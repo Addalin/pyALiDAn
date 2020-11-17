@@ -1,6 +1,8 @@
 #Dataset preprocess
+
 ## Database structure
 Each sample contains the followings: 
+
 ####1. Properties: 
     - date          <datetime.date>
     
@@ -19,15 +21,21 @@ Each sample contains the followings:
     - altitude      <float>          - in meters
     
     - calib_method  <string>         - e.g.,: Klett_Method, AOD_Constrained_Method, Raman_Method
+
 ####2. X (measurements):
     - p_r2          <torch.float64>  - 2D, raw lidar measurment 
+
     - p_mol_r2      <torch.float64>  - 2D, calculated lidar molecular measurment 
+
 ####3. Y (estimated values):
     - lc            <torch.float64>  - scalar, lidar constant
+
     - r0            <torch.float64>  - scalar, min height of reference range
+
     - r1            <torch.float64>  - scalar, max height of reference range
     
 ## Workflow
+
 1. Create a time slots list of samples from the database:
     [date, period, start_time, end_time, calib_method, lc, profile_file_name]
 2. For each row in the list create sample: 
