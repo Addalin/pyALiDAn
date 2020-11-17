@@ -32,3 +32,8 @@ Each sample contains the followings:
 2. Generate a daily molecular profile (2D) from the converted txt files 
 3. Create list of time slots (and save)
 4. Create and save database samples     
+
+## TODOS and Open issues to figure out:
+1. Check if the reference_range heights are above sea level or above ground level
+2. Make sure p_r2, and p_mol_r2 start both from ground level, and share the same dimensions (y-axis for height, x-axis for time)
+3. How should the samples be saved ? as numpy or pytorch objects ? 
