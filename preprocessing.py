@@ -10,6 +10,8 @@ from constsLidar import LAMBDA, min_height
 from generate_atmosphere import RadiosondeProfile
 import re
 from netCDF4 import Dataset
+import sqlite3
+
 
 def gdas2radiosonde(src_file, dst_file, col_names=None):
     """
@@ -197,6 +199,35 @@ def extract_att_bsc(lidar_parent_folder, day_date, wavelengths):
                 print(f"Extracted OC_attenuated_backscatter_{wavelen}nm from {bsc_path.split('/')[-1]}")
             except KeyError as e:
                 print(f"Key {e} does not exist in {bsc_path.split('/')[-1]}")
+
+
+def query_database(query="SELECT * FROM lidar_calibration_constant;", database_path="pollyxt_tropos_calibration.db"):
+    """
+    Query is a string following sqlite syntax (https://www.sqlitetutorial.net/) to query the .db
+    Examples:
+    query_basic = "
+    SELECT * -- This is a comment. Get all columns from table
+    FROM lidar_calibration_constant -- Which table to query
+    ;
+    "
+
+    query_advanced = "
+    SELECT lcc.id, lcc.liconst, lcc.cali_start_time, lcc.cali_stop_time -- get only some columns
+    FROM lidar_calibration_constant as lcc
+    WHERE -- different filtering options on rows
+        wavelength == 1064 AND
+        cali_method LIKE 'Klet%' AND
+        (cali_start_time BETWEEN '2017-09-01' AND '2017-09-02');
+    "
+    """
+    # Connect to the db and query it directly into pandas df.
+    with sqlite3.connect(database_path) as c:
+        # Query to df
+        # optionally parse 'id' as index column and 'cali_start_time', 'cali_stop_time' as dates
+        df = pd.read_sql(sql=query, con=c, index_col='id', parse_dates=['cali_start_time', 'cali_stop_time'])
+
+    return df
+
 
 
 def main():
