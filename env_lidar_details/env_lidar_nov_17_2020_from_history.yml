@@ -1,4 +1,4 @@
-name: lidar
+name: lidarAdi
 channels:
   - conda-forge
   - defaults
@@ -24,7 +24,7 @@ dependencies:
   - ipympl
   - numpy
   - pandas
-  - wincertstore
+  # - wincertstore
   # - altgraph # This is for ARLreader
   - pyyaml
   - matplotlib
