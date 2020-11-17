@@ -11,30 +11,30 @@ dependencies:
   - nodejs
   - mpld3
   - packaging
-  - pywin32-ctypes
-  - attrs
+  # - pywin32-ctypes # This is for ARLreader
+  # - attrs # This is for ARLreader
   - pip
   - pyparsing
   - git
   - seaborn
   - py
-  - importlib-metadata
+  # - importlib-metadata # This is for ARLreader
   - opencv
   - pytest
   - ipympl
   - numpy
   - pandas
   - wincertstore
-  - altgraph
+  # - altgraph # This is for ARLreader
   - pyyaml
   - matplotlib
   - isofit
   - astropy
   - colorama
   - zipp
-  - pefile
+  # - pefile # This is for ARLreader
   - pluggy
-  - atomicwrites
+  # - atomicwrites # This is for ARLreader
   - jupyterlab
   - jupyter
   - future
