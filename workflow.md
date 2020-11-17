@@ -3,13 +3,21 @@
 Each sample contains the followings: 
 ####1. Properties: 
     - date          <datetime.date>
+    
     - period        <timedelta.min>  - in minutes, e.g.: 30 min or 60 min 
+    
     - start_time    <timedelta.time>
+    
     - end_time      <timedelta.time>
+    
     - wavelength    <float>          - in meters, e.g.: LAMBDA.UV, LAMBDA.G, LAMBDA.IR 
+    
     - latitude      <float>          - in meters            
+    
     - longitude     <float>          - in meters
+    
     - altitude      <float>          - in meters
+    
     - calib_method  <string>         - e.g.,: Klett_Method, AOD_Constrained_Method, Raman_Method
 ####2. X (measurements):
     - p_r2          <torch.float64>  - 2D, raw lidar measurment 
