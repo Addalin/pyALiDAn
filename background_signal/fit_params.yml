@@ -1,0 +1,43 @@
+UV_high:
+    A: 0.03
+    H: 1.12
+    t0: 342.5
+    W: 115
+    C: 'darkblue' 
+    C_mid: 'blueviolet'
+UV_low:
+    A: 0.0001
+    H: 0.87
+    t0: 342.5
+    W: 100
+    C: 'darkblue'
+G_high:
+    A: 0.035
+    H: 1.37
+    t0: 343
+    W: 117
+    C: 'darkgreen'
+    C_mid: 'green'
+G_low:
+    A: 0.0001
+    H: 1.16
+    t0: 342
+    W: 105
+    C: 'darkgreen'
+IR_high:
+    A: 0.045
+    H: 0.72
+    t0: 359.2
+    W: 126
+    C: 'darkred'
+    C_mid: 'firebrick'
+IR_low:
+    A: 0.0001
+    H: 0.30
+    t0: 359.2
+    W: 116
+    C: 'darkred'
+curve_exp: A + H*exp(-(x-t0)^2/(2*W^2))
+delta_t: 100 # [seconds] time resolution betweein bins 
+bins_per_hr: 36 # bins per hour
+bins_per_day: 864 # total bins in the time period of 24 hours (this is relevant to t0, and W)

@@ -1,0 +1,22 @@
+name: lidar
+channels:
+  - conda-forge
+  - defaults
+  - pro
+dependencies:
+  - jupyter
+  - netcdf4
+  - ipykernel
+  - seaborn
+  - mpld3
+  - scikit-learn
+  - matplotlib
+  - opencv
+  - scipy
+  - nb_conda
+  - plotly
+  - pip
+  - numpy
+  - pandas
+prefix: C:\Users\addalin\.conda\envs\lidar
+

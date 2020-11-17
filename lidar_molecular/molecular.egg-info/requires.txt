@@ -1,0 +1,7 @@
+numpy
+matplotlib
+scipy
+sphinx
+numpydoc
+pytest
+sphinx-bootstrap-theme
