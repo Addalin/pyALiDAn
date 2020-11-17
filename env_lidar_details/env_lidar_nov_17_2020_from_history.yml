@@ -1,0 +1,47 @@
+name: lidar
+channels:
+  - conda-forge
+  - defaults
+  - pro
+dependencies:
+  - more-itertools
+  - six
+  - netcdf4
+  - ipykernel
+  - nodejs
+  - mpld3
+  - packaging
+  - pywin32-ctypes
+  - attrs
+  - pip
+  - pyparsing
+  - git
+  - seaborn
+  - py
+  - importlib-metadata
+  - opencv
+  - pytest
+  - ipympl
+  - numpy
+  - pandas
+  - wincertstore
+  - altgraph
+  - pyyaml
+  - matplotlib
+  - isofit
+  - astropy
+  - colorama
+  - zipp
+  - pefile
+  - pluggy
+  - atomicwrites
+  - jupyterlab
+  - jupyter
+  - future
+  - scikit-learn
+  - wcwidth
+  - scipy
+  - nb_conda
+  - plotly
+prefix: C:\Users\addalin\.conda\envs\lidar
+
