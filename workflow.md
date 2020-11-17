@@ -3,7 +3,8 @@
 ## Database structure
 Each sample contains the followings: 
 
-####1. Properties: 
+#### 1. Properties: 
+    
     - date          <datetime.date>
     
     - period        <timedelta.min>  - in minutes, e.g.: 30 min or 60 min 
@@ -22,12 +23,12 @@ Each sample contains the followings:
     
     - calib_method  <string>         - e.g.,: Klett_Method, AOD_Constrained_Method, Raman_Method
 
-####2. X (measurements):
+#### 2. X (measurements):
     - p_r2          <torch.float64>  - 2D, raw lidar measurment 
 
     - p_mol_r2      <torch.float64>  - 2D, calculated lidar molecular measurment 
 
-####3. Y (estimated values):
+#### 3. Y (estimated values):
     - lc            <torch.float64>  - scalar, lidar constant
 
     - r0            <torch.float64>  - scalar, min height of reference range
