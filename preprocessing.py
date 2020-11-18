@@ -14,6 +14,9 @@ import sqlite3
 import fnmatch
 import matplotlib.pyplot as plt
 
+#### TODO: create pre-proc class, having the following internal fields:
+#### location, lat, lon, gdas_name_format, gdas_txt_format, min_height, top_height, h_bins,
+
 
 def gdas2radiosonde(src_file, dst_file, col_names=None):
     """
@@ -251,13 +254,20 @@ def main():
 
     """set day,location"""
     day_date = datetime(2017, 9, 1)
+    lon = 35.0
+    lat = 32.8
+    location = 'haifa'
+    min_height = 0.229 #[km]
+    top_height = 22.71466 #[km]
+    h_bins = 3000
+
 
     # GDAS
     if DO_GDAS:
-        lon = 35.0
-        lat = 32.8
-        gdas_dst_paths = gdas_tropos2txt(day_date, lon, lat)
-        df_sigma, df_beta = generate_daily_molecular_profile(gdas_dst_paths)
+        lambda_um = 532
+        gdas_dst_paths = gdas_tropos2txt(day_date,location, lat, lon)
+        df_sigma, df_beta = generate_daily_molecular_profile(gdas_dst_paths,lambda_um,location,
+                                                             lat, lon,min_height , top_height,h_bins)
         '''Visualize molecular profiles'''
         plt.figure()
         df_beta.plot()
