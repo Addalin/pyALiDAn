@@ -43,15 +43,15 @@ def gdas2radiosonde(src_file, dst_file, col_names=None):
 # TODO: add warning if failed
 
 
-def gdas_tropos2txt(day_date, lon, lat):
+def gdas_tropos2txt(day_date, location='haifa', lat=32.8, lon=35.0):
     # Converting gdas files from TROPOS to txt
     # set source gdas files
     # TODO: Add namings and existing path validation (print warnings and errors)
     src_folder = os.path.join(os.getcwd(), 'data_example', 'data_examples', 'gdas')
     if not os.path.exists(src_folder):
         os.makedirs(src_folder)
-    gdas_curd_pattern = 'haifa_{}_*_{}_{}.gdas1'.format(day_date.strftime('%Y%m%d'), lat, lon)
-    gdas_nxtd_pattern = 'haifa_{}_00_{}_{}.gdas1'.format((day_date + timedelta(days=1)).strftime('%Y%m%d'), lat, lon)
+    gdas_curd_pattern = '{}_{}_*_{}_{}.gdas1'.format(location,day_date.strftime('%Y%m%d'), lat, lon)
+    gdas_nxtd_pattern = '{}_{}_00_{}_{}.gdas1'.format(location,(day_date + timedelta(days=1)).strftime('%Y%m%d'), lat, lon)
     gdas_src_paths = sorted(glob.glob(os.path.join(src_folder, gdas_curd_pattern)))
     gdas_src_paths.append(os.path.join(src_folder, gdas_nxtd_pattern))
 
@@ -152,22 +152,36 @@ def load_att_bsc(lidar_parent_folder, day_date):
     return bsc_paths, profile_paths
 
 
-def generate_daily_molecular_profile(gdas_dst_paths):
-    # GENERATE DAILY MOLECULAR PROFILE from the converted files (above)
+def generate_daily_molecular_profile(gdas_txt_paths, lambda_um=532,
+                                     location='haifa', lat=32.8, lon=35.0,
+                                     min_height=0.229, top_height=22.71466, h_bins=3000):
+    '''
+    Generating daily molecular profile from gdas txt file
+    :param gdas_txt_paths: paths to gdas txt files , containing table with the columns
+    "PRES	HGHT	TEMP	UWND	VWND	WWND	RELH	TPOT	WDIR	WSPD"
+    :param lambda_um: wavelength [um] e.g., for the green channel 532 [um]
+    :param location: location name of the lidar station, e.g., Haifa
+    :param lat: latitude of the station
+    :param lon: longitude of the station
+    :param min_height: Min height [km] **above sea level** (preferably this is the lidar height above sea level, e.g., Haifa min_height=0.229[km])
+    :param top_height: Top height [km] **above see level** (preferably this is lidar_top_height_of + min_height)
+    :param h_bins: Number of height bins                   (preferably this is the lidar height bins, sanity check for
+    this parameter gives dr= heights[1]-heights[0] =~ 7.5e-3[km] -> the height resolution of pollyXT lidar)
+    :return: Returns backscatter and extinction profiles as pandas-dataframes, according to Rayleigh scattering.
+    The resulted profile start at min_height, end at top_height and extrapolated to have h_bins.
+    '''
 
-    '''physical parameters'''
-    lambda_um = LAMBDA.G * 1e+9
-    dr = 7.47e-3  # Height resolution dr~= 7.5e-3[km] (similar to the lidar height resolution)
-    top_height = 22.48566  # Top height for interest signals (similar to the top height of the lidar measurement)
-    heights = np.arange(min_height, top_height, dr)  # setting heights for interpolation of gdas/radiosonde inputs
-    print(heights.shape, min_height)
+    heights = np.linspace(min_height, top_height, h_bins) # setting heights for interpolation of gdas/radiosonde inputs
+    # uncomment the commands below for sanity check of the desired height resolution
+    # dr = heights[1]-heights[0]
+    # print('h_bins=',heights.shape,' min_height=', min_height,' top_height=', top_height,' dr=',dr )
+
     df_sigma = pd.DataFrame()
     df_beta = pd.DataFrame()
 
-    for dst_file in gdas_dst_paths:
-        df_sonde = RadiosondeProfile(dst_file).get_df_sonde(heights)
-        # df_sonde = sondeprofile.get_df_sonde(heights)
-        time = extract_date_time(dst_file, r'haifa_(.*)_32.8_35.0.txt', ['%Y%m%d_%H'])[0]
+    for path in gdas_txt_paths:
+        df_sonde = RadiosondeProfile(path).get_df_sonde(heights)
+        time = extract_date_time(path, r'{}_(.*)_{}_{}.txt'.format(location,lat,lon), ['%Y%m%d_%H'])[0]
         '''Calculating molecular profiles from temperature and pressure'''
         res = df_sonde.apply(calc_sigma_profile_df, axis=1, args=(lambda_um, time,), result_type='expand').astype(
             'float64')
