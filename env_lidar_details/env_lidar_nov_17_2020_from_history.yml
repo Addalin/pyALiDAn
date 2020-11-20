@@ -5,10 +5,10 @@ channels:
   - pro
 dependencies:
   - more-itertools
-  - six
+  # - six # This is for ARLreader
   - netcdf4
   - ipykernel
-  - nodejs
+  - nodejs #for dynamic figures in jupyterlab
   - mpld3
   - packaging
   # - pywin32-ctypes # This is for ARLreader
@@ -20,16 +20,16 @@ dependencies:
   - py
   # - importlib-metadata # This is for ARLreader
   - opencv
-  - pytest
-  - ipympl
+  # pytest # related to isofit installation
+  - ipympl #for dynamic figures in jupyterlab
   - numpy
   - pandas
   # - wincertstore
   # - altgraph # This is for ARLreader
   - pyyaml
   - matplotlib
-  - isofit
-  - astropy
+  # - isofit # relates to isofit installation
+  # - astropy # relates to isofit installation
   - colorama
   - zipp
   # - pefile # This is for ARLreader
@@ -39,9 +39,12 @@ dependencies:
   - jupyter
   - future
   - scikit-learn
-  - wcwidth
+  # - wcwidth # This is for ARLreader
   - scipy
   - nb_conda
   - plotly
 prefix: C:\Users\addalin\.conda\envs\lidar
 
+# installation line:
+# conda install more-itertools six netcdf4 ipykernel nodejs mpld3 packaging pip pyparsing git seaborn py opencv pytest ipympl numpy pandas pyyaml matplotlib astropy colorama zipp pluggy
+# jupyterlab jupyter future scikit-learn wcwidth scipy nb_conda plotly

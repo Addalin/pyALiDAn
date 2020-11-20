@@ -1,0 +1,5 @@
+conda create -n lidar=3.8
+conda activate lidar
+conda config --env --set restore_free_channel true
+conda config --env --append channels conda-forge
+conda install more-itertools netcdf4 packaging pip future git seaborn py opencv numpy scikit-learn scikit-image scipy pyparsing pandas pyyaml matplotlib plotly mpld3 colorama zipp pluggy jupyterlab jupyter ipykernel ipympl nb_conda nodejs
