@@ -240,7 +240,6 @@ cython_debug/
 /protokol_linfit_20170913.dat
 /r_m.eps
 /legacy_code/
-/testfile.txt
 /.idea/codeStyles/codeStyleConfig.xml
 /.idea/inspectionProfiles/profiles_settings.xml
 /.idea/.gitignore
@@ -252,7 +251,6 @@ cython_debug/
 /.idea/other.xml
 /.idea/vcs.xml
 /.idea/workspace (VSM-PC-16's conflicted copy 2020-11-10).xml
-/ARLreader/chk_data.f
 /code from Zhenping/2017_09_13_Wed_TROPOS_18_00_01_1932_2018_profiles/2017_09_13_Wed_TROPOS_18_00_01_1932_2018_profiles.nc
 /code from Zhenping/rayleigh-scattering-python/iannis_b-lidar_molecular-85bb208df35c/data/bucholtz_tabular_values/bucholtz_1995_last_working_values.csv
 /code from Zhenping/rayleigh-scattering-python/iannis_b-lidar_molecular-85bb208df35c/data/bucholtz_tabular_values/bucholtz_1995_table_1.csv
@@ -623,10 +621,7 @@ cython_debug/
 /data examples/Radiosonden/Haifa/2018/40179_20180912_12.dat
 /data examples/Radiosonden/Haifa/2018/40179_20180913_00.dat
 /exportToHTML/generating_background_signal.ipynb.html
-/ARLreader/chk_data.f
-/ARLreader/
 /legacy_code/molecular_old/
-/ARLreader/
 /ARLreader/
 /ARLreader/.pytest_cache/
 /ARLreader/ARLreader/
@@ -643,3 +638,5 @@ cython_debug/
 /ARLreader/requirements.txt
 /ARLreader/setup.py
 /ARLreader/working_with_ARLformat.md
+/test_file_0.txt
+/testfile.txt
