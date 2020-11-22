@@ -24,7 +24,7 @@ Modules for physical and pollyXT constants.
 """
 
 import numpy as np
-
+from dataclasses import dataclass
 # %% Basic physics constants
 
 eps = np.finfo(np.float).eps
@@ -35,7 +35,7 @@ h_plank = 6.62606e-34  # plank constant [J sec]
 n_chan = 13
 
 #%% Haifa station info
-from dataclasses import dataclass
+
 
 @dataclass()
 class station:
