@@ -624,3 +624,22 @@ cython_debug/
 /data examples/Radiosonden/Haifa/2018/40179_20180913_00.dat
 /exportToHTML/generating_background_signal.ipynb.html
 /ARLreader/chk_data.f
+/ARLreader/
+/legacy_code/molecular_old/
+/ARLreader/
+/ARLreader/
+/ARLreader/.pytest_cache/
+/ARLreader/ARLreader/
+/ARLreader/ARLreader.egg-info/
+/ARLreader/build/
+/ARLreader/dist/
+/ARLreader/example/
+/ARLreader/img/
+/ARLreader/tests/
+/ARLreader/.gitignore
+/ARLreader/chk_data.f
+/ARLreader/LICENSE
+/ARLreader/README.md
+/ARLreader/requirements.txt
+/ARLreader/setup.py
+/ARLreader/working_with_ARLformat.md
