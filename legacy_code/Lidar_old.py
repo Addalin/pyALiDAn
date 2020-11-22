@@ -12,7 +12,7 @@ import pandas as pd
 from generate_atmosphere import LidarProfile
 #import mpld3
 import miscLidar as mscLid
-from constsLidar import *
+from global_settings import *
 import matplotlib.patches as mpatches
 eps = np.finfo(np.float).eps
 plt.rcParams['text.latex.preamble']=[r"\usepackage{amsmath}"]

@@ -223,3 +223,403 @@ cython_debug/
 
 # Remove previous ipynb_checkpoints
 #   git rm -r .ipynb_checkpoints/
+/bsc_profiles_26042017.zip
+/clusterable_data.npy
+/generate_air_aerosol_from vadim.m
+/data from eshkol
+/generating_background_signal.aux
+/ARLreader/
+/Matlab_code_Polly_Haifa/
+/Pollynet_Processing_Chain/
+/generating_background_signal.out
+/generating_background_signal.synctex.gz
+/iannis_b-lidar_molecular-de3d2ef2f36b.zip
+/named_colors.ipynb
+/optimize_lidar_const.py
+/pois.m
+/protokol_linfit_20170913.dat
+/r_m.eps
+/legacy_code/
+/testfile.txt
+/.idea/codeStyles/codeStyleConfig.xml
+/.idea/inspectionProfiles/profiles_settings.xml
+/.idea/.gitignore
+/.idea/code.iml
+/.idea/deployment.xml
+/.idea/encodings.xml
+/.idea/misc.xml
+/.idea/modules.xml
+/.idea/other.xml
+/.idea/vcs.xml
+/.idea/workspace (VSM-PC-16's conflicted copy 2020-11-10).xml
+/ARLreader/chk_data.f
+/code from Zhenping/2017_09_13_Wed_TROPOS_18_00_01_1932_2018_profiles/2017_09_13_Wed_TROPOS_18_00_01_1932_2018_profiles.nc
+/code from Zhenping/rayleigh-scattering-python/iannis_b-lidar_molecular-85bb208df35c/data/bucholtz_tabular_values/bucholtz_1995_last_working_values.csv
+/code from Zhenping/rayleigh-scattering-python/iannis_b-lidar_molecular-85bb208df35c/data/bucholtz_tabular_values/bucholtz_1995_table_1.csv
+/code from Zhenping/rayleigh-scattering-python/iannis_b-lidar_molecular-85bb208df35c/data/bucholtz_tabular_values/bucholtz_1995_table_2.csv
+/code from Zhenping/rayleigh-scattering-python/iannis_b-lidar_molecular-85bb208df35c/docs/_build/doctrees/bucholtz.doctree
+/code from Zhenping/rayleigh-scattering-python/iannis_b-lidar_molecular-85bb208df35c/docs/_build/doctrees/environment.pickle
+/code from Zhenping/rayleigh-scattering-python/iannis_b-lidar_molecular-85bb208df35c/docs/_build/doctrees/index.doctree
+/code from Zhenping/rayleigh-scattering-python/iannis_b-lidar_molecular-85bb208df35c/docs/_build/html/_modules/index.html
+/code from Zhenping/rayleigh-scattering-python/iannis_b-lidar_molecular-85bb208df35c/docs/_build/html/_modules/rayleigh_scattering_bucholtz.html
+/code from Zhenping/rayleigh-scattering-python/iannis_b-lidar_molecular-85bb208df35c/docs/_build/html/_sources/bucholtz.txt
+/code from Zhenping/rayleigh-scattering-python/iannis_b-lidar_molecular-85bb208df35c/docs/_build/html/_sources/index.txt
+/code from Zhenping/rayleigh-scattering-python/iannis_b-lidar_molecular-85bb208df35c/docs/_build/html/_static/bootstrap-2.3.2/css/bootstrap.css
+/code from Zhenping/rayleigh-scattering-python/iannis_b-lidar_molecular-85bb208df35c/docs/_build/html/_static/bootstrap-2.3.2/css/bootstrap.min.css
+/code from Zhenping/rayleigh-scattering-python/iannis_b-lidar_molecular-85bb208df35c/docs/_build/html/_static/bootstrap-2.3.2/css/bootstrap-responsive.css
+/code from Zhenping/rayleigh-scattering-python/iannis_b-lidar_molecular-85bb208df35c/docs/_build/html/_static/bootstrap-2.3.2/css/bootstrap-responsive.min.css
+/code from Zhenping/rayleigh-scattering-python/iannis_b-lidar_molecular-85bb208df35c/docs/_build/html/_static/bootstrap-2.3.2/img/glyphicons-halflings.png
+/code from Zhenping/rayleigh-scattering-python/iannis_b-lidar_molecular-85bb208df35c/docs/_build/html/_static/bootstrap-2.3.2/img/glyphicons-halflings-white.png
+/code from Zhenping/rayleigh-scattering-python/iannis_b-lidar_molecular-85bb208df35c/docs/_build/html/_static/bootstrap-2.3.2/js/bootstrap.js
+/code from Zhenping/rayleigh-scattering-python/iannis_b-lidar_molecular-85bb208df35c/docs/_build/html/_static/bootstrap-2.3.2/js/bootstrap.min.js
+/code from Zhenping/rayleigh-scattering-python/iannis_b-lidar_molecular-85bb208df35c/docs/_build/html/_static/bootstrap-3.3.6/css/bootstrap.css
+/code from Zhenping/rayleigh-scattering-python/iannis_b-lidar_molecular-85bb208df35c/docs/_build/html/_static/bootstrap-3.3.6/css/bootstrap.css.map
+/code from Zhenping/rayleigh-scattering-python/iannis_b-lidar_molecular-85bb208df35c/docs/_build/html/_static/bootstrap-3.3.6/css/bootstrap.min.css
+/code from Zhenping/rayleigh-scattering-python/iannis_b-lidar_molecular-85bb208df35c/docs/_build/html/_static/bootstrap-3.3.6/css/bootstrap.min.css.map
+/code from Zhenping/rayleigh-scattering-python/iannis_b-lidar_molecular-85bb208df35c/docs/_build/html/_static/bootstrap-3.3.6/css/bootstrap-theme.css
+/code from Zhenping/rayleigh-scattering-python/iannis_b-lidar_molecular-85bb208df35c/docs/_build/html/_static/bootstrap-3.3.6/css/bootstrap-theme.css.map
+/code from Zhenping/rayleigh-scattering-python/iannis_b-lidar_molecular-85bb208df35c/docs/_build/html/_static/bootstrap-3.3.6/css/bootstrap-theme.min.css
+/code from Zhenping/rayleigh-scattering-python/iannis_b-lidar_molecular-85bb208df35c/docs/_build/html/_static/bootstrap-3.3.6/css/bootstrap-theme.min.css.map
+/code from Zhenping/rayleigh-scattering-python/iannis_b-lidar_molecular-85bb208df35c/docs/_build/html/_static/bootstrap-3.3.6/fonts/glyphicons-halflings-regular.eot
+/code from Zhenping/rayleigh-scattering-python/iannis_b-lidar_molecular-85bb208df35c/docs/_build/html/_static/bootstrap-3.3.6/fonts/glyphicons-halflings-regular.svg
+/code from Zhenping/rayleigh-scattering-python/iannis_b-lidar_molecular-85bb208df35c/docs/_build/html/_static/bootstrap-3.3.6/fonts/glyphicons-halflings-regular.ttf
+/code from Zhenping/rayleigh-scattering-python/iannis_b-lidar_molecular-85bb208df35c/docs/_build/html/_static/bootstrap-3.3.6/fonts/glyphicons-halflings-regular.woff
+/code from Zhenping/rayleigh-scattering-python/iannis_b-lidar_molecular-85bb208df35c/docs/_build/html/_static/bootstrap-3.3.6/fonts/glyphicons-halflings-regular.woff2
+/code from Zhenping/rayleigh-scattering-python/iannis_b-lidar_molecular-85bb208df35c/docs/_build/html/_static/bootstrap-3.3.6/js/bootstrap.js
+/code from Zhenping/rayleigh-scattering-python/iannis_b-lidar_molecular-85bb208df35c/docs/_build/html/_static/bootstrap-3.3.6/js/bootstrap.min.js
+/code from Zhenping/rayleigh-scattering-python/iannis_b-lidar_molecular-85bb208df35c/docs/_build/html/_static/bootstrap-3.3.6/js/npm.js
+/code from Zhenping/rayleigh-scattering-python/iannis_b-lidar_molecular-85bb208df35c/docs/_build/html/_static/bootswatch-2.3.2/amelia/bootstrap.min.css
+/code from Zhenping/rayleigh-scattering-python/iannis_b-lidar_molecular-85bb208df35c/docs/_build/html/_static/bootswatch-2.3.2/cerulean/bootstrap.min.css
+/code from Zhenping/rayleigh-scattering-python/iannis_b-lidar_molecular-85bb208df35c/docs/_build/html/_static/bootswatch-2.3.2/cosmo/bootstrap.min.css
+/code from Zhenping/rayleigh-scattering-python/iannis_b-lidar_molecular-85bb208df35c/docs/_build/html/_static/bootswatch-2.3.2/cyborg/bootstrap.min.css
+/code from Zhenping/rayleigh-scattering-python/iannis_b-lidar_molecular-85bb208df35c/docs/_build/html/_static/bootswatch-2.3.2/flatly/bootstrap.min.css
+/code from Zhenping/rayleigh-scattering-python/iannis_b-lidar_molecular-85bb208df35c/docs/_build/html/_static/bootswatch-2.3.2/img/glyphicons-halflings.png
+/code from Zhenping/rayleigh-scattering-python/iannis_b-lidar_molecular-85bb208df35c/docs/_build/html/_static/bootswatch-2.3.2/img/glyphicons-halflings-white.png
+/code from Zhenping/rayleigh-scattering-python/iannis_b-lidar_molecular-85bb208df35c/docs/_build/html/_static/bootswatch-2.3.2/journal/bootstrap.min.css
+/code from Zhenping/rayleigh-scattering-python/iannis_b-lidar_molecular-85bb208df35c/docs/_build/html/_static/bootswatch-2.3.2/readable/bootstrap.min.css
+/code from Zhenping/rayleigh-scattering-python/iannis_b-lidar_molecular-85bb208df35c/docs/_build/html/_static/bootswatch-2.3.2/simplex/bootstrap.min.css
+/code from Zhenping/rayleigh-scattering-python/iannis_b-lidar_molecular-85bb208df35c/docs/_build/html/_static/bootswatch-2.3.2/slate/bootstrap.min.css
+/code from Zhenping/rayleigh-scattering-python/iannis_b-lidar_molecular-85bb208df35c/docs/_build/html/_static/bootswatch-2.3.2/spacelab/bootstrap.min.css
+/code from Zhenping/rayleigh-scattering-python/iannis_b-lidar_molecular-85bb208df35c/docs/_build/html/_static/bootswatch-2.3.2/spruce/bootstrap.min.css
+/code from Zhenping/rayleigh-scattering-python/iannis_b-lidar_molecular-85bb208df35c/docs/_build/html/_static/bootswatch-2.3.2/superhero/bootstrap.min.css
+/code from Zhenping/rayleigh-scattering-python/iannis_b-lidar_molecular-85bb208df35c/docs/_build/html/_static/bootswatch-2.3.2/united/bootstrap.min.css
+/code from Zhenping/rayleigh-scattering-python/iannis_b-lidar_molecular-85bb208df35c/docs/_build/html/_static/bootswatch-3.3.6/cerulean/bootstrap.min.css
+/code from Zhenping/rayleigh-scattering-python/iannis_b-lidar_molecular-85bb208df35c/docs/_build/html/_static/bootswatch-3.3.6/cosmo/bootstrap.min.css
+/code from Zhenping/rayleigh-scattering-python/iannis_b-lidar_molecular-85bb208df35c/docs/_build/html/_static/bootswatch-3.3.6/custom/bootstrap.min.css
+/code from Zhenping/rayleigh-scattering-python/iannis_b-lidar_molecular-85bb208df35c/docs/_build/html/_static/bootswatch-3.3.6/cyborg/bootstrap.min.css
+/code from Zhenping/rayleigh-scattering-python/iannis_b-lidar_molecular-85bb208df35c/docs/_build/html/_static/bootswatch-3.3.6/darkly/bootstrap.min.css
+/code from Zhenping/rayleigh-scattering-python/iannis_b-lidar_molecular-85bb208df35c/docs/_build/html/_static/bootswatch-3.3.6/flatly/bootstrap.min.css
+/code from Zhenping/rayleigh-scattering-python/iannis_b-lidar_molecular-85bb208df35c/docs/_build/html/_static/bootswatch-3.3.6/fonts/glyphicons-halflings-regular.eot
+/code from Zhenping/rayleigh-scattering-python/iannis_b-lidar_molecular-85bb208df35c/docs/_build/html/_static/bootswatch-3.3.6/fonts/glyphicons-halflings-regular.svg
+/code from Zhenping/rayleigh-scattering-python/iannis_b-lidar_molecular-85bb208df35c/docs/_build/html/_static/bootswatch-3.3.6/fonts/glyphicons-halflings-regular.ttf
+/code from Zhenping/rayleigh-scattering-python/iannis_b-lidar_molecular-85bb208df35c/docs/_build/html/_static/bootswatch-3.3.6/fonts/glyphicons-halflings-regular.woff
+/code from Zhenping/rayleigh-scattering-python/iannis_b-lidar_molecular-85bb208df35c/docs/_build/html/_static/bootswatch-3.3.6/fonts/glyphicons-halflings-regular.woff2
+/code from Zhenping/rayleigh-scattering-python/iannis_b-lidar_molecular-85bb208df35c/docs/_build/html/_static/bootswatch-3.3.6/journal/bootstrap.min.css
+/code from Zhenping/rayleigh-scattering-python/iannis_b-lidar_molecular-85bb208df35c/docs/_build/html/_static/bootswatch-3.3.6/lumen/bootstrap.min.css
+/code from Zhenping/rayleigh-scattering-python/iannis_b-lidar_molecular-85bb208df35c/docs/_build/html/_static/bootswatch-3.3.6/paper/bootstrap.min.css
+/code from Zhenping/rayleigh-scattering-python/iannis_b-lidar_molecular-85bb208df35c/docs/_build/html/_static/bootswatch-3.3.6/readable/bootstrap.min.css
+/code from Zhenping/rayleigh-scattering-python/iannis_b-lidar_molecular-85bb208df35c/docs/_build/html/_static/bootswatch-3.3.6/sandstone/bootstrap.min.css
+/code from Zhenping/rayleigh-scattering-python/iannis_b-lidar_molecular-85bb208df35c/docs/_build/html/_static/bootswatch-3.3.6/simplex/bootstrap.min.css
+/code from Zhenping/rayleigh-scattering-python/iannis_b-lidar_molecular-85bb208df35c/docs/_build/html/_static/bootswatch-3.3.6/slate/bootstrap.min.css
+/code from Zhenping/rayleigh-scattering-python/iannis_b-lidar_molecular-85bb208df35c/docs/_build/html/_static/bootswatch-3.3.6/spacelab/bootstrap.min.css
+/code from Zhenping/rayleigh-scattering-python/iannis_b-lidar_molecular-85bb208df35c/docs/_build/html/_static/bootswatch-3.3.6/superhero/bootstrap.min.css
+/code from Zhenping/rayleigh-scattering-python/iannis_b-lidar_molecular-85bb208df35c/docs/_build/html/_static/bootswatch-3.3.6/united/bootstrap.min.css
+/code from Zhenping/rayleigh-scattering-python/iannis_b-lidar_molecular-85bb208df35c/docs/_build/html/_static/bootswatch-3.3.6/yeti/bootstrap.min.css
+/code from Zhenping/rayleigh-scattering-python/iannis_b-lidar_molecular-85bb208df35c/docs/_build/html/_static/js/jquery-1.11.0.min.js
+/code from Zhenping/rayleigh-scattering-python/iannis_b-lidar_molecular-85bb208df35c/docs/_build/html/_static/js/jquery-fix.js
+/code from Zhenping/rayleigh-scattering-python/iannis_b-lidar_molecular-85bb208df35c/docs/_build/html/_static/ajax-loader.gif
+/code from Zhenping/rayleigh-scattering-python/iannis_b-lidar_molecular-85bb208df35c/docs/_build/html/_static/alabaster.css
+/code from Zhenping/rayleigh-scattering-python/iannis_b-lidar_molecular-85bb208df35c/docs/_build/html/_static/basic.css
+/code from Zhenping/rayleigh-scattering-python/iannis_b-lidar_molecular-85bb208df35c/docs/_build/html/_static/bootstrap-sphinx.css
+/code from Zhenping/rayleigh-scattering-python/iannis_b-lidar_molecular-85bb208df35c/docs/_build/html/_static/bootstrap-sphinx.js
+/code from Zhenping/rayleigh-scattering-python/iannis_b-lidar_molecular-85bb208df35c/docs/_build/html/_static/comment.png
+/code from Zhenping/rayleigh-scattering-python/iannis_b-lidar_molecular-85bb208df35c/docs/_build/html/_static/comment-bright.png
+/code from Zhenping/rayleigh-scattering-python/iannis_b-lidar_molecular-85bb208df35c/docs/_build/html/_static/comment-close.png
+/code from Zhenping/rayleigh-scattering-python/iannis_b-lidar_molecular-85bb208df35c/docs/_build/html/_static/custom.css
+/code from Zhenping/rayleigh-scattering-python/iannis_b-lidar_molecular-85bb208df35c/docs/_build/html/_static/doctools.js
+/code from Zhenping/rayleigh-scattering-python/iannis_b-lidar_molecular-85bb208df35c/docs/_build/html/_static/down.png
+/code from Zhenping/rayleigh-scattering-python/iannis_b-lidar_molecular-85bb208df35c/docs/_build/html/_static/down-pressed.png
+/code from Zhenping/rayleigh-scattering-python/iannis_b-lidar_molecular-85bb208df35c/docs/_build/html/_static/file.png
+/code from Zhenping/rayleigh-scattering-python/iannis_b-lidar_molecular-85bb208df35c/docs/_build/html/_static/jquery.js
+/code from Zhenping/rayleigh-scattering-python/iannis_b-lidar_molecular-85bb208df35c/docs/_build/html/_static/jquery-1.11.1.js
+/code from Zhenping/rayleigh-scattering-python/iannis_b-lidar_molecular-85bb208df35c/docs/_build/html/_static/minus.png
+/code from Zhenping/rayleigh-scattering-python/iannis_b-lidar_molecular-85bb208df35c/docs/_build/html/_static/plus.png
+/code from Zhenping/rayleigh-scattering-python/iannis_b-lidar_molecular-85bb208df35c/docs/_build/html/_static/pygments.css
+/code from Zhenping/rayleigh-scattering-python/iannis_b-lidar_molecular-85bb208df35c/docs/_build/html/_static/searchtools.js
+/code from Zhenping/rayleigh-scattering-python/iannis_b-lidar_molecular-85bb208df35c/docs/_build/html/_static/underscore.js
+/code from Zhenping/rayleigh-scattering-python/iannis_b-lidar_molecular-85bb208df35c/docs/_build/html/_static/underscore-1.3.1.js
+/code from Zhenping/rayleigh-scattering-python/iannis_b-lidar_molecular-85bb208df35c/docs/_build/html/_static/up.png
+/code from Zhenping/rayleigh-scattering-python/iannis_b-lidar_molecular-85bb208df35c/docs/_build/html/_static/up-pressed.png
+/code from Zhenping/rayleigh-scattering-python/iannis_b-lidar_molecular-85bb208df35c/docs/_build/html/_static/websupport.js
+/code from Zhenping/rayleigh-scattering-python/iannis_b-lidar_molecular-85bb208df35c/docs/_build/html/.buildinfo
+/code from Zhenping/rayleigh-scattering-python/iannis_b-lidar_molecular-85bb208df35c/docs/_build/html/bucholtz.html
+/code from Zhenping/rayleigh-scattering-python/iannis_b-lidar_molecular-85bb208df35c/docs/_build/html/genindex.html
+/code from Zhenping/rayleigh-scattering-python/iannis_b-lidar_molecular-85bb208df35c/docs/_build/html/index.html
+/code from Zhenping/rayleigh-scattering-python/iannis_b-lidar_molecular-85bb208df35c/docs/_build/html/objects.inv
+/code from Zhenping/rayleigh-scattering-python/iannis_b-lidar_molecular-85bb208df35c/docs/_build/html/py-modindex.html
+/code from Zhenping/rayleigh-scattering-python/iannis_b-lidar_molecular-85bb208df35c/docs/_build/html/search.html
+/code from Zhenping/rayleigh-scattering-python/iannis_b-lidar_molecular-85bb208df35c/docs/_build/html/searchindex.js
+/code from Zhenping/rayleigh-scattering-python/iannis_b-lidar_molecular-85bb208df35c/docs/bucholtz.rst
+/code from Zhenping/rayleigh-scattering-python/iannis_b-lidar_molecular-85bb208df35c/docs/conf.py
+/code from Zhenping/rayleigh-scattering-python/iannis_b-lidar_molecular-85bb208df35c/docs/index.rst
+/code from Zhenping/rayleigh-scattering-python/iannis_b-lidar_molecular-85bb208df35c/docs/make.bat
+/code from Zhenping/rayleigh-scattering-python/iannis_b-lidar_molecular-85bb208df35c/docs/Makefile
+/code from Zhenping/rayleigh-scattering-python/iannis_b-lidar_molecular-85bb208df35c/docs/molecular_properties.rst
+/code from Zhenping/rayleigh-scattering-python/iannis_b-lidar_molecular-85bb208df35c/molecular/__init__.py
+/code from Zhenping/rayleigh-scattering-python/iannis_b-lidar_molecular-85bb208df35c/molecular/constants.py
+/code from Zhenping/rayleigh-scattering-python/iannis_b-lidar_molecular-85bb208df35c/molecular/molecular_properties.py
+/code from Zhenping/rayleigh-scattering-python/iannis_b-lidar_molecular-85bb208df35c/molecular/raman_scattering.py
+/code from Zhenping/rayleigh-scattering-python/iannis_b-lidar_molecular-85bb208df35c/molecular/rayleigh_brillouin.py
+/code from Zhenping/rayleigh-scattering-python/iannis_b-lidar_molecular-85bb208df35c/molecular/rayleigh_depol.py
+/code from Zhenping/rayleigh-scattering-python/iannis_b-lidar_molecular-85bb208df35c/molecular/rayleigh_scattering.py
+/code from Zhenping/rayleigh-scattering-python/iannis_b-lidar_molecular-85bb208df35c/molecular/rayleigh_scattering_bucholtz.py
+/code from Zhenping/rayleigh-scattering-python/iannis_b-lidar_molecular-85bb208df35c/molecular/refractive_index.py
+/code from Zhenping/rayleigh-scattering-python/iannis_b-lidar_molecular-85bb208df35c/molecular/us_std.py
+/code from Zhenping/rayleigh-scattering-python/iannis_b-lidar_molecular-85bb208df35c/molecular/utilities.py
+/code from Zhenping/rayleigh-scattering-python/iannis_b-lidar_molecular-85bb208df35c/notebooks/Bucholtz_1995_vs_Python_Script.ipynb
+/code from Zhenping/rayleigh-scattering-python/iannis_b-lidar_molecular-85bb208df35c/notebooks/Calculate depolarization.ipynb
+/code from Zhenping/rayleigh-scattering-python/iannis_b-lidar_molecular-85bb208df35c/notebooks/Ulla code.ipynb
+/code from Zhenping/rayleigh-scattering-python/iannis_b-lidar_molecular-85bb208df35c/tests/test_molecular_properties.py
+/code from Zhenping/rayleigh-scattering-python/iannis_b-lidar_molecular-85bb208df35c/tests/test_rayleigh_scattering_bucholtz.py
+/code from Zhenping/rayleigh-scattering-python/iannis_b-lidar_molecular-85bb208df35c/tests/test_scattering.py
+/code from Zhenping/rayleigh-scattering-python/iannis_b-lidar_molecular-85bb208df35c/.hg_archival.txt
+/code from Zhenping/rayleigh-scattering-python/iannis_b-lidar_molecular-85bb208df35c/.hgignore
+/code from Zhenping/rayleigh-scattering-python/iannis_b-lidar_molecular-85bb208df35c/LICENCE.txt
+/code from Zhenping/rayleigh-scattering-python/iannis_b-lidar_molecular-85bb208df35c/molecular.zip
+/code from Zhenping/rayleigh-scattering-python/iannis_b-lidar_molecular-85bb208df35c/README.rst
+/code from Zhenping/rayleigh-scattering-python/iannis_b-lidar_molecular-85bb208df35c/requirements.txt
+/code from Zhenping/rayleigh-scattering-python/iannis_b-lidar_molecular-85bb208df35c/setup.py
+/code from Zhenping/rayleighscattering-matlab/Rayleigh_Scattering/air_refractive_index.m
+/code from Zhenping/rayleighscattering-matlab/Rayleigh_Scattering/alpha_rayleigh.m
+/code from Zhenping/rayleighscattering-matlab/Rayleigh_Scattering/beta_pi_rayleigh.m
+/code from Zhenping/rayleighscattering-matlab/Rayleigh_Scattering/dsigma_phi_rayleigh.m
+/code from Zhenping/rayleighscattering-matlab/Rayleigh_Scattering/enhancement_factor_f.m
+/code from Zhenping/rayleighscattering-matlab/Rayleigh_Scattering/kings_factor_atmosphere.m
+/code from Zhenping/rayleighscattering-matlab/Rayleigh_Scattering/molar_fraction_water_vapour.m
+/code from Zhenping/rayleighscattering-matlab/Rayleigh_Scattering/number_density_at_pt.m
+/code from Zhenping/rayleighscattering-matlab/Rayleigh_Scattering/phase_function.m
+/code from Zhenping/rayleighscattering-matlab/Rayleigh_Scattering/physical_constants.m
+/code from Zhenping/rayleighscattering-matlab/Rayleigh_Scattering/rayleigh_scattering.m
+/code from Zhenping/rayleighscattering-matlab/Rayleigh_Scattering/rh_to_pressure.m
+/code from Zhenping/rayleighscattering-matlab/Rayleigh_Scattering/rho_atmosphere.m
+/code from Zhenping/rayleighscattering-matlab/Rayleigh_Scattering/saturation_vapor_pressure.m
+/code from Zhenping/rayleighscattering-matlab/Rayleigh_Scattering/sigma_rayleigh.m
+/code from Zhenping/2017_09_13_Wed_TROPOS_18_00_01_1932_2018_profiles.zip
+/code from Zhenping/rayleigh-scattering-python.zip
+/code from Zhenping/rayleighscattering-matlab.zip
+/data examples/gdas/gdas1.sep17.w1
+/data examples/gdas/haifa_20170901_00_32.8_35.0.csv
+/data examples/gdas/haifa_20170901_00_32.8_35.0.txt
+/data examples/gdas/haifa_20170901_03_32.8_35.0.gdas1
+/data examples/gdas/haifa_20170901_06_32.8_35.0.gdas1
+/data examples/gdas/haifa_20170901_09_32.8_35.0.gdas1
+/data examples/gdas/haifa_20170901_12_32.8_35.0.gdas1
+/data examples/gdas/haifa_20170901_15_32.8_35.0.gdas1
+/data examples/gdas/haifa_20170901_18_32.8_35.0.gdas1
+/data examples/gdas/haifa_20170901_21_32.8_35.0.gdas1
+/data examples/gdas/haifa_20170902_00_32.8_35.0.gdas1
+/data examples/gdas/haifa_20170902_03_32.8_35.0.gdas1
+/data examples/gdas/haifa_20170902_06_32.8_35.0.gdas1
+/data examples/gdas/haifa_20170902_09_32.8_35.0.gdas1
+/data examples/gdas/haifa_20170902_12_32.8_35.0.gdas1
+/data examples/gdas/haifa_20170902_15_32.8_35.0.gdas1
+/data examples/gdas/haifa_20170902_18_32.8_35.0.gdas1
+/data examples/gdas/haifa_20170902_21_32.8_35.0.gdas1
+/data examples/gdas/haifa_20170903_00_32.8_35.0.gdas1
+/data examples/gdas/haifa_20170903_03_32.8_35.0.gdas1
+/data examples/gdas/new.gdas
+/data examples/gdas_txt/haifa_20170901_03_32.8_35.0.txt
+/data examples/gdas_txt/haifa_20170901_06_32.8_35.0.txt
+/data examples/gdas_txt/haifa_20170901_09_32.8_35.0.txt
+/data examples/gdas_txt/haifa_20170901_12_32.8_35.0.txt
+/data examples/gdas_txt/haifa_20170901_15_32.8_35.0.txt
+/data examples/gdas_txt/haifa_20170901_18_32.8_35.0.txt
+/data examples/gdas_txt/haifa_20170901_21_32.8_35.0.txt
+/data examples/gdas_txt/haifa_20170902_00_32.8_35.0.txt
+/data examples/lidar netcdf/2017_09_12_Tue_TROPOS_18_00_01.nc
+/data examples/lidar netcdf/2017_09_13_Wed_TROPOS_00_00_01.nc
+/data examples/lidar netcdf/2017_09_13_Wed_TROPOS_06_00_01.nc
+/data examples/lidar netcdf/2017_09_13_Wed_TROPOS_18_00_01.nc
+/data examples/lidar netcdf/2017_09_14_Thu_TROPOS_00_00_01.nc
+/data examples/lidar netcdf/2017_09_14_Thu_TROPOS_06_00_01.nc
+/data examples/lidar netcdf/2018_09_12_Wed_TROPOS_18_00_01.nc
+/data examples/lidar netcdf/2018_09_13_Thu_TROPOS_00_00_01.nc
+/data examples/lidar netcdf/2018_09_13_Thu_TROPOS_18_00_01.nc
+/data examples/lidar retrieval/2017_04_22_Lidar/2017_04_22/20170422_0800-0900_klett.pdf
+/data examples/lidar retrieval/2017_04_22_Lidar/2017_04_22/20170422_0800-1000_Klett.pdf
+/data examples/lidar retrieval/2017_04_22_Lidar/2017_04_22/20170422_0900-1000_klett.pdf
+/data examples/lidar retrieval/2017_04_22_Lidar/2017_04_22/20170422_1000-1100_klett.pdf
+/data examples/lidar retrieval/2017_04_22_Lidar/2017_04_22/20170422_1140-1320_Klett.pdf
+/data examples/lidar retrieval/2017_04_22_Lidar/2017_04_22/20170422_1200-1300_klett.pdf
+/data examples/lidar retrieval/2017_04_22_Lidar/2017_04_22/20170422_1300-1400_klett.pdf
+/data examples/lidar retrieval/2017_04_22_Lidar/2017_04_22/20170422_1400-1500_Klett.pdf
+/data examples/lidar retrieval/2017_04_22_Lidar/2017_04_22/20170422_2000-2359_raman.pdf
+/data examples/lidar retrieval/2017_04_22_Lidar/2017_04_22/-20170422_0800-0900-21smooth.txt
+/data examples/lidar retrieval/2017_04_22_Lidar/2017_04_22/-20170422_0800-0900-21smooth-info.txt
+/data examples/lidar retrieval/2017_04_22_Lidar/2017_04_22/-20170422_0800-0900-41smooth.txt
+/data examples/lidar retrieval/2017_04_22_Lidar/2017_04_22/-20170422_0800-0900-41smooth-info.txt
+/data examples/lidar retrieval/2017_04_22_Lidar/2017_04_22/-20170422_0800-0900-99smooth.txt
+/data examples/lidar retrieval/2017_04_22_Lidar/2017_04_22/-20170422_0800-0900-99smooth-info.txt
+/data examples/lidar retrieval/2017_04_22_Lidar/2017_04_22/-20170422_0800-1000-41smooth.txt
+/data examples/lidar retrieval/2017_04_22_Lidar/2017_04_22/-20170422_0800-1000-41smooth-info.txt
+/data examples/lidar retrieval/2017_04_22_Lidar/2017_04_22/-20170422_0900-1000-41smooth.txt
+/data examples/lidar retrieval/2017_04_22_Lidar/2017_04_22/-20170422_0900-1000-41smooth-info.txt
+/data examples/lidar retrieval/2017_04_22_Lidar/2017_04_22/-20170422_0900-1000-99smooth.txt
+/data examples/lidar retrieval/2017_04_22_Lidar/2017_04_22/-20170422_0900-1000-99smooth-info.txt
+/data examples/lidar retrieval/2017_04_22_Lidar/2017_04_22/-20170422_1000-1100-41smooth.txt
+/data examples/lidar retrieval/2017_04_22_Lidar/2017_04_22/-20170422_1000-1100-41smooth-info.txt
+/data examples/lidar retrieval/2017_04_22_Lidar/2017_04_22/-20170422_1000-1100-99smooth.txt
+/data examples/lidar retrieval/2017_04_22_Lidar/2017_04_22/-20170422_1000-1100-99smooth-info.txt
+/data examples/lidar retrieval/2017_04_22_Lidar/2017_04_22/-20170422_1140-1320-41smooth.txt
+/data examples/lidar retrieval/2017_04_22_Lidar/2017_04_22/-20170422_1140-1320-41smooth-info.txt
+/data examples/lidar retrieval/2017_04_22_Lidar/2017_04_22/-20170422_1200-1300-41smooth.txt
+/data examples/lidar retrieval/2017_04_22_Lidar/2017_04_22/-20170422_1200-1300-41smooth-info.txt
+/data examples/lidar retrieval/2017_04_22_Lidar/2017_04_22/-20170422_1200-1300-99smooth.txt
+/data examples/lidar retrieval/2017_04_22_Lidar/2017_04_22/-20170422_1200-1300-99smooth-info.txt
+/data examples/lidar retrieval/2017_04_22_Lidar/2017_04_22/-20170422_1300-1400-41smooth.txt
+/data examples/lidar retrieval/2017_04_22_Lidar/2017_04_22/-20170422_1300-1400-41smooth-info.txt
+/data examples/lidar retrieval/2017_04_22_Lidar/2017_04_22/-20170422_1300-1400-99smooth.txt
+/data examples/lidar retrieval/2017_04_22_Lidar/2017_04_22/-20170422_1300-1400-99smooth-info.txt
+/data examples/lidar retrieval/2017_04_22_Lidar/2017_04_22/-20170422_1400-1500-41smooth.txt
+/data examples/lidar retrieval/2017_04_22_Lidar/2017_04_22/-20170422_1400-1500-41smooth-info.txt
+/data examples/lidar retrieval/2017_04_22_Lidar/2017_04_22/-20170422_1400-1500-99smooth.txt
+/data examples/lidar retrieval/2017_04_22_Lidar/2017_04_22/-20170422_1400-1500-99smooth-info.txt
+/data examples/lidar retrieval/2017_04_22_Lidar/2017_04_22/-20170422_2000-2359-99smooth.txt
+/data examples/lidar retrieval/2017_04_22_Lidar/2017_04_22/-20170422_2000-2359-99smooth-info.txt
+/data examples/lidar retrieval/2017_04_22_Lidar/2017_04_22/-20170422_2000-2359-121smooth.txt
+/data examples/lidar retrieval/2017_04_22_Lidar/2017_04_22/-20170422_2000-2359-121smooth-info.txt
+/data examples/lidar retrieval/2017_04_22_Lidar/2017_04_22/BetDagan20170422_12.txt
+/data examples/netcdf/2017/09/01/2017_09_01_00_00_01_PollyXT_TROPOS_lc.nc
+/data examples/netcdf/2017/09/01/2017_09_01_06_00_01_PollyXT_TROPOS_lc.nc
+/data examples/netcdf/2017/09/01/2017_09_01_18_00_01_PollyXT_TROPOS_lc.nc
+/data examples/netcdf/2017/09/01/2017_09_01_Fri_TROPOS_00_00_01_0000_0059_NR_profiles.nc
+/data examples/netcdf/2017/09/01/2017_09_01_Fri_TROPOS_00_00_01_0000_0059_OC_profiles.nc
+/data examples/netcdf/2017/09/01/2017_09_01_Fri_TROPOS_00_00_01_0000_0059_profiles.nc
+/data examples/netcdf/2017/09/01/2017_09_01_Fri_TROPOS_00_00_01_0134_0308_NR_profiles.nc
+/data examples/netcdf/2017/09/01/2017_09_01_Fri_TROPOS_00_00_01_0134_0308_OC_profiles.nc
+/data examples/netcdf/2017/09/01/2017_09_01_Fri_TROPOS_00_00_01_0134_0308_profiles.nc
+/data examples/netcdf/2017/09/01/2017_09_01_Fri_TROPOS_00_00_01_0309_0442_NR_profiles.nc
+/data examples/netcdf/2017/09/01/2017_09_01_Fri_TROPOS_00_00_01_0309_0442_OC_profiles.nc
+/data examples/netcdf/2017/09/01/2017_09_01_Fri_TROPOS_00_00_01_0309_0442_profiles.nc
+/data examples/netcdf/2017/09/01/2017_09_01_Fri_TROPOS_00_00_01_att_bsc.nc
+/data examples/netcdf/2017/09/01/2017_09_01_Fri_TROPOS_00_00_01_cloudinfo.nc
+/data examples/netcdf/2017/09/01/2017_09_01_Fri_TROPOS_00_00_01_OC_att_bsc.nc
+/data examples/netcdf/2017/09/01/2017_09_01_Fri_TROPOS_00_00_01_overlap.nc
+/data examples/netcdf/2017/09/01/2017_09_01_Fri_TROPOS_00_00_01_quasi_results.nc
+/data examples/netcdf/2017/09/01/2017_09_01_Fri_TROPOS_00_00_01_quasi_results_V2.nc
+/data examples/netcdf/2017/09/01/2017_09_01_Fri_TROPOS_00_00_01_target_classification.nc
+/data examples/netcdf/2017/09/01/2017_09_01_Fri_TROPOS_00_00_01_target_classification_V2.nc
+/data examples/netcdf/2017/09/01/2017_09_01_Fri_TROPOS_00_00_01_vol_depol.nc
+/data examples/netcdf/2017/09/01/2017_09_01_Fri_TROPOS_00_00_01_WVMR_RH.nc
+/data examples/netcdf/2017/09/01/2017_09_01_Fri_TROPOS_06_00_01_0905_0957_NR_profiles.nc
+/data examples/netcdf/2017/09/01/2017_09_01_Fri_TROPOS_06_00_01_0905_0957_OC_profiles.nc
+/data examples/netcdf/2017/09/01/2017_09_01_Fri_TROPOS_06_00_01_0905_0957_profiles.nc
+/data examples/netcdf/2017/09/01/2017_09_01_Fri_TROPOS_06_00_01_att_bsc.nc
+/data examples/netcdf/2017/09/01/2017_09_01_Fri_TROPOS_06_00_01_cloudinfo.nc
+/data examples/netcdf/2017/09/01/2017_09_01_Fri_TROPOS_06_00_01_OC_att_bsc.nc
+/data examples/netcdf/2017/09/01/2017_09_01_Fri_TROPOS_06_00_01_overlap.nc
+/data examples/netcdf/2017/09/01/2017_09_01_Fri_TROPOS_06_00_01_quasi_results.nc
+/data examples/netcdf/2017/09/01/2017_09_01_Fri_TROPOS_06_00_01_quasi_results_V2.nc
+/data examples/netcdf/2017/09/01/2017_09_01_Fri_TROPOS_06_00_01_target_classification.nc
+/data examples/netcdf/2017/09/01/2017_09_01_Fri_TROPOS_06_00_01_target_classification_V2.nc
+/data examples/netcdf/2017/09/01/2017_09_01_Fri_TROPOS_06_00_01_vol_depol.nc
+/data examples/netcdf/2017/09/01/2017_09_01_Fri_TROPOS_06_00_01_WVMR_RH.nc
+/data examples/netcdf/2017/09/01/2017_09_01_Fri_TROPOS_12_00_01_att_bsc.nc
+/data examples/netcdf/2017/09/01/2017_09_01_Fri_TROPOS_12_00_01_cloudinfo.nc
+/data examples/netcdf/2017/09/01/2017_09_01_Fri_TROPOS_12_00_01_OC_att_bsc.nc
+/data examples/netcdf/2017/09/01/2017_09_01_Fri_TROPOS_12_00_01_overlap.nc
+/data examples/netcdf/2017/09/01/2017_09_01_Fri_TROPOS_12_00_01_quasi_results.nc
+/data examples/netcdf/2017/09/01/2017_09_01_Fri_TROPOS_12_00_01_quasi_results_V2.nc
+/data examples/netcdf/2017/09/01/2017_09_01_Fri_TROPOS_12_00_01_target_classification.nc
+/data examples/netcdf/2017/09/01/2017_09_01_Fri_TROPOS_12_00_01_target_classification_V2.nc
+/data examples/netcdf/2017/09/01/2017_09_01_Fri_TROPOS_12_00_01_vol_depol.nc
+/data examples/netcdf/2017/09/01/2017_09_01_Fri_TROPOS_12_00_01_WVMR_RH.nc
+/data examples/netcdf/2017/09/01/2017_09_01_Fri_TROPOS_18_00_01_1800_1859_NR_profiles.nc
+/data examples/netcdf/2017/09/01/2017_09_01_Fri_TROPOS_18_00_01_1800_1859_OC_profiles.nc
+/data examples/netcdf/2017/09/01/2017_09_01_Fri_TROPOS_18_00_01_1800_1859_profiles.nc
+/data examples/netcdf/2017/09/01/2017_09_01_Fri_TROPOS_18_00_01_1900_2010_NR_profiles.nc
+/data examples/netcdf/2017/09/01/2017_09_01_Fri_TROPOS_18_00_01_1900_2010_OC_profiles.nc
+/data examples/netcdf/2017/09/01/2017_09_01_Fri_TROPOS_18_00_01_1900_2010_profiles.nc
+/data examples/netcdf/2017/09/01/2017_09_01_Fri_TROPOS_18_00_01_2013_2113_NR_profiles.nc
+/data examples/netcdf/2017/09/01/2017_09_01_Fri_TROPOS_18_00_01_2013_2113_OC_profiles.nc
+/data examples/netcdf/2017/09/01/2017_09_01_Fri_TROPOS_18_00_01_2013_2113_profiles.nc
+/data examples/netcdf/2017/09/01/2017_09_01_Fri_TROPOS_18_00_01_2113_2200_NR_profiles.nc
+/data examples/netcdf/2017/09/01/2017_09_01_Fri_TROPOS_18_00_01_2113_2200_OC_profiles.nc
+/data examples/netcdf/2017/09/01/2017_09_01_Fri_TROPOS_18_00_01_2113_2200_profiles.nc
+/data examples/netcdf/2017/09/01/2017_09_01_Fri_TROPOS_18_00_01_2210_2309_NR_profiles.nc
+/data examples/netcdf/2017/09/01/2017_09_01_Fri_TROPOS_18_00_01_2210_2309_OC_profiles.nc
+/data examples/netcdf/2017/09/01/2017_09_01_Fri_TROPOS_18_00_01_2210_2309_profiles.nc
+/data examples/netcdf/2017/09/01/2017_09_01_Fri_TROPOS_18_00_01_2310_2359_NR_profiles.nc
+/data examples/netcdf/2017/09/01/2017_09_01_Fri_TROPOS_18_00_01_2310_2359_OC_profiles.nc
+/data examples/netcdf/2017/09/01/2017_09_01_Fri_TROPOS_18_00_01_2310_2359_profiles.nc
+/data examples/netcdf/2017/09/01/2017_09_01_Fri_TROPOS_18_00_01_att_bsc.nc
+/data examples/netcdf/2017/09/01/2017_09_01_Fri_TROPOS_18_00_01_cloudinfo.nc
+/data examples/netcdf/2017/09/01/2017_09_01_Fri_TROPOS_18_00_01_OC_att_bsc.nc
+/data examples/netcdf/2017/09/01/2017_09_01_Fri_TROPOS_18_00_01_overlap.nc
+/data examples/netcdf/2017/09/01/2017_09_01_Fri_TROPOS_18_00_01_quasi_results.nc
+/data examples/netcdf/2017/09/01/2017_09_01_Fri_TROPOS_18_00_01_quasi_results_V2.nc
+/data examples/netcdf/2017/09/01/2017_09_01_Fri_TROPOS_18_00_01_target_classification.nc
+/data examples/netcdf/2017/09/01/2017_09_01_Fri_TROPOS_18_00_01_target_classification_V2.nc
+/data examples/netcdf/2017/09/01/2017_09_01_Fri_TROPOS_18_00_01_vol_depol.nc
+/data examples/netcdf/2017/09/01/2017_09_01_Fri_TROPOS_18_00_01_WVMR_RH.nc
+/data examples/netcdf/2019/09/13/2019_04_13_00_01_31_PollyXT_TROPOS_lc.nc
+/data examples/netcdf/2019/09/13/2019_04_13_12_00_00_PollyXT_TROPOS_lc.nc
+/data examples/netcdf/2019/09/13/2019_04_13_18_00_01_PollyXT_TROPOS_lc.nc
+/data examples/netcdf/2019/09/13/2019_04_13_Sat_TROPOS_00_01_31_0001_0101_NR_profiles.nc
+/data examples/netcdf/2019/09/13/2019_04_13_Sat_TROPOS_00_01_31_0001_0101_profiles.nc
+/data examples/netcdf/2019/09/13/2019_04_13_Sat_TROPOS_00_01_31_0101_0201_NR_profiles.nc
+/data examples/netcdf/2019/09/13/2019_04_13_Sat_TROPOS_00_01_31_0101_0201_profiles.nc
+/data examples/netcdf/2019/09/13/2019_04_13_Sat_TROPOS_00_01_31_0201_0301_NR_profiles.nc
+/data examples/netcdf/2019/09/13/2019_04_13_Sat_TROPOS_00_01_31_0201_0301_profiles.nc
+/data examples/netcdf/2019/09/13/2019_04_13_Sat_TROPOS_00_01_31_0301_0401_NR_profiles.nc
+/data examples/netcdf/2019/09/13/2019_04_13_Sat_TROPOS_00_01_31_0301_0401_profiles.nc
+/data examples/netcdf/2019/09/13/2019_04_13_Sat_TROPOS_00_01_31_0401_0501_NR_profiles.nc
+/data examples/netcdf/2019/09/13/2019_04_13_Sat_TROPOS_00_01_31_0401_0501_profiles.nc
+/data examples/netcdf/2019/09/13/2019_04_13_Sat_TROPOS_00_01_31_0501_0559_NR_profiles.nc
+/data examples/netcdf/2019/09/13/2019_04_13_Sat_TROPOS_00_01_31_0501_0559_profiles.nc
+/data examples/netcdf/2019/09/13/2019_04_13_Sat_TROPOS_00_01_31_att_bsc.nc
+/data examples/netcdf/2019/09/13/2019_04_13_Sat_TROPOS_00_01_31_overlap.nc
+/data examples/netcdf/2019/09/13/2019_04_13_Sat_TROPOS_00_01_31_quasi_results.nc
+/data examples/netcdf/2019/09/13/2019_04_13_Sat_TROPOS_00_01_31_quasi_results_V2.nc
+/data examples/netcdf/2019/09/13/2019_04_13_Sat_TROPOS_00_01_31_target_classification.nc
+/data examples/netcdf/2019/09/13/2019_04_13_Sat_TROPOS_00_01_31_target_classification_V2.nc
+/data examples/netcdf/2019/09/13/2019_04_13_Sat_TROPOS_00_01_31_vol_depol.nc
+/data examples/netcdf/2019/09/13/2019_04_13_Sat_TROPOS_00_01_31_WVMR_RH.nc
+/data examples/netcdf/2019/09/13/2019_04_13_Sat_TROPOS_12_00_00_1200_1259_NR_profiles.nc
+/data examples/netcdf/2019/09/13/2019_04_13_Sat_TROPOS_12_00_00_1200_1259_profiles.nc
+/data examples/netcdf/2019/09/13/2019_04_13_Sat_TROPOS_12_00_00_1300_1419_NR_profiles.nc
+/data examples/netcdf/2019/09/13/2019_04_13_Sat_TROPOS_12_00_00_1300_1419_profiles.nc
+/data examples/netcdf/2019/09/13/2019_04_13_Sat_TROPOS_12_00_00_1508_1616_NR_profiles.nc
+/data examples/netcdf/2019/09/13/2019_04_13_Sat_TROPOS_12_00_00_1508_1616_profiles.nc
+/data examples/netcdf/2019/09/13/2019_04_13_Sat_TROPOS_12_00_00_1708_1758_NR_profiles.nc
+/data examples/netcdf/2019/09/13/2019_04_13_Sat_TROPOS_12_00_00_1708_1758_profiles.nc
+/data examples/netcdf/2019/09/13/2019_04_13_Sat_TROPOS_12_00_00_att_bsc.nc
+/data examples/netcdf/2019/09/13/2019_04_13_Sat_TROPOS_12_00_00_overlap.nc
+/data examples/netcdf/2019/09/13/2019_04_13_Sat_TROPOS_12_00_00_quasi_results.nc
+/data examples/netcdf/2019/09/13/2019_04_13_Sat_TROPOS_12_00_00_quasi_results_V2.nc
+/data examples/netcdf/2019/09/13/2019_04_13_Sat_TROPOS_12_00_00_target_classification.nc
+/data examples/netcdf/2019/09/13/2019_04_13_Sat_TROPOS_12_00_00_target_classification_V2.nc
+/data examples/netcdf/2019/09/13/2019_04_13_Sat_TROPOS_12_00_00_vol_depol.nc
+/data examples/netcdf/2019/09/13/2019_04_13_Sat_TROPOS_12_00_00_WVMR_RH.nc
+/data examples/netcdf/2019/09/13/2019_04_13_Sat_TROPOS_18_00_01_1800_1852_NR_profiles.nc
+/data examples/netcdf/2019/09/13/2019_04_13_Sat_TROPOS_18_00_01_1800_1852_profiles.nc
+/data examples/netcdf/2019/09/13/2019_04_13_Sat_TROPOS_18_00_01_2244_2356_NR_profiles.nc
+/data examples/netcdf/2019/09/13/2019_04_13_Sat_TROPOS_18_00_01_2244_2356_profiles.nc
+/data examples/netcdf/2019/09/13/2019_04_13_Sat_TROPOS_18_00_01_att_bsc.nc
+/data examples/netcdf/2019/09/13/2019_04_13_Sat_TROPOS_18_00_01_overlap.nc
+/data examples/netcdf/2019/09/13/2019_04_13_Sat_TROPOS_18_00_01_quasi_results.nc
+/data examples/netcdf/2019/09/13/2019_04_13_Sat_TROPOS_18_00_01_quasi_results_V2.nc
+/data examples/netcdf/2019/09/13/2019_04_13_Sat_TROPOS_18_00_01_target_classification.nc
+/data examples/netcdf/2019/09/13/2019_04_13_Sat_TROPOS_18_00_01_target_classification_V2.nc
+/data examples/netcdf/2019/09/13/2019_04_13_Sat_TROPOS_18_00_01_vol_depol.nc
+/data examples/netcdf/2019/09/13/2019_04_13_Sat_TROPOS_18_00_01_WVMR_RH.nc
+/data examples/Radiosonden/Haifa/2017/40179_20170413_12.txt
+/data examples/Radiosonden/Haifa/2017/40179_20170413_12 (2).txt
+/data examples/Radiosonden/Haifa/2017/40179_20170422_12.dat
+/data examples/Radiosonden/Haifa/2017/40179_20170422_12.txt
+/data examples/Radiosonden/Haifa/2017/40179_20170913_00.dat
+/data examples/Radiosonden/Haifa/2017/40179_20170913_12.dat
+/data examples/Radiosonden/Haifa/2017/40179_20170914_00.dat
+/data examples/Radiosonden/Haifa/2018/40179_20180912_12.dat
+/data examples/Radiosonden/Haifa/2018/40179_20180913_00.dat
+/exportToHTML/generating_background_signal.ipynb.html

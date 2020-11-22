@@ -32,7 +32,7 @@ from netCDF4 import Dataset
 
 
 ## %% Constants 
-from constsLidar import * #eps, c, h_plank, n_chan, min_height, CHANELS, LAMBDA
+from global_settings import * #eps, c, h_plank, n_chan, min_height, CHANELS, LAMBDA
 
 n = 500  # number of measurments
 top_meas_height = 10 # [km]
@@ -54,7 +54,7 @@ sounde_profile = RadiosondeProfile(soundePath)
 temps = sounde_profile.interpolateKmKelvin(heights)     # Temprature [K]
 pres = sounde_profile.interpolateKMPres(heights)        # Pressures [hPa]
 relhs = sounde_profile.interpolateKMRLH(heights)        # Atmospheric relative humidity [%]
-lambda_um =  LAMBDA.G*1e+9  # Changing wavelength to [nm] units; these are the input requirments of "molecular" module. 
+lambda_um = LAMBDA_um.G  # Changing wavelength to [nm] units; these are the input requirments of "molecular" module.
 sigma_mol = rayleigh_scattering.alpha_rayleigh(wavelength = lambda_um, pressure=pres, temperature=temps, C=385., rh=relhs)*1e+3 # converting from [1/m] to [1/km] 
 beta_mol = rayleigh_scattering.beta_pi_rayleigh(wavelength = lambda_um, pressure=pres, temperature=temps, C=385., rh=relhs)*1e+3 # converting from [1/m] to [1/km sr] 
 
@@ -107,7 +107,7 @@ tau = 50e-9 # [sec] temporal pulse width of the lidar
 A = 1       # [km] - TODO : ask for this value 
 P0 = 1e+15   # TODO : ask for this value 
 #lidar_const = 0.5*P0*c*tau*A #1e+13
-lidar_const= lidar_const_optimized #5e+13  #1e+13 #lidar_const_optimized #1e+13# lidar_const_optimized#1e+13 #lidar_const_optimized #1e+13 #lidar_const_optimized
+lidar_const= 5e+13 #lidar_const_optimized #5e+13  #1e+13 #lidar_const_optimized #1e+13# lidar_const_optimized#1e+13 #lidar_const_optimized #1e+13 #lidar_const_optimized
 '''Calculate the power and the Logaritmic range adjusted power'''
 P = mscLid.generate_P(P0,c,A,tau,heights,sigmaT_orig,betaT_orig)
 P = P.round()

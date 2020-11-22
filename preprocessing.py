@@ -6,7 +6,7 @@ from datetime import datetime, timedelta
 import glob
 from molecular import rayleigh_scattering
 import numpy as np
-from constsLidar import LAMBDA, min_height
+import global_settings as gs #import #WAVELEN, min_height
 from generate_atmosphere import RadiosondeProfile
 import re
 from netCDF4 import Dataset
@@ -14,8 +14,7 @@ import sqlite3
 import fnmatch
 import matplotlib.pyplot as plt
 
-#### TODO: create pre-proc class, having the following internal fields:
-#### location, lat, lon, gdas_name_format, gdas_txt_format, min_height, top_height, h_bins,
+
 
 
 def gdas2radiosonde(src_file, dst_file, col_names=None):
@@ -254,20 +253,17 @@ def main():
 
     """set day,location"""
     day_date = datetime(2017, 9, 1)
-    lon = 35.0
-    lat = 32.8
     location = 'haifa'
-    min_height = 0.229 #[km]
-    top_height = 22.71466 #[km]
-    h_bins = 3000
-
+    station = gs.stations[location]
+    min_height = gs.altitude + gs.start_bin_height
+    top_height = gs.altitude + gs.end_bin_height
 
     # GDAS
     if DO_GDAS:
-        lambda_um = 532
-        gdas_dst_paths = gdas_tropos2txt(day_date,location, lat, lon)
-        df_sigma, df_beta = generate_daily_molecular_profile(gdas_dst_paths,lambda_um,location,
-                                                             lat, lon,min_height , top_height,h_bins)
+        lambda_um = gs.LAMBDA_um.G
+        gdas_dst_paths = gdas_tropos2txt(day_date, gs.location, gs.lat, gs.lon)
+        df_sigma, df_beta = generate_daily_molecular_profile(gdas_dst_paths, lambda_um, gs.location,
+                                                             gs.lat, gs.lon, min_height, top_height, gs.n_bins)
         '''Visualize molecular profiles'''
         plt.figure()
         df_beta.plot()
@@ -281,15 +277,15 @@ def main():
         lidar_parent_folder = 'data_example/data_examples/netcdf'
         bsc_paths, profile_paths = load_att_bsc(lidar_parent_folder, day_date)
 
-        wavelengths = ['355', '532', '1064']
+        wavelengths = gs.LAMBDA_um.get_elastic() #[UV,G,IR]
 
         # Extract the OC_attenuated_backscatter_{wavelen}nm and Lidar_calibration_constant_used for all
         # files in bsc_paths and for all wavelengths
         # TODO do something with the data!
         extract_att_bsc(bsc_paths, wavelengths)
 
-        # Query the db for a specfic day & aavelength and calib method
-        wavelength = 1064
+        # Query the db for a specific day & wavelength and calibration method
+        wavelength = gs.LAMBDA_um.IR # or wavelengths[0] # 1064 or
         day_diff = timedelta(days=1)
         start_day = day_date.strftime('%Y-%m-%d')
         till_date = (day_date + day_diff).strftime('%Y-%m-%d')
