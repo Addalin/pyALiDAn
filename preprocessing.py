@@ -55,7 +55,7 @@ def gdas_tropos2txt(day_date, location='haifa', lat=32.8, lon=35.0, src_folder=[
 	# set source gdas files
 	# TODO: Add namings and existing path validation (print warnings and errors)
 	if not src_folder:
-		src_folder = os.path.join(os.getcwd(), r'data examples/gdas')
+		src_folder = os.path.join(os.getcwd(), 'data examples\gdas')
 	if not os.path.exists(src_folder):
 		os.makedirs(src_folder)
 	gdas_curd_pattern = '{}_{}_*_{}_{}.gdas1'.format(location, day_date.strftime('%Y%m%d'), lat, lon)
@@ -68,7 +68,7 @@ def gdas_tropos2txt(day_date, location='haifa', lat=32.8, lon=35.0, src_folder=[
 	# TODO: Add validation and indicate if folder already existed or created now (print warnings and errors)
 
 	if not dst_folder:
-		src_folder = os.path.join(os.getcwd(), r'data examples/gdas_txt')
+		src_folder = os.path.join(os.getcwd(), 'data examples\gdas_txt')
 	Path(dst_folder).mkdir(parents=True, exist_ok=True)
 	gdas_dst_paths = [sub.replace(src_folder, dst_folder).replace('gdas1', 'txt') for sub in gdas_src_paths]
 
