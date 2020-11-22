@@ -623,3 +623,4 @@ cython_debug/
 /data examples/Radiosonden/Haifa/2018/40179_20180912_12.dat
 /data examples/Radiosonden/Haifa/2018/40179_20180913_00.dat
 /exportToHTML/generating_background_signal.ipynb.html
+/ARLreader/chk_data.f
