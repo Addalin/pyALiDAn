@@ -236,12 +236,13 @@ class LidarProfile(object):
 
 
 # %%
-def generate_P(P0, c, A, tau, heights, sigma, beta, lidar_const=None, add_photon_noise=True):
+def generate_P(P0, c, A, tau, heights, sigma, beta, lidar_const=1, add_photon_noise=True):
 	""" Regenerate the lidar power readings according to atmospheric profile of backscatter (beta) and extinction
 	coefficient(sigma) """
 	dr = heights[1:] - heights[0:-1]  # dr for integration
 	last = dr[-1]
-	dr = np.append(dr, last)
+	dr = np.insert(dr.flatten(), 0, heights[0])
+
 	if sigma.ndim > 1:
 		dr = np.tile(dr.reshape(dr.shape[0], 1), sigma.shape[1])
 		heights = np.tile(heights.reshape(heights.shape[0], 1), sigma.shape[1])
@@ -254,14 +255,15 @@ def generate_P(P0, c, A, tau, heights, sigma, beta, lidar_const=None, add_photon
 	P = lidar_const * numerator / denominator
 
 	P[P < np.finfo(np.float).eps] = np.finfo(np.float).eps
-	P = P.round()
 
 	if add_photon_noise:
 		std_P = np.sqrt(P)
 		rand_P = std_P * np.random.normal(loc=0, scale=1.0, size=P.shape)
-		P = P + rand_P.round()
+		P = P.round + rand_P.round() # converting P to photons counts
 	P[P < np.finfo(np.float).eps] = np.finfo(np.float).eps
-	P = P.round()
+	if lidar_const>1: # lidar_const = 1 for cases of calculating P_mol without constant
+	 	P = P.round()
+
 	return P
 
 
