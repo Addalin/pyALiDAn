@@ -28,7 +28,8 @@ from dataclasses import dataclass
 # %% Basic physics constants
 
 eps = np.finfo(np.float).eps
-c = 299792.458  # Speed of light [Km/sec]
+C_km_s = 299792.458  # Speed of light [Km/sec]
+C_m_s = C_km_s * 1E+3  # Speed of light [m/sec]
 h_plank = 6.62606e-34  # plank constant [J sec]
 
 # %% pollyXT Lidar info
