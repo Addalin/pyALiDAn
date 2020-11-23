@@ -207,6 +207,8 @@ def generate_daily_molecular_profile(gdas_txt_paths, lambda_um=532,
 		res = df_sonde.apply(calc_beta_profile_df, axis=1, args=(lambda_um, time,), result_type='expand').astype(
 			'float64')
 		df_beta[res.columns] = res
+	df_sigma.index = heights
+	df_beta.index = heights
 
 	return df_sigma, df_beta
 
