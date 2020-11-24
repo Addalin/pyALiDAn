@@ -6,31 +6,29 @@ from datetime import datetime, timedelta
 import glob
 from molecular import rayleigh_scattering
 import numpy as np
-from constsLidar import LAMBDA, min_height
 from generate_atmosphere import RadiosondeProfile
 import re
 from netCDF4 import Dataset
 import sqlite3
 import fnmatch
 import matplotlib.pyplot as plt
+import global_settings as gs
 
 
+# %%
 def gdas2radiosonde(src_file, dst_file, col_names=None):
     """
     Helper function that converts a gdas file from TROPOS server, to a simple txt.
     The resulting file is without any prior info, and resembles the table format
     of a radiosonde file (see class: RadiosondeProfile)
-
     :param src_file: source file name
     :param dst_file: destination file name
     :param col_names: column names of the final table
+    :return:
     """
     if col_names is None:
-        col_names = ['PRES', 'HGHT', 'TEMP', 'UWND',
-                     'VWND', 'WWND', 'RELH', 'TPOT', 'WDIR', 'WSPD']
-
-    data_src = pd.read_fwf(src_file, skiprows=[0, 1, 2, 3, 4, 5, 6, 8],
-                           delimiter="\s+", skipinitialspace=True).dropna()
+        col_names = ['PRES', 'HGHT', 'TEMP', 'UWND', 'VWND', 'WWND', 'RELH', 'TPOT', 'WDIR', 'WSPD']
+    data_src = pd.read_fwf(src_file, skiprows=[0, 1, 2, 3, 4, 5, 6, 8], delimiter="\s+", skipinitialspace=True).dropna()
     # converting any kind of blank spaces to zeros
     for col in data_src.columns:
         if not is_numeric_dtype(data_src[col]):
@@ -43,56 +41,70 @@ def gdas2radiosonde(src_file, dst_file, col_names=None):
 # TODO: add warning if failed
 
 
-def gdas_tropos2txt(day_date, lon, lat):
-    # Converting gdas files from TROPOS to txt
+def gdas_tropos2txt(day_date, location='haifa', lat=32.8, lon=35.0, src_folder=[], dst_folder=[]):
+    """
+	Converting gdas files from TROPOS to txt
+	:param day_date: datetime.date of the date to be converted
+	:param location: station location name
+	:param lat: latitude of the station
+	:param lon: longitude of the station
+	:param src_folder: source folder that contains .gdas1 files
+	:param dst_folder:  destination folder to create for the converted files
+	:return:
+	"""
     # set source gdas files
     # TODO: Add namings and existing path validation (print warnings and errors)
-    src_folder = os.path.join(os.getcwd(), 'data_example', 'data_examples', 'gdas')
+    if not src_folder:
+        src_folder = os.path.join(os.getcwd(), 'data examples\gdas')
     if not os.path.exists(src_folder):
         os.makedirs(src_folder)
-    gdas_curd_pattern = 'haifa_{}_*_{}_{}.gdas1'.format(day_date.strftime('%Y%m%d'), lat, lon)
-    gdas_nxtd_pattern = 'haifa_{}_00_{}_{}.gdas1'.format((day_date + timedelta(days=1)).strftime('%Y%m%d'), lat, lon)
+    gdas_curd_pattern = '{}_{}_*_{}_{}.gdas1'.format(location, day_date.strftime('%Y%m%d'), lat, lon)
+    gdas_nxtd_pattern = '{}_{}_00_{}_{}.gdas1'.format(location, (day_date + timedelta(days=1)).strftime('%Y%m%d'), lat,
+                                                      lon)
     gdas_src_paths = sorted(glob.glob(os.path.join(src_folder, gdas_curd_pattern)))
     gdas_src_paths.append(os.path.join(src_folder, gdas_nxtd_pattern))
 
-    '''set dest txt files'''
-    dst_folder = os.path.join(os.getcwd(), 'tmp2')
+    # set dest txt files
     # TODO: Add validation and indicate if folder already existed or created now (print warnings and errors)
+
+    if not dst_folder:
+        src_folder = os.path.join(os.getcwd(), 'data examples\gdas_txt')
     Path(dst_folder).mkdir(parents=True, exist_ok=True)
     gdas_dst_paths = [sub.replace(src_folder, dst_folder).replace('gdas1', 'txt') for sub in gdas_src_paths]
 
     for (src_file, dst_file) in zip(gdas_src_paths, gdas_dst_paths):
         gdas2radiosonde(src_file, dst_file)
-        print('\n Done conversion src: ', src_file, 'dst: ', dst_file)
-        # sanity check
-        # data_dst =pd.read_csv(dst_file,delimiter="\s+")
-        # print(data_dst)
-
+    # print('\n Done conversion src: ', src_file, 'dst: ', dst_file) #TODO: run this command line only for debug mode
+    # sanity check
+    # data_dst =pd.read_csv(dst_file,delimiter="\s+")
+    # print(data_dst)
+    return gdas_dst_paths
     # TODO : set 'gdas_src_paths' and 'src_folder' according to 'start_date' and 'end_date' -
     #  for conversion of a big chunk of gdas files. See examples below.
     # TODO : set 'gdas_dst_paths' in similar way. Such that the folders of gdas and txt files will have same tree
     #  (or just save it in the same folders?)
     '''gdas_month_folder = os.path.join(gdas_parent_folder, day_date.strftime("%Y\%m"))
-    #print (os.path.exists(gdas_month_folder))
-    
-    gdas_cur_pattern = 'haifa_{}_*_{}_{}.gdas1'.format(day_date.strftime('%Y%m%d'),lat,lon)
-    gdas_next = 'haifa_{}_00_{}_{}.gdas1'.format((day_date+timedelta(days=1)).strftime('%Y%m%d'),lon,lat)
-    gdas_pattern  = os.path.join(gdas_month_folder,gdas_cur_pattern)
-    gdas_paths = sorted(glob.glob(gdas_pattern))
-    gdas_paths.append(os.path.join(gdas_month_folder,gdas_next))
-    #gdas_file = Ar.fname_from_date(day_date)
-    #print('name of input file ', gdas_pattern)'''
-    return gdas_dst_paths
+	print (os.path.exists(gdas_month_folder))
+	gdas_cur_pattern = 'haifa_{}_*_{}_{}.gdas1'.format(day_date.strftime('%Y%m%d'),lat,lon)
+	gdas_next = 'haifa_{}_00_{}_{}.gdas1'.format((day_date+timedelta(days=1)).strftime('%Y%m%d'),lon,lat)
+	gdas_pattern  = os.path.join(gdas_month_folder,gdas_cur_pattern)
+	gdas_paths = sorted(glob.glob(gdas_pattern))
+	gdas_paths.append(os.path.join(gdas_month_folder,gdas_next))
+	gdas_file = Ar.fname_from_date(day_date)
+	print('name of input file ', gdas_pattern)'''
 
 
 def extract_date_time(path, format_filename, format_times):
-    # Extracting datetime from file name using a formatter string.
-    #
-    # Usage:
-    # create a formatter string: format_filename=  r'-(.*)_(.*)-(.*)-.*.txt'
-    # Call the function:        f time_stamp = extract_date_time(soundePath,r'40179_(.*).txt',['%Y%m%d_%H'])
-    # Output:
-    #       time_stamps - A list of datetime objects
+    """
+    Extracting datetime from file name using a formatter string.
+    :param path: path to folder containing the files to observe
+    :param format_filename:  a formatter string
+    :param format_times: format of datetime in the file name
+    :return: time_stamps - A list of datetime objects
+    usage:  create a formatter string: format_filename=  r'-(.*)_(.*)-(.*)-.*.txt'
+            Call the function: time_stamp = extract_date_time(soundePath,r'40179_(.*).txt',['%Y%m%d_%H'])
+
+    """
     filename = os.path.basename(path)
     # print(filename)
     matchObj = re.match(format_filename, filename, re.M | re.I)
@@ -138,7 +150,13 @@ def calc_beta_profile_df(row, lambda_um=532.0, ind_n='beta'):
 
 
 def load_att_bsc(lidar_parent_folder, day_date):
-    # Load netcdf file of the attenuation backscatter profile(att_bsc.nc)
+    """
+    Load netcdf file of the attenuation backscatter profile(att_bsc.nc) according to date
+    :param lidar_parent_folder: this is the station main folder of the lidar
+    :param day_date: datetime obj of the measuring date
+    :return: paths to all *att_bsc.nc in the saved for day_date
+    """
+    #
 
     lidar_day_folder = os.path.join(lidar_parent_folder, day_date.strftime("%Y/%m/%d"))
     os.listdir(lidar_day_folder)
@@ -152,22 +170,36 @@ def load_att_bsc(lidar_parent_folder, day_date):
     return bsc_paths, profile_paths
 
 
-def generate_daily_molecular_profile(gdas_dst_paths):
-    # GENERATE DAILY MOLECULAR PROFILE from the converted files (above)
+def generate_daily_molecular_profile(gdas_txt_paths, lambda_um=532,
+                                     location='haifa', lat=32.8, lon=35.0,
+                                     min_height=0.229, top_height=22.71466, h_bins=3000):
+    """
+    Generating daily molecular profile from gdas txt file
+    :param gdas_txt_paths: paths to gdas txt files , containing table with the columns
+    "PRES	HGHT	TEMP	UWND	VWND	WWND	RELH	TPOT	WDIR	WSPD"
+    :param lambda_um: wavelength [um] e.g., for the green channel 532 [um]
+    :param location: location name of the lidar station, e.g., Haifa
+    :param lat: latitude of the station
+    :param lon: longitude of the station
+    :param min_height: Min height [km] **above sea level** (preferably this is the lidar height above sea level, e.g., Haifa min_height=0.229[km])
+    :param top_height: Top height [km] **above see level** (preferably this is lidar_top_height_of + min_height)
+    :param h_bins: Number of height bins                   (preferably this is the lidar height bins, sanity check for
+    this parameter gives dr= heights[1]-heights[0] =~ 7.5e-3[km] -> the height resolution of pollyXT lidar)
+    :return: Returns backscatter and extinction profiles as pandas-dataframes, according to Rayleigh scattering.
+    The resulted profile start at min_height, end at top_height and extrapolated to have h_bins.
+    """
 
-    '''physical parameters'''
-    lambda_um = LAMBDA.G * 1e+9
-    dr = 7.47e-3  # Height resolution dr~= 7.5e-3[km] (similar to the lidar height resolution)
-    top_height = 22.48566  # Top height for interest signals (similar to the top height of the lidar measurement)
-    heights = np.arange(min_height, top_height, dr)  # setting heights for interpolation of gdas/radiosonde inputs
-    print(heights.shape, min_height)
+    heights = np.linspace(min_height, top_height, h_bins)  # setting heights for interpolation of gdas/radiosonde inputs
+    # uncomment the commands below for sanity check of the desired height resolution
+    # dr = heights[1]-heights[0]
+    # print('h_bins=',heights.shape,' min_height=', min_height,' top_height=', top_height,' dr=',dr )
+
     df_sigma = pd.DataFrame()
     df_beta = pd.DataFrame()
 
-    for dst_file in gdas_dst_paths:
-        df_sonde = RadiosondeProfile(dst_file).get_df_sonde(heights)
-        # df_sonde = sondeprofile.get_df_sonde(heights)
-        time = extract_date_time(dst_file, r'haifa_(.*)_32.8_35.0.txt', ['%Y%m%d_%H'])[0]
+    for path in gdas_txt_paths:
+        df_sonde = RadiosondeProfile(path).get_df_sonde(heights)
+        time = extract_date_time(path, r'{}_(.*)_{}_{}.txt'.format(location, lat, lon), ['%Y%m%d_%H'])[0]
         '''Calculating molecular profiles from temperature and pressure'''
         res = df_sonde.apply(calc_sigma_profile_df, axis=1, args=(lambda_um, time,), result_type='expand').astype(
             'float64')
@@ -175,6 +207,8 @@ def generate_daily_molecular_profile(gdas_dst_paths):
         res = df_sonde.apply(calc_beta_profile_df, axis=1, args=(lambda_um, time,), result_type='expand').astype(
             'float64')
         df_beta[res.columns] = res
+    df_sigma.index = heights
+    df_beta.index = heights
 
     return df_sigma, df_beta
 
@@ -184,10 +218,8 @@ def extract_att_bsc(bsc_paths, wavelengths):
     For all .nc files under bsc_paths and for each wavelength in wavelengths
     extract the OC_attenuated_backscatter_{wavelen}nm and Lidar_calibration_constant_used
 
-    :param lidar_parent_folder: aath to netcdf folder
-    :param day_date: datetime to extract
+    :param bsc_paths: paath to netcdf folder
     :param wavelengths: iterable, list of wavelengths
-
     :return:
     """
 
@@ -210,7 +242,6 @@ def query_database(query="SELECT * FROM lidar_calibration_constant;", database_p
     query_basic = "
     SELECT * -- This is a comment. Get all columns from table
     FROM lidar_calibration_constant -- Which table to query
-    ;
     "
 
     query_advanced = "
@@ -237,35 +268,41 @@ def main():
 
     """set day,location"""
     day_date = datetime(2017, 9, 1)
+    haifa_station = gs.station
+    print(haifa_station)
+    # location = haifa_station.location
+    min_height = haifa_station.altitude + haifa_station.start_bin_height
+    top_height = haifa_station.altitude + haifa_station.end_bin_height
 
     # GDAS
     if DO_GDAS:
-        lon = 35.0
-        lat = 32.8
-        gdas_dst_paths = gdas_tropos2txt(day_date, lon, lat)
-        df_sigma, df_beta = generate_daily_molecular_profile(gdas_dst_paths)
+        lambda_um = gs.LAMBDA_um.G
+        gdas_dst_paths = gdas_tropos2txt(day_date, haifa_station.location, haifa_station.lat, haifa_station.lon)
+        df_sigma, df_beta = generate_daily_molecular_profile(gdas_dst_paths, lambda_um,
+                                                             haifa_station.location, haifa_station.lat,
+                                                             haifa_station.lon, min_height, top_height,
+                                                             haifa_station.n_bins)
         '''Visualize molecular profiles'''
         plt.figure()
         df_beta.plot()
         plt.show()
 
-
     # NETCDF
     if DO_NETCDF:
 
         # Get the paths
-        lidar_parent_folder = 'data_example/data_examples/netcdf'
+        lidar_parent_folder = os.path.join(os.getcwd(), r'/data examples/netcdf')
         bsc_paths, profile_paths = load_att_bsc(lidar_parent_folder, day_date)
 
-        wavelengths = ['355', '532', '1064']
+        wavelengths = gs.LAMBDA_um.get_elastic()  # [UV,G,IR]
 
         # Extract the OC_attenuated_backscatter_{wavelen}nm and Lidar_calibration_constant_used for all
         # files in bsc_paths and for all wavelengths
         # TODO do something with the data!
         extract_att_bsc(bsc_paths, wavelengths)
 
-        # Query the db for a specfic day & aavelength and calib method
-        wavelength = 1064
+        # Query the db for a specific day & wavelength and calibration method
+        wavelength = gs.LAMBDA_um.IR  # or wavelengths[0] # 1064 or
         day_diff = timedelta(days=1)
         start_day = day_date.strftime('%Y-%m-%d')
         till_date = (day_date + day_diff).strftime('%Y-%m-%d')
@@ -311,7 +348,7 @@ def main():
 
         df[['altitude', 'delta_r']] = df.apply(get_info_from_profile_nc, axis=1, result_type='expand')
         # TODO do something with the df
-        pass # add breakpoint here to see the df
+        pass  # add breakpoint here to see the df
 
 
 if __name__ == '__main__':

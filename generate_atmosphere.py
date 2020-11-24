@@ -75,7 +75,6 @@ class RadiosondeProfile(object):
 
 	def interpolateKMRLH(self, heights):
 		"""Interpolate relative humidity values for a given height profile.
-
 		Args:
 			heights (array): 1D grid of heights in kilometers.
 		"""
@@ -89,12 +88,21 @@ class RadiosondeProfile(object):
 		return relhs
 
 	def get_df_sonde(self):
-		return pd.DataFrame({'TEMPS': self._temps,'PRES': self._pressures ,'RELHS': self._RelativeHumidity}).astype('float64').fillna(0)
+		"""
+		:return: DataFrame of ['TEMPS','PRES','RELHS'] of radiosonde (or gdas) measurements,
+		interpolated according the height profile of the radiosonde file
+		"""
 
-	def get_df_sonde(self,heights):
-		return pd.DataFrame({'TEMPS':self.interpolateKmKelvin(heights),
-		                     'PRES':self.interpolateKMPres(heights),
-		                     'RELHS':self.interpolateKMRLH(heights)}).astype('float64').fillna(0)
+		return pd.DataFrame({'TEMPS': self._temps, 'PRES': self._pressures, 'RELHS': self._RelativeHumidity}).astype('float64').fillna(0)
+
+	def get_df_sonde(self, heights):
+		"""
+		:param heights: profile with the min_height, top_height and resolution set by the user
+		:return: DataFrame of ['TEMPS','PRES','RELHS'] of radiosonde (or gdas) measurements interpolated according the input height
+		"""
+		return pd.DataFrame( {'TEMPS': self.interpolateKmKelvin(heights),
+		                     'PRES': self.interpolateKMPres(heights),
+		                     'RELHS': self.interpolateKMRLH(heights)} ).astype('float64').fillna(0)
 
 class LidarProfile(object):
 	"""Temperature Profile Handling
@@ -301,7 +309,7 @@ def generate_aerosol_single_voxel(density, refractive_index, reff, veff, size):
 def generate_water_single_voxel(denstype='ext', density=100, reff=10, veff=0.1, size=0.02):
 	# Voxel parameters
 	Vdx, Vdy, Vdz = size, size, size
-	temperature_profile_0_20km = [294.2, 289.7, 295.2, 279.2, 273.2, 287.2, 261.2, 254.7, 248.2, 241.7, \
+	temperature_profile_0_20km = [294.2, 289.7, 295.2, 279.2, 273.2, 287.2, 261.2, 254.7, 248.2, 241.7,\
 	                              235.3, 228.8, 222.3, 215.8, 215.7, 215.7, 215.7, 215.7, 216.8, 217.9, 219.2]
 	z_levels_0_20km = np.linspace(0, 20, len(temperature_profile_0_20km))
 	zlevels = np.linspace(0, 2 * Vdz, 3)

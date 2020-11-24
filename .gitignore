@@ -223,3 +223,32 @@ cython_debug/
 
 # Remove previous ipynb_checkpoints
 #   git rm -r .ipynb_checkpoints/
+
+
+/ARLreader/
+/ARLreader/chk_data.f
+/background_signal/
+/code from Zhenping/
+/data examples/
+/exportToHTML/
+/git-filter-repo/
+/legacy_code/
+/Matlab_code_Polly_Haifa/
+/molecular_old/
+/Pollynet_Processing_Chain/
+/bsc_profiles_26042017.zip
+/clusterable_data.npy
+/data from eshkol
+/generate_air_aerosol_from vadim.m
+/generating_background_signal.aux
+/generating_background_signal.log
+/generating_background_signal.out
+/generating_background_signal.synctex.gz
+/iannis_b-lidar_molecular-de3d2ef2f36b.zip
+/named_colors.ipynb
+/optimize_lidar_const.py
+/pois.m
+/r_m.eps
+/protokol_linfit_20170913.dat
+/test_file_0.txt
+/testfile.txt
