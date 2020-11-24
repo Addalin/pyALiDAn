@@ -236,6 +236,7 @@ cython_debug/
 /Matlab_code_Polly_Haifa/
 /molecular_old/
 /Pollynet_Processing_Chain/
+/git-filter-repo/
 /bsc_profiles_26042017.zip
 /clusterable_data.npy
 /data from eshkol
@@ -252,4 +253,4 @@ cython_debug/
 /protokol_linfit_20170913.dat
 /test_file_0.txt
 /testfile.txt
-/git-filter-repo/
+
