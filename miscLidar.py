@@ -236,33 +236,57 @@ class LidarProfile(object):
 
 
 # %%
-def generate_P(P0, c, A, tau, heights, sigma, beta, lidar_const=1, add_photon_noise=True):
-	""" Regenerate the lidar power readings according to atmospheric profile of backscatter (beta) and extinction
-	coefficient(sigma) """
-	dr = heights[1:] - heights[0:-1]  # dr for integration
-	last = dr[-1]
-	dr = np.insert(dr.flatten(), 0, heights[0])
-
-	if sigma.ndim > 1:
+def calc_tau(sigma,heights):
+	"""
+	Calculate the the attenuated optical depth (tau is the optical depth), through a collumn of heights.
+	:param sigma: ndarray (1-d or 2-d) of attenuation coefficents related to heights vector
+	:param heigts: vector of heights.
+	Important note: make sure the heights are biased to GROUND (above the lidar), othewise the integration is wrong!
+	:return: vector of attenuated optoical depth : tau = integral( sigma(r) * dr)
+	"""
+	if sigma.ndim == 1:
+		dr = heights[1:] - heights[0:-1]  # dr for integration
+		dr = np.insert(dr.flatten(), 0, heights[0])
+	else:
+		dr = heights[1:,0] - heights[0:-1,0]  # dr for integration
+		dr = np.insert(dr.flatten(), 0, heights[0,0])
 		dr = np.tile(dr.reshape(dr.shape[0], 1), sigma.shape[1])
-		heights = np.tile(heights.reshape(heights.shape[0], 1), sigma.shape[1])
-	if lidar_const is None:
-		lidar_const = 0.5 * P0 * c * tau * A
 
 	tau = np.cumsum(sigma * dr, axis=0)
+
+	return tau
+
+
+def generate_P(P0, c, A, dt, heights, sigma, beta, lidar_const=1, add_photon_noise=True):
+	""" Regenerate the lidar power readings according to atmospheric profile of backscatter (beta) and extinction
+	coefficient(sigma) """
+	if sigma.ndim > 1:
+		heights = np.tile(heights.reshape(heights.shape[0], 1), sigma.shape[1])
+	tau = calc_tau(sigma,heights)
+	#dr = heights[1:] - heights[0:-1]  # dr for integration
+	#dr = np.insert(dr.flatten(), 0, heights[0])
+
+	#if sigma.ndim > 1:
+	#	dr = np.tile(dr.reshape(dr.shape[0], 1), sigma.shape[1])
+	#	heights = np.tile(heights.reshape(heights.shape[0], 1), sigma.shape[1])
+	if lidar_const is None:
+		lidar_const = 0.5 * P0 * c * dt * A
+
+	#tau = np.cumsum(sigma * dr, axis=0)
 	numerator = beta * np.exp(-2 * tau)  # add axis
 	denominator = np.power(heights, 2) + eps  # epsilon is to avoid NaN
 	P = lidar_const * numerator / denominator
 
 	P[P < np.finfo(np.float).eps] = np.finfo(np.float).eps
 
-	if add_photon_noise:
-		std_P = np.sqrt(P)
-		rand_P = std_P * np.random.normal(loc=0, scale=1.0, size=P.shape)
-		P = P.round + rand_P.round() # converting P to photons counts
-	P[P < np.finfo(np.float).eps] = np.finfo(np.float).eps
 	if lidar_const>1: # lidar_const = 1 for cases of calculating P_mol without constant
-	 	P = P.round()
+		if add_photon_noise:
+			std_P = np.sqrt(P)
+			rand_P = std_P * np.random.normal(loc=0, scale=1.0, size=P.shape)
+			P = P + rand_P
+		P = P.round() # converting P to photons counts
+
+	P[P < np.finfo(np.float).eps] = np.finfo(np.float).eps
 
 	return P
 

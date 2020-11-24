@@ -69,7 +69,7 @@ def gdas_tropos2txt(day_date, location='haifa', lat=32.8, lon=35.0, src_folder=[
     # TODO: Add validation and indicate if folder already existed or created now (print warnings and errors)
 
     if not dst_folder:
-        dst_folder = os.path.join(os.getcwd(), 'data examples','gdas_txt')
+        dst_folder = os.path.join(os.getcwd(), 'data examples', 'gdas_txt')
     Path(dst_folder).mkdir(parents=True, exist_ok=True)
     gdas_dst_paths = [sub.replace(src_folder, dst_folder).replace('gdas1', 'txt') for sub in gdas_src_paths]
 
@@ -84,6 +84,7 @@ def gdas_tropos2txt(day_date, location='haifa', lat=32.8, lon=35.0, src_folder=[
     #  for conversion of a big chunk of gdas files. See examples below.
     # TODO : set 'gdas_dst_paths' in similar way. Such that the folders of gdas and txt files will have same tree
     #  (or just save it in the same folders?)
+
     '''gdas_month_folder = os.path.join(gdas_parent_folder, day_date.strftime("%Y\%m"))
 	print (os.path.exists(gdas_month_folder))
 	gdas_cur_pattern = 'haifa_{}_*_{}_{}.gdas1'.format(day_date.strftime('%Y%m%d'),lat,lon)
@@ -159,7 +160,8 @@ def load_att_bsc(lidar_parent_folder, day_date):
     """
     #
 
-    lidar_day_folder = os.path.join(lidar_parent_folder, day_date.strftime("%Y"), day_date.strftime("%m"), day_date.strftime("%d"))
+    lidar_day_folder = os.path.join(lidar_parent_folder, day_date.strftime("%Y"), day_date.strftime("%m"),
+                                    day_date.strftime("%d"))
     os.listdir(lidar_day_folder)
 
     bsc_pattern = os.path.join(lidar_day_folder, "*_att_bsc.nc")
@@ -290,7 +292,8 @@ def main():
         df_beta.plot()
         plt.xlabel('Height [km]')
         plt.ylabel('Time [hr]')
-        plt.title('backscatter profiles of {} station during {} '.format(haifa_station.location, day_date.strftime("%d-%m-%Y")))
+        plt.title('backscatter profiles of {} station during {} '.format(haifa_station.location,
+                                                                         day_date.strftime("%d-%m-%Y")))
         plt.show()
 
     # NETCDF
@@ -298,7 +301,7 @@ def main():
 
         # Get the paths
         print('start_nc')
-        lidar_parent_folder = os.path.join('.','data examples','netcdf')
+        lidar_parent_folder = os.path.join('.', 'data examples', 'netcdf')
         print('path', lidar_parent_folder)
         bsc_paths, profile_paths = load_att_bsc(lidar_parent_folder, day_date)
 
