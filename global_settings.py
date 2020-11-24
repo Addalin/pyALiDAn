@@ -49,7 +49,8 @@ class station:
         self.altitude = 229  # [m] The Lidar's altitude   ( above sea level, see 'altitude' in ' *_att_bsc.nc)
         self.start_bin_height = 78.75  # [m] The first bin's height ( above ground level - a.k.a above the lidar, see height[0]  in *_att_bsc.nc)
         self.end_bin_height = 22485.66015  # [m] The last bin's height  ( see height[-1] in *_att_bsc.nc)
-        self.n_bins = 3000  # [#] Number of bins         ( see height.shape  in  *_att_bsc.nc)
+        self.n_bins = 3000      # [#] Number of bins         ( see height.shape  in  *_att_bsc.nc)
+        self.dt = 50 * 1E-9     # [sec] temporal pulse width of the lidar
 
     def __str__(self):
         return str(self.__class__) + ": " + str(self.__dict__)

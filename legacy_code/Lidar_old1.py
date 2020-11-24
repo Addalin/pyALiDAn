@@ -12,7 +12,7 @@ import pandas as pd
 from generate_atmosphere import LidarProfile
 #import mpld3
 import miscLidar as mscLid
-from global_settings import *
+import global_settings as gs
 import matplotlib.patches as mpatches
 eps = np.finfo(np.float).eps
 plt.rcParams['text.latex.preamble']=[r"\usepackage{amsmath}"]
@@ -65,7 +65,7 @@ P0 = 100*200000  # TODO : ask for this value
 lambda_uv = 355e-9
 lambda_g = 532e-9 # wavelength [nm]
 lambda_ir = 1064e-9
-J_photon = h_plank*c/lambda_uv
+J_photon = gs.h_plank*gs.C_km_s/lambda_uv
 
 beta[beta<eps]= eps
 alpha[alpha<eps] = eps
@@ -73,8 +73,8 @@ ind = np.where(alpha>10*eps)
 B_0 =  (beta/alpha)[ind].mean()
 # %%
 '''Calculate the power and the Logaritmic range adjusted power'''
-tau = 50e-9 # [sec]
-P = mscLid.generate_P(P0,c,A,tau,heights,alpha,beta)
+dt = 50e-9 # [sec]
+P = mscLid.generate_P(P0, gs.C_km_s, A, dt, heights, alpha, beta)
 #P[P<eps] = eps
 P= P.round()
 P[P<eps] = eps
@@ -149,8 +149,8 @@ ax[1].legend()
     
 n = len(heights)
 dr = np.mean(heights[1:]-heights[0:-1]) # dr for integration
-tau = dr*2/c  #[sec]  Is this resonable ? How to set the real value 
-lidar_const = 0.5*P0*c*tau*A
+dt = dr * 2 / gs.C_km_s  #[sec]  Is this resonable ? How to set the real value
+lidar_const = 0.5 * P0 * gs.C_km_s * dt * A
 
 '''Model matrices '''
 D = dr*np.tril(np.ones((n,n)),0)
@@ -648,7 +648,7 @@ heights = np.linspace(min_height, 10, 1334)
 alpha=np.interp(heights,heights_orig,alpha_orig)
 beta=np.interp(heights,heights_orig,beta_orig)
 
-P = mscLid.generate_P(P0,c,A,tau,heights,alpha,beta)
+P = mscLid.generate_P(P0, c, A, dt, heights, alpha, beta)
 
 n = len(heights)
 U_sol_interp = np.interp(heights,heights_orig,np.squeeze(np.asarray(U_sol1)))  # U_sol_interp - is the coarse solution
@@ -671,7 +671,7 @@ heights1 = mat['alt'][0][sind:eind]/1000.0 #converts [m] to [Km]
 
 n = len(heights1)
 dr = np.mean(heights1[1:]-heights1[0:-1])
-tau = dr*2/c
+dt = dr * 2 / c
 B_0 = 55
 #P = mat['bg_corr'][chan][sind:eind]
 #P[P<=0]=eps
@@ -695,11 +695,11 @@ beta_sol_sm = mat['beta_aerosol_sm'][chan][sind:eind]
 alpha = sigma_sol_sm
 beta = beta_sol_sm
 
-lidar_const = 25909075299601.637000 #0.5*P0*c*tau*A
+lidar_const = 25909075299601.637000 #0.5*P0*c*dt*A
 ConstP=lidar_const*B_0
 tot_alpha = alpha+sigma_mol
 tot_beta=beta+beta_sol
-P1 = mscLid.generate_P(P0,c,A,tau,heights,alpha,beta)
+P1 = mscLid.generate_P(P0, c, A, dt, heights, alpha, beta)
 P1[np.isnan(P1)]=0
 #P[P<eps] = eps
 #P1= P1.round()
