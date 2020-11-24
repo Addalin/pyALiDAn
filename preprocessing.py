@@ -134,6 +134,20 @@ def calc_sigma_profile_df(row, lambda_um=532.0, indx_n='sigma'):
                                                          C=385.0, rh=row['RELHS'])], index=[indx_n])
 
 
+def cal_e_tau_df(col, altitude):
+    """
+    Calculate the the attenuated optical depth (tau is the optical depth).
+    Calculation is per column of the backscatter (sigma) dataframe.
+    :param col: column of sigma_df
+    :param altitude: the altitude of the the lidar station above sea level
+    :return: Series of exp(-2*tau)  , tau = integral( sigma(r) * dr)
+    """
+
+    # TODO: validate height scale (m or km)
+    heights = col.index.to_numpy() - altitude
+    tau = mscLid.calc_tau(col, heights)
+    return pd.Series(np.exp(-2 * tau))
+
 def calc_beta_profile_df(row, lambda_um=532.0, ind_n='beta'):
     """
     Returns pd series of backscatter profile from a radiosonde dataframe containing the
@@ -149,28 +163,6 @@ def calc_beta_profile_df(row, lambda_um=532.0, ind_n='beta'):
                                                            pressure=row['PRES'],
                                                            temperature=row['TEMPS'],
                                                            C=385.0, rh=row['RELHS'])], index=[ind_n])
-
-
-def load_att_bsc(lidar_parent_folder, day_date):
-    """
-    Load netcdf file of the attenuation backscatter profile(att_bsc.nc) according to date
-    :param lidar_parent_folder: this is the station main folder of the lidar
-    :param day_date: datetime obj of the measuring date
-    :return: paths to all *att_bsc.nc in the saved for day_date
-    """
-    #
-
-    lidar_day_folder = os.path.join(lidar_parent_folder, day_date.strftime("%Y"), day_date.strftime("%m"),
-                                    day_date.strftime("%d"))
-    os.listdir(lidar_day_folder)
-
-    bsc_pattern = os.path.join(lidar_day_folder, "*_att_bsc.nc")
-    profile_pattern = os.path.join(lidar_day_folder, "*[0-9]_profiles.nc")
-
-    bsc_paths = sorted(glob.glob(bsc_pattern))
-    profile_paths = sorted(glob.glob(profile_pattern))
-
-    return bsc_paths, profile_paths
 
 
 def generate_daily_molecular_profile(gdas_txt_paths, lambda_um=532,
@@ -214,6 +206,28 @@ def generate_daily_molecular_profile(gdas_txt_paths, lambda_um=532,
     df_beta.index = heights
 
     return df_sigma, df_beta
+
+
+def load_att_bsc(lidar_parent_folder, day_date):
+    """
+    Load netcdf file of the attenuation backscatter profile(att_bsc.nc) according to date
+    :param lidar_parent_folder: this is the station main folder of the lidar
+    :param day_date: datetime obj of the measuring date
+    :return: paths to all *att_bsc.nc in the saved for day_date
+    """
+    #
+
+    lidar_day_folder = os.path.join(lidar_parent_folder, day_date.strftime("%Y"), day_date.strftime("%m"),
+                                    day_date.strftime("%d"))
+    os.listdir(lidar_day_folder)
+
+    bsc_pattern = os.path.join(lidar_day_folder, "*_att_bsc.nc")
+    profile_pattern = os.path.join(lidar_day_folder, "*[0-9]_profiles.nc")
+
+    bsc_paths = sorted(glob.glob(bsc_pattern))
+    profile_paths = sorted(glob.glob(profile_pattern))
+
+    return bsc_paths, profile_paths
 
 
 def extract_att_bsc(bsc_paths, wavelengths):
