@@ -13,6 +13,7 @@ import sqlite3
 import fnmatch
 import matplotlib.pyplot as plt
 import global_settings as gs
+import miscLidar as mscLid
 
 
 # %%
@@ -68,7 +69,7 @@ def gdas_tropos2txt(day_date, location='haifa', lat=32.8, lon=35.0, src_folder=[
     # TODO: Add validation and indicate if folder already existed or created now (print warnings and errors)
 
     if not dst_folder:
-        src_folder = os.path.join(os.getcwd(), 'data examples\gdas_txt')
+        dst_folder = os.path.join(os.getcwd(), 'data examples','gdas_txt')
     Path(dst_folder).mkdir(parents=True, exist_ok=True)
     gdas_dst_paths = [sub.replace(src_folder, dst_folder).replace('gdas1', 'txt') for sub in gdas_src_paths]
 
@@ -158,7 +159,7 @@ def load_att_bsc(lidar_parent_folder, day_date):
     """
     #
 
-    lidar_day_folder = os.path.join(lidar_parent_folder, day_date.strftime("%Y/%m/%d"))
+    lidar_day_folder = os.path.join(lidar_parent_folder, day_date.strftime("%Y"), day_date.strftime("%m"), day_date.strftime("%d"))
     os.listdir(lidar_day_folder)
 
     bsc_pattern = os.path.join(lidar_day_folder, "*_att_bsc.nc")
@@ -265,10 +266,11 @@ def query_database(query="SELECT * FROM lidar_calibration_constant;", database_p
 def main():
     DO_GDAS = True
     DO_NETCDF = True
-
+    wavs_um = gs.LAMBDA_um()
+    print('waves_um', wavs_um)
     """set day,location"""
     day_date = datetime(2017, 9, 1)
-    haifa_station = gs.station
+    haifa_station = gs.station()
     print(haifa_station)
     # location = haifa_station.location
     min_height = haifa_station.altitude + haifa_station.start_bin_height
@@ -276,33 +278,39 @@ def main():
 
     # GDAS
     if DO_GDAS:
-        lambda_um = gs.LAMBDA_um.G
+        lambda_um = wavs_um.G
         gdas_dst_paths = gdas_tropos2txt(day_date, haifa_station.location, haifa_station.lat, haifa_station.lon)
+        print('gdas_dst_paths', gdas_dst_paths)
         df_sigma, df_beta = generate_daily_molecular_profile(gdas_dst_paths, lambda_um,
                                                              haifa_station.location, haifa_station.lat,
-                                                             haifa_station.lon, min_height, top_height,
+                                                             haifa_station.lon, 1E-3 * min_height, 1E-3 * top_height,
                                                              haifa_station.n_bins)
         '''Visualize molecular profiles'''
         plt.figure()
         df_beta.plot()
+        plt.xlabel('Height [km]')
+        plt.ylabel('Time [hr]')
+        plt.title('backscatter profiles of {} station during {} '.format(haifa_station.location, day_date.strftime("%d-%m-%Y")))
         plt.show()
 
     # NETCDF
     if DO_NETCDF:
 
         # Get the paths
-        lidar_parent_folder = os.path.join(os.getcwd(), r'/data examples/netcdf')
+        print('start_nc')
+        lidar_parent_folder = os.path.join('.','data examples','netcdf')
+        print('path', lidar_parent_folder)
         bsc_paths, profile_paths = load_att_bsc(lidar_parent_folder, day_date)
 
-        wavelengths = gs.LAMBDA_um.get_elastic()  # [UV,G,IR]
+        waves_elastic = wavs_um.get_elastic()  # [UV,G,IR]
 
         # Extract the OC_attenuated_backscatter_{wavelen}nm and Lidar_calibration_constant_used for all
         # files in bsc_paths and for all wavelengths
         # TODO do something with the data!
-        extract_att_bsc(bsc_paths, wavelengths)
+        extract_att_bsc(bsc_paths, waves_elastic)
 
         # Query the db for a specific day & wavelength and calibration method
-        wavelength = gs.LAMBDA_um.IR  # or wavelengths[0] # 1064 or
+        wavelength = wavs_um.IR  # or wavelengths[0] # 1064 or
         day_diff = timedelta(days=1)
         start_day = day_date.strftime('%Y-%m-%d')
         till_date = (day_date + day_diff).strftime('%Y-%m-%d')
@@ -317,7 +325,7 @@ def main():
             (cali_start_time BETWEEN '{start_day}' AND '{till_date}');
         """
 
-        db_path = "data_example/pollyxt_tropos_calibration.db"
+        db_path = "data examples/netcdf/pollyxt_tropos_calibration.db"
         df = query_database(query=query, database_path=db_path)
 
         # Build matching_nc_file
@@ -339,9 +347,9 @@ def main():
         df['matched_nc_file'] = df['nc_path'].apply(get_file_match)
 
         # Get the altitude (r0) and delta_r
-        def get_info_from_profile_nc(s):
-            data = Dataset(s['matched_nc_file'])
-            wavelen = s.wavelength
+        def get_info_from_profile_nc(row):
+            data = Dataset(row['matched_nc_file'])
+            wavelen = row.wavelength
             delta_r = data.variables[f'reference_height_{wavelen}'][:].data[1] - \
                       data.variables[f'reference_height_{wavelen}'][:].data[0]
             return data.variables['altitude'][:].data.item(), delta_r
