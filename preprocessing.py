@@ -242,7 +242,6 @@ def query_database(query="SELECT * FROM lidar_calibration_constant;", database_p
     query_basic = "
     SELECT * -- This is a comment. Get all columns from table
     FROM lidar_calibration_constant -- Which table to query
-    ;
     "
 
     query_advanced = "
