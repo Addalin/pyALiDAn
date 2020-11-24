@@ -25,6 +25,7 @@ Modules for physical and pollyXT constants.
 
 import numpy as np
 from dataclasses import dataclass
+
 # %% Basic physics constants
 
 eps = np.finfo(np.float).eps
@@ -35,20 +36,23 @@ h_plank = 6.62606e-34  # plank constant [J sec]
 # %% pollyXT Lidar info
 n_chan = 13
 
-#%% Haifa station info
 
-
+# %% Haifa station info
 
 
 @dataclass()
 class station:
-    location = 'haifa'
-    lon = 35.0
-    lat = 32.8
-    altitude = 229                # [m] The Lidar's altitude   ( above sea level, see 'altitude' in ' *_att_bsc.nc)
-    start_bin_height = 78.75      # [m] The first bin's height ( above ground level - a.k.a above the lidar, see height[0]  in *_att_bsc.nc)
-    end_bin_height = 22485.66015  # [m] The last bin's height  ( see height[-1] in *_att_bsc.nc)
-    n_bins = 3000                 # [#] Number of bins         ( see height.shape  in  *_att_bsc.nc)
+    def __init__(self):
+        self.location = 'haifa'
+        self.lon = 35.0
+        self.lat = 32.8
+        self.altitude = 229  # [m] The Lidar's altitude   ( above sea level, see 'altitude' in ' *_att_bsc.nc)
+        self.start_bin_height = 78.75  # [m] The first bin's height ( above ground level - a.k.a above the lidar, see height[0]  in *_att_bsc.nc)
+        self.end_bin_height = 22485.66015  # [m] The last bin's height  ( see height[-1] in *_att_bsc.nc)
+        self.n_bins = 3000  # [#] Number of bins         ( see height.shape  in  *_att_bsc.nc)
+
+    def __str__(self):
+        return str(self.__class__) + ": " + str(self.__dict__)
 
 
 #### TODO: station parameters load from station_info.csv
@@ -75,34 +79,36 @@ class CHANNELS():
     V1NF = 11  # Near field Ramman channel - 387[nm]
 
 
-class LAMBDA_m():
-    def __init__(self):
-        pass
-    ''' Class of pollyXT lidar wavelengths, values are in meters '''
-    UV = 355e-9   # UV channel - 355[nm]
-    V_1 = 387e-9  # V_1 Ramman channel of Nitrogen N2 - 386[nm]
-    V_2 = 407e-9  # V_2 Ramman channel of water H2O - 407[nm]
-    G = 532e-9    # Green channel - 532[nm]
-    R = 607e-9    # Red Raman channel - 607[nm]
-    IR = 1064e-9  # IR channel - 1064[nm]
+class LAMBDA_um(object):
+    def __init__(self, scale=1):
+        # pass
+        """ Class of pollyXT lidar wavelengths, values are in micro meters
+        :param scale: unit scaling to [um]
+        """
+        self.UV = 355 * scale  # UV channel - 355[um]
+        self.V_1 = 387 * scale  # V_1 Ramman channel of Nitrogen N2 - 386[um]
+        self.V_2 = 407 * scale  # V_2 Ramman channel of water H2O - 407[nm]
+        self.G = 532 * scale  # Green channel - 532[um]
+        self.R = 607 * scale  # Red Raman channel - 607[um]
+        self.IR = 1064 * scale  # IR channel - 1064[um]
 
     def get_elastic(self):
         return [self.UV, self.G, self.IR]
 
-class LAMBDA_um():
-    def __init__(self):
-        pass
-    ''' Class of pollyXT lidar wavelengths, values are in micro meters '''
-    UV = 355   # UV channel - 355[um]
-    V_1 = 387  # V_1 Ramman channel of Nitrogen N2 - 386[um]
-    V_2 = 407  # V_2 Ramman channel of water H2O - 407[nm]
-    G = 532    # Green channel - 532[um]
-    R = 607    # Red Raman channel - 607[um]
-    IR = 1064  # IR channel - 1064[um]
+    def __str__(self):
+        return str(self.__class__) + ": " + str(self.__dict__)
 
-    def get_elastic(self):
-        return [self.UV, self.G, self.IR]
+class LAMBDA_m(LAMBDA_um):
+    def __init__(self):
+        LAMBDA_um.__init__(self, 1E-9)
+
 
 # %%DEBUG -----------------------------
 if __name__ == '__main__':
-	print('This files contains some useful constants')
+    print('This files contains some useful constants')
+    wavelengths = LAMBDA_um()
+    print(wavelengths)
+    wavelengths_m = LAMBDA_m()
+    print(wavelengths_m.get_elastic())
+    haifa_station = station()
+    print(haifa_station)
