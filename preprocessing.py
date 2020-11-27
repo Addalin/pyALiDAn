@@ -29,8 +29,14 @@ def gdas2radiosonde ( src_file , dst_file , col_names = None ) :
     """
     if col_names is None :
         col_names = [ 'PRES' , 'HGHT' , 'TEMP' , 'UWND' , 'VWND' , 'WWND' , 'RELH' , 'TPOT' , 'WDIR' , 'WSPD' ]
-    data_src = pd.read_fwf ( src_file , skiprows = [ 0 , 1 , 2 , 3 , 4 , 5 , 6 , 8 ] , delimiter = "\s+" ,
+    try:
+        data_src = pd.read_fwf ( src_file , skiprows = [ 0 , 1 , 2 , 3 , 4 , 5 , 6 , 8 ] , delimiter = "\s+" ,
                              skipinitialspace = True ).dropna ( )
+    except:
+        print ( '\n Failed reading {}. \n Check the source file, '
+                'or generate it again with ARLreader module'.format ( src_file) )
+        return None
+
     # converting any kind of blank spaces to zeros
     try:
         for col in data_src.columns :

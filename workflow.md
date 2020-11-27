@@ -49,7 +49,7 @@ Each sample contains the followings:
 2. Generate a daily molecular profile (2D) from the converted txt files  
 3. create a class of station(<location_name>) loaded from stations_info.csv
 4. Create a list of time slots from the database file
-5. Create and save database samples
+5. Create and save database samples (dataloader)
 6. separate and organize the modules:  preprocessing, micLidar , dataloader 
 
 ## TODOS and Open issues to figure out:
