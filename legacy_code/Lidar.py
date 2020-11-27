@@ -54,7 +54,7 @@ sounde_profile = RadiosondeProfile(soundePath)
 temps = sounde_profile.interpolateKmKelvin(heights)     # Temprature [K]
 pres = sounde_profile.interpolateKMPres(heights)        # Pressures [hPa]
 relhs = sounde_profile.interpolateKMRLH(heights)        # Atmospheric relative humidity [%]
-lambda_um = LAMBDA_um.G  # Changing wavelength to [nm] units; these are the input requirments of "molecular" module.
+lambda_um = LAMBDA_nm.G  # Changing wavelength to [nm] units; these are the input requirments of "molecular" module.
 sigma_mol = rayleigh_scattering.alpha_rayleigh(wavelength = lambda_um, pressure=pres, temperature=temps, C=385., rh=relhs)*1e+3 # converting from [1/m] to [1/km] 
 beta_mol = rayleigh_scattering.beta_pi_rayleigh(wavelength = lambda_um, pressure=pres, temperature=temps, C=385., rh=relhs)*1e+3 # converting from [1/m] to [1/km sr] 
 

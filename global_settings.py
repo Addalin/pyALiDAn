@@ -83,18 +83,18 @@ class CHANNELS():
     V1NF = 11  # Near field Ramman channel - 387[nm]
 
 
-class LAMBDA_um(object):
+class LAMBDA_nm( object ):
     def __init__(self, scale=1):
         # pass
         """ Class of pollyXT lidar wavelengths, values are in micro meters
-        :param scale: unit scaling to [um]
+        :param scale: unit scaling to [nm]
         """
-        self.UV = 355 * scale  # UV channel - 355[um]
-        self.V_1 = 387 * scale  # V_1 Ramman channel of Nitrogen N2 - 386[um]
+        self.UV = 355 * scale  # UV channel - 355[nm]
+        self.V_1 = 387 * scale  # V_1 Ramman channel of Nitrogen N2 - 386[nm]
         self.V_2 = 407 * scale  # V_2 Ramman channel of water H2O - 407[nm]
-        self.G = 532 * scale  # Green channel - 532[um]
-        self.R = 607 * scale  # Red Raman channel - 607[um]
-        self.IR = 1064 * scale  # IR channel - 1064[um]
+        self.G = 532 * scale  # Green channel - 532[nm]
+        self.R = 607 * scale  # Red Raman channel - 607[nm]
+        self.IR = 1064 * scale  # IR channel - 1064[nm]
 
     def get_elastic(self):
         return [self.UV, self.G, self.IR]
@@ -102,15 +102,15 @@ class LAMBDA_um(object):
     def __str__(self):
         return str(self.__class__) + ": " + str(self.__dict__)
 
-class LAMBDA_m(LAMBDA_um):
+class LAMBDA_m( LAMBDA_nm ):
     def __init__(self):
-        LAMBDA_um.__init__(self, 1E-9)
+        LAMBDA_nm.__init__( self , 1E-9 )
 
 
 # %%DEBUG -----------------------------
 if __name__ == '__main__':
     print('This files contains some useful constants')
-    wavelengths = LAMBDA_um()
+    wavelengths = LAMBDA_nm( )
     print(wavelengths)
     wavelengths_m = LAMBDA_m()
     print(wavelengths_m.get_elastic())

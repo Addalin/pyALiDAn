@@ -111,19 +111,19 @@ def extract_date_time ( path , format_filename , format_times ) :
     return time_stamps
 
 
-def calc_sigma_profile_df ( row , lambda_um = 532.0 , indx_n = 'sigma' ) :
+def calc_sigma_profile_df ( row , lambda_nm = 532.0 , indx_n = 'sigma' ) :
     """
     Returns pd series of extinction profile [1/m] from a radiosonde dataframe containing the
     columns:['PRES','TEMPS','RELHS']. The function applies on rows of the radiosonde df.
     :param row: row of radiosonde df
-    :param lambda_um: wavelength in [um], e.g, for green lambda_um = 532.0 [um]
+    :param lambda_nm: wavelength in [nm], e.g, for green lambda_nm = 532.0 [nm]
     :param indx_n: index name, the column name of the result. The default is 'sigma'
     but could be useful to get profiles for several hours each have a different index name
     (e.g., datetime object of measuring time of the radiosonde as datetime.datetime(2017, 9, 2, 0, 0))
     :return: pd series of extinction profile [1/m]
     """
     return pd.Series (
-        data = [ rayleigh_scattering.alpha_rayleigh ( wavelength = lambda_um , pressure = row [ 'PRES' ] ,
+        data = [ rayleigh_scattering.alpha_rayleigh ( wavelength = lambda_nm , pressure = row [ 'PRES' ] ,
                                                       temperature = row [ 'TEMPS' ] , C = 385.0 ,
                                                       rh = row [ 'RELHS' ] ) ] ,
         index = [ indx_n ] )
@@ -144,32 +144,32 @@ def cal_e_tau_df ( col , altitude ) :
     return pd.Series ( np.exp ( -2 * tau ) )
 
 
-def calc_beta_profile_df ( row , lambda_um = 532.0 , ind_n = 'beta' ) :
+def calc_beta_profile_df ( row , lambda_nm = 532.0 , ind_n = 'beta' ) :
     """
     Returns pd series of backscatter profile from a radiosonde dataframe containing the
     columns:['PRES','TEMPS',RELHS]. The function applies on rows of the radiosonde df.
     :param row: row of radiosonde df
-    :param lambda_um: wavelength in [um], e.g, for green lambda_um = 532.0 [um]
+    :param lambda_nm: wavelength in [nm], e.g, for green lambda_nm = 532.0 [nm]
     :param ind_n: index name, the column name of the result. The default is 'beta'
     but could be useful to get profiles for several hours each have a different index name
     (e.g., datetime object of measuring time of the radiosonde as datetime.datetime(2017, 9, 2, 0, 0))
     :return: pd series of backscatter profile [1/sr*m]
     """
-    return pd.Series ( [ rayleigh_scattering.beta_pi_rayleigh ( wavelength = lambda_um ,
+    return pd.Series ( [ rayleigh_scattering.beta_pi_rayleigh ( wavelength = lambda_nm ,
                                                                 pressure = row [ 'PRES' ] ,
                                                                 temperature = row [ 'TEMPS' ] ,
                                                                 C = 385.0 , rh = row [ 'RELHS' ] ) ] ,
                        index = [ ind_n ] )
 
 
-def generate_daily_molecular_profile ( gdas_txt_paths , lambda_um = 532 ,
+def generate_daily_molecular_profile ( gdas_txt_paths , lambda_nm = 532 ,
                                        location = 'haifa' , lat = 32.8 , lon = 35.0 ,
                                        min_height = 0.229 , top_height = 22.71466 , h_bins = 3000 ) :
     """
     Generating daily molecular profile from gdas txt file
     :param gdas_txt_paths: paths to gdas txt files , containing table with the columns
     "PRES	HGHT	TEMP	UWND	VWND	WWND	RELH	TPOT	WDIR	WSPD"
-    :param lambda_um: wavelength [um] e.g., for the green channel 532 [um]
+    :param lambda_nm: wavelength [nm] e.g., for the green channel 532 [nm]
     :param location: location name of the lidar station, e.g., Haifa
     :param lat: latitude of the station
     :param lon: longitude of the station
@@ -194,11 +194,11 @@ def generate_daily_molecular_profile ( gdas_txt_paths , lambda_um = 532 ,
         df_sonde = RadiosondeProfile ( path ).get_df_sonde ( heights )
         time = extract_date_time ( path , r'{}_(.*)_{}_{}.txt'.format ( location , lat , lon ) , [ '%Y%m%d_%H' ] ) [ 0 ]
         '''Calculating molecular profiles from temperature and pressure'''
-        res = df_sonde.apply ( calc_sigma_profile_df , axis = 1 , args = (lambda_um , time ,) ,
+        res = df_sonde.apply ( calc_sigma_profile_df , axis = 1 , args = (lambda_nm , time ,) ,
                                result_type = 'expand' ).astype (
             'float64' )
         df_sigma [ res.columns ] = res
-        res = df_sonde.apply ( calc_beta_profile_df , axis = 1 , args = (lambda_um , time ,) ,
+        res = df_sonde.apply ( calc_beta_profile_df , axis = 1 , args = (lambda_nm , time ,) ,
                                result_type = 'expand' ).astype (
             'float64' )
         df_beta [ res.columns ] = res
@@ -284,8 +284,8 @@ def query_database ( query = "SELECT * FROM lidar_calibration_constant;" ,
 def main ( ) :
     DO_GDAS = True
     DO_NETCDF = True
-    wavs_um = gs.LAMBDA_um ( )
-    print ( 'waves_um' , wavs_um )
+    wavs_nm = gs.LAMBDA_nm ( )
+    print ( 'waves_nm' , wavs_nm )
     """set day,location"""
     day_date = datetime ( 2017 , 9 , 1 )
     haifa_station = gs.station ( )
@@ -296,11 +296,11 @@ def main ( ) :
 
     # GDAS
     if DO_GDAS :
-        lambda_um = wavs_um.G
+        lambda_nm = wavs_nm.G
         gdas_txt_paths = convert_daily_gdas ( haifa_station, day_date )
         # gdas_txt_paths = gdas_tropos2txt ( day_date , haifa_station.location , haifa_station.lat , haifa_station.lon )
         print ( 'gdas_dst_paths' , gdas_txt_paths )
-        df_sigma , df_beta = generate_daily_molecular_profile ( gdas_txt_paths , lambda_um ,
+        df_sigma , df_beta = generate_daily_molecular_profile ( gdas_txt_paths , lambda_nm ,
                                                                 haifa_station.location , haifa_station.lat ,
                                                                 haifa_station.lon , 1E-3 * min_height ,
                                                                 1E-3 * top_height ,
@@ -323,7 +323,7 @@ def main ( ) :
         print ( 'path' , lidar_parent_folder )
         bsc_paths , profile_paths = load_att_bsc ( lidar_parent_folder , day_date )
 
-        waves_elastic = wavs_um.get_elastic ( )  # [UV,G,IR]
+        waves_elastic = wavs_nm.get_elastic ( )  # [UV,G,IR]
 
         # Extract the OC_attenuated_backscatter_{wavelen}nm and Lidar_calibration_constant_used for all
         # files in bsc_paths and for all wavelengths
@@ -331,7 +331,7 @@ def main ( ) :
         extract_att_bsc ( bsc_paths , waves_elastic )
 
         # Query the db for a specific day & wavelength and calibration method
-        wavelength = wavs_um.IR  # or wavelengths[0] # 1064 or
+        wavelength = wavs_nm.IR  # or wavelengths[0] # 1064 or
         day_diff = timedelta ( days = 1 )
         start_day = day_date.strftime ( '%Y-%m-%d' )
         till_date = (day_date + day_diff).strftime ( '%Y-%m-%d' )
