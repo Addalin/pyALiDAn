@@ -47,7 +47,7 @@ class RadiosondeProfile(object):
 		"""Interpolate temperature values for a given height profile.
 
 		Args:
-			heights (array): 1D grid of heights in kilometers.
+			heights (array): 1D grid of heights in kilometers.(relative sea level)
 		"""
 
 		temps = np.interp(
@@ -63,6 +63,7 @@ class RadiosondeProfile(object):
 
 		Args:
 			heights (array): 1D grid of heights in kilometers.
+			heights are relative to sea level
 		"""
 
 		pressures = np.interp(
@@ -77,6 +78,7 @@ class RadiosondeProfile(object):
 		"""Interpolate relative humidity values for a given height profile.
 		Args:
 			heights (array): 1D grid of heights in kilometers.
+			heights are relative to sea level.
 		"""
 
 		relhs = np.interp(
@@ -90,19 +92,21 @@ class RadiosondeProfile(object):
 	def get_df_sonde(self):
 		"""
 		:return: DataFrame of ['TEMPS','PRES','RELHS'] of radiosonde (or gdas) measurements,
-		interpolated according the height profile of the radiosonde file
+		interpolated according the height profile of the radiosonde file (1D grid in meters)
+		heights are relative to sea level
 		"""
 
-		return pd.DataFrame({'TEMPS': self._temps, 'PRES': self._pressures, 'RELHS': self._RelativeHumidity}).astype('float64').fillna(0)
+		return pd.DataFrame(data={'TEMPS': self._temps, 'PRES': self._pressures,
+		                          'RELHS': self._RelativeHumidity}, index = self._heights).astype('float64').fillna(0)
 
 	def get_df_sonde(self, heights):
 		"""
 		:param heights: profile with the min_height, top_height and resolution set by the user
 		:return: DataFrame of ['TEMPS','PRES','RELHS'] of radiosonde (or gdas) measurements interpolated according the input height
 		"""
-		return pd.DataFrame( {'TEMPS': self.interpolateKmKelvin(heights),
+		return pd.DataFrame( data= {'TEMPS': self.interpolateKmKelvin(heights),
 		                     'PRES': self.interpolateKMPres(heights),
-		                     'RELHS': self.interpolateKMRLH(heights)} ).astype('float64').fillna(0)
+		                     'RELHS': self.interpolateKMRLH(heights)}, index = heights ).astype('float64').fillna(0)
 
 class LidarProfile(object):
 	"""Temperature Profile Handling

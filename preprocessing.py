@@ -41,7 +41,7 @@ def gdas2radiosonde ( src_file , dst_file , col_names = None ) :
     # TODO: add warning if fails and exit
 
 
-def get_gdas_paths ( station , day_date , f_type = 'gdas1' ) :
+def get_daily_gdas_paths ( station , day_date , f_type = 'gdas1' ) :
     """
     Retrieves gdas container folder and file paths for a given date
     :param station: gs.station() object of the lidar station
@@ -67,6 +67,16 @@ def get_gdas_paths ( station , day_date , f_type = 'gdas1' ) :
     return gdas_folder , gdas_paths
 
 
+def get_gdas_fname ( station , time , f_type = 'txt' ) :
+    file_pattern = '{}_{}_{}_{}_{}.{}'.format ( station.location , time.strftime ( '%Y%m%d' ) , time.strftime ( '%H' ) ,
+                                                station.lat , station.lon , f_type )
+    if f_type == 'gdas1' :
+        base_folder = station.gdas1_folder
+    elif f_type == 'txt' :
+        base_folder = station.gdastxt_folder
+
+    return os.path.join ( base_folder , time.strftime ( '%Y' ) , time.strftime ( '%m' ) , file_pattern )
+
 def convert_daily_gdas ( station , day_date ) :
     """
     Converting gdas files from TROPOS of type .gdas1 to .txt for a given day.
@@ -76,10 +86,10 @@ def convert_daily_gdas ( station , day_date ) :
     """
     # TODO: Add namings and path validation (print warnings and errors) , e.g. if a path relate to a day_date doesn't exsit
     # get source container folder and file paths (.gdas1)
-    src_folder , gdas1_paths = get_gdas_paths ( station , day_date , 'gdas1' )
+    src_folder , gdas1_paths = get_daily_gdas_paths ( station , day_date , 'gdas1' )
 
     # set dest container folder and file paths (.txt)
-    dst_folder , _ = get_gdas_paths ( station , day_date , 'txt' )
+    dst_folder , _ = get_daily_gdas_paths ( station , day_date , 'txt' )
     gdastxt_paths = [ sub.replace ( src_folder , dst_folder ).replace ( 'gdas1' , 'txt' ) for sub in gdas1_paths ]
 
     # convert each src_file (as .gdas1) to dst_file (as .txt)
@@ -88,7 +98,6 @@ def convert_daily_gdas ( station , day_date ) :
 
     return gdastxt_paths
     #  TODO:  create function to convert of a big chunk of gdas files (start date to end date)
-
 
 def extract_date_time ( path , format_filename , format_times ) :
     """
@@ -117,10 +126,10 @@ def calc_sigma_profile_df ( row , lambda_nm = 532.0 , indx_n = 'sigma' ) :
     columns:['PRES','TEMPS','RELHS']. The function applies on rows of the radiosonde df.
     :param row: row of radiosonde df
     :param lambda_nm: wavelength in [nm], e.g, for green lambda_nm = 532.0 [nm]
-    :param indx_n: index name, the column name of the result. The default is 'sigma'
-    but could be useful to get profiles for several hours each have a different index name
+    :param indx_n: index name, the column name of the result. The default is 'sigma'.
+    This could be useful to get profiles for several hours each have a different index name
     (e.g., datetime object of measuring time of the radiosonde as datetime.datetime(2017, 9, 2, 0, 0))
-    :return: pd series of extinction profile [1/m]
+    :return: pd series of extinction profile in units of [1/m]
     """
     return pd.Series (
         data = [ rayleigh_scattering.alpha_rayleigh ( wavelength = lambda_nm , pressure = row [ 'PRES' ] ,
@@ -162,48 +171,66 @@ def calc_beta_profile_df ( row , lambda_nm = 532.0 , ind_n = 'beta' ) :
                        index = [ ind_n ] )
 
 
-def generate_daily_molecular_profile ( gdas_txt_paths , lambda_nm = 532 ,
-                                       location = 'haifa' , lat = 32.8 , lon = 35.0 ,
-                                       min_height = 0.229 , top_height = 22.71466 , h_bins = 3000 ) :
+def get_daily_molecular_profiles ( station , day_date , lambda_nm = 532 , height_units = 'Km' ) :
     """
     Generating daily molecular profile from gdas txt file
+    :param station: gs.station() object of the lidar station
     :param gdas_txt_paths: paths to gdas txt files , containing table with the columns
     "PRES	HGHT	TEMP	UWND	VWND	WWND	RELH	TPOT	WDIR	WSPD"
     :param lambda_nm: wavelength [nm] e.g., for the green channel 532 [nm]
-    :param location: location name of the lidar station, e.g., Haifa
-    :param lat: latitude of the station
-    :param lon: longitude of the station
-    :param min_height: Min height [km] **above sea level** (preferably this is the lidar height above sea level, e.g., Haifa min_height=0.229[km])
-    :param top_height: Top height [km] **above see level** (preferably this is lidar_top_height_of + min_height)
-    :param h_bins: Number of height bins                   (preferably this is the lidar height bins, sanity check for
+    :param height_units: units of height grid in 'Km' (default) or 'm' 
     this parameter gives dr= heights[1]-heights[0] =~ 7.5e-3[km] -> the height resolution of pollyXT lidar)
     :return: Returns backscatter and extinction profiles as pandas-dataframes, according to Rayleigh scattering.
-    The resulted profile start at min_height, end at top_height and extrapolated to have h_bins.
+    The resulted profile has a grid height above (in 'Km' or 'm' - according to input), above sea level. start at min_height, end at top_height and extrapolated to have h_bins.
     """
+    if height_units == 'Km' :
+        scale = 1E-3
+    elif height_units == 'm' :
+        scale = 1
 
-    heights = np.linspace ( min_height , top_height ,
-                            h_bins )  # setting heights for interpolation of gdas/radiosonde inputs
+    # setting height vector above sea level (for interpolation of radiosonde / gdas files).
+    min_height = station.altitude + station.start_bin_height
+    top_height = station.altitude + station.end_bin_height
+
+    heights = np.linspace ( min_height * scale , top_height * scale , station.n_bins )  # setting heights for interpolation of gdas/radiosonde inputs
     # uncomment the commands below for sanity check of the desired height resolution
     # dr = heights[1]-heights[0]
     # print('h_bins=',heights.shape,' min_height=', min_height,' top_height=', top_height,' dr=',dr )
 
-    df_sigma = pd.DataFrame ( )
-    df_beta = pd.DataFrame ( )
+    df_sigma = pd.DataFrame ( index = heights ).rename_axis ( 'Height[{}]'.format ( height_units ) )
+    df_beta = pd.DataFrame ( index = heights ).rename_axis ( 'Height[{}]'.format ( height_units ) )
+
+    # TODO: add warning in case of missing files, and convert the required paths according to below
+    # %% timestapms daily range
+    #timestamps = pd.date_range ( start = day_date , end = day_date + timedelta(days = 1) , freq = timedelta ( hours = 3 ) )
+    #gdas_txt_paths = [get_gdas_fname ( station , time ) for time in timestamps ]
+    # [os.path.exists(path) for path in paths]
+
+    # set a list of relevant timestamps for interpolation of day_date
+    # The list contains all measurements in day_date and the first one of next_day at 00:00
+    _, gdas_curday_paths = get_daily_gdas_paths ( station , day_date,'txt' )
+    if not gdas_curday_paths :
+        gdas_curday_paths = convert_daily_gdas ( station , day_date  )
+
+    next_day = day_date + timedelta(days = 1)
+    _ , gdas_nxtday_paths = get_daily_gdas_paths ( station ,next_day  , 'txt' )
+    if not gdas_nxtday_paths :
+        gdas_nxtday_paths = convert_daily_gdas ( station , next_day  )
+
+    gdas_txt_paths =gdas_curday_paths
+    gdas_txt_paths.append(gdas_nxtday_paths[0])
 
     for path in gdas_txt_paths :
         df_sonde = RadiosondeProfile ( path ).get_df_sonde ( heights )
-        time = extract_date_time ( path , r'{}_(.*)_{}_{}.txt'.format ( location , lat , lon ) , [ '%Y%m%d_%H' ] ) [ 0 ]
+        time = extract_date_time ( path , r'{}_(.*)_{}_{}.txt'.format ( station.location , station.lat , station.lon ) ,
+                                   [ '%Y%m%d_%H' ] ) [ 0 ]
         '''Calculating molecular profiles from temperature and pressure'''
         res = df_sonde.apply ( calc_sigma_profile_df , axis = 1 , args = (lambda_nm , time ,) ,
-                               result_type = 'expand' ).astype (
-            'float64' )
+                               result_type = 'expand' ).astype ( 'float64' )
         df_sigma [ res.columns ] = res
         res = df_sonde.apply ( calc_beta_profile_df , axis = 1 , args = (lambda_nm , time ,) ,
-                               result_type = 'expand' ).astype (
-            'float64' )
+                               result_type = 'expand' ).astype ( 'float64' )
         df_beta [ res.columns ] = res
-    df_sigma.index = heights
-    df_beta.index = heights
 
     return df_sigma , df_beta
 
@@ -283,7 +310,7 @@ def query_database ( query = "SELECT * FROM lidar_calibration_constant;" ,
 
 def main ( ) :
     DO_GDAS = True
-    DO_NETCDF = True
+    DO_NETCDF = False
     wavs_nm = gs.LAMBDA_nm ( )
     print ( 'waves_nm' , wavs_nm )
     """set day,location"""
@@ -297,21 +324,17 @@ def main ( ) :
     # GDAS
     if DO_GDAS :
         lambda_nm = wavs_nm.G
-        gdas_txt_paths = convert_daily_gdas ( haifa_station, day_date )
+        gdas_txt_paths = convert_daily_gdas ( haifa_station , day_date )
         # gdas_txt_paths = gdas_tropos2txt ( day_date , haifa_station.location , haifa_station.lat , haifa_station.lon )
         print ( 'gdas_dst_paths' , gdas_txt_paths )
-        df_sigma , df_beta = generate_daily_molecular_profile ( gdas_txt_paths , lambda_nm ,
-                                                                haifa_station.location , haifa_station.lat ,
-                                                                haifa_station.lon , 1E-3 * min_height ,
-                                                                1E-3 * top_height ,
-                                                                haifa_station.n_bins )
+        df_sigma , df_beta = get_daily_molecular_profiles( haifa_station , day_date , lambda_nm , 'Km' )
         '''Visualize molecular profiles'''
         plt.figure ( )
         df_beta.plot ( )
-        plt.xlabel ( 'Height [km]' )
-        plt.ylabel ( 'Time [hr]' )
-        plt.title ( 'backscatter profiles of {} station during {} '.format ( haifa_station.location ,
-                                                                             day_date.strftime ( "%d-%m-%Y" ) ) )
+        plt.ylabel ( r'$\beta_{mol}[1/m]$' )
+        plt.title ( 'Molecular backscatter profiles of {} station during {} '.format ( haifa_station.location ,
+                                                                                       day_date.strftime (
+                                                                                           "%d-%m-%Y" ) ) )
         plt.show ( )
 
     # NETCDF

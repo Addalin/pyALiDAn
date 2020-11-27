@@ -49,7 +49,7 @@ class station:
         self.altitude = 229  # [m] The Lidar's altitude   ( above sea level, see 'altitude' in ' *_att_bsc.nc)
         self.start_bin_height = 78.75  # [m] The first bin's height ( above ground level - a.k.a above the lidar, see height[0]  in *_att_bsc.nc)
         self.end_bin_height = 22485.66015  # [m] The last bin's height  ( see height[-1] in *_att_bsc.nc)
-        self.n_bins = 3000      # [#] Number of bins         ( see height.shape  in  *_att_bsc.nc)
+        self.n_bins = 3000      # [#] Number of height bins         ( see height.shape  in  *_att_bsc.nc)
         self.dt = 50 * 1E-9     # [sec] temporal pulse width of the lidar
         self.gdas1_folder = 'H:\data_haifa\DATA FROM TROPOS\GDAS\haifa'
         self.gdastxt_folder = 'H:\data_haifa\DATA FROM TROPOS\GDAS\haifa_preproc'
