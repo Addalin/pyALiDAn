@@ -191,8 +191,7 @@ def get_daily_molecular_profiles ( station , day_date , lambda_nm = 532 , height
     # setting height vector above sea level (for interpolation of radiosonde / gdas files).
     min_height = station.altitude + station.start_bin_height
     top_height = station.altitude + station.end_bin_height
-
-    heights = np.linspace ( min_height * scale , top_height * scale , station.n_bins )  # setting heights for interpolation of gdas/radiosonde inputs
+    heights = np.linspace ( min_height * scale , top_height * scale , station.n_bins )
     # uncomment the commands below for sanity check of the desired height resolution
     # dr = heights[1]-heights[0]
     # print('h_bins=',heights.shape,' min_height=', min_height,' top_height=', top_height,' dr=',dr )
