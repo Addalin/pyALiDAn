@@ -32,14 +32,20 @@ def gdas2radiosonde ( src_file , dst_file , col_names = None ) :
     data_src = pd.read_fwf ( src_file , skiprows = [ 0 , 1 , 2 , 3 , 4 , 5 , 6 , 8 ] , delimiter = "\s+" ,
                              skipinitialspace = True ).dropna ( )
     # converting any kind of blank spaces to zeros
-    for col in data_src.columns :
-        if not is_numeric_dtype ( data_src [ col ] ) :
-            data_src [ col ] = pd.core.strings.str_strip ( data_src [ col ] )
-            data_src [ col ] = data_src [ col ].replace ( '' , '0' ).astype ( 'float64' )
-    data_src.columns = col_names
-    data_src.to_csv ( dst_file , index = False , sep = '\t' , na_rep = '\t' )
-    # TODO: add warning if fails and exit
-
+    try:
+        for col in data_src.columns :
+            if not is_numeric_dtype ( data_src [ col ] ) :
+                data_src [ col ] = pd.core.strings.str_strip ( data_src [ col ] )
+                data_src [ col ] = data_src [ col ].replace ( '' , '0' ).astype ( 'float64' )
+        data_src.columns = col_names
+        data_src.to_csv ( dst_file , index = False , sep = '\t' , na_rep = '\t' )
+    except:
+        print('\n Conversion of {} to {} failed. \n Check the source file, '
+              'or generate it again with ARLreader module'.format(src_file,dst_file))
+        dst_file = None
+        pass
+    # TODO: write errors to log file and collect to a file all paths gdas paths that didn't pass the conversion
+    return dst_file
 
 def get_daily_gdas_paths ( station , day_date , f_type = 'gdas1' ) :
     """
@@ -57,15 +63,18 @@ def get_daily_gdas_paths ( station , day_date , f_type = 'gdas1' ) :
     elif f_type == 'txt' :
         gdas_folder = os.path.join ( station.gdastxt_folder , month_folder )
 
-    # TODO: Add path validation and warning if not exits (exit on failure)
     if not os.path.exists ( gdas_folder ) :
-        os.makedirs ( gdas_folder )
+        try:
+            os.makedirs ( gdas_folder )
+        except:
+            print('\n Failed to create folder {}'.format(gdas_folder))
+            pass
+            # TODO: write failure to logger, and save the problematic file/folder name
 
     gdas_day_pattern = '{}_{}_*_{}_{}.{}'.format ( station.location , day_date.strftime ( '%Y%m%d' ) ,
                                                    station.lat , station.lon , f_type )
     gdas_paths = sorted ( glob.glob ( os.path.join ( gdas_folder , gdas_day_pattern ) ) )
     return gdas_folder , gdas_paths
-
 
 def get_gdas_fname ( station , time , f_type = 'txt' ) :
     file_pattern = '{}_{}_{}_{}_{}.{}'.format ( station.location , time.strftime ( '%Y%m%d' ) , time.strftime ( '%H' ) ,
@@ -90,14 +99,27 @@ def convert_daily_gdas ( station , day_date ) :
 
     # set dest container folder and file paths (.txt)
     dst_folder , _ = get_daily_gdas_paths ( station , day_date , 'txt' )
-    gdastxt_paths = [ sub.replace ( src_folder , dst_folder ).replace ( 'gdas1' , 'txt' ) for sub in gdas1_paths ]
-
+    path_to_convert = [ sub.replace ( src_folder , dst_folder ).replace ( 'gdas1' , 'txt' ) for sub in gdas1_paths ]
+    converted_paths = []
     # convert each src_file (as .gdas1) to dst_file (as .txt)
-    for (src_file , dst_file) in zip ( gdas1_paths , gdastxt_paths ) :
-        gdas2radiosonde ( src_file , dst_file )
+    for (src_file , dst_file) in zip ( gdas1_paths , path_to_convert ) :
+        converted = gdas2radiosonde ( src_file , dst_file )
+        if converted:
+            converted_paths.append(converted)
 
-    return gdastxt_paths
-    #  TODO:  create function to convert of a big chunk of gdas files (start date to end date)
+    return converted_paths
+
+def convert_periodic_gdas(station,start_day, end_day):
+    day_dates = pd.date_range ( start = start_day , end = end_day , freq = timedelta ( days = 1 ) )
+    expected_file_no = len(day_dates)*8 # 8 timestamps per day
+    gdastxt_paths =[]
+    for day in day_dates :
+        gdastxt_paths.extend ( convert_daily_gdas ( station , day ) )
+    total_converted = len(gdastxt_paths)
+    print('\n Done conversion of {} gdas files from {} to {}, {} failed.'.
+          format(total_converted,start_day.strftime('%Y/%m/%d'),
+                 end_day.strftime('%Y/%m/%d'), (expected_file_no-total_converted)))
+    return  gdastxt_paths
 
 def extract_date_time ( path , format_filename , format_times ) :
     """
@@ -118,7 +140,6 @@ def extract_date_time ( path , format_filename , format_times ) :
     for fmt_time , grp in zip ( format_times , matchObj.groups ( ) ) :
         time_stamps.append ( datetime.strptime ( grp , fmt_time ) )
     return time_stamps
-
 
 def calc_sigma_profile_df ( row , lambda_nm = 532.0 , indx_n = 'sigma' ) :
     """
