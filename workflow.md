@@ -46,13 +46,12 @@ Each sample contains the followings:
      
 ## Tasks
 1. Convert all gdas files in the directory `H:\data_haifa\DATA FROM TROPOS\GDAS\haifa` to txt files (using gdas2radiosonde())
-2. Generate a daily molecular profile (2D) from the converted txt files 
-3. Create list of time slots (and save)
-4. Create and save database samples
-5. Create a normal and organized module of data preprocessing and loading 
+2. Generate a daily molecular profile (2D) from the converted txt files  
+3. create a class of station(<location_name>) loaded from stations_info.csv
+4. Create a list of time slots from the database file
+5. Create and save database samples
+6. separate and organize the modules:  preprocessing, micLidar , dataloader 
 
 ## TODOS and Open issues to figure out:
-1. Check if the reference_range heights are above sea level or above ground level
-2. Make sure p_r2, and p_mol_r2 start both from ground level, and share the same dimensions (y-axis for height, x-axis for time)
-3. How should the samples be saved ? as numpy or pytorch objects ? 
-4. Estimate the database size and decide where to save it
+1. Troubleshooting of file and system errors (see TODOS in preprocessing.py)
+2. Fix erroneous gdas files (using ARLreder module)
