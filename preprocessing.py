@@ -19,9 +19,9 @@ import miscLidar as mscLid
 # %%
 def gdas2radiosonde ( src_file , dst_file , col_names = None ) :
     """
-    Helper function that converts a gdas file from TROPOS server, to a simple txt.
+    Helper function that converts a gdas file from TROPOS server (saved as .gdas1), to a simple txt.
     The resulting file is without any prior info, and resembles the table format
-    of a radiosonde file (see class: RadiosondeProfile)
+    of a radiosonde file (see class: RadiosondeProfile).
     :param src_file: source file name
     :param dst_file: destination file name
     :param col_names: column names of the final table
@@ -38,66 +38,56 @@ def gdas2radiosonde ( src_file , dst_file , col_names = None ) :
             data_src [ col ] = data_src [ col ].replace ( '' , '0' ).astype ( 'float64' )
     data_src.columns = col_names
     data_src.to_csv ( dst_file , index = False , sep = '\t' , na_rep = '\t' )
+    # TODO: add warning if fails and exit
 
 
-# TODO: add warning if failed
-
-
-def gdas_tropos2txt ( day_date , location = 'haifa' , lat = 32.8 , lon = 35.0 , src_folder = [ ] , dst_folder = [ ] ) :
+def get_gdas_paths ( station , day_date , f_type = 'gdas1' ) :
     """
-	Converting gdas files from TROPOS to txt
-	:param day_date: datetime.date of the date to be converted
-	:param location: station location name
-	:param lat: latitude of the station
-	:param lon: longitude of the station
-	:param src_folder: source folder that contains .gdas1 files
-	:param dst_folder:  destination folder to create for the converted files
-	:return:
-	"""
+    Retrieves gdas container folder and file paths for a given date
+    :param station: gs.station() object of the lidar station
+    :param day_date: datetime.date object of the required date
+    :param f_type: 'gdas1' - for the original gdas files (from TROPOS), 'txt' - for converted (fixed) gdas files
+    :return: gdas_folder, gdas_paths - the folder containing the gdas files and the file paths.
+    NOTE: during a daily conversion, the function creates a NEW gdas_folder (for the converted txt files),
+    and returns an EMPTY list of gdas_paths. The creation of NEW gdas_paths is done in convert_daily_gdas()
+    """
+    month_folder = os.path.join ( day_date.strftime ( '%Y' ) , day_date.strftime ( '%m' ) )
+    if f_type == 'gdas1' :
+        gdas_folder = os.path.join ( station.gdas1_folder , month_folder )
+    elif f_type == 'txt' :
+        gdas_folder = os.path.join ( station.gdastxt_folder , month_folder )
 
-    # TODO: Add namings and existing path validation (print warnings and errors)
-    # set source gdas files
-    if not src_folder :
-        src_folder = os.path.join ( os.getcwd ( ) , 'data examples\gdas' )
-    if not os.path.exists ( src_folder ) :
-        os.makedirs ( src_folder )
-    gdas_curd_pattern = '{}_{}_*_{}_{}.gdas1'.format ( location , day_date.strftime ( '%Y%m%d' ) , lat , lon )
-    gdas_nxtd_pattern = '{}_{}_00_{}_{}.gdas1'.format ( location ,
-                                                        (day_date + timedelta ( days = 1 )).strftime ( '%Y%m%d' ) ,
-                                                        lat ,
-                                                        lon )
-    gdas_src_paths = sorted ( glob.glob ( os.path.join ( src_folder , gdas_curd_pattern ) ) )
-    gdas_src_paths.append ( os.path.join ( src_folder , gdas_nxtd_pattern ) )
+    # TODO: Add path validation and warning if not exits (exit on failure)
+    if not os.path.exists ( gdas_folder ) :
+        os.makedirs ( gdas_folder )
 
-    # set dest txt files
-    # TODO: Add validation and indicate if folder already existed or created now (print warnings and errors)
+    gdas_day_pattern = '{}_{}_*_{}_{}.{}'.format ( station.location , day_date.strftime ( '%Y%m%d' ) ,
+                                                   station.lat , station.lon , f_type )
+    gdas_paths = sorted ( glob.glob ( os.path.join ( gdas_folder , gdas_day_pattern ) ) )
+    return gdas_folder , gdas_paths
 
-    if not dst_folder :
-        dst_folder = os.path.join ( os.getcwd ( ) , 'data examples' , 'gdas_txt' )
-    Path ( dst_folder ).mkdir ( parents = True , exist_ok = True )
-    gdas_dst_paths = [ sub.replace ( src_folder , dst_folder ).replace ( 'gdas1' , 'txt' ) for sub in gdas_src_paths ]
 
-    for (src_file , dst_file) in zip ( gdas_src_paths , gdas_dst_paths ) :
+def convert_daily_gdas ( station , day_date ) :
+    """
+    Converting gdas files from TROPOS of type .gdas1 to .txt for a given day.
+    :param station: gs.station() object of the lidar station
+    :param day_date: datetime.date object of the date to be converted
+    :return:
+    """
+    # TODO: Add namings and path validation (print warnings and errors) , e.g. if a path relate to a day_date doesn't exsit
+    # get source container folder and file paths (.gdas1)
+    src_folder , gdas1_paths = get_gdas_paths ( station , day_date , 'gdas1' )
+
+    # set dest container folder and file paths (.txt)
+    dst_folder , _ = get_gdas_paths ( station , day_date , 'txt' )
+    gdastxt_paths = [ sub.replace ( src_folder , dst_folder ).replace ( 'gdas1' , 'txt' ) for sub in gdas1_paths ]
+
+    # convert each src_file (as .gdas1) to dst_file (as .txt)
+    for (src_file , dst_file) in zip ( gdas1_paths , gdastxt_paths ) :
         gdas2radiosonde ( src_file , dst_file )
-    # print('\n Done conversion src: ', src_file, 'dst: ', dst_file) #TODO: run this command line only for debug mode
-    # sanity check
-    # data_dst =pd.read_csv(dst_file,delimiter="\s+")
-    # print(data_dst)
-    return gdas_dst_paths
-    # TODO : set 'gdas_src_paths' and 'src_folder' according to 'start_date' and 'end_date' -
-    #  for conversion of a big chunk of gdas files. See examples below.
-    # TODO : set 'gdas_dst_paths' in similar way. Such that the folders of gdas and txt files will have same tree
-    #  (or just save it in the same folders?)
 
-    '''gdas_month_folder = os.path.join(gdas_parent_folder, day_date.strftime("%Y\%m"))
-	print (os.path.exists(gdas_month_folder))
-	gdas_cur_pattern = 'haifa_{}_*_{}_{}.gdas1'.format(day_date.strftime('%Y%m%d'),lat,lon)
-	gdas_next = 'haifa_{}_00_{}_{}.gdas1'.format((day_date+timedelta(days=1)).strftime('%Y%m%d'),lon,lat)
-	gdas_pattern  = os.path.join(gdas_month_folder,gdas_cur_pattern)
-	gdas_paths = sorted(glob.glob(gdas_pattern))
-	gdas_paths.append(os.path.join(gdas_month_folder,gdas_next))
-	gdas_file = Ar.fname_from_date(day_date)
-	print('name of input file ', gdas_pattern)'''
+    return gdastxt_paths
+    #  TODO:  create function to convert of a big chunk of gdas files (start date to end date)
 
 
 def extract_date_time ( path , format_filename , format_times ) :
@@ -124,7 +114,7 @@ def extract_date_time ( path , format_filename , format_times ) :
 def calc_sigma_profile_df ( row , lambda_um = 532.0 , indx_n = 'sigma' ) :
     """
     Returns pd series of extinction profile [1/m] from a radiosonde dataframe containing the
-    columns:['PRES','TEMPS',RELHS]. The function applies on rows of the radiosonde df.
+    columns:['PRES','TEMPS','RELHS']. The function applies on rows of the radiosonde df.
     :param row: row of radiosonde df
     :param lambda_um: wavelength in [um], e.g, for green lambda_um = 532.0 [um]
     :param indx_n: index name, the column name of the result. The default is 'sigma'
@@ -132,11 +122,11 @@ def calc_sigma_profile_df ( row , lambda_um = 532.0 , indx_n = 'sigma' ) :
     (e.g., datetime object of measuring time of the radiosonde as datetime.datetime(2017, 9, 2, 0, 0))
     :return: pd series of extinction profile [1/m]
     """
-    return pd.Series ( [ rayleigh_scattering.alpha_rayleigh ( wavelength = lambda_um ,
-                                                              pressure = row [ 'PRES' ] ,
-                                                              temperature = row [ 'TEMPS' ] ,
-                                                              C = 385.0 , rh = row [ 'RELHS' ] ) ] ,
-                       index = [ indx_n ] )
+    return pd.Series (
+        data = [ rayleigh_scattering.alpha_rayleigh ( wavelength = lambda_um , pressure = row [ 'PRES' ] ,
+                                                      temperature = row [ 'TEMPS' ] , C = 385.0 ,
+                                                      rh = row [ 'RELHS' ] ) ] ,
+        index = [ indx_n ] )
 
 
 def cal_e_tau_df ( col , altitude ) :
@@ -307,9 +297,10 @@ def main ( ) :
     # GDAS
     if DO_GDAS :
         lambda_um = wavs_um.G
-        gdas_dst_paths = gdas_tropos2txt ( day_date , haifa_station.location , haifa_station.lat , haifa_station.lon )
-        print ( 'gdas_dst_paths' , gdas_dst_paths )
-        df_sigma , df_beta = generate_daily_molecular_profile ( gdas_dst_paths , lambda_um ,
+        gdas_txt_paths = convert_daily_gdas ( haifa_station, day_date )
+        # gdas_txt_paths = gdas_tropos2txt ( day_date , haifa_station.location , haifa_station.lat , haifa_station.lon )
+        print ( 'gdas_dst_paths' , gdas_txt_paths )
+        df_sigma , df_beta = generate_daily_molecular_profile ( gdas_txt_paths , lambda_um ,
                                                                 haifa_station.location , haifa_station.lat ,
                                                                 haifa_station.lon , 1E-3 * min_height ,
                                                                 1E-3 * top_height ,

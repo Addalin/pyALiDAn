@@ -51,6 +51,9 @@ class station:
         self.end_bin_height = 22485.66015  # [m] The last bin's height  ( see height[-1] in *_att_bsc.nc)
         self.n_bins = 3000      # [#] Number of bins         ( see height.shape  in  *_att_bsc.nc)
         self.dt = 50 * 1E-9     # [sec] temporal pulse width of the lidar
+        self.gdas1_folder = 'H:\data_haifa\DATA FROM TROPOS\GDAS\haifa'
+        self.gdastxt_folder = 'H:\data_haifa\DATA FROM TROPOS\GDAS\haifa_preproc'
+        self.lidar_src_folder = 'H:\data_haifa\DATA FROM TROPOS\data\level1a\PollyXT_TROPOS'
 
     def __str__(self):
         return str(self.__class__) + ": " + str(self.__dict__)
