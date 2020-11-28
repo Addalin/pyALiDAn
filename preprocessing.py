@@ -329,7 +329,7 @@ def extract_att_bsc(bsc_paths, wavelengths):
                 arr = vals * vals.Lidar_calibration_constant_used
                 logger.debug(f"Extracted OC_attenuated_backscatter_{wavelen}nm from {file_name}")
             except KeyError as e:
-                logger.exception(f"Key {e} does not exist in {file_name}")
+                logger.exception(f"Key {e} does not exist in {file_name}", exc_info=False)
 
 
 def query_database(query="SELECT * FROM lidar_calibration_constant;",
