@@ -272,7 +272,7 @@ def get_daily_molecular_profiles(station, day_date, lambda_nm=532, height_units=
     return df_sigma, df_beta
 
 
-def load_att_bsc ( lidar_parent_folder , day_date ) :
+def get_att_bsc_paths(lidar_parent_folder, day_date):
     """
     Load netcdf file of the attenuation backscatter profile(att_bsc.nc) according to date
 
@@ -280,20 +280,34 @@ def load_att_bsc ( lidar_parent_folder , day_date ) :
     :param day_date: datetime obj of the measuring date
     :return: paths to all *att_bsc.nc in the saved for day_date
     """
-    #
-    # TODO: rename this function to get_att_bsc_paths
-    # TODO: split this function to get_att_bsc_paths(lidar_parent_folder, day_date) and get_profiles_paths(lidar_parent_folder, day_date)
-    lidar_day_folder = os.path.join ( lidar_parent_folder , day_date.strftime ( "%Y" ) , day_date.strftime ( "%m" ) ,
-                                      day_date.strftime ( "%d" ) )
-    os.listdir ( lidar_day_folder )
+    lidar_day_folder = os.path.join(lidar_parent_folder, day_date.strftime("%Y"), day_date.strftime("%m"),
+                                    day_date.strftime("%d"))
+    os.listdir(lidar_day_folder)
 
-    bsc_pattern = os.path.join ( lidar_day_folder , "*[0-9]_att_bsc.nc" )
-    profile_pattern = os.path.join ( lidar_day_folder , "*[0-9]_profiles.nc" )
+    bsc_pattern = os.path.join(lidar_day_folder, "*[0-9]_att_bsc.nc")
 
-    bsc_paths = sorted ( glob.glob ( bsc_pattern ) )
-    profile_paths = sorted ( glob.glob ( profile_pattern ) )
+    bsc_paths = sorted(glob.glob(bsc_pattern))
 
-    return bsc_paths , profile_paths
+    return bsc_paths
+
+
+def get_profiles_paths(lidar_parent_folder, day_date):
+    """
+    Load netcdf file of the attenuation backscatter profile(att_bsc.nc) according to date
+
+    :param lidar_parent_folder: this is the station main folder of the lidar
+    :param day_date: datetime obj of the measuring date
+    :return: paths to all *profiles.nc in the saved for day_date
+    """
+    lidar_day_folder = os.path.join(lidar_parent_folder, day_date.strftime("%Y"), day_date.strftime("%m"),
+                                    day_date.strftime("%d"))
+    os.listdir(lidar_day_folder)
+
+    profile_pattern = os.path.join(lidar_day_folder, "*[0-9]_profiles.nc")
+
+    profile_paths = sorted(glob.glob(profile_pattern))
+
+    return profile_paths
 
 
 def extract_att_bsc(bsc_paths, wavelengths):
@@ -351,9 +365,9 @@ def main():
     logging.getLogger('PIL').setLevel(logging.ERROR)  # Fix annoying PIL logs
     logger = create_and_configer_logger('preprocessing_log.log')
     DO_GDAS = True
-    DO_NETCDF = False
-    wavs_nm = gs.LAMBDA_nm ( )
-    print ( 'waves_nm' , wavs_nm )
+    DO_NETCDF = True
+    wavs_nm = gs.LAMBDA_nm()
+    logger.debug(f'waves_nm: {wavs_nm}')
     """set day,location"""
     day_date = datetime ( 2017 , 9 , 1 )
     haifa_station = gs.station ( )
@@ -382,10 +396,11 @@ def main():
     if DO_NETCDF:
 
         # Get the paths
-        print ( 'start_nc' )
-        lidar_parent_folder = os.path.join ( '.' , 'data examples' , 'netcdf' )
-        print ( 'path' , lidar_parent_folder )
-        bsc_paths , profile_paths = load_att_bsc ( lidar_parent_folder , day_date )
+        logger.debug('start_nc')
+        lidar_parent_folder = os.path.join('.', 'data examples', 'netcdf')
+        logger.debug(f'path {lidar_parent_folder}')
+        bsc_paths = get_att_bsc_paths(lidar_parent_folder, day_date)
+        profile_paths = get_profiles_paths(lidar_parent_folder, day_date)
 
         waves_elastic = wavs_nm.get_elastic()  # [UV,G,IR]
 
