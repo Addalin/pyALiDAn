@@ -54,7 +54,6 @@ def gdas2radiosonde(src_file, dst_file, col_names=None):
                          'or generate it again with ARLreader module')
         write_row_to_csv('gdas2radiosonde_failed_files.csv', [src_file, 'Conversion Fail'])
         dst_file = None
-    # TODO: write errors to log file and collect to a file all paths gdas paths that didn't pass the conversion
     return dst_file
 
 
@@ -205,8 +204,7 @@ def calc_beta_profile_df(row, lambda_nm=532.0, ind_n='beta'):
     return pd.Series([rayleigh_scattering.beta_pi_rayleigh(wavelength=lambda_nm,
                                                            pressure=row['PRES'],
                                                            temperature=row['TEMPS'],
-                                                           C=385.0, rh=row['RELHS'])],
-                     index=[ind_n])
+                                                           C=385.0, rh=row['RELHS'])], index=[ind_n])
 
 
 def get_daily_molecular_profiles(station, day_date, lambda_nm=532, height_units='Km'):
@@ -369,9 +367,9 @@ def main():
     wavs_nm = gs.LAMBDA_nm()
     logger.debug(f'waves_nm: {wavs_nm}')
     """set day,location"""
-    day_date = datetime ( 2017 , 9 , 1 )
-    haifa_station = gs.station ( )
-    print ( haifa_station )
+    day_date = datetime(2017, 9, 1)
+    haifa_station = gs.Station(stations_csv_path='stations.csv', station_name='haifa_shubi')
+    logger.debug(f"haifa_station: {haifa_station}")
     # location = haifa_station.location
     min_height = haifa_station.altitude + haifa_station.start_bin_height
     top_height = haifa_station.altitude + haifa_station.end_bin_height
@@ -425,7 +423,7 @@ def main():
             (cali_start_time BETWEEN '{start_day}' AND '{till_date}');
         """
 
-        db_path = "data examples/netcdf/pollyxt_tropos_calibration.db"
+        db_path = "data_example/pollyxt_tropos_calibration.db"
         df = query_database(query=query, database_path=db_path)
 
         # Build matching_nc_file
