@@ -128,5 +128,5 @@ if __name__ == '__main__':
     print(wavelengths)
     wavelengths_m = LAMBDA_m()
     print(wavelengths_m.get_elastic())
-    haifa_station = station()
+    haifa_station = Station()
     print(haifa_station)
