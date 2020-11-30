@@ -22,7 +22,7 @@
 """
 Modules for physical and pollyXT constants.
 """
-
+import pandas as pd
 import numpy as np
 from dataclasses import dataclass
 
@@ -41,19 +41,33 @@ n_chan = 13
 
 
 @dataclass()
-class station:
-    def __init__(self):
-        self.location = 'haifa'
-        self.lon = 35.0
-        self.lat = 32.8
-        self.altitude = 229  # [m] The Lidar's altitude   ( above sea level, see 'altitude' in ' *_att_bsc.nc)
-        self.start_bin_height = 78.75  # [m] The first bin's height ( above ground level - a.k.a above the lidar, see height[0]  in *_att_bsc.nc)
-        self.end_bin_height = 22485.66015  # [m] The last bin's height  ( see height[-1] in *_att_bsc.nc)
-        self.n_bins = 3000      # [#] Number of height bins         ( see height.shape  in  *_att_bsc.nc)
-        self.dt = 50 * 1E-9     # [sec] temporal pulse width of the lidar
-        self.gdas1_folder = 'H:\data_haifa\DATA FROM TROPOS\GDAS\haifa'
-        self.gdastxt_folder = 'H:\data_haifa\DATA FROM TROPOS\GDAS\haifa_preproc'
-        self.lidar_src_folder = 'H:\data_haifa\DATA FROM TROPOS\data\level1a\PollyXT_TROPOS'
+class Station:
+    def __init__(self, station_name='haifa', stations_csv_path='stations.csv'):
+        """
+        A station class that stores all the below information
+
+        :param station_name: str, should match a station_name in the csv file
+        :param stations_csv_path: str, path to stations csv file
+        """
+
+        stations_df = pd.read_csv(stations_csv_path, index_col='station_name', sep=', ')
+        try:
+            station_df = stations_df.loc[station_name]
+        except KeyError as e:
+            print(f"{station_name} not in {stations_csv_path}. Available stations: {stations_df.index.values}")
+            raise e
+        self.name = station_name
+        self.location = station_df['location']
+        self.lon = station_df['longitude']
+        self.lat = station_df['latitude']
+        self.altitude = station_df['altitude']  # [m] The Lidar's altitude   ( above sea level, see 'altitude' in ' *_att_bsc.nc)
+        self.start_bin_height = station_df['start_bin_height']  # [m] The first bin's height ( above ground level - a.k.a above the lidar, see height[0]  in *_att_bsc.nc)
+        self.end_bin_height = station_df['end_bin_height']  # [m] The last bin's height  ( see height[-1] in *_att_bsc.nc)
+        self.n_bins = station_df['n_bins']      # [#] Number of height bins         ( see height.shape  in  *_att_bsc.nc)
+        self.dt = eval(station_df['dt'])     # [sec] temporal pulse width of the lidar
+        self.gdas1_folder = station_df['gdas1_folder']
+        self.gdastxt_folder = station_df['gdastxt_folder']
+        self.lidar_src_folder = station_df['lidar_src_folder']
 
     def __str__(self):
         return str(self.__class__) + ": " + str(self.__dict__)
