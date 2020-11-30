@@ -8,7 +8,7 @@ import csv
 from utils import create_and_configer_logger
 
 
-def extract_dates_to_retrieve(failed_gdas_files_path='gdas2radiosonde_failed_files.csv'):
+def extract_dates_to_retrieve(failed_gdas_files_path='gdas2radiosonde_failed_files.csv', mark_as_fixed=False):
     """
     Extracts a set of datetimes from the failed_gdas_files_path csv file.
 
@@ -22,14 +22,23 @@ def extract_dates_to_retrieve(failed_gdas_files_path='gdas2radiosonde_failed_fil
     dates_to_retrieve = set()
     with open(failed_gdas_files_path, 'r') as failed_files:
         reader = csv.reader(failed_files)
-
+        file_data = [['gdas_source_file', 'Failure Reason', 'status']]
         for indx, failed_file in enumerate(reader):
-            if indx == 0: continue
+            if indx == 0:
+                continue
             path = failed_file[0]
+            corruption_reason = failed_file[1]
             status = failed_file[2]
-            if status=='Broken':
+            if status == 'Broken':
                 yearmonthday_to_retrieve = datetime.strptime(path.split('/')[-1].split('_')[1], '%Y%m%d')
                 dates_to_retrieve.add(yearmonthday_to_retrieve)
+            if mark_as_fixed:
+                status = 'Fixed'
+            file_data.append([path, corruption_reason, status])
+
+    with open(failed_gdas_files_path, 'w') as failed_files:
+        writer = csv.writer(failed_files)
+        writer.writerows(file_data)
 
     logger.debug(
         f"Extracted {len(dates_to_retrieve)} failed gdas files from dates: {[date_.strftime('%d-%m-%Y') for date_ in dates_to_retrieve]}")
@@ -54,8 +63,9 @@ def download_gdas_files(dates_to_retrieve, save_folder='downloaded_gdas'):
 if __name__ == '__main__':
     logging.getLogger('ARLreader').setLevel(logging.ERROR)  # Fix annoying ARLreader logs
     logger = create_and_configer_logger('preprocessing_log.log')
-    dates_to_retrieve = extract_dates_to_retrieve()
+    _ = extract_dates_to_retrieve(mark_as_fixed=False)
     sleep(0.1)
     flag = input("Are you sure you want to download all these files? [y/n]")
     if flag == 'y':
+        dates_to_retrieve = extract_dates_to_retrieve(mark_as_fixed=True)
         download_gdas_files(dates_to_retrieve)
