@@ -38,7 +38,7 @@ def gdas2radiosonde(src_file, dst_file, col_names=None):
     except Exception:
         logger.exception(f'Failed reading {src_file}. Check the source file, '
                          'or generate it again with ARLreader module')
-        write_row_to_csv('gdas2radiosonde_failed_files.csv', [src_file, 'Read Fail'])
+        write_row_to_csv('gdas2radiosonde_failed_files.csv', [src_file, 'Read Fail', 'Broken'])
         return None
 
     # converting any kind of blank spaces to zeros
@@ -52,7 +52,7 @@ def gdas2radiosonde(src_file, dst_file, col_names=None):
     except Exception:
         logger.exception(f'Conversion of {src_file} to {dst_file} failed. Check the source file, '
                          'or generate it again with ARLreader module')
-        write_row_to_csv('gdas2radiosonde_failed_files.csv', [src_file, 'Conversion Fail'])
+        write_row_to_csv('gdas2radiosonde_failed_files.csv', [src_file, 'Conversion Fail', 'Broken'])
         dst_file = None
     return dst_file
 
@@ -80,7 +80,6 @@ def get_daily_gdas_paths(station, day_date, f_type='gdas1'):
             os.makedirs(gdas_folder)
         except:
             logger.exception(f'Failed to create folder {gdas_folder}')
-            pass
             # TODO: write failure to logger, and save the problematic file/folder name
 
     gdas_day_pattern = '{}_{}_*_{}_{}.{}'.format(station.location, day_date.strftime('%Y%m%d'),
