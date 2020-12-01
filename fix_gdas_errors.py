@@ -27,13 +27,13 @@ def extract_dates_to_retrieve(failed_gdas_files_path='gdas2radiosonde_failed_fil
         reader = csv.reader(failed_files)
         file_data = [['gdas_source_file', 'failure_reason', 'status']]
         for indx, failed_file in enumerate(reader):
-            if indx == 0:
+            if indx == 0 or not failed_file:
                 continue
             path = failed_file[0]
             corruption_reason = failed_file[1]
             status = failed_file[2]
             if status == 'Broken':
-                YYYYMMDD = path.split('/')[-1].split('_')[1]
+                YYYYMMDD = path.split(os.sep)[-1].split('_')[1]
                 yearmonthday_to_retrieve = datetime.strptime(YYYYMMDD, '%Y%m%d')
                 dates_to_retrieve.add(yearmonthday_to_retrieve)
             if mark_as_downloaded:
@@ -78,7 +78,7 @@ def extract_profiles(failed_gdas_files_path='gdas2radiosonde_failed_files.csv'):
         file_data = [['gdas_source_file', 'Failure Reason', 'status']]
         for indx, failed_file in enumerate(reader):
             # skip first row
-            if indx == 0:
+            if indx == 0 or not failed_file:
                 continue
             # parse the csv row
             path = failed_file[0]
@@ -87,14 +87,14 @@ def extract_profiles(failed_gdas_files_path='gdas2radiosonde_failed_files.csv'):
 
             if status == 'Downloaded':
                 logger.debug(f"Converting {path}...")
-                parsed_path = path.split('/')[-1].split('_')
+                parsed_path = path.split(os.sep)[-1].split('_')
                 station_name = parsed_path[0]
                 date = parsed_path[1]
                 day = int(date[-2:])
                 hour = int(parsed_path[2])
                 lat = float(parsed_path[3])
                 lon = float(parsed_path[4].rstrip('.gdas1'))
-                YYYYMMDD = path.split('/')[-1].split('_')[1]
+                YYYYMMDD = path.split(os.sep)[-1].split('_')[1]
                 yearmonthday_to_retrieve = datetime.strptime(YYYYMMDD, '%Y%m%d')
                 new_file_name = f"{station_name}_{date}_{hour}_{lat}_{lon}.txt"
                 folder = os.path.dirname(path)
@@ -122,7 +122,7 @@ def extract_single_profile(day, hour, lat, lon, yearmonthday_to_retrieve, new_fi
     logger = logging.getLogger()
 
     gdas_file = Ar.fname_from_date(yearmonthday_to_retrieve)
-    logger.debug(f'{gdas_file} converted to {new_file_name}')
+    logger.debug(f'{gdas_file} converted to {os.path.join(save_path,new_file_name)}')
     gdas = Ar.reader(os.path.join('downloaded_gdas', gdas_file))
     profile, sfcdata, indexinfo, ind = gdas.load_profile(day, hour, (lat, lon))
 
