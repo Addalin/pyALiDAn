@@ -13,7 +13,8 @@ def create_and_configer_logger(log_name):
     logging.basicConfig(
         filename=log_name,
         level=logging.DEBUG,
-        format='[%(asctime)s] {%(pathname)s:%(lineno)d} %(levelname)s - %(message)s'
+        format='[%(asctime)s] {%(pathname)s:%(lineno)d} %(levelname)s - %(message)s',
+        datefmt = '%Y-%m-%d %H:%M:%S'
     )
 
     # set up logging to console
