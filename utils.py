@@ -2,12 +2,25 @@ import csv
 import logging
 
 
-def create_and_configer_logger(log_name):
+def create_and_configer_logger(log_name='log_file.log'):
     """
-    TODO
+    Sets up a logger that works across files.
+    The logger prints to console, and to log_name log file. 
+    
+    Example usage:
+        In main function:
+            logger = create_and_configer_logger(log_name='myLog.log')
+
+        Then in all other files:
+            logger = logging.getLogger(__name__)
+            
+        To add records to log:
+            logger.debug(f"New Log Message. Value of x is {x}")
+    
     Args:
-        log_name ():
-    Returns:
+        log_name: str, log file name
+        
+    Returns: logger
     """
     # set up logging to file
     logging.basicConfig(
@@ -32,11 +45,12 @@ def create_and_configer_logger(log_name):
 
 def write_row_to_csv(csv_path, msg):
     """
-    TODO
+    Writes msg to a new row in csv_path which is a csv file.
+    Logs message in logger.
+    
     Args:
-        forward_dir ():
-        msg ():
-    Returns:
+        csv_path: str, path to the csv file. Creates it if file doesn't exist.
+        msg: list, message to write to file. Each entry in list represents a column.
     """
     with open(csv_path, 'a') as csv_file:
         writer = csv.writer(csv_file)
