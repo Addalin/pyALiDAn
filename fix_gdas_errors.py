@@ -25,7 +25,7 @@ def extract_dates_to_retrieve(failed_gdas_files_path='gdas2radiosonde_failed_fil
     dates_to_retrieve = set()
     with open(failed_gdas_files_path, 'r') as failed_files:
         reader = csv.reader(failed_files)
-        file_data = [['gdas_source_file', 'Failure Reason', 'status']]
+        file_data = [['gdas_source_file', 'failure_reason', 'status']]
         for indx, failed_file in enumerate(reader):
             if indx == 0:
                 continue
@@ -97,8 +97,8 @@ def extract_profiles(failed_gdas_files_path='gdas2radiosonde_failed_files.csv'):
                 YYYYMMDD = path.split('/')[-1].split('_')[1]
                 yearmonthday_to_retrieve = datetime.strptime(YYYYMMDD, '%Y%m%d')
                 new_file_name = f"{station_name}_{date}_{hour}_{lat}_{lon}.txt"
-
-                extract_single_profile(day, hour, lat, lon, yearmonthday_to_retrieve, new_file_name)
+                folder = os.path.dirname(path)
+                extract_single_profile(day, hour, lat, lon, yearmonthday_to_retrieve, new_file_name,folder)
                 status = 'Fixed'
 
             file_data.append([path, corruption_reason, status])
