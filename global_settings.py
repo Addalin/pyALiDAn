@@ -50,7 +50,7 @@ class Station:
         :param stations_csv_path: str, path to stations csv file
         """
 
-        stations_df = pd.read_csv(stations_csv_path, index_col='station_name', sep=', ')
+        stations_df = pd.read_csv(stations_csv_path, index_col='station_name', sep=',',skipinitialspace=True)
         try:
             station_df = stations_df.loc[station_name]
         except KeyError as e:
@@ -68,6 +68,9 @@ class Station:
         self.gdas1_folder = station_df['gdas1_folder']
         self.gdastxt_folder = station_df['gdastxt_folder']
         self.lidar_src_folder = station_df['lidar_src_folder']
+        self.molecular_src_folder = station_df['molecular_src_folder']
+        self.db_file = station_df['db_file']
+
 
     def __str__(self):
         return str(self.__class__) + ": " + str(self.__dict__)
