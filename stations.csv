@@ -1,3 +1,3 @@
-station_name, location, longitude, latitude, altitude, start_bin_height, end_bin_height, n_bins, dt, gdas1_folder, gdastxt_folder, lidar_src_folder
-haifa, haifa, 35.0, 32.8, 229, 8.75, 22485.66015, 3000, 50 * 1E-9, H:\data_haifa\DATA FROM TROPOS\GDAS\haifa, H:\data_haifa\DATA FROM TROPOS\GDAS\haifa_preproc, H:\data_haifa\DATA FROM TROPOS\data\level1a\PollyXT_TROPOS
-haifa_shubi, haifa, 35.0, 32.8, 229, 8.75, 22485.66015, 3000, 50 * 1E-9, data_example/gdas, data_example/gdas_txt, H:\data_haifa\DATA FROM TROPOS\data\level1a\PollyXT_TROPOS
+station_name, location, longitude, latitude, altitude, start_bin_height, end_bin_height, n_bins, dt, gdas1_folder, gdastxt_folder, lidar_src_folder,molecular_src_folder,db_file
+haifa, haifa,35,32.8,229,8.75,22485.66015,3000, 50 * 1E-9, H:\data_haifa\DATA FROM TROPOS\GDAS\haifa, H:\data_haifa\DATA FROM TROPOS\GDAS\haifa_preproc, H:\data_haifa\DATA FROM TROPOS\data\level1a\PollyXT_TROPOS,H:\data_haifa\DATA FROM TROPOS\molecular_dataset,H:\data_haifa\DATA FROM TROPOS\data\level1a\PollyXT_TROPOS\pollyxt_tropos_calibration.db
+haifa_shubi, haifa,35,32.8,229,8.75,22485.66015,3000, 50 * 1E-9, data_example/gdas, data_example/gdas_txt, H:\data_haifa\DATA FROM TROPOS\data\level1a\PollyXT_TROPOS,,
