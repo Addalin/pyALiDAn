@@ -58,13 +58,13 @@ class Station:
             raise e
         self.name = station_name
         self.location = station_df['location']
-        self.lon = station_df['longitude']
-        self.lat = station_df['latitude']
-        self.altitude = station_df['altitude']  # [m] The Lidar's altitude   ( above sea level, see 'altitude' in ' *_att_bsc.nc)
-        self.start_bin_height = station_df['start_bin_height']  # [m] The first bin's height ( above ground level - a.k.a above the lidar, see height[0]  in *_att_bsc.nc)
-        self.end_bin_height = station_df['end_bin_height']  # [m] The last bin's height  ( see height[-1] in *_att_bsc.nc)
-        self.n_bins = station_df['n_bins']      # [#] Number of height bins         ( see height.shape  in  *_att_bsc.nc)
-        self.dt = eval(station_df['dt'])     # [sec] temporal pulse width of the lidar
+        self.lon = np.float(station_df['longitude'])
+        self.lat = np.float(station_df['latitude'])
+        self.altitude = np.float(station_df['altitude'])  # [m] The Lidar's altitude   ( above sea level, see 'altitude' in ' *_att_bsc.nc)
+        self.start_bin_height = np.float(station_df['start_bin_height'])  # [m] The first bin's height ( above ground level - a.k.a above the lidar, see height[0]  in *_att_bsc.nc)
+        self.end_bin_height = np.float(station_df['end_bin_height'])  # [m] The last bin's height  ( see height[-1] in *_att_bsc.nc)
+        self.n_bins = np.int(station_df['n_bins'])      # [#] Number of height bins         ( see height.shape  in  *_att_bsc.nc)
+        self.dt = np.float(eval(station_df['dt']))     # [sec] temporal pulse width of the lidar
         self.gdas1_folder = station_df['gdas1_folder']
         self.gdastxt_folder = station_df['gdastxt_folder']
         self.lidar_src_folder = station_df['lidar_src_folder']

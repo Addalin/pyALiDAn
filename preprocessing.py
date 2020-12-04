@@ -362,12 +362,12 @@ def main():
     logging.getLogger('PIL').setLevel(logging.ERROR)  # Fix annoying PIL logs
     logger = create_and_configer_logger('preprocessing_log.log')
     DO_GDAS = True
-    DO_NETCDF = True
+    DO_NETCDF = False
     wavs_nm = gs.LAMBDA_nm()
     logger.debug(f'waves_nm: {wavs_nm}')
     """set day,location"""
     day_date = datetime(2017, 9, 1)
-    haifa_station = gs.Station(stations_csv_path='stations.csv', station_name='haifa_shubi')
+    haifa_station = gs.Station(stations_csv_path='stations.csv', station_name='haifa')#haifa_shubi')
     logger.debug(f"haifa_station: {haifa_station}")
     # location = haifa_station.location
     min_height = haifa_station.altitude + haifa_station.start_bin_height
