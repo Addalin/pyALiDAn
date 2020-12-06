@@ -501,7 +501,25 @@ def create_dataset():
     return full_df
 
 
+from torch.utils.data import Dataset, DataLoader
+class customDataSet(Dataset):
+    """TODO"""
 
+    def __init__(self, df):
+        """
+        Args:
+            csv_file (string): Path to the csv file with annotations.
+            root_dir (string): Directory with all the images.
+            transform (callable, optional): Optional transform to be applied
+                on a sample.
+        """
+        self.data = df
+
+    def __len__(self):
+        return len(self.data)
+
+    def __getitem__(self, idx):
+        return self.df.loc[idx, :]
 
 
 def main():
@@ -605,7 +623,10 @@ def main():
         pass  # add breakpoint here to see the df
 
     if CREATE_DATASET:
-        create_dataset()
+        df = create_dataset()
+        dataset = customDataSet(df)
+
+
 
 
 if __name__ == '__main__':
