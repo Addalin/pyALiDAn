@@ -70,6 +70,7 @@ class Station:
         self.lidar_src_folder = station_df['lidar_src_folder']
         self.molecular_src_folder = station_df['molecular_src_folder']
         self.db_file = station_df['db_file']
+        self.lidar_parent_folder = station_df['lidar_parent_folder']
 
 
     def __str__(self):

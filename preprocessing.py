@@ -357,12 +357,161 @@ def query_database(query="SELECT * FROM lidar_calibration_constant;",
     return df
 
 
+def get_query(wavelength, cali_method, start_day, till_date):
+    query = f"""
+    SELECT  lcc.liconst, lcc.uncertainty_liconst,
+            lcc.cali_start_time, lcc.cali_stop_time,
+            lcc.wavelength, lcc.cali_method, lcc.telescope
+    FROM lidar_calibration_constant as lcc
+    WHERE
+        wavelength == {wavelength} AND
+        cali_method == '{cali_method}' AND
+        telescope == 'far_range' AND
+        (cali_start_time BETWEEN '{start_day}' AND '{till_date}');
+    """
+    return query
+
+
+def get_nc_params(df, profile_paths):
+    # Build matching_nc_file
+    # TODO ?? currently matches any two values
+    df['nc_path'] = "*" + df['cali_start_time'].dt.strftime('%Y_%m_%d') + \
+                    "_" + df['cali_start_time'].dt.day_name().str.slice(start=0, stop=3) + \
+                    "_TROPOS_" + "??_00_01_" + \
+                    df['cali_start_time'].dt.strftime('%H%M') + "_" + \
+                    df['cali_stop_time'].dt.strftime('%H%M') + "_profiles.nc"
+
+    # Find Actual matching nc profile  file (full path)
+    # makes sure only one file is returned
+    df['matched_nc_file'] = df['nc_path'].apply(
+        lambda x: fnmatch.filter(profile_paths, x)[0] if len(fnmatch.filter(profile_paths, x)) == 1 else exec(
+            "raise(Exception('More than one File'))"))
+
+    # Get the altitude, delta_r and r0
+    def _get_info_from_profile_nc(row):
+        data = Dataset(row['matched_nc_file'])
+        wavelen = row.wavelength
+        delta_r = data.variables[f'reference_height_{wavelen}'][:].data[1] - \
+                  data.variables[f'reference_height_{wavelen}'][:].data[0]
+        return data.variables['altitude'][:].data.item(), delta_r, \
+               data.variables[f'reference_height_{wavelen}'][:].data[0]
+
+    df[['altitude', 'delta_r', 'r0']] = df.apply(_get_info_from_profile_nc, axis=1, result_type='expand')
+    return df
+
+
+def get_att_bsc_path(df, bsc_paths):
+    # Find Actual matching att_bsc file (full path)
+    # makes sure only one file is returned
+    df['att_bsc_path'] = df['matched_nc_file'].apply(lambda x: x[:-22] + "_att_bsc.nc")
+    df['att_bsc_path'].apply(
+        lambda x: exec("raise(Exception('att_bsc file not found in bsc_paths'))") if x not in bsc_paths else 1)
+
+    return df
+
+
+def get_mol_path(df, mol_src_path):
+    # mol_path ( station .molecular_src_folder/<%Y/%M><day_mol.nc>
+    df['mol_path'] = mol_src_path + os.sep + df['cali_start_time'].dt.strftime(
+        f'%Y{os.sep}%m') + os.sep + "day_mol.nc"
+
+    return df
+
+
+def get_time_frames(df):
+    df['start_time'] = df['cali_start_time'].dt.round('30min')
+    df.loc[df['start_time'] < df['cali_start_time'], 'start_time'] += timedelta(minutes=30)
+
+    df['end_time'] = df['cali_stop_time'].dt.round('30min')
+    df.loc[df['end_time'] > df['cali_stop_time'], 'end_time'] -= timedelta(minutes=30)
+    return df
+
+
+def create_dataset():
+    """
+    CHOOSE: telescope: far_range , METHOD: Klett_Method
+    each sample will have 60 bins (aka 30 mins length)
+    path to db:  stationdb_file
+
+    :key
+    Date DONE
+    start_time
+    end_time
+    period <30 min>
+    wavelength DONE
+    method (KLET) DONE
+
+    Y:
+    LC (linconst from .db) DONE
+    LC std (un.linconst from.db) DONE
+    r0 (from *_profile.nc DONE
+    delta_r (r1-r0) DONE
+
+    X:
+    att_bsc_path (station.lidar_src_folder/<%Y/%M/%d> +nc_zip_file+'att_bsc.nc'
+    mol_path ( station .molecular_src_folder/<%Y/%M><day_mol.nc>
+    """
+
+    station = gs.Station(station_name='haifa_shubi')
+    db_path = station.db_file
+    mol_src_path = station.molecular_src_folder
+    lidar_parent_folder = station.lidar_parent_folder
+    wavelength = gs.LAMBDA_nm().IR  # or wavelengths[0] # 1064 or
+    cali_method = 'Klett_Method'
+
+    day_date1 = datetime(2017, 9, 1)
+    day_date2 = datetime(2017, 9, 1)
+    full_df = pd.DataFrame()
+    for day_date in [day_date1, day_date2]:
+
+        day_diff = timedelta(days=1)
+        start_day = day_date.strftime('%Y-%m-%d')
+        till_date = (day_date + day_diff).strftime('%Y-%m-%d')
+        # Query the db for a specific day, wavelength and calibration method
+        query = get_query(wavelength, cali_method, start_day, till_date)
+        df = query_database(query=query, database_path=db_path)
+
+        df['date'] = day_date.strftime('%Y-%m-%d')
+
+
+        profile_paths = get_profiles_paths(lidar_parent_folder, day_date)
+        df = get_nc_params(df, profile_paths)
+
+        bsc_paths = get_att_bsc_paths(lidar_parent_folder, day_date)
+        df = get_att_bsc_path(df, bsc_paths)
+
+        df = get_mol_path(df, mol_src_path)
+
+        df = get_time_frames(df)
+
+        expanded_df = pd.DataFrame()
+        for indx, row in df.iterrows():
+            for start_time, end_time in zip(pd.date_range(row.loc['start_time'], row.loc['end_time'], freq='30min')[:-1], pd.date_range(row.loc['start_time'], row.loc['end_time'], freq='30min').shift(1)[:-1]):
+                mini_df = row.copy()
+                mini_df['start_time_period'] = start_time
+                mini_df['end_time_period'] = end_time
+                expanded_df = expanded_df.append(mini_df)
+
+        # reorder the columns
+        key = ['date', 'wavelength', 'cali_method', 'telescope', 'cali_start_time', 'cali_stop_time', 'start_time_period', 'end_time_period']
+        X_features = ['liconst', 'uncertainty_liconst', 'delta_r', 'r0']
+        y_features = ['att_bsc_path', 'mol_path']
+        expanded_df = expanded_df[key+X_features+y_features]
+        full_df = full_df.append(expanded_df)
+    return full_df
+
+
+
+
+
 def main():
     logging.getLogger('matplotlib').setLevel(logging.ERROR)  # Fix annoying matplotlib logs
     logging.getLogger('PIL').setLevel(logging.ERROR)  # Fix annoying PIL logs
     logger = create_and_configer_logger('preprocessing_log.log')
-    DO_GDAS = True
-    DO_NETCDF = True
+    DO_GDAS = False
+    DO_NETCDF = False
+    CREATE_DATASET = True
+
     wavs_nm = gs.LAMBDA_nm()
     logger.debug(f'waves_nm: {wavs_nm}')
     """set day,location"""
@@ -454,6 +603,9 @@ def main():
         df[['altitude', 'delta_r']] = df.apply(get_info_from_profile_nc, axis=1, result_type='expand')
         # TODO do something with the df
         pass  # add breakpoint here to see the df
+
+    if CREATE_DATASET:
+        create_dataset()
 
 
 if __name__ == '__main__':
