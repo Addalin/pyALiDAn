@@ -16,6 +16,7 @@ import global_settings as gs
 import miscLidar as mscLid
 from utils import create_and_configer_logger, write_row_to_csv
 import logging
+import torch.utils.data
 
 
 # %%
@@ -427,7 +428,7 @@ def get_time_frames(df):
     return df
 
 
-def create_dataset():
+def create_dataset(station_name='haifa'):
     """
     CHOOSE: telescope: far_range , METHOD: Klett_Method
     each sample will have 60 bins (aka 30 mins length)
@@ -452,7 +453,7 @@ def create_dataset():
     mol_path ( station .molecular_src_folder/<%Y/%M><day_mol.nc>
     """
 
-    station = gs.Station(station_name='haifa_shubi')
+    station = gs.Station(station_name=station_name)
     db_path = station.db_file
     mol_src_path = station.molecular_src_folder
     lidar_parent_folder = station.lidar_parent_folder
@@ -473,7 +474,6 @@ def create_dataset():
 
         df['date'] = day_date.strftime('%Y-%m-%d')
 
-
         profile_paths = get_profiles_paths(lidar_parent_folder, day_date)
         df = get_nc_params(df, profile_paths)
 
@@ -486,22 +486,27 @@ def create_dataset():
 
         expanded_df = pd.DataFrame()
         for indx, row in df.iterrows():
-            for start_time, end_time in zip(pd.date_range(row.loc['start_time'], row.loc['end_time'], freq='30min')[:-1], pd.date_range(row.loc['start_time'], row.loc['end_time'], freq='30min').shift(1)[:-1]):
+            for start_time, end_time in zip(
+                    pd.date_range(row.loc['start_time'], row.loc['end_time'], freq='30min')[:-1],
+                    pd.date_range(row.loc['start_time'], row.loc['end_time'], freq='30min').shift(1)[:-1]):
                 mini_df = row.copy()
                 mini_df['start_time_period'] = start_time
                 mini_df['end_time_period'] = end_time
                 expanded_df = expanded_df.append(mini_df)
 
         # reorder the columns
-        key = ['date', 'wavelength', 'cali_method', 'telescope', 'cali_start_time', 'cali_stop_time', 'start_time_period', 'end_time_period']
+        key = ['date', 'wavelength', 'cali_method', 'telescope', 'cali_start_time', 'cali_stop_time',
+               'start_time_period', 'end_time_period']
         X_features = ['liconst', 'uncertainty_liconst', 'delta_r', 'r0']
         y_features = ['att_bsc_path', 'mol_path']
-        expanded_df = expanded_df[key+X_features+y_features]
+        expanded_df = expanded_df[key + X_features + y_features]
         full_df = full_df.append(expanded_df)
 
     return full_df.reset_index()
 
-import torch.utils.data
+
+
+
 class customDataSet(torch.utils.data.Dataset):
     """TODO"""
 
@@ -511,13 +516,20 @@ class customDataSet(torch.utils.data.Dataset):
             TODO
         """
         self.data = df.copy()
+        self.key = ['date', 'wavelength', 'cali_method', 'telescope', 'cali_start_time', 'cali_stop_time',
+               'start_time_period', 'end_time_period']
+        self.X_features = ['liconst', 'uncertainty_liconst', 'delta_r', 'r0']
+        self.y_features = ['att_bsc_path', 'mol_path']
 
     def __len__(self):
         return len(self.data)
 
     def __getitem__(self, idx):
-        #TODO transform to torch.tensor!
-        return self.data.loc[idx, :]
+        row = self.data.loc[idx, :]
+        X = row[self.X_features]
+        y = row[self.y_features]
+        # TODO transform y to torch.tensor!
+        return torch.tensor(X), y
 
 
 def main():
@@ -526,7 +538,7 @@ def main():
     logger = create_and_configer_logger('preprocessing_log.log')
     DO_GDAS = False
     DO_NETCDF = False
-    CREATE_DATASET = True
+    DO_DATASET = True
 
     wavs_nm = gs.LAMBDA_nm()
     logger.debug(f'waves_nm: {wavs_nm}')
@@ -620,17 +632,15 @@ def main():
         # TODO do something with the df
         pass  # add breakpoint here to see the df
 
-    if CREATE_DATASET:
-        df = create_dataset()
+    if DO_DATASET:
+        df = create_dataset(station_name='haifa_shubi')
         dataset = customDataSet(df)
         dataloader = torch.utils.data.DataLoader(dataset, batch_size=4,
-                                shuffle=True, num_workers=0)
+                                                 shuffle=True)
 
         for i_batch, sample_batched in enumerate(dataloader):
             print(i_batch, sample_batched)
             break
-
-
 
 
 if __name__ == '__main__':
