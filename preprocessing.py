@@ -498,28 +498,26 @@ def create_dataset():
         y_features = ['att_bsc_path', 'mol_path']
         expanded_df = expanded_df[key+X_features+y_features]
         full_df = full_df.append(expanded_df)
-    return full_df
 
+    return full_df.reset_index()
 
-from torch.utils.data import Dataset, DataLoader
-class customDataSet(Dataset):
+import torch.utils.data
+class customDataSet(torch.utils.data.Dataset):
     """TODO"""
 
     def __init__(self, df):
         """
         Args:
-            csv_file (string): Path to the csv file with annotations.
-            root_dir (string): Directory with all the images.
-            transform (callable, optional): Optional transform to be applied
-                on a sample.
+            TODO
         """
-        self.data = df
+        self.data = df.copy()
 
     def __len__(self):
         return len(self.data)
 
     def __getitem__(self, idx):
-        return self.df.loc[idx, :]
+        #TODO transform to torch.tensor!
+        return self.data.loc[idx, :]
 
 
 def main():
@@ -625,6 +623,12 @@ def main():
     if CREATE_DATASET:
         df = create_dataset()
         dataset = customDataSet(df)
+        dataloader = torch.utils.data.DataLoader(dataset, batch_size=4,
+                                shuffle=True, num_workers=0)
+
+        for i_batch, sample_batched in enumerate(dataloader):
+            print(i_batch, sample_batched)
+            break
 
 
 
