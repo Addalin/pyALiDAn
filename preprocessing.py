@@ -503,9 +503,7 @@ def create_dataset(station_name='haifa'):
         expanded_df = expanded_df[key + X_features + y_features]
         full_df = full_df.append(expanded_df)
 
-    return full_df.reset_index()
-
-
+    return full_df.reset_index(drop=True)
 
 
 class customDataSet(torch.utils.data.Dataset):
