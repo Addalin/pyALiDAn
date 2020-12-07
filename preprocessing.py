@@ -421,10 +421,10 @@ def get_mol_path(df, mol_src_path):
 
 def get_time_frames(df):
     df['start_time'] = df['cali_start_time'].dt.round('30min')
-    df.loc[df['start_time'] < df['cali_start_time'], 'start_time'] += timedelta(minutes=30)
+    df.loc[df['start_time'] <  df['cali_start_time'], 'start_time'] += timedelta(minutes=30)
 
     df['end_time'] = df['cali_stop_time'].dt.round('30min')
-    df.loc[df['end_time'] > df['cali_stop_time'], 'end_time'] -= timedelta(minutes=30)
+    df.loc[df['end_time'] - df['cali_stop_time'] > timedelta(seconds=30), 'end_time'] -= timedelta(minutes=30)
     return df
 
 
@@ -491,7 +491,7 @@ def create_dataset(station_name='haifa'):
                     pd.date_range(row.loc['start_time'], row.loc['end_time'], freq='30min').shift(1)[:-1]):
                 mini_df = row.copy()
                 mini_df['start_time_period'] = start_time
-                mini_df['end_time_period'] = end_time
+                mini_df['end_time_period'] = end_time - timedelta(seconds=30)
                 expanded_df = expanded_df.append(mini_df)
 
         # reorder the columns
