@@ -413,8 +413,9 @@ def get_att_bsc_path(df, bsc_paths):
 
 def get_mol_path(df, mol_src_path):
     # mol_path ( station .molecular_src_folder/<%Y/%M><day_mol.nc>
-    df['mol_path'] = mol_src_path + os.sep + df['cali_start_time'].dt.strftime(
-        f'%Y{os.sep}%m') + os.sep + "day_mol.nc"
+    df['mol_path'] = mol_src_path + os.sep +\
+                     df['cali_start_time'].dt.strftime(f'%Y{os.sep}%m') + os.sep +\
+                     df['cali_start_time'].dt.strftime(f'%Y_%m_%d') + "_mol.nc"
 
     return df
 
