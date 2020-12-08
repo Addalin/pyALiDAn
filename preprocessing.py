@@ -80,7 +80,6 @@ def get_daily_gdas_paths(station, day_date, f_type='gdas1'):
             os.makedirs(gdas_folder)
         except:
             logger.exception(f'Failed to create folder {gdas_folder}')
-            # TODO: write failure to logger, and save the problematic file/folder name
 
     gdas_day_pattern = '{}_{}_*_{}_{}.{}'.format(station.location, day_date.strftime('%Y%m%d'),
                                                  station.lat, station.lon, f_type)
@@ -192,7 +191,7 @@ def cal_e_tau_df(col, altitude):
 def calc_beta_profile_df(row, lambda_nm=532.0, ind_n='beta'):
     """
     Returns pd series of backscatter profile from a radiosonde dataframe containing the
-    columns:['PRES','TEMPS',RELHS]. The function applies on rows of the radiosonde df.
+    columns:['PRES','TEMPS','RELHS']. The function applies on rows of the radiosonde df.
     :param row: row of radiosonde df
     :param lambda_nm: wavelength in [nm], e.g, for green lambda_nm = 532.0 [nm]
     :param ind_n: index name, the column name of the result. The default is 'beta'
@@ -268,7 +267,6 @@ def get_daily_molecular_profiles(station, day_date, lambda_nm=532, height_units=
 
     return df_sigma, df_beta
 
-
 def get_att_bsc_paths(lidar_parent_folder, day_date):
     """
     Load netcdf file of the attenuation backscatter profile(att_bsc.nc) according to date
@@ -312,7 +310,7 @@ def extract_att_bsc(bsc_paths, wavelengths):
     For all .nc files under bsc_paths and for each wavelength in wavelengths
     extract the OC_attenuated_backscatter_{wavelen}nm and Lidar_calibration_constant_used
 
-    :param bsc_paths: paath to netcdf folder
+    :param bsc_paths: path to netcdf folder
     :param wavelengths: iterable, list of wavelengths
     :return:
     """
@@ -365,11 +363,11 @@ def main():
     DO_NETCDF = False
     wavs_nm = gs.LAMBDA_nm()
     logger.debug(f'waves_nm: {wavs_nm}')
+
     """set day,location"""
     day_date = datetime(2017, 9, 1)
     haifa_station = gs.Station(stations_csv_path='stations.csv', station_name='haifa')#haifa_shubi')
     logger.debug(f"haifa_station: {haifa_station}")
-    # location = haifa_station.location
     min_height = haifa_station.altitude + haifa_station.start_bin_height
     top_height = haifa_station.altitude + haifa_station.end_bin_height
 
