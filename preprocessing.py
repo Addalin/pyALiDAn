@@ -81,14 +81,14 @@ def get_daily_gdas_paths(station, day_date, f_type='gdas1'):
         except:
             logger.exception(f'Failed to create folder {gdas_folder}')
 
-    gdas_day_pattern = '{}_{}_*_{}_{}.{}'.format(station.location, day_date.strftime('%Y%m%d'),
+    gdas_day_pattern = '{}_{}_*_{:.1f}_{:.1f}.{}'.format(station.location.lower(), day_date.strftime('%Y%m%d'),
                                                  station.lat, station.lon, f_type)
     gdas_paths = sorted(glob.glob(os.path.join(gdas_folder, gdas_day_pattern)))
     return gdas_folder, gdas_paths
 
 
 def get_gdas_fname(station, time, f_type='txt'):
-    file_pattern = '{}_{}_{}_{}_{}.{}'.format(station.location, time.strftime('%Y%m%d'), time.strftime('%H'),
+    file_pattern = '{}_{}_{}_{:.1f}_{:.1f}.{}'.format(station.location.lower(), time.strftime('%Y%m%d'), time.strftime('%H'),
                                               station.lat, station.lon, f_type)
     if f_type == 'gdas1':
         base_folder = station.gdas1_folder
@@ -234,11 +234,15 @@ def get_daily_molecular_profiles(station, day_date, lambda_nm=532, height_units=
 
     _, gdas_curday_paths = get_daily_gdas_paths(station, day_date, 'txt')
     if not gdas_curday_paths:
+        logger.debug(f"For {day_date.strftime('%Y/%m/%d' )}, "
+                     f"there are not the required GDAS '.txt' files. Starting conversion from '.gdas1'" )
         gdas_curday_paths = convert_daily_gdas(station, day_date)
 
     next_day = day_date + timedelta(days=1)
     _, gdas_nxtday_paths = get_daily_gdas_paths(station, next_day, 'txt')
     if not gdas_nxtday_paths:
+        logger.debug(f"For {day_date.strftime('%Y/%m/%d' )}, "
+                     f"there are not the required GDAS '.txt' files. Starting conversion from '.gdas1'" )
         gdas_nxtday_paths = convert_daily_gdas(station, next_day)
 
     gdas_txt_paths = gdas_curday_paths
@@ -246,7 +250,7 @@ def get_daily_molecular_profiles(station, day_date, lambda_nm=532, height_units=
 
     for path in gdas_txt_paths:
         df_sonde = RadiosondeProfile(path).get_df_sonde(heights)
-        time = extract_date_time(path, r'{}_(.*)_{}_{}.txt'.format(station.location, station.lat, station.lon),
+        time = extract_date_time(path, r'{}_(.*)_{:.1f}_{:.1f}.txt'.format(station.location.lower(), station.lat, station.lon),
                                  ['%Y%m%d_%H'])[0]
         '''Calculating molecular profiles from temperature and pressure'''
         res = df_sonde.apply(calc_sigma_profile_df, axis=1, args=(lambda_nm, time,),
