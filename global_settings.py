@@ -52,9 +52,9 @@ class Station:
 
         stations_df = pd.read_csv(stations_csv_path, index_col='station_name', sep=',',skipinitialspace=True)
         try:
-            station_df = stations_df.loc[station_name]
+            station_df = stations_df.loc[station_name.lower()]
         except KeyError as e:
-            print(f"{station_name} not in {stations_csv_path}. Available stations: {stations_df.index.values}")
+            print(f"{station_name.lower()} not in {stations_csv_path}. Available stations: {stations_df.index.values}")
             raise e
         self.name = station_name
         self.location = station_df['location']
