@@ -177,12 +177,11 @@ def cal_e_tau_df(col, altitude):
     """
     Calculate the the attenuated optical depth (tau is the optical depth).
     Calculation is per column of the backscatter (sigma) dataframe.
-    :param col: column of sigma_df
-    :param altitude: the altitude of the the lidar station above sea level
+    :param col: column of sigma_df , the values of sigma should be in [1/m]
+    :param altitude: the altitude of the the lidar station above sea level, in [m]
     :return: Series of exp(-2*tau)  , tau = integral( sigma(r) * dr)
     """
 
-    # TODO: validate height scale (m or km)
     heights = col.index.to_numpy() - altitude
     tau = mscLid.calc_tau(col, heights)
     return pd.Series(np.exp(-2 * tau))
@@ -233,14 +232,6 @@ def get_daily_molecular_profiles(station, day_date, lambda_nm=532, height_units=
     df_sigma = pd.DataFrame(index=heights).rename_axis('Height[{}]'.format(height_units))
     df_beta = pd.DataFrame(index=heights).rename_axis('Height[{}]'.format(height_units))
 
-    # TODO: add warning in case of missing files, and convert the required paths according to below
-    # %% timestapms daily range
-    # timestamps = pd.date_range ( start = day_date , end = day_date + timedelta(days = 1) , freq = timedelta ( hours = 3 ) )
-    # gdas_txt_paths = [get_gdas_fname ( station , time ) for time in timestamps ]
-    # [os.path.exists(path) for path in paths]
-
-    # set a list of relevant timestamps for interpolation of day_date
-    # The list contains all measurements in day_date and the first one of next_day at 00:00
     _, gdas_curday_paths = get_daily_gdas_paths(station, day_date, 'txt')
     if not gdas_curday_paths:
         gdas_curday_paths = convert_daily_gdas(station, day_date)
