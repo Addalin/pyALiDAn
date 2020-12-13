@@ -239,8 +239,8 @@ class LidarProfile(object):
 def calc_tau(sigma,heights):
 	"""
 	Calculate the the attenuated optical depth (tau is the optical depth), through a collumn of heights.
-	:param sigma: ndarray (1-d or 2-d) of attenuation coefficents related to heights vector
-	:param heigts: vector of heights.
+	:param sigma: ndarray (1-d or 2-d) of attenuation coefficents related to heights vector. units : [1/m]
+	:param heigts: vector of heights [m]. IMPORTANT: make sure units are in meters!
 	Important note: make sure the heights are biased to GROUND (above the lidar), othewise the integration is wrong!
 	:return: vector of attenuated optoical depth : tau = integral( sigma(r) * dr)
 	"""

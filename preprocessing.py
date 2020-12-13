@@ -81,16 +81,15 @@ def get_daily_gdas_paths(station, day_date, f_type='gdas1'):
             os.makedirs(gdas_folder)
         except:
             logger.exception(f'Failed to create folder {gdas_folder}')
-            # TODO: write failure to logger, and save the problematic file/folder name
 
-    gdas_day_pattern = '{}_{}_*_{}_{}.{}'.format(station.location, day_date.strftime('%Y%m%d'),
+    gdas_day_pattern = '{}_{}_*_{:.1f}_{:.1f}.{}'.format(station.location.lower(), day_date.strftime('%Y%m%d'),
                                                  station.lat, station.lon, f_type)
     gdas_paths = sorted(glob.glob(os.path.join(gdas_folder, gdas_day_pattern)))
     return gdas_folder, gdas_paths
 
 
 def get_gdas_fname(station, time, f_type='txt'):
-    file_pattern = '{}_{}_{}_{}_{}.{}'.format(station.location, time.strftime('%Y%m%d'), time.strftime('%H'),
+    file_pattern = '{}_{}_{}_{:.1f}_{:.1f}.{}'.format(station.location.lower(), time.strftime('%Y%m%d'), time.strftime('%H'),
                                               station.lat, station.lon, f_type)
     if f_type == 'gdas1':
         base_folder = station.gdas1_folder
@@ -179,12 +178,11 @@ def cal_e_tau_df(col, altitude):
     """
     Calculate the the attenuated optical depth (tau is the optical depth).
     Calculation is per column of the backscatter (sigma) dataframe.
-    :param col: column of sigma_df
-    :param altitude: the altitude of the the lidar station above sea level
+    :param col: column of sigma_df , the values of sigma should be in [1/m]
+    :param altitude: the altitude of the the lidar station above sea level, in [m]
     :return: Series of exp(-2*tau)  , tau = integral( sigma(r) * dr)
     """
 
-    # TODO: validate height scale (m or km)
     heights = col.index.to_numpy() - altitude
     tau = mscLid.calc_tau(col, heights)
     return pd.Series(np.exp(-2 * tau))
@@ -193,7 +191,7 @@ def cal_e_tau_df(col, altitude):
 def calc_beta_profile_df(row, lambda_nm=532.0, ind_n='beta'):
     """
     Returns pd series of backscatter profile from a radiosonde dataframe containing the
-    columns:['PRES','TEMPS',RELHS]. The function applies on rows of the radiosonde df.
+    columns:['PRES','TEMPS','RELHS']. The function applies on rows of the radiosonde df.
     :param row: row of radiosonde df
     :param lambda_nm: wavelength in [nm], e.g, for green lambda_nm = 532.0 [nm]
     :param ind_n: index name, the column name of the result. The default is 'beta'
@@ -235,21 +233,17 @@ def get_daily_molecular_profiles(station, day_date, lambda_nm=532, height_units=
     df_sigma = pd.DataFrame(index=heights).rename_axis('Height[{}]'.format(height_units))
     df_beta = pd.DataFrame(index=heights).rename_axis('Height[{}]'.format(height_units))
 
-    # TODO: add warning in case of missing files, and convert the required paths according to below
-    # %% timestapms daily range
-    # timestamps = pd.date_range ( start = day_date , end = day_date + timedelta(days = 1) , freq = timedelta ( hours = 3 ) )
-    # gdas_txt_paths = [get_gdas_fname ( station , time ) for time in timestamps ]
-    # [os.path.exists(path) for path in paths]
-
-    # set a list of relevant timestamps for interpolation of day_date
-    # The list contains all measurements in day_date and the first one of next_day at 00:00
     _, gdas_curday_paths = get_daily_gdas_paths(station, day_date, 'txt')
     if not gdas_curday_paths:
+        logger.debug(f"For {day_date.strftime('%Y/%m/%d' )}, "
+                     f"there are not the required GDAS '.txt' files. Starting conversion from '.gdas1'" )
         gdas_curday_paths = convert_daily_gdas(station, day_date)
 
     next_day = day_date + timedelta(days=1)
     _, gdas_nxtday_paths = get_daily_gdas_paths(station, next_day, 'txt')
     if not gdas_nxtday_paths:
+        logger.debug(f"For {day_date.strftime('%Y/%m/%d' )}, "
+                     f"there are not the required GDAS '.txt' files. Starting conversion from '.gdas1'" )
         gdas_nxtday_paths = convert_daily_gdas(station, next_day)
 
     gdas_txt_paths = gdas_curday_paths
@@ -257,7 +251,7 @@ def get_daily_molecular_profiles(station, day_date, lambda_nm=532, height_units=
 
     for path in gdas_txt_paths:
         df_sonde = RadiosondeProfile(path).get_df_sonde(heights)
-        time = extract_date_time(path, r'{}_(.*)_{}_{}.txt'.format(station.location, station.lat, station.lon),
+        time = extract_date_time(path, r'{}_(.*)_{:.1f}_{:.1f}.txt'.format(station.location.lower(), station.lat, station.lon),
                                  ['%Y%m%d_%H'])[0]
         '''Calculating molecular profiles from temperature and pressure'''
         res = df_sonde.apply(calc_sigma_profile_df, axis=1, args=(lambda_nm, time,),
@@ -268,7 +262,6 @@ def get_daily_molecular_profiles(station, day_date, lambda_nm=532, height_units=
         df_beta[res.columns] = res
 
     return df_sigma, df_beta
-
 
 def get_att_bsc_paths(lidar_parent_folder, day_date):
     """
@@ -313,7 +306,7 @@ def extract_att_bsc(bsc_paths, wavelengths):
     For all .nc files under bsc_paths and for each wavelength in wavelengths
     extract the OC_attenuated_backscatter_{wavelen}nm and Lidar_calibration_constant_used
 
-    :param bsc_paths: paath to netcdf folder
+    :param bsc_paths: path to netcdf folder
     :param wavelengths: iterable, list of wavelengths
     :return:
     """
@@ -535,17 +528,16 @@ def main():
     logging.getLogger('matplotlib').setLevel(logging.ERROR)  # Fix annoying matplotlib logs
     logging.getLogger('PIL').setLevel(logging.ERROR)  # Fix annoying PIL logs
     logger = create_and_configer_logger('preprocessing_log.log')
-    DO_GDAS = False
+    DO_GDAS = True
     DO_NETCDF = False
     DO_DATASET = True
-
     wavs_nm = gs.LAMBDA_nm()
     logger.debug(f'waves_nm: {wavs_nm}')
+
     """set day,location"""
     day_date = datetime(2017, 9, 1)
-    haifa_station = gs.Station(stations_csv_path='stations.csv', station_name='haifa_shubi')
+    haifa_station = gs.Station(stations_csv_path='stations.csv', station_name='haifa')#haifa_shubi')
     logger.debug(f"haifa_station: {haifa_station}")
-    # location = haifa_station.location
     min_height = haifa_station.altitude + haifa_station.start_bin_height
     top_height = haifa_station.altitude + haifa_station.end_bin_height
 
