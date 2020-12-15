@@ -68,19 +68,14 @@ class Station:
         self.gdas1_folder = station_df['gdas1_folder']
         self.gdastxt_folder = station_df['gdastxt_folder']
         self.lidar_src_folder = station_df['lidar_src_folder']
-        self.molecular_src_folder = station_df['molecular_src_folder']
+        self.molecular_dataset = station_df['molecular_dataset']
+        self.lidar_dataset = station_df['lidar_dataset']
         self.db_file = station_df['db_file']
-        self.lidar_parent_folder = station_df['lidar_parent_folder']
+
 
 
     def __str__(self):
         return str(self.__class__) + ": " + str(self.__dict__)
-
-
-#### TODO: station parameters load from station_info.csv
-#### TODO: create pre-proc class, having the following internal fields:
-#### location, lat, lon, gdas_name_format, gdas_txt_format, min_height, top_height, h_bins,
-
 
 class CHANNELS():
     def __init__(self):
