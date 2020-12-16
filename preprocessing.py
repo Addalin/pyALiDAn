@@ -20,12 +20,19 @@ import torch.utils.data
 import xarray as xr
 import matplotlib.dates as mdates
 
-#%% General functions
+
+# %% General functions
 
 
-def get_month_folder_name(parent_folder, day_date):
+def get_month_folder_name ( parent_folder , day_date ) :
     month_folder = os.path.join ( parent_folder , day_date.strftime ( "%Y" ) , day_date.strftime ( "%m" ) )
     return (month_folder)
+
+
+def get_day_folder_name ( parent_folder , day_date ) :
+    moth_folder = get_month_folder_name ( parent_folder , day_date )
+    day_folder = os.path.join ( moth_folder , day_date.strftime ( "%d" ) )
+    return day_folder
 
 
 def extract_date_time ( path , format_filename , format_times ) :
@@ -45,6 +52,51 @@ def extract_date_time ( path , format_filename , format_times ) :
     for fmt_time , grp in zip ( format_times , matchObj.groups ( ) ) :
         time_stamps.append ( datetime.strptime ( grp , fmt_time ) )
     return time_stamps
+
+
+def save_dataset ( dataset , folder_name , nc_name ) :
+    """
+    Save the input dataset to netcdf file
+    :param dataset: array.Dataset()
+    :param folder_name: folder name
+    :param nc_name: netcdf file name
+    :return: ncpath - full path to netcdf file created if succeeded, else none
+    """
+    logger = logging.getLogger ( )
+    if not os.path.exists ( folder_name ) :
+        try :
+            os.makedirs ( folder_name )
+            logger.debug ( f"Creating folder: {folder_name}" )
+        except Exception :
+            logger.exception ( f"Failed to create folder: {folder_name}" )
+            return None
+
+    ncpath = os.path.join ( folder_name , nc_name )
+    try :
+        dataset.to_netcdf ( ncpath , mode = 'w' , format = 'NETCDF4' , engine = 'netcdf4' )
+        dataset.close ( )
+        logger.debug ( f"Saving dataset file: {ncpath}" )
+    except Exception :
+        logger.exception ( f"Failed to save dataset file: {ncpath}" )
+        ncpath = None
+    return ncpath
+
+
+def load_dataset ( ncpath ) :
+    """
+    Load Dataset stored in the netcdf file path (ncpath)
+	:param ncpath: a netcdf file path
+	:return: xarray.Dataset, if fails return none
+	"""
+    logger = logging.getLogger ( )
+    try :
+        dataset = xr.open_dataset ( ncpath , engine = 'netcdf4' ).expand_dims ( )
+        dataset.close ( )
+        logger.debug ( f"Loading dataset file: {ncpath}" )
+    except Exception :
+        logger.exception ( f"Failed to load dataset file: {ncpath}" )
+        return None
+    return dataset
 
 
 # %% Functions to handle TROPOS datasets (netcdf) files
@@ -112,42 +164,44 @@ def get_daily_molecular_profiles ( station , day_date , lambda_nm = 532 , height
     return df_sigma , df_beta
 
 
-def get_att_bsc_paths ( lidar_parent_folder , day_date ) :
+def get_TROPOS_dataset_file_name(start_time = None, end_time = None, file_type = 'profiles' ):
     """
-    Load netcdf file of the attenuation backscatter profile(att_bsc.nc) according to date
+    Retrieves file pattern name of TROPOS start time, end time and  profile type.
+    :param start_time: datetime.datetime object specifying specific start time of measurement or profile analysis
+    :param end_time: datetime.datetime object specifying specific end time of profile analysis
+    :param file_type: type of data stored in the files, E.g.: 'profiles', 'att_bsc', 'overlap', 'OC_att_bsc', 'cloudinfo', etc.
+    E.g.: for analyzed profiles "*_<start_time>_<end_time>_<file_type>.nc" ( or  "*<file_type>.nc" if start_time = None, end_time = None)
+          for daily attenuation backscatter profile "*<att_bsc>.nc" ( or  "*<start_time>_<file_type>.nc" if start_time is given)
+    """
+    if start_time and end_time and ('profiles' in file_type):
+        pattern = f"*[0-9]_{start_time.strftime('%H%M')}_{end_time.strftime('%H%M')}_{file_type}.nc"
+    elif start_time:
+        pattern = f"*{start_time.strftime('%H_%M_%S')}_{file_type}.nc"
+    else:
+        pattern = f"*[0-9]_{file_type}.nc"
+    return pattern
 
-    :param lidar_parent_folder: this is the station main folder of the lidar
+def get_TROPOS_dataset_paths ( station , day_date , start_time = None, end_time = None, file_type = 'profiles' ) :
+    """
+    Retrieves netcdf (.nc) files from TROPOS for a given station and day_date, and type.
+
+    :param station: gs.station() object of the lidar station
     :param day_date: datetime.datetime object of the measuring date
-    :return: paths to all *att_bsc.nc in the saved for day_date
+    :param start_time: datetime.datetime object specifying specific start time of measurement or profile analysis
+    :param end_time: datetime.datetime object specifying specific end time of profile analysis
+    :param file_type: type of data stored in the files, E.g.: 'profiles', 'att_bsc', 'overlap', 'OC_att_bsc', 'cloudinfo', etc.
+    E.g.: for analyzed profiles "*_<start_time>_<end_time>_<file_type>.nc" ( or  "*<file_type>.nc" if start_time = None, end_time = None)
+          for daily attenuation backscatter profile "*<att_bsc>.nc" ( or  "*<start_time>_<file_type>.nc" if start_time is given)
+    :return: paths: paths to all *<file_type>.nc for a given station and day_date
     """
-    lidar_day_folder = os.path.join ( lidar_parent_folder , day_date.strftime ( "%Y" ) , day_date.strftime ( "%m" ) ,
-                                      day_date.strftime ( "%d" ) )
-    os.listdir ( lidar_day_folder )
+    lidar_day_folder = get_day_folder_name ( station.lidar_src_folder , day_date )
+    file_name = get_TROPOS_dataset_file_name ( start_time , end_time , file_type )
+    os.listdir(lidar_day_folder)
+    paths_pattern = os.path.join ( lidar_day_folder , file_name )
 
-    bsc_pattern = os.path.join ( lidar_day_folder , "*[0-9]_att_bsc.nc" )
+    paths = sorted ( glob.glob ( paths_pattern ) )
 
-    bsc_paths = sorted ( glob.glob ( bsc_pattern ) )
-
-    return bsc_paths
-
-
-def get_profiles_paths ( lidar_parent_folder , day_date ) :
-    """
-    Load netcdf file of the attenuation backscatter profile(att_bsc.nc) according to date
-
-    :param lidar_parent_folder: this is the station main folder of the lidar
-    :param day_date: datetime.datetime object of the measuring date
-    :return: paths to all *profiles.nc in the saved for day_date
-    """
-    lidar_day_folder = os.path.join ( lidar_parent_folder , day_date.strftime ( "%Y" ) , day_date.strftime ( "%m" ) ,
-                                      day_date.strftime ( "%d" ) )
-    os.listdir ( lidar_day_folder )
-
-    profile_pattern = os.path.join ( lidar_day_folder , "*[0-9]_profiles.nc" )
-
-    profile_paths = sorted ( glob.glob ( profile_pattern ) )
-
-    return profile_paths
+    return paths
 
 
 def extract_att_bsc ( bsc_paths , wavelengths ) :
@@ -160,19 +214,19 @@ def extract_att_bsc ( bsc_paths , wavelengths ) :
     :return:
     """
     logger = logging.getLogger ( )
-    for wavelen in wavelengths :
+    for wavelength in wavelengths :
         for bsc_path in bsc_paths :
             data = Dataset ( bsc_path )
             file_name = bsc_path.split ( '/' ) [ -1 ]
             try :
-                vals = data.variables [ f'OC_attenuated_backscatter_{wavelen}nm' ]
+                vals = data.variables [ f'OC_attenuated_backscatter_{wavelength}nm' ]
                 arr = vals * vals.Lidar_calibration_constant_used
-                logger.debug ( f"Extracted OC_attenuated_backscatter_{wavelen}nm from {file_name}" )
+                logger.debug ( f"Extracted OC_attenuated_backscatter_{wavelength}nm from {file_name}" )
             except KeyError as e :
                 logger.exception ( f"Key {e} does not exist in {file_name}" , exc_info = False )
 
 
-#%% GDAS files preprocessing functions
+# %% GDAS files preprocessing functions
 
 
 def gdas2radiosonde ( src_file , dst_file , col_names = None ) :
@@ -229,29 +283,26 @@ def get_daily_gdas_paths ( station , day_date , f_type = 'gdas1' ) :
         parent_folder = station.gdas1_folder
     elif f_type == 'txt' :
         parent_folder = station.gdastxt_folder
-    gdas_folder = get_month_folder_name ( parent_folder , day_date )
-    if not os.path.exists ( gdas_folder ) :
+    month_folder = get_month_folder_name ( parent_folder , day_date )
+    if not os.path.exists ( month_folder ) :
         try :
-            os.makedirs ( gdas_folder )
+            os.makedirs ( month_folder )
         except :
-            logger.exception ( f"Failed to create folder: {gdas_folder}" )
+            logger.exception ( f"Failed to create folder: {month_folder}" )
 
     gdas_day_pattern = '{}_{}_*_{:.1f}_{:.1f}.{}'.format ( station.location.lower ( ) , day_date.strftime ( '%Y%m%d' ) ,
                                                            station.lat , station.lon , f_type )
-    gdas_paths = sorted ( glob.glob ( os.path.join ( gdas_folder , gdas_day_pattern ) ) )
-    return gdas_folder , gdas_paths
+    path_pattern = os.path.join ( month_folder , gdas_day_pattern )
+    gdas_paths = sorted ( glob.glob ( path_pattern ) )
+    return month_folder , gdas_paths
 
 
-def get_gdas_fname ( station , time , f_type = 'txt' ) :
-    file_pattern = '{}_{}_{}_{:.1f}_{:.1f}.{}'.format ( station.location.lower ( ) , time.strftime ( '%Y%m%d' ) ,
-                                                        time.strftime ( '%H' ) ,
-                                                        station.lat , station.lon , f_type )
-    if f_type == 'gdas1' :
-        base_folder = station.gdas1_folder
-    elif f_type == 'txt' :
-        base_folder = station.gdastxt_folder
+def get_gdas_file_name ( station , time , f_type = 'txt' ) :
+    file_name = '{}_{}_{}_{:.1f}_{:.1f}.{}'.format ( station.location.lower ( ) , time.strftime ( '%Y%m%d' ) ,
+                                                     time.strftime ( '%H' ) ,
+                                                     station.lat , station.lon , f_type )
 
-    return os.path.join ( base_folder , time.strftime ( '%Y' ) , time.strftime ( '%m' ) , file_pattern )
+    return (file_name)
 
 
 def convert_daily_gdas ( station , day_date ) :
@@ -406,9 +457,9 @@ def generate_daily_molecular_chan ( station , day_date , lambda_nm , time_res = 
             size_sigma_opt = interp_sigma_df.memory_usage ( deep = True ).sum ( )
             size_att_bsc_opt = att_bsc_mol_df.memory_usage ( deep = True ).sum ( )
             logger.debug ( 'Memory saved for wavelength {} beta: {:.2f}%, sigma: {:.2f}%, att_bsc:{:.2f}%'.
-                    format ( lambda_nm , 100.0 * float ( size_beta - size_beta_opt ) / float ( size_beta ) ,
-                             100.0 * float ( size_sigma - size_sigma_opt ) / float ( size_sigma ) ,
-                             100.0 * float ( size_att_bsc - size_att_bsc_opt ) / float ( size_att_bsc ) ) )
+                           format ( lambda_nm , 100.0 * float ( size_beta - size_beta_opt ) / float ( size_beta ) ,
+                                    100.0 * float ( size_sigma - size_sigma_opt ) / float ( size_sigma ) ,
+                                    100.0 * float ( size_att_bsc - size_att_bsc_opt ) / float ( size_att_bsc ) ) )
 
     ''' Create molecular dataset'''
     ds_chan = xr.Dataset (
@@ -492,7 +543,7 @@ def save_molecular_dataset ( station , dataset , save_mode = 'sep' ) :
         return None
 
     day_date = datetime.utcfromtimestamp ( date.tolist ( ) / 1e9 )
-    month_folder = get_month_folder_name(station.molecular_dataset, day_date)
+    month_folder = get_month_folder_name ( station.molecular_dataset , day_date )
 
     '''save the dataset to separated netcdf files: per profile per wavelength'''
     ncpaths = [ ]
@@ -507,16 +558,17 @@ def save_molecular_dataset ( station , dataset , save_mode = 'sep' ) :
             for lambda_nm in dataset.Wavelength.values :
                 profile_vars.extend ( shared_vars )
                 ds_profile = dataset.get ( profile_vars ).sel ( Wavelength = lambda_nm )
-                file_name = get_dataset_file_name ( station , day_date , lambda_nm , data_source = 'molecular', profile_type = profile )
+                file_name = get_prep_dataset_file_name ( station , day_date , lambda_nm , data_source = 'molecular' ,
+                                                         file_type = profile )
                 ncpath = save_dataset ( ds_profile , month_folder , file_name )
                 if ncpath :
                     ncpaths.append ( ncpath )
 
     '''save the dataset to a single netcdf'''
     if save_mode in [ 'both' , 'single' ] :
-        file_name = get_dataset_file_name ( station , day_date , lambda_nm ='all', data_source = 'molecular' ,
-                                            profile_type = 'all' )
-        ncpath = save_dataset(dataset, month_folder, file_name)
+        file_name = get_prep_dataset_file_name ( station , day_date , lambda_nm = 'all' , data_source = 'molecular' ,
+                                                 file_type = 'all' )
+        ncpath = save_dataset ( dataset , month_folder , file_name )
         if ncpath :
             ncpaths.append ( ncpath )
     return ncpaths
@@ -542,7 +594,7 @@ def get_daily_range_corr ( station , day_date , height_units = 'Km' , optim_size
 	"""
 
     '''get netcdf paths of the attenuation backscatter for given day_date'''
-    bsc_paths = get_att_bsc_paths ( station.lidar_src_folder , day_date )
+    bsc_paths = get_TROPOS_dataset_paths ( station , day_date , file_type = 'att_bsc' )
     bsc_ds0 = load_dataset ( bsc_paths [ 0 ] )
     altitude = bsc_ds0.altitude.values [ 0 ]
     profiles = [ dvar for dvar in list ( bsc_ds0.data_vars ) if 'attenuated_backscatter' in dvar ]
@@ -578,7 +630,8 @@ def get_daily_range_corr ( station , day_date , height_units = 'Km' , optim_size
     return ds_range_corr
 
 
-def get_range_corr_ds_chan ( darray , altitude , lambda_nm , height_units = 'Km' , optim_size = False , verbose = False ) :
+def get_range_corr_ds_chan ( darray , altitude , lambda_nm , height_units = 'Km' , optim_size = False ,
+                             verbose = False ) :
     """
 	Retrieving a 6-hours range corrected lidar signal (pr^2) from attenuated_backscatter signals in three channels (355,532,1064).
 	The attenuated_backscatter are from a 6-hours *att_bsc.nc loaded earlier by darray
@@ -617,8 +670,8 @@ def get_range_corr_ds_chan ( darray , altitude , lambda_nm , height_units = 'Km'
         if verbose :
             size_rangecorr_opt = rangecorr_df.memory_usage ( deep = True ).sum ( )
             logger.debug ( 'Memory saved for wavelength {} range corrected: {:.2f}%'.
-                    format ( lambda_nm ,
-                             100.0 * float ( size_rangecorr - size_rangecorr_opt ) / float ( size_rangecorr ) ) )
+                           format ( lambda_nm ,
+                                    100.0 * float ( size_rangecorr - size_rangecorr_opt ) / float ( size_rangecorr ) ) )
 
     ''' Create range_corr_chan lidar dataset'''
     range_corr_ds_chan = xr.Dataset (
@@ -656,14 +709,14 @@ def save_range_corr_dataset ( station , dataset , save_mode = 'sep' ) :
 	:return: ncpaths - the paths of the saved dataset/s . None - for failure.
 	"""
     logger = logging.getLogger ( )
-    try:
+    try :
         date = dataset.date.values
     except ValueError :
         logger.exception ( "The dataset does not contain a data variable named 'date'" )
         return None
 
     day_date = datetime.utcfromtimestamp ( date.tolist ( ) / 1e9 )
-    month_folder = get_month_folder_name(station.lidar_dataset, day_date)
+    month_folder = get_month_folder_name ( station.lidar_dataset , day_date )
 
     '''save the dataset to separated netcdf files: per profile per wavelength'''
     ncpaths = [ ]
@@ -671,8 +724,8 @@ def save_range_corr_dataset ( station , dataset , save_mode = 'sep' ) :
     if save_mode in [ 'both' , 'sep' ] :
         for lambda_nm in dataset.Wavelength.values :
             ds_profile = dataset.sel ( Wavelength = lambda_nm )
-            file_name = get_dataset_file_name ( station , day_date , lambda_nm , data_source = 'lidar' ,
-                                                profile_type = profile )
+            file_name = get_prep_dataset_file_name ( station , day_date , lambda_nm , data_source = 'lidar' ,
+                                                     file_type = profile )
             ncpath = save_dataset ( ds_profile , month_folder , file_name )
             if ncpath :
                 ncpaths.append ( ncpath )
@@ -686,36 +739,37 @@ def save_range_corr_dataset ( station , dataset , save_mode = 'sep' ) :
     return ncpaths
 
 
-#%% General preprocessed datasets functions
+# %% General functions to handle preprocessing (prep) datasets (figures ,(netcdf) files)
 
 
-def get_dataset_file_name( station , day_date , lambda_nm = 532 , data_source = 'molecular' , profile_type = 'attbsc' ) :
+def get_prep_dataset_file_name ( station , day_date , lambda_nm = 532 , data_source = 'molecular' ,
+                                 file_type = 'attbsc' ) :
     """
      Retrieves file pattern name of preprocessed dataset according to date, station, wavelength dataset source, and profile type.
     :param station: gs.station() object of the lidar station
     :param day_date: datetime.datetime object of the measuring date
     :param lambda_nm: wavelength [nm] e.g., for the green channel 532 [nm] or all (meaning the dataset contains all elastic wavelengths)
     :param data_source: string object: 'molecular' or 'lidar'
-    :param profile_type: string object: e.g., 'attbsc' for molecular_dataset or 'range_corr' for a lidar_dataset, or 'all' (meaning the dataset contains several profile types)
+    :param file_type: string object: e.g., 'attbsc' for molecular_dataset or 'range_corr' for a lidar_dataset, or 'all' (meaning the dataset contains several profile types)
 
-    :return: dataset file name (netcdf) file of the data_type required per given day and wavelength, data_source and profile_type
+    :return: dataset file name (netcdf) file of the data_type required per given day and wavelength, data_source and file_type
     """
-    if profile_type == 'all' and lambda_nm == 'all':
-        file_name = f"{day_date.strftime ( '%Y_%m_%d' )}_{station.location}_{'data_source'}.nc"
-    else:
-        file_name = f"{day_date.strftime ( '%Y_%m_%d' )}_{station.location}_{profile_type}_{lambda_nm}_{data_source}.nc"
+    if file_type == 'all' and lambda_nm == 'all' :
+        file_name = f"{day_date.strftime ( '%Y_%m_%d' )}_{station.location}_{data_source}.nc"
+    else :
+        file_name = f"{day_date.strftime ( '%Y_%m_%d' )}_{station.location}_{file_type}_{lambda_nm}_{data_source}.nc"
 
     return (file_name)
 
 
-def get_dataset_paths ( station , day_date , lambda_nm = 532 , data_source = 'molecular' , profile_type = 'attbsc' ) :
+def get_prep_dataset_paths ( station , day_date , lambda_nm = 532 , data_source = 'molecular' , file_type = 'attbsc' ) :
     """
      Retrieves file paths of preprocessed datasets according to date, station, wavelength dataset source, and profile type.
     :param station: gs.station() object of the lidar station
     :param day_date: datetime.datetime object of the measuring date
     :param lambda_nm: wavelength [nm] e.g., for the green channel 532 [nm]
     :param data_source: string object: 'molecular' or 'lidar'
-    :param profile_type: string object: e.g., 'attbsc' for molecular_dataset or 'range_corr' for a lidar_dataset
+    :param file_type: string object: e.g., 'attbsc' for molecular_dataset or 'range_corr' for a lidar_dataset
 
     :return: paths to all datasets netcdf files of the data_type required per given day and wavelength
     """
@@ -724,8 +778,8 @@ def get_dataset_paths ( station , day_date , lambda_nm = 532 , data_source = 'mo
     elif data_source == 'lidar' :
         parent_folder = station.lidar_dataset
 
-    month_folder = get_month_folder_name(parent_folder, day_date)
-    file_name = get_dataset_file_name( station , day_date , lambda_nm , data_source , profile_type )
+    month_folder = get_month_folder_name ( parent_folder , day_date )
+    file_name = get_prep_dataset_file_name ( station , day_date , lambda_nm , data_source , file_type )
 
     # print(os.listdir(month_folder))
     file_pattern = os.path.join ( month_folder , file_name )
@@ -733,51 +787,6 @@ def get_dataset_paths ( station , day_date , lambda_nm = 532 , data_source = 'mo
     paths = sorted ( glob.glob ( file_pattern ) )
 
     return paths
-
-
-def save_dataset(dataset, folder_name, nc_name):
-    """
-    Save the input dataset to netcdf file
-    :param dataset: array.Dataset()
-    :param folder_name: folder name
-    :param nc_name: netcdf file name
-    :return: ncpath - full path to netcdf file created if succeeded, else none
-    """
-    logger = logging.getLogger()
-    if not os.path.exists(folder_name):
-        try :
-            os.makedirs(folder_name)
-            logger.debug ( f"Creating folder: {folder_name}" )
-        except Exception:
-            logger.exception(f"Failed to create folder: {folder_name}")
-            return None
-
-    ncpath = os.path.join(folder_name, nc_name)
-    try :
-        dataset.to_netcdf(ncpath , mode = 'w' , format = 'NETCDF4' , engine = 'netcdf4' )
-        dataset.close()
-        logger.debug ( f"Saving dataset file: {ncpath}")
-    except Exception:
-        logger.exception(f"Failed to save dataset file: {ncpath}")
-        ncpath = None
-    return ncpath
-
-
-def load_dataset ( ncpath ) :
-    """
-	Load Dataset stored in ncpath
-	:param ncpath: netcdf file path
-	:return: xarray.Dataset, if fails return none
-	"""
-    logger = logging.getLogger ( )
-    try :
-        dataset = xr.open_dataset ( ncpath , engine = 'netcdf4' ).expand_dims ( )
-        dataset.close ( )
-        logger.debug(f"Loading dataset file: {ncpath}")
-    except Exception :
-        logger.exception(f"Failed to load dataset file: {ncpath}")
-        return None
-    return dataset
 
 
 def visualize_ds_profile_chan ( dataset , lambda_nm = 532 , profile_type = 'range_corr' , USE_RANGE = False ) :
@@ -813,7 +822,7 @@ def visualize_ds_profile_chan ( dataset , lambda_nm = 532 , profile_type = 'rang
     return g
 
 
-#%% Database functions
+# %% Database functions
 def query_database ( query = "SELECT * FROM lidar_calibration_constant;" ,
                      database_path = "pollyxt_tropos_calibration.db" ) :
     """
@@ -857,25 +866,32 @@ def get_query ( wavelength , cali_method , start_day , till_date ) :
     return query
 
 
-def get_nc_params ( df , profile_paths ) :
-    # Build matching_nc_file
-    # TODO ?? currently matches any two values
-    df [ 'nc_path' ] = "*" + df [ 'cali_start_time' ].dt.strftime ( '%Y_%m_%d' ) + \
-                       "_" + df [ 'cali_start_time' ].dt.day_name ( ).str.slice ( start = 0 , stop = 3 ) + \
-                       "_TROPOS_" + "??_00_01_" + \
-                       df [ 'cali_start_time' ].dt.strftime ( '%H%M' ) + "_" + \
-                       df [ 'cali_stop_time' ].dt.strftime ( '%H%M' ) + "_profiles.nc"
+def add_profiles_values ( df , station , day_date, file_type = 'profiles' ) :
+
+    df['matched_nc_profile'] = df.apply( lambda row : get_TROPOS_dataset_paths ( station , day_date ,
+                                                                      start_time = row.cali_start_time ,
+                                                                      end_time = row.cali_stop_time ,
+                                                                      file_type = file_type ) [0 ] ,
+                              axis = 1 , result_type ='expand' )
+    '''
+    df['nc_path'] = df.apply(lambda row: get_TROPOS_dataset_file_name(start_time = row.cali_start_time,
+                                                                      end_time = row.cali_stop_time,
+                                                                      file_type = 'profiles'),
+                                                                      axis = 1, result_type ='expand')
+    '''
 
     # Find Actual matching nc profile  file (full path)
     # makes sure only one file is returned
-    df [ 'matched_nc_file' ] = df [ 'nc_path' ].apply (
-        lambda x : fnmatch.filter ( profile_paths , x ) [ 0 ] if len (
-            fnmatch.filter ( profile_paths , x ) ) == 1 else exec (
-            "raise(Exception('More than one File'))" ) )
+    '''
+    df['matched_nc_profile'] = df['nc_path'].apply(lambda row: fnmatch.filter(profile_paths, row)[0]
+                                                if len(fnmatch.filter(profile_paths, row)) == 1
+                                                else exec("raise(Exception('More than one File'))"))
+    '''
 
     # Get the altitude, delta_r and r0
     def _get_info_from_profile_nc ( row ) :
-        data = Dataset ( row [ 'matched_nc_file' ] )
+
+        data = Dataset ( row [ 'matched_nc_profile' ] )
         wavelen = row.wavelength
         delta_r = data.variables [ f'reference_height_{wavelen}' ] [ : ].data [ 1 ] - \
                   data.variables [ f'reference_height_{wavelen}' ] [ : ].data [ 0 ]
@@ -886,28 +902,7 @@ def get_nc_params ( df , profile_paths ) :
                                                           result_type = 'expand' )
     return df
 
-'''
-# LEGACY : replaced with add_path ( df , station , day_date , lambda_nm = 532 , data_source = 'molecular' , profile_type = 'attbsc' )
-def get_range_corr_path ( df , lidar_paths ) :
-    # makes sure only one file is returned
-    if len ( lidar_paths ) != 1 :
-        raise Exception ( f"Expected ONE lidar path per day. Got: {lidar_paths} " )
-    df [ 'lidar_path' ] = lidar_paths [ 0 ]
-    return df
-
-
-def get_mol_path ( df , station , wavelength , profilename = 'attbsc' ) :
-    # mol_path ( station .molecular_src_folder/<%Y/%M><day_mol.nc>
-    df [ 'molecular_path' ] = station.molecular_dataset + os.sep + \
-                              df [ 'cali_start_time' ].dt.strftime ( f'%Y{os.sep}%m' ) + os.sep + \
-                              df [ 'cali_start_time' ].dt.strftime (
-                                  f'%Y_%m_%d' ) + f"_{station.location}_{profilename}_{wavelength}_molecular.nc"
-
-    return df
-'''
-
-
-def add_path ( df , station , day_date , lambda_nm = 532 , data_source = 'molecular' , profile_type = 'attbsc' ) :
+def add_X_path ( df , station , day_date , lambda_nm = 532 , data_source = 'molecular' , file_type = 'attbsc' ) :
     """
     Add path of 'molecular' or 'lidar' dataset to df
     :param df: pd.DataFrame ( ) result from database query
@@ -915,11 +910,11 @@ def add_path ( df , station , day_date , lambda_nm = 532 , data_source = 'molecu
     :param day_date: datetime.datetime object of the measuring date
     :param lambda_nm: wavelength [nm] e.g., for the green channel 532 [nm]
     :param data_source: string object: 'molecular' or 'lidar'
-    :param profile_type: string object: e.g., 'attbsc' for molecular_dataset or 'range_corr' for a lidar_dataset
+    :param file_type: string object: e.g., 'attbsc' for molecular_dataset or 'range_corr' for a lidar_dataset
     :return: ds with the added collum of the relevant raw
     """
 
-    paths = get_dataset_paths ( station , day_date , lambda_nm , data_source , profile_type )
+    paths = get_prep_dataset_paths ( station , day_date , lambda_nm , data_source , file_type )
     if len ( paths ) != 1 :
         raise Exception ( f"Expected ONE {data_source} path per day. Got: {paths} " )
     df [ f"{data_source}_path" ] = paths [ 0 ]
@@ -936,7 +931,7 @@ def get_time_frames ( df ) :
     return df
 
 
-def create_dataset ( station_name = 'haifa' ) :
+def create_dataset ( station_name = 'haifa' , sample_size = '30min') :
     """
     CHOOSE: telescope: far_range , METHOD: Klett_Method
     each sample will have 60 bins (aka 30 mins length)
@@ -958,19 +953,16 @@ def create_dataset ( station_name = 'haifa' ) :
 
     X:
     lidar_path (station.lidar_src_folder/<%Y/%M/%d> +nc_zip_file+'att_bsc.nc'
-    mol_path ( station .molecular_src_folder/<%Y/%M><day_mol.nc>
+    molecular_path ( station .molecular_src_folder/<%Y/%M><day_mol.nc>
     """
 
     station = gs.Station ( station_name = station_name )
     db_path = station.db_file
-    molecular_dataset = station.molecular_dataset
-    lidar_src_folder = station.lidar_src_folder
-    lidar_dataset = station.lidar_dataset
-    wavelengths = gs.LAMBDA_nm ( ).get_elastic ( )  # or wavelengths[0] # 1064 or
+    wavelengths = gs.LAMBDA_nm ( ).get_elastic ( )
     cali_method = 'Klett_Method'
 
     day_date1 = datetime ( 2017 , 9 , 1 )
-    day_date2 = datetime ( 2017 , 9 , 2 )
+    day_date2 = datetime ( 2017 , 9 , 4 )
     full_df = pd.DataFrame ( )
     for wavelength in wavelengths :
         for day_date in [ day_date1 , day_date2 ] :
@@ -984,23 +976,20 @@ def create_dataset ( station_name = 'haifa' ) :
 
             df [ 'date' ] = day_date.strftime ( '%Y-%m-%d' )
 
-            profile_paths = get_profiles_paths ( lidar_src_folder , day_date )
-            df = get_nc_params ( df , profile_paths )
+            df = add_profiles_values ( df , station , day_date , file_type = 'profiles' )
 
-            df = add_path ( df , station , day_date , lambda_nm = wavelength , data_source = 'lidar',
-                            profile_type = 'range_corr' )
-            df = add_path ( df , station , day_date , lambda_nm = wavelength , data_source = 'molecular',
-                            profile_type = 'attbsc' )
+            df = add_X_path(df , station, day_date , lambda_nm = wavelength , data_source = 'lidar' ,
+                              file_type = 'range_corr' )
+            df = add_X_path( df , station , day_date , lambda_nm = wavelength , data_source = 'molecular' ,
+                              file_type = 'attbsc' )
 
             df = get_time_frames ( df )
 
             expanded_df = pd.DataFrame ( )
             for indx , row in df.iterrows ( ) :
                 for start_time , end_time in zip (
-                        pd.date_range ( row.loc [ 'start_time' ] , row.loc [ 'end_time' ] , freq = '30min' ) [ :-1 ] ,
-                        pd.date_range ( row.loc [ 'start_time' ] , row.loc [ 'end_time' ] , freq = '30min' ).shift (
-                            1 ) [
-                        :-1 ] ) :
+                        pd.date_range ( row.loc [ 'start_time' ] , row.loc [ 'end_time' ] , freq = sample_size ) [ :-1 ] ,
+                        pd.date_range ( row.loc [ 'start_time' ] , row.loc [ 'end_time' ] , freq = sample_size ).shift ( 1 ) [ :-1 ] ) :
                     mini_df = row.copy ( )
                     mini_df [ 'start_time_period' ] = start_time
                     mini_df [ 'end_time_period' ] = end_time - timedelta ( seconds = 30 )
@@ -1079,10 +1068,9 @@ def main ( ) :
 
         # Get the paths
         logger.debug ( 'start_nc' )
-        lidar_parent_folder = os.path.join ( '.' , 'data examples' , 'netcdf' )
-        logger.debug ( f'path {lidar_parent_folder}' )
-        bsc_paths = get_att_bsc_paths ( lidar_parent_folder , day_date )
-        profile_paths = get_profiles_paths ( lidar_parent_folder , day_date )
+        logger.debug ( f'path {haifa_station.lidar_src_folder}' )
+        bsc_paths = get_TROPOS_dataset_paths ( haifa_station , day_date , file_type = 'att_bsc' )
+        profile_paths = get_TROPOS_dataset_paths ( haifa_station , day_date , file_type = 'profiles' )
 
         waves_elastic = wavs_nm.get_elastic ( )  # [UV,G,IR]
 
