@@ -46,12 +46,25 @@ Each sample contains the followings:
      
 ## Tasks
 1. Convert all gdas files in the directory `H:\data_haifa\DATA FROM TROPOS\GDAS\haifa` to txt files (using gdas2radiosonde())
-2. Generate a daily molecular profile (2D) from the converted txt files  
-3. create a class of station(<location_name>) loaded from stations_info.csv
-4. Create a list of time slots from the database file
-5. Create and save database samples (dataloader)
-6. separate and organize the modules:  preprocessing, micLidar , dataloader 
+2. Generate a daily molecular profile (2D) from the converted txt files  - done
+3. create a class of station(<location_name>) loaded from stations_info.csv - done 
+4. Create a list of time slots from the database file - done 
+5. Create and save database samples (dataloader) - done 
+6. Generate dataset of lidar and molecular to certain period - on going 
+7. update create_dataset() to work for a list of days and check it on the generated dataset (above)
+8. For Y loader - Convert height bins into heatmap
+9. For X loader - convert xarray.dataset to pytorch and split into time slices 
 
 ## TODOS and Open issues to figure out:
-1. Troubleshooting of file and system errors (see TODOS in preprocessing.py)
-2. Fix erroneous gdas files (using ARLreder module)
+1. Troubleshooting of file and system errors (see TODOS in preprocessing.py) - done
+2. Fix erroneous gdas files (using ARLreder module) - done 
+3. Debug what causes prep.generate_daily_molecular() to run so slowly
+4. Explore dynamic range of range corrected signal - done , waiting for TROPOS response
+
+## General coding tasks:
+1. Separate and organize the modules:  preprocessing, micLidar , dataloader 
+2. Update environment installations documents (as ARLreader and pytorch )
+
+## Possible issues that may require solutions: 
+1. Save space for the saved data: split each sataset of range corrected to 2 : one contains the exponent of 10 , and the other the base (less importanat for now)
+2. Figure out the plot_range values of TROPOS dataset and how they were decided
