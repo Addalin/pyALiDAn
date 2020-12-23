@@ -45,7 +45,7 @@ Each sample contains the followings:
     - from profile_file_name extract: ro,r1 
      
 ## Tasks
-1. Convert all gdas files in the directory `H:\data_haifa\DATA FROM TROPOS\GDAS\haifa` to txt files (using gdas2radiosonde())
+1. Convert all gdas files in the directory `H:\data_haifa\DATA FROM TROPOS\GDAS\haifa` to txt files (using gdas2radiosonde()) - done 
 2. Generate a daily molecular profile (2D) from the converted txt files  - done
 3. create a class of station(<location_name>) loaded from stations_info.csv - done 
 4. Create a list of time slots from the database file - done 
