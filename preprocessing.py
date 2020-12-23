@@ -621,6 +621,9 @@ def get_daily_range_corr ( station , day_date , height_units = 'Km' , optim_size
 
     '''merge range corrected of lidar through 24-hours'''
     ds_range_corr = xr.merge ( ds_range_corrs , compat = 'no_conflicts' )
+    # Fixing missing timestamps values:
+    time_indx = pd.date_range(start = day_date, end = (day_date+timedelta(hours = 24)-timedelta(seconds = 30)), freq = '30S')
+    ds_range_corr = ds_range_corr.reindex ( {"Time" : time_indx} , fill_value = 0 )
     ds_range_corr = ds_range_corr.assign ( {'plot_min_range' : ('Wavelength' , min_range.min ( axis = 1 )) ,
                                             'plot_max_range' : ('Wavelength' , max_range.max ( axis = 1 ))} )
     ds_range_corr [ 'date' ] = day_date
