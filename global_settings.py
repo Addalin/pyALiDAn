@@ -79,21 +79,26 @@ class Station:
 
 class CHANNELS():
     def __init__(self):
-        pass
 
-    ''' Class of pollyXT lidar channel numbers '''
-    UV = 0  # UV channel - 355[nm]
-    UVs = 1  # UV polarized chnanel - 355 [nm]
-    V_1 = 2  # V_1 Ramman channel of Nitrogen N2 - 387[nm]
-    V_2 = 3  # V_2 Ramman channel of water H2O - 407[nm]
-    G = 4  # Green channel - 532[nm]
-    Gs = 5  # Green channel - 532[nm]
-    R = 6  # Red Raman channel - 607[nm]
-    IR = 7  # IR channel - 1064[nm]
-    GNF = 8  # Near Field green channel - 532[nm]
-    RNF = 9  # Near Field red channel - 607[nm]
-    UVNF = 10  # Near Field UV channel - 355[nm]
-    V1NF = 11  # Near field Ramman channel - 387[nm]
+        ''' Class of pollyXT lidar channel numbers '''
+        self.UV = 0  # UV channel - 355[nm]
+        self.UVs = 1  # UV polarized chnanel - 355 [nm]
+        self.V_1 = 2  # V_1 Ramman channel of Nitrogen N2 - 387[nm]
+        self.V_2 = 3  # V_2 Ramman channel of water H2O - 407[nm]
+        self.G = 4  # Green channel - 532[nm]
+        self.Gs = 5  # Green channel - 532[nm]
+        self.R = 6  # Red Raman channel - 607[nm]
+        self.IR = 7  # IR channel - 1064[nm]
+        self.GNF = 8  # Near Field green channel - 532[nm]
+        self.RNF = 9  # Near Field red channel - 607[nm]
+        self.UVNF = 10  # Near Field UV channel - 355[nm]
+        self.V1NF = 11  # Near field Ramman channel - 387[nm]
+
+    def get_elastic ( self ) :
+        return [ self.UV , self.G , self.IR ]
+
+    def __str__(self):
+        return str(self.__class__) + ": " + str(self.__dict__)
 
 
 class LAMBDA_nm( object ):
