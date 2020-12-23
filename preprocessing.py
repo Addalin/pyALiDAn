@@ -516,9 +516,10 @@ def generate_daily_molecular ( station , day_date , time_res = '30S' ,
     # t.toc()
     '''concatenating molecular profiles of all channels'''
     ds_mol = xr.concat ( ds_list , dim = 'Wavelength' )
-    ds_mol [ 'date' ] = day_date
-    ds_mol.attrs = {'info' : 'Daily molecular profiles'}
-    ds_mol.attrs = {'location' : station.name}
+    ds_mol [ 'date' ] = date_datetime
+    ds_mol.attrs = {'info' : 'Daily molecular profiles',
+                    'location' : station.name,
+                    'source_type':'gdas'}
     return ds_mol
 
 
@@ -625,10 +626,10 @@ def get_daily_range_corr ( station , day_date , height_units = 'Km' , optim_size
     ds_range_corr = ds_range_corr.reindex ( {"Time" : time_indx} , fill_value = 0 )
     ds_range_corr = ds_range_corr.assign ( {'plot_min_range' : ('Wavelength' , min_range.min ( axis = 1 )) ,
                                             'plot_max_range' : ('Wavelength' , max_range.max ( axis = 1 ))} )
-    ds_range_corr [ 'date' ] = day_date
-    ds_range_corr.attrs [ 'location' ] = station.location
-    ds_range_corr.attrs [ 'info' ] = 'Daily range corrected lidar signal'
-
+    ds_range_corr [ 'date' ] = date_datetime
+    ds_range_corr.attrs = {'location': station.location,
+                           'info':'Daily range corrected lidar signal',
+                           'source_type' : 'att_bsc'}
     return ds_range_corr
 
 
@@ -857,7 +858,8 @@ def visualize_ds_profile_chan ( dataset , lambda_nm = 532 , profile_type = 'rang
     if SAVE_FIG :
 
         fname = f"{date_datetime.strftime ( '%Y-%m-%d' )}_{dataset.attrs [ 'location' ]}_{profile_type}_" \
-                f"{lambda_nm}_plot_range_{str ( USE_RANGE ).lower ( )}.{format_fig}"
+                f"{lambda_nm}_source_{dataset.attrs['source_type']}" \
+                f"_plot_range_{str ( USE_RANGE ).lower ( )}.{format_fig}"
 
         if not os.path.exists ( dst_folder ) :
             try :
