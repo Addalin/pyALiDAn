@@ -535,15 +535,8 @@ def save_molecular_dataset ( station , dataset , save_mode = 'sep' ) :
 					'both' -saving both options
 	:return: ncpaths - the paths of the saved dataset/s . None - for failure.
 	"""
-    logger = logging.getLogger ( )
-    try :
-        date = dataset.date.values
-    except ValueError :
-        logger.exception ( "The dataset does not contain a data variable named 'date'" )
-        return None
-
-    day_date = datetime.utcfromtimestamp ( date.tolist ( ) / 1e9 )
-    month_folder = get_month_folder_name ( station.molecular_dataset , day_date )
+    date_datetime = get_daily_ds_date ( dataset )
+    month_folder = get_month_folder_name ( station.molecular_dataset , date_datetime )
 
     '''save the dataset to separated netcdf files: per profile per wavelength'''
     ncpaths = [ ]
@@ -711,15 +704,9 @@ def save_range_corr_dataset ( station , dataset , save_mode = 'sep' ) :
 					'both' -saving both options
 	:return: ncpaths - the paths of the saved dataset/s . None - for failure.
 	"""
-    logger = logging.getLogger ( )
-    try :
-        date = dataset.date.values
-    except ValueError :
-        logger.exception ( "The dataset does not contain a data variable named 'date'" )
-        return None
 
-    day_date = datetime.utcfromtimestamp ( date.tolist ( ) / 1e9 )
-    month_folder = get_month_folder_name ( station.lidar_dataset , day_date )
+    date_datetime = get_daily_ds_date ( dataset )
+    month_folder = get_month_folder_name ( station.lidar_dataset , date_datetime )
 
     '''save the dataset to separated netcdf files: per profile per wavelength'''
     ncpaths = [ ]
@@ -743,6 +730,15 @@ def save_range_corr_dataset ( station , dataset , save_mode = 'sep' ) :
 
 
 # %% General functions to handle preprocessing (prep) datasets (figures ,(netcdf) files)
+def get_daily_ds_date ( dataset ) :
+    logger = logging.getLogger ( )
+    try :
+        date_64 = dataset.date.values
+    except ValueError :
+        logger.exception ( "The dataset does not contain a data variable named 'date'" )
+        return None
+    date_datetime = datetime.utcfromtimestamp ( date_64.tolist ( ) / 1e9 )
+    return date_datetime
 
 
 def get_prep_dataset_file_name ( station , day_date , lambda_nm = 532 , data_source = 'molecular' ,
@@ -792,45 +788,48 @@ def get_prep_dataset_paths ( station , day_date , lambda_nm = 532 , data_source 
     return paths
 
 
-def visualize_ds_profile_chan ( dataset , lambda_nm = 532 , profile_type = 'range_corr',USE_RANGE = None ,
-                                SAVE_FIG = False , dst_folder = os.path.join('..', 'Figures'), format_fig = 'png', dpi = 1000):
+def visualize_ds_profile_chan ( dataset , lambda_nm = 532 , profile_type = 'range_corr' , USE_RANGE = None ,
+                                SAVE_FIG = False , dst_folder = os.path.join ( '..' , 'Figures' ) , format_fig = 'png' ,
+                                dpi = 1000 ) :
     logger = logging.getLogger ( )
+    date_datetime = get_daily_ds_date ( dataset )
     sub_ds = dataset.sel ( Wavelength = lambda_nm ).get ( profile_type )
 
     # Currently only a dataset with range_corrected variable, has min/max plot_range values
     USE_RANGE = None if (profile_type != 'range_corr') else USE_RANGE
-    if USE_RANGE=='MID' :
+    if USE_RANGE == 'MID' :
         [ maxv , minv ] = [
             dataset.sel ( Wavelength = lambda_nm , drop = True ).get ( 'plot_max_range' ).values.tolist ( ) ,
             dataset.sel ( Wavelength = lambda_nm , drop = True ).get ( 'plot_min_range' ).values.tolist ( ) ]
-    elif USE_RANGE=='LOW':
-        try:
+    elif USE_RANGE == 'LOW' :
+        try :
             maxv = dataset.sel ( Wavelength = lambda_nm , drop = True ).get ( 'plot_min_range' ).values.tolist ( )
-        except:
-            logger.debug("The dataset doesn't 'contain plot_min_range', setting maxv=0")
-            maxv=0
+        except :
+            logger.debug ( "The dataset doesn't 'contain plot_min_range', setting maxv=0" )
+            maxv = 0
         minv = np.nanmin ( sub_ds.values )
-    elif USE_RANGE=='HIGH':
+    elif USE_RANGE == 'HIGH' :
         try :
             minv = dataset.sel ( Wavelength = lambda_nm , drop = True ).get ( 'plot_max_range' ).values.tolist ( )
-        except:
+        except :
             logger.debug ( "The dataset doesn't 'contain plot_min_range', setting maxv=0" )
             minv = np.nanmin ( sub_ds.values )
-        maxv = np.nanmax(sub_ds.values)
+        maxv = np.nanmax ( sub_ds.values )
     elif USE_RANGE is None :
         [ maxv , minv ] = [ np.nanmax ( sub_ds.values ) , np.nanmin ( sub_ds.values ) ]
 
     dims = sub_ds.dims
-    if 'Time' not in dims:
-        logger.error(f"The dataset should have a 'Time' dimension.")
+    if 'Time' not in dims :
+        logger.error ( f"The dataset should have a 'Time' dimension." )
         return None
-    if 'Height' in dims: # plot x- time, y- height
-        g = sub_ds.where ( sub_ds < maxv ).where ( sub_ds > minv ).plot ( x = 'Time' , y = 'Height' , cmap = 'turbo' ,figsize = (10 ,6))# ,robust=True)
-    elif len(dims) == 2: # plot x- time, y- other dimension
-        g = sub_ds.where ( sub_ds < maxv ).where ( sub_ds > minv ).plot ( x = 'Time' , cmap = 'turbo' , figsize = (10 , 6) )
-    elif len(dims) == 1: # plot x- time, y - values in profile type
-        g = sub_ds.plot ( x = 'Time' , figsize = (10 , 6) )[0]
-
+    if 'Height' in dims :  # plot x- time, y- height
+        g = sub_ds.where ( sub_ds < maxv ).where ( sub_ds > minv ).plot ( x = 'Time' , y = 'Height' , cmap = 'turbo' ,
+                                                                          figsize = (10 , 6) )  # ,robust=True)
+    elif len ( dims ) == 2 :  # plot x- time, y- other dimension
+        g = sub_ds.where ( sub_ds < maxv ).where ( sub_ds > minv ).plot ( x = 'Time' , cmap = 'turbo' ,
+                                                                          figsize = (10 , 6) )
+    elif len ( dims ) == 1 :  # plot x- time, y - values in profile type
+        g = sub_ds.plot ( x = 'Time' , figsize = (10 , 6) ) [ 0 ]
 
     # Set time on x-axis
     xfmt = mdates.DateFormatter ( '%H:%M' )
@@ -840,8 +839,6 @@ def visualize_ds_profile_chan ( dataset , lambda_nm = 532 , profile_type = 'rang
     plt.setp ( g.axes.get_xticklabels ( ) , rotation = 0 , horizontalalignment = 'center' )
 
     # Set title description
-    date_64 = dataset.date.values
-    date_datetime = datetime.utcfromtimestamp ( date_64.tolist ( ) / 1e9 )
     date_str = date_datetime.strftime ( '%d/%m/%Y' )
     plt.title (
         '{} - {}nm \n {} {}'.format ( sub_ds.attrs [ 'info' ] , lambda_nm , dataset.attrs [ 'location' ] , date_str ) ,
@@ -855,7 +852,7 @@ def visualize_ds_profile_chan ( dataset , lambda_nm = 532 , profile_type = 'rang
                 f"{lambda_nm}_plot_range_{str ( USE_RANGE ).lower ( )}.{format_fig}"
 
         if not os.path.exists ( dst_folder ) :
-            try:
+            try :
                 os.makedirs ( dst_folder , exist_ok = True )
                 logger.debug ( f"Creating folder: {dst_folder}" )
             except Exception :
@@ -863,8 +860,6 @@ def visualize_ds_profile_chan ( dataset , lambda_nm = 532 , profile_type = 'rang
 
         fpath = os.path.join ( dst_folder , fname )
         g.figure.savefig ( fpath , bbox_inches = 'tight' , format = format_fig , dpi = dpi )
-
-
 
     return g
 
