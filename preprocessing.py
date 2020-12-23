@@ -2,7 +2,7 @@ import pandas as pd
 from pandas.api.types import is_numeric_dtype
 from pathlib import Path
 import os
-from datetime import datetime , timedelta
+from datetime import datetime , timedelta,time, date
 import glob
 from molecular import rayleigh_scattering
 import numpy as np
@@ -503,13 +503,17 @@ def generate_daily_molecular ( station , day_date , time_res = '30S' ,
 			 3 daily dataframes: beta,sigma,att_bsc with shared dimensions(Height, Time, Wavelength)
 			 and 2 shared variables: lambda_nm with dimension (Wavelength), and date
 	"""
+
+    date_datetime = datetime.combine ( date = day_date , time = time.min )\
+        if isinstance (day_date, date) else day_date
+
     wavelengths = gs.LAMBDA_nm ( ).get_elastic ( )
     ds_list = [ ]
     # from pytictoc import TicToc
     # t = TicToc()
     # t.tic()
     for lambda_nm in wavelengths :
-        ds_chan = generate_daily_molecular_chan ( station , day_date , lambda_nm , time_res = time_res ,
+        ds_chan = generate_daily_molecular_chan ( station , date_datetime , lambda_nm , time_res = time_res ,
                                                   height_units = height_units , optim_size = optim_size ,
                                                   verbose = verbose )
         ds_list.append ( ds_chan )
@@ -620,8 +624,8 @@ def get_daily_range_corr ( station , day_date , height_units = 'Km' , optim_size
     ds_range_corr = xr.merge ( ds_range_corrs , compat = 'no_conflicts' )
 
     # Fixing missing timestamps values:
-    time_indx = pd.date_range ( start = day_date ,
-                                end = (day_date + timedelta ( hours = 24 ) - timedelta ( seconds = 30 )) ,
+    time_indx = pd.date_range ( start = date_datetime ,
+                                end = (date_datetime + timedelta ( hours = 24 ) - timedelta ( seconds = 30 )) ,
                                 freq = '30S' )
     ds_range_corr = ds_range_corr.reindex ( {"Time" : time_indx} , fill_value = 0 )
     ds_range_corr = ds_range_corr.assign ( {'plot_min_range' : ('Wavelength' , min_range.min ( axis = 1 )) ,
