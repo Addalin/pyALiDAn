@@ -792,26 +792,54 @@ def get_prep_dataset_paths ( station , day_date , lambda_nm = 532 , data_source 
     return paths
 
 
-def visualize_ds_profile_chan ( dataset , lambda_nm = 532 , profile_type = 'range_corr' , USE_RANGE = False ) :
+def visualize_ds_profile_chan ( dataset , lambda_nm = 532 , profile_type = 'range_corr',USE_RANGE = None ,
+                                SAVE_FIG = False , dst_folder = os.path.join('..', 'Figures'), format_fig = 'png', dpi = 1000):
+    logger = logging.getLogger ( )
     sub_ds = dataset.sel ( Wavelength = lambda_nm ).get ( profile_type )
 
     # Currently only a dataset with range_corrected variable, has min/max plot_range values
-    USE_RANGE = False if (profile_type != 'range_corr') else USE_RANGE
-    if USE_RANGE :
+    USE_RANGE = None if (profile_type != 'range_corr') else USE_RANGE
+    if USE_RANGE=='MID' :
         [ maxv , minv ] = [
             dataset.sel ( Wavelength = lambda_nm , drop = True ).get ( 'plot_max_range' ).values.tolist ( ) ,
             dataset.sel ( Wavelength = lambda_nm , drop = True ).get ( 'plot_min_range' ).values.tolist ( ) ]
-    else :
+    elif USE_RANGE=='LOW':
+        try:
+            maxv = dataset.sel ( Wavelength = lambda_nm , drop = True ).get ( 'plot_min_range' ).values.tolist ( )
+        except:
+            logger.debug("The dataset doesn't 'contain plot_min_range', setting maxv=0")
+            maxv=0
+        minv = np.nanmin ( sub_ds.values )
+    elif USE_RANGE=='HIGH':
+        try :
+            minv = dataset.sel ( Wavelength = lambda_nm , drop = True ).get ( 'plot_max_range' ).values.tolist ( )
+        except:
+            logger.debug ( "The dataset doesn't 'contain plot_min_range', setting maxv=0" )
+            minv = np.nanmin ( sub_ds.values )
+        maxv = np.nanmax(sub_ds.values)
+    elif USE_RANGE is None :
         [ maxv , minv ] = [ np.nanmax ( sub_ds.values ) , np.nanmin ( sub_ds.values ) ]
 
-    g = sub_ds.where ( sub_ds < maxv ).where ( sub_ds > minv ).plot ( x = 'Time' , y = 'Height' , cmap = 'turbo' ,
-                                                                      figsize = (12 , 8) )
+    dims = sub_ds.dims
+    if 'Time' not in dims:
+        logger.error(f"The dataset should have a 'Time' dimension.")
+        return None
+    if 'Height' in dims: # plot x- time, y- height
+        g = sub_ds.where ( sub_ds < maxv ).where ( sub_ds > minv ).plot ( x = 'Time' , y = 'Height' , cmap = 'turbo' ,figsize = (10 ,6))# ,robust=True)
+    elif len(dims) == 2: # plot x- time, y- other dimension
+        g = sub_ds.where ( sub_ds < maxv ).where ( sub_ds > minv ).plot ( x = 'Time' , cmap = 'turbo' , figsize = (10 , 6) )
+    elif len(dims) == 1: # plot x- time, y - values in profile type
+        g = sub_ds.plot ( x = 'Time' , figsize = (10 , 6) )[0]
+
+
+    # Set time on x-axis
     xfmt = mdates.DateFormatter ( '%H:%M' )
     g.axes.xaxis.set_major_formatter ( xfmt )
     g.axes.xaxis_date ( )
     g.axes.get_xaxis ( ).set_major_locator ( mdates.HourLocator ( interval = 4 ) )
     plt.setp ( g.axes.get_xticklabels ( ) , rotation = 0 , horizontalalignment = 'center' )
 
+    # Set title description
     date_64 = dataset.date.values
     date_datetime = datetime.utcfromtimestamp ( date_64.tolist ( ) / 1e9 )
     date_str = date_datetime.strftime ( '%d/%m/%Y' )
@@ -821,7 +849,23 @@ def visualize_ds_profile_chan ( dataset , lambda_nm = 532 , profile_type = 'rang
     plt.tight_layout ( )
     plt.show ( )
 
-    plt.show ( )
+    if SAVE_FIG :
+
+        fname = f"{date_datetime.strftime ( '%Y-%m-%d' )}_{dataset.attrs [ 'location' ]}_{profile_type}_" \
+                f"{lambda_nm}_plot_range_{str ( USE_RANGE ).lower ( )}.{format_fig}"
+
+        if not os.path.exists ( dst_folder ) :
+            try:
+                os.makedirs ( dst_folder , exist_ok = True )
+                logger.debug ( f"Creating folder: {dst_folder}" )
+            except Exception :
+                raise OSError ( f"Failed to create folder: {dst_folder}" )
+
+        fpath = os.path.join ( dst_folder , fname )
+        g.figure.savefig ( fpath , bbox_inches = 'tight' , format = format_fig , dpi = dpi )
+
+
+
     return g
 
 
