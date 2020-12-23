@@ -196,7 +196,6 @@ def get_TROPOS_dataset_paths ( station , day_date , start_time = None, end_time 
     """
     lidar_day_folder = get_day_folder_name ( station.lidar_src_folder , day_date )
     file_name = get_TROPOS_dataset_file_name ( start_time , end_time , file_type )
-    os.listdir(lidar_day_folder)
     paths_pattern = os.path.join ( lidar_day_folder , file_name )
 
     paths = sorted ( glob.glob ( paths_pattern ) )
@@ -615,7 +614,9 @@ def get_daily_range_corr ( station , day_date , height_units = 'Km' , optim_size
     '''merge range corrected of lidar through 24-hours'''
     ds_range_corr = xr.merge ( ds_range_corrs , compat = 'no_conflicts' )
     # Fixing missing timestamps values:
-    time_indx = pd.date_range(start = day_date, end = (day_date+timedelta(hours = 24)-timedelta(seconds = 30)), freq = '30S')
+    time_indx = pd.date_range ( start = day_date ,
+                                end = (day_date + timedelta ( hours = 24 ) - timedelta ( seconds = 30 )) ,
+                                freq = '30S' )
     ds_range_corr = ds_range_corr.reindex ( {"Time" : time_indx} , fill_value = 0 )
     ds_range_corr = ds_range_corr.assign ( {'plot_min_range' : ('Wavelength' , min_range.min ( axis = 1 )) ,
                                             'plot_max_range' : ('Wavelength' , max_range.max ( axis = 1 ))} )
@@ -679,9 +680,9 @@ def get_range_corr_ds_chan ( darray , altitude , lambda_nm , height_units = 'Km'
                   'Wavelength' : [ lambda_nm ]
                   }
     )
-    range_corr_ds_chan.range_corr.attrs = {'long_name' : r'$\beta \cdot \exp(-2\tau)$' ,
+    range_corr_ds_chan.range_corr.attrs = {'long_name' : r'$LC \beta \cdot \exp(-2\tau)$' ,
                                            'units' : r'$photons \cdot m^2$' ,
-                                           'info' : 'Range corrected lidar signal from attenuated backscatter multiplied with LC'}
+                                           'info' : 'Range corrected lidar signal from attenuated backscatter multiplied by LC'}
     # set attributes of coordinates
     range_corr_ds_chan.Height.attrs = {'units' : '{}'.format ( '{}'.format ( height_units ) ) ,
                                        'info' : 'Measurements heights above sea level'}
@@ -714,15 +715,15 @@ def save_range_corr_dataset ( station , dataset , save_mode = 'sep' ) :
     if save_mode in [ 'both' , 'sep' ] :
         for lambda_nm in dataset.Wavelength.values :
             ds_profile = dataset.sel ( Wavelength = lambda_nm )
-            file_name = get_prep_dataset_file_name ( station , day_date , lambda_nm , data_source = 'lidar' ,
-                                                     file_type = profile )
+            file_name = get_prep_dataset_file_name ( station , date_datetime , data_source = 'lidar' ,
+                                                     lambda_nm = lambda_nm , file_type = profile )
             ncpath = save_dataset ( ds_profile , month_folder , file_name )
             if ncpath :
                 ncpaths.append ( ncpath )
 
     '''save the dataset to a single netcdf'''
     if save_mode in [ 'both' , 'single' ] :
-        file_name = '{}_{}_{}_lidar.nc'.format ( day_date.strftime ( '%Y_%m_%d' ) , station.location , profile )
+        file_name = '{}_{}_{}_lidar.nc'.format ( date_datetime.strftime ( '%Y_%m_%d' ) , station.location , profile )
         ncpath = save_dataset ( dataset , month_folder , file_name )
         if ncpath :
             ncpaths.append ( ncpath )
