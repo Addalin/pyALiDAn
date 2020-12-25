@@ -75,7 +75,7 @@ class Station:
 
 
     def __str__(self):
-        return str(self.__class__) + ": " + str(self.__dict__)
+        return  ("\n " + str(self.__class__) + ": " + str(self.__dict__)).replace(" {","\n  {").replace(",",",\n  ")
 
 class CHANNELS():
     def __init__(self):
@@ -98,7 +98,7 @@ class CHANNELS():
         return [ self.UV , self.G , self.IR ]
 
     def __str__(self):
-        return str(self.__class__) + ": " + str(self.__dict__)
+        return ("\n " + str(self.__class__) + ": " + str(self.__dict__)).replace(" {","\n  {").replace(",",",\n  ")
 
 
 class LAMBDA_nm( object ):
@@ -118,7 +118,7 @@ class LAMBDA_nm( object ):
         return [self.UV, self.G, self.IR]
 
     def __str__(self):
-        return str(self.__class__) + ": " + str(self.__dict__)
+        return ("\n " + str(self.__class__) + ": " + str(self.__dict__)).replace(" {","\n  {").replace(",",",\n  ")
 
 class LAMBDA_m( LAMBDA_nm ):
     def __init__(self):
