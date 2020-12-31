@@ -233,6 +233,11 @@ def extract_att_bsc ( bsc_paths , wavelengths ) :
 
 
 # %% GDAS files preprocessing functions
+def get_gdas_timestamp ( station , path , file_type = 'txt' ) :
+    format_times = [ "%Y%m%d_%H" ]
+    format_filename = f"{station.location.lower ( )}_(.*)_{station.lat:.1f}_{station.lon:.1f}.{file_type}"
+    date_time = extract_date_time ( path , format_filename , format_times )
+    return date_time
 
 
 def gdas2radiosonde ( src_file , dst_file , col_names = None ) :
@@ -343,8 +348,8 @@ def convert_periodic_gdas ( station , start_day , end_day ) :
     for day in day_dates :
         gdastxt_paths.extend ( convert_daily_gdas ( station , day ) )
     total_converted = len ( gdastxt_paths )
-    logger.debug ( f"Done conversion of {total_converted} gdas files from {start_day.strftime ( '%Y/%m/%d' )} to "
-                   f"{end_day.strftime ( '%Y/%m/%d' )}, {(expected_file_no - total_converted)} failed." )
+    logger.debug ( f"Done conversion of {total_converted} gdas files for period [{start_day.strftime ( '%Y-%m-%d' )},"
+                   f"{end_day.strftime ( '%Y-%m-%d' )}], {(expected_file_no - total_converted)} failed." )
     return gdastxt_paths
 
 
@@ -510,12 +515,11 @@ def generate_daily_molecular ( station , day_date , time_res = '30S' ,
 			 and 2 shared variables: lambda_nm with dimension (Wavelength), and date
 	"""
 
-    date_datetime = datetime.combine ( date = day_date , time = time.min )\
-        if isinstance (day_date, date) else day_date
+    date_datetime = datetime.combine ( date = day_date , time = time.min ) \
+        if isinstance ( day_date , date ) else day_date
 
     wavelengths = gs.LAMBDA_nm ( ).get_elastic ( )
     ds_list = [ ]
-    # from pytictoc import TicToc
     # t = TicToc()
     # t.tic()
     for lambda_nm in wavelengths :
@@ -527,9 +531,9 @@ def generate_daily_molecular ( station , day_date , time_res = '30S' ,
     '''concatenating molecular profiles of all channels'''
     ds_mol = xr.concat ( ds_list , dim = 'Wavelength' )
     ds_mol [ 'date' ] = date_datetime
-    ds_mol.attrs = {'info' : 'Daily molecular profiles',
-                    'location' : station.name,
-                    'source_type':'gdas'}
+    ds_mol.attrs = {'info' : 'Daily molecular profiles' ,
+                    'location' : station.name ,
+                    'source_type' : 'gdas'}
     return ds_mol
 
 
@@ -562,7 +566,8 @@ def save_molecular_dataset ( station , dataset , save_mode = 'sep' ) :
             for lambda_nm in dataset.Wavelength.values :
                 profile_vars.extend ( shared_vars )
                 ds_profile = dataset.get ( profile_vars ).sel ( Wavelength = lambda_nm )
-                file_name = get_prep_dataset_file_name ( station , date_datetime , data_source = 'molecular', lambda_nm = lambda_nm ,
+                file_name = get_prep_dataset_file_name ( station , date_datetime , data_source = 'molecular' ,
+                                                         lambda_nm = lambda_nm ,
                                                          file_type = profile )
                 ncpath = save_dataset ( ds_profile , month_folder , file_name )
                 if ncpath :
@@ -570,7 +575,8 @@ def save_molecular_dataset ( station , dataset , save_mode = 'sep' ) :
 
     '''save the dataset to a single netcdf'''
     if save_mode in [ 'both' , 'single' ] :
-        file_name = get_prep_dataset_file_name ( station , date_datetime , data_source = 'molecular' , lambda_nm = 'all' ,
+        file_name = get_prep_dataset_file_name ( station , date_datetime , data_source = 'molecular' ,
+                                                 lambda_nm = 'all' ,
                                                  file_type = 'all' )
         ncpath = save_dataset ( dataset , month_folder , file_name )
         if ncpath :
@@ -598,8 +604,8 @@ def get_daily_range_corr ( station , day_date , height_units = 'Km' , optim_size
 	"""
 
     '''get netcdf paths of the attenuation backscatter for given day_date'''
-    date_datetime = datetime.combine ( date = day_date , time = time.min )\
-        if isinstance (day_date, date) else day_date
+    date_datetime = datetime.combine ( date = day_date , time = time.min ) \
+        if isinstance ( day_date , date ) else day_date
 
     bsc_paths = get_TROPOS_dataset_paths ( station , date_datetime , file_type = 'att_bsc' )
     bsc_ds0 = load_dataset ( bsc_paths [ 0 ] )
@@ -637,8 +643,8 @@ def get_daily_range_corr ( station , day_date , height_units = 'Km' , optim_size
     ds_range_corr = ds_range_corr.assign ( {'plot_min_range' : ('Wavelength' , min_range.min ( axis = 1 )) ,
                                             'plot_max_range' : ('Wavelength' , max_range.max ( axis = 1 ))} )
     ds_range_corr [ 'date' ] = date_datetime
-    ds_range_corr.attrs = {'location': station.location,
-                           'info':'Daily range corrected lidar signal',
+    ds_range_corr.attrs = {'location' : station.location ,
+                           'info' : 'Daily range corrected lidar signal' ,
                            'source_type' : 'att_bsc'}
     return ds_range_corr
 
@@ -772,11 +778,11 @@ def get_prep_dataset_file_name ( station , day_date , data_source = 'molecular' 
     """
     if file_type == '*' or lambda_nm == '*' :
         # retrieves any file of this date
-        file_name = f"{day_date.strftime('%Y_%m_%d')}_{station.location}_{file_type}_{lambda_nm}*{data_source}.nc"
+        file_name = f"{day_date.strftime ( '%Y_%m_%d' )}_{station.location}_{file_type}_{lambda_nm}*{data_source}.nc"
     else :
         # this option is mainly to set new file names
-        file_name = f"{day_date.strftime('%Y_%m_%d')}_{station.location}_{file_type}_{lambda_nm}_{data_source}.nc"
-    file_name = file_name.replace('all','').replace ( '__' , '_' ).replace ( '__' , '_' )
+        file_name = f"{day_date.strftime ( '%Y_%m_%d' )}_{station.location}_{file_type}_{lambda_nm}_{data_source}.nc"
+    file_name = file_name.replace ( 'all' , '' ).replace ( '__' , '_' ).replace ( '__' , '_' )
     return (file_name)
 
 
@@ -859,16 +865,15 @@ def visualize_ds_profile_chan ( dataset , lambda_nm = 532 , profile_type = 'rang
 
     # Set title description
     date_str = date_datetime.strftime ( '%d/%m/%Y' )
-    plt.title (
-        '{} - {}nm \n {} {}'.format ( sub_ds.attrs [ 'info' ] , lambda_nm , dataset.attrs [ 'location' ] , date_str ) ,
-        y = 1.05 )
+    stitle = f"{sub_ds.attrs [ 'info' ]} - {lambda_nm}nm \n {dataset.attrs [ 'location' ]} {date_str}"
+    plt.title ( stitle , y = 1.05 )
     plt.tight_layout ( )
     plt.show ( )
 
     if SAVE_FIG :
 
         fname = f"{date_datetime.strftime ( '%Y-%m-%d' )}_{dataset.attrs [ 'location' ]}_{profile_type}_" \
-                f"{lambda_nm}_source_{dataset.attrs['source_type']}" \
+                f"{lambda_nm}_source_{dataset.attrs [ 'source_type' ]}" \
                 f"_plot_range_{str ( USE_RANGE ).lower ( )}.{format_fig}"
 
         if not os.path.exists ( dst_folder ) :
@@ -883,6 +888,11 @@ def visualize_ds_profile_chan ( dataset , lambda_nm = 532 , profile_type = 'rang
 
     return g
 
+def get_prep_ds_timestamp ( station , path , data_source = 'molecular' ) :
+    format_times = [ "%Y_%m_%d" ]
+    format_filename = f"(.*)_{station.location}_*_{data_source}.nc"
+    date_time = extract_date_time ( path , format_filename , format_times )
+    return date_time
 
 # %% Database functions
 def query_database ( query = "SELECT * FROM lidar_calibration_constant;" ,
@@ -913,7 +923,9 @@ def query_database ( query = "SELECT * FROM lidar_calibration_constant;" ,
     return df
 
 
-def get_query ( wavelength , cali_method , start_day , till_date ) :
+def get_query ( wavelength , cali_method , day_date ) :
+    start_time = datetime.combine ( date = day_date.date ( ) , time = day_date.time ( ).min )
+    end_time = datetime.combine ( date = day_date.date ( ) , time = day_date.time ( ).max )
     query = f"""
     SELECT  lcc.liconst, lcc.uncertainty_liconst,
             lcc.cali_start_time, lcc.cali_stop_time,
@@ -923,18 +935,23 @@ def get_query ( wavelength , cali_method , start_day , till_date ) :
         wavelength == {wavelength} AND
         cali_method == '{cali_method}' AND
         telescope == 'far_range' AND
-        (cali_start_time BETWEEN '{start_day}' AND '{till_date}');
+        (cali_start_time BETWEEN '{start_time}' AND '{end_time}');
     """
     return query
 
 
-def add_profiles_values ( df , station , day_date, file_type = 'profiles' ) :
-
-    df['matched_nc_profile'] = df.apply( lambda row : get_TROPOS_dataset_paths ( station , day_date ,
-                                                                      start_time = row.cali_start_time ,
-                                                                      end_time = row.cali_stop_time ,
-                                                                      file_type = file_type ) [0 ] ,
-                              axis = 1 , result_type ='expand' )
+def add_profiles_values ( df , station , day_date , file_type = 'profiles' ) :
+    logger = logging.getLogger ( )
+    try :
+        df [ 'matched_nc_profile' ] = df.apply ( lambda row : get_TROPOS_dataset_paths ( station , day_date ,
+                                                                                         start_time = row.cali_start_time ,
+                                                                                         end_time = row.cali_stop_time ,
+                                                                                         file_type = file_type ) [ 0 ] ,
+                                                 axis = 1 , result_type = 'expand' )
+    except Exception :
+        logger.exception (
+            f"Non resolved 'matched_nc_profile' for {station.location} station, at date {day_date.strftime ( '%Y-%m-%d' )} " )
+        pass
     '''
     df['nc_path'] = df.apply(lambda row: get_TROPOS_dataset_file_name(start_time = row.cali_start_time,
                                                                       end_time = row.cali_stop_time,
@@ -954,12 +971,13 @@ def add_profiles_values ( df , station , day_date, file_type = 'profiles' ) :
     def _get_info_from_profile_nc ( row ) :
         data = Dataset ( row [ 'matched_nc_profile' ] )
         wavelen = row.wavelength
-        delta_r = data.variables [ f'reference_height_{wavelen}' ] [ : ].data [ 1 ] - \
-                  data.variables [ f'reference_height_{wavelen}' ] [ : ].data [ 0 ]
-        return data.variables [ 'altitude' ] [ : ].data.item ( ) , delta_r , \
-               data.variables [ f'reference_height_{wavelen}' ] [ : ].data [ 0 ]
+        r0 = data.variables [ f'reference_height_{wavelen}' ] [ : ].data [ 0 ]
+        r1 = data.variables [ f'reference_height_{wavelen}' ] [ : ].data [ 1 ]
+        altitude = data.variables [ 'altitude' ] [ : ].data.item ( )
+        #delta_r = r1 - r0
+        return altitude ,r0,r1 #,delta_r
 
-    df [ [ 'altitude' , 'delta_r' , 'r0' ] ] = df.apply ( _get_info_from_profile_nc , axis = 1 ,
+    df [ [ 'altitude' , 'r0' , 'r1' ] ] = df.apply ( _get_info_from_profile_nc , axis = 1 ,
                                                           result_type = 'expand' )
     return df
 
@@ -976,9 +994,17 @@ def add_X_path ( df , station , day_date , lambda_nm = 532 , data_source = 'mole
     :return: ds with the added collum of the relevant raw
     """
 
-    paths = get_prep_dataset_paths ( station , day_date , lambda_nm , data_source , file_type )
-    if len ( paths ) != 1 :
-        raise Exception ( f"Expected ONE {data_source} path per day. Got: {paths} " )
+    paths = get_prep_dataset_paths ( station = station ,
+                                     day_date = day_date ,
+                                     data_source = data_source ,
+                                     lambda_nm = lambda_nm ,
+                                     file_type = file_type )
+    if not paths :
+        raise Exception (
+            f"Not exiting any '{data_source}' path for {station.location} station, at {day_date.strftime ( '%Y-%m-%d' )}" )
+    elif len ( paths ) != 1 :
+        raise Exception (
+            f"Expected ONE '{data_source}' path for {station.location} station, at {day_date.strftime ( '%Y-%m-%d' )}.\nGot: {paths} " )
     df [ f"{data_source}_path" ] = paths [ 0 ]
     return df
 
@@ -993,12 +1019,15 @@ def get_time_frames ( df ) :
     return df
 
 
-def create_dataset ( station_name = 'haifa' , sample_size = '30min') :
+def create_dataset ( station_name = 'haifa' , start_date = datetime ( 2017 , 9 , 1 ) ,
+                     end_date = datetime ( 2017 , 9 , 2 ) , sample_size = '30min' ) :
     """
     CHOOSE: telescope: far_range , METHOD: Klett_Method
     each sample will have 60 bins (aka 30 mins length)
     path to db:  stationdb_file
 
+    :param start_date:
+    :param end_date:
     :key
     Date DONE
     start_time
@@ -1017,53 +1046,58 @@ def create_dataset ( station_name = 'haifa' , sample_size = '30min') :
     lidar_path (station.lidar_src_folder/<%Y/%M/%d> +nc_zip_file+'att_bsc.nc'
     molecular_path ( station .molecular_src_folder/<%Y/%M><day_mol.nc>
     """
-
+    logger = logging.getLogger ( )
     station = gs.Station ( station_name = station_name )
     db_path = station.db_file
     wavelengths = gs.LAMBDA_nm ( ).get_elastic ( )
     cali_method = 'Klett_Method'
 
-    day_date1 = datetime ( 2017 , 9 , 1 )
-    day_date2 = datetime ( 2017 , 9 , 4 )
+    dates = pd.date_range ( start = start_date , end = end_date , freq = 'D' ).to_pydatetime ( ).tolist ( )
     full_df = pd.DataFrame ( )
     for wavelength in wavelengths :
-        for day_date in [ day_date1 , day_date2 ] :
+        for day_date in dates :
 
-            day_diff = timedelta ( days = 1 )
-            start_day = day_date.strftime ( '%Y-%m-%d' )
-            till_date = (day_date + day_diff).strftime ( '%Y-%m-%d' )
             # Query the db for a specific day, wavelength and calibration method
-            query = get_query ( wavelength , cali_method , start_day , till_date )
-            df = query_database ( query = query , database_path = db_path )
+            try :
+                query = get_query ( wavelength , cali_method , day_date )
+                df = query_database ( query = query , database_path = db_path )
+                if df.empty :
+                    raise Exception (
+                        f"Not existing data for {station.location} station, during {day_date.strftime ( '%Y-%m-%d' )} in '{db_path}'" )
+                df [ 'date' ] = day_date.strftime ( '%Y-%m-%d' )
 
-            df [ 'date' ] = day_date.strftime ( '%Y-%m-%d' )
+                df = add_profiles_values ( df , station , day_date , file_type = 'profiles' )
 
-            df = add_profiles_values ( df , station , day_date , file_type = 'profiles' )
+                df = add_X_path ( df , station , day_date , lambda_nm = wavelength , data_source = 'lidar' ,
+                                  file_type = 'range_corr' )
+                df = add_X_path ( df , station , day_date , lambda_nm = wavelength , data_source = 'molecular' ,
+                                  file_type = 'attbsc' )
 
-            df = add_X_path(df , station, day_date , lambda_nm = wavelength , data_source = 'lidar' ,
-                              file_type = 'range_corr' )
-            df = add_X_path( df , station , day_date , lambda_nm = wavelength , data_source = 'molecular' ,
-                              file_type = 'attbsc' )
+                df = get_time_frames ( df )
 
-            df = get_time_frames ( df )
+                df = df.rename ( {'liconst' : 'LC' , 'uncertainty_liconst' : 'LC_std'} , axis = 'columns' )
+                expanded_df = pd.DataFrame ( )
+                for indx , row in df.iterrows ( ) :
+                    for start_time , end_time in zip (
+                            pd.date_range ( row.loc [ 'start_time' ] , row.loc [ 'end_time' ] , freq = sample_size ) [
+                            :-1 ] ,
+                            pd.date_range ( row.loc [ 'start_time' ] , row.loc [ 'end_time' ] ,
+                                            freq = sample_size ).shift ( 1 ) [ :-1 ] ) :
+                        mini_df = row.copy ( )
+                        mini_df [ 'start_time_period' ] = start_time
+                        mini_df [ 'end_time_period' ] = end_time - timedelta ( seconds = 30 )
+                        expanded_df = expanded_df.append ( mini_df )
 
-            expanded_df = pd.DataFrame ( )
-            for indx , row in df.iterrows ( ) :
-                for start_time , end_time in zip (
-                        pd.date_range ( row.loc [ 'start_time' ] , row.loc [ 'end_time' ] , freq = sample_size ) [ :-1 ] ,
-                        pd.date_range ( row.loc [ 'start_time' ] , row.loc [ 'end_time' ] , freq = sample_size ).shift ( 1 ) [ :-1 ] ) :
-                    mini_df = row.copy ( )
-                    mini_df [ 'start_time_period' ] = start_time
-                    mini_df [ 'end_time_period' ] = end_time - timedelta ( seconds = 30 )
-                    expanded_df = expanded_df.append ( mini_df )
-
-            # reorder the columns
-            key = [ 'date' , 'wavelength' , 'cali_method' , 'telescope' , 'cali_start_time' , 'cali_stop_time' ,
-                    'start_time_period' , 'end_time_period' ]
-            Y_features = [ 'liconst' , 'uncertainty_liconst' , 'delta_r' , 'r0' ]
-            X_features = [ 'lidar_path' , 'molecular_path' ]
-            expanded_df = expanded_df [ key + X_features + Y_features ]
-            full_df = full_df.append ( expanded_df )
+                # reorder the columns
+                key = [ 'date' , 'wavelength' , 'cali_method' , 'telescope' , 'cali_start_time' , 'cali_stop_time' ,
+                        'start_time_period' , 'end_time_period' ]
+                Y_features = [ 'LC' , 'LC_std' , 'r0' , 'r1' ]
+                X_features = [ 'lidar_path' , 'molecular_path' ]
+                expanded_df = expanded_df [ key + X_features + Y_features ]
+                full_df = full_df.append ( expanded_df )
+            except Exception as e :
+                logger.exception ( f"{e}, skipping to next day." )
+                continue
 
     return full_df.reset_index ( drop = True )
 
@@ -1079,7 +1113,7 @@ class customDataSet ( torch.utils.data.Dataset ) :
         self.data = df.copy ( )
         self.key = [ 'date' , 'wavelength' , 'cali_method' , 'telescope' , 'cali_start_time' , 'cali_stop_time' ,
                      'start_time_period' , 'end_time_period' ]
-        self.Y_features = [ 'liconst' , 'uncertainty_liconst' , 'delta_r' , 'r0' ]
+        self.Y_features = [ 'liconst' , 'uncertainty_liconst' , 'r0' , 'r1' ]
         self.X_features = [ 'lidar_path' , 'molecular_path' ]
 
     def __len__ ( self ) :
@@ -1087,11 +1121,27 @@ class customDataSet ( torch.utils.data.Dataset ) :
 
     def __getitem__ ( self , idx ) :
         row = self.data.loc [ idx , : ]
+        tslice = slice ( row.start_time_period , row.end_time_period )
+        hslice = slice (0,15000)  # up to 15 km
+
+        profiles = [ 'range_corr' , 'attbsc' ]
+        X_paths = [ row [ key ] for key in self.X_features ]
+        X = [torch.from_numpy ( (load_dataset ( path ).sel ( Time = tslice , Height = hslice)) [ profile ].values ).float ( ).to (
+            device ) for path , profile in zip ( X_paths , profiles ) ]
         X = row [ self.X_features ]
         Y = row [ self.Y_features ]
         # TODO transform X to torch.tensor!
         return X , torch.tensor ( Y )
 
+def gen_daily_ds(day_date):
+    logger = logging.getLogger ( )
+    optim_size = True
+    save_mode = 'both'
+    logger.debug (f"Start generation of molecular dataset for {day_date.strftime ( '%Y-%m-%d' )}" )
+    station = gs.Station ( stations_csv_path = 'stations.csv' , station_name = 'haifa' )
+    mol_ds = generate_daily_molecular ( station , day_date , optim_size = optim_size )
+    ncpaths = save_molecular_dataset ( station , mol_ds , save_mode = save_mode)
+    logger.debug ( f"Done saving molecular datasets for {day_date.strftime ( '%Y-%m-%d' )}, to: {ncpaths}" )
 
 def main ( station_name = 'haifa' , start_date = datetime ( 2017 , 9 , 1 ) , end_date = datetime ( 2017 , 9 , 2 ) ) :
     logging.getLogger ( 'matplotlib' ).setLevel ( logging.ERROR )  # Fix annoying matplotlib logs
@@ -1187,6 +1237,7 @@ def main ( station_name = 'haifa' , start_date = datetime ( 2017 , 9 , 1 ) , end
         for i_batch , sample_batched in enumerate ( dataloader ) :
             print ( i_batch , sample_batched )
             break
+
 
 
 if __name__ == '__main__' :
