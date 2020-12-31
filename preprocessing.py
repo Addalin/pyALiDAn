@@ -1093,106 +1093,94 @@ class customDataSet ( torch.utils.data.Dataset ) :
         return X , torch.tensor ( Y )
 
 
-def main ( ) :
+def main ( station_name = 'haifa' , start_date = datetime ( 2017 , 9 , 1 ) , end_date = datetime ( 2017 , 9 , 2 ) ) :
     logging.getLogger ( 'matplotlib' ).setLevel ( logging.ERROR )  # Fix annoying matplotlib logs
     logging.getLogger ( 'PIL' ).setLevel ( logging.ERROR )  # Fix annoying PIL logs
     logger = create_and_configer_logger ( 'preprocessing_log.log' )
-    DO_GDAS = False
-    DO_NETCDF = False
+    CONV_GDAS = False
+    GEN_MOL_DS = False
+    GEN_LIDAR_DS = False
     DO_DATASET = True
-    wavs_nm = gs.LAMBDA_nm ( )
-    logger.debug ( f'waves_nm: {wavs_nm}' )
+    LOAD_DATASET =  False
 
     """set day,location"""
-    day_date = datetime ( 2017 , 9 , 1 )
-    haifa_station = gs.Station ( stations_csv_path = 'stations.csv' , station_name = 'haifa' )  # haifa_shubi')
-    logger.debug ( f"haifa_station: {haifa_station}" )
-    min_height = haifa_station.altitude + haifa_station.start_bin_height
-    top_height = haifa_station.altitude + haifa_station.end_bin_height
+    station = gs.Station ( stations_csv_path = 'stations.csv' , station_name = station_name )  # haifa_shubi')
+    logger.debug ( f"Loading {station.location} station" )
+    logger.debug ( f"station info: {station}" )
+    logger.debug (
+        f"Start preprocessing for period: [{start_date.strftime ( '%Y-%m-%d' )},{end_date.strftime ( '%Y-%m-%d' )}]" )
 
-    # GDAS
-    if DO_GDAS :
-        lambda_nm = wavs_nm.G
-        gdas_txt_paths = convert_daily_gdas ( haifa_station , day_date )
-        logger.debug ( f'gdas_dst_paths: {gdas_txt_paths}' )
-        df_sigma , df_beta = get_daily_molecular_profiles ( haifa_station , day_date , lambda_nm , 'Km' )
-        '''Visualize molecular profiles'''
-        plt.figure ( )
-        df_beta.plot ( )
-        plt.ylabel ( r'$\beta_{mol}[1/m]$' )
-        plt.title ( 'Molecular backscatter profiles of {} station during {} '.format ( haifa_station.location ,
-                                                                                       day_date.strftime (
-                                                                                           "%d-%m-%Y" ) ) )
-        plt.show ( )
+    ''' Generate molecular datasets for required period'''
+    gdas_paths = [ ]
+    if CONV_GDAS :
+        # Convert gdas files for a period
+        gdas_paths.extend ( convert_periodic_gdas ( station , start_date , end_date ) )
 
-    # NETCDF
-    if DO_NETCDF :
+    # get all days having a converted (to txt) gdas files in the required period
+    if not gdas_paths :
+        dates = pd.date_range ( start = start_date , end = end_date , freq = 'D' ).to_pydatetime ( ).tolist ( )
+        for day in dates :
+            _ , curpath = get_daily_gdas_paths ( station , day , f_type = 'txt' )
+            if curpath :
+                gdas_paths.extend ( curpath )
+    timestamps = [ get_gdas_timestamp ( station , path ) for path in gdas_paths ]
+    df_times = pd.DataFrame ( data = timestamps , columns = [ 'timestamp' ] )
+    days_g = df_times.groupby ( [ df_times.timestamp.dt.date ] ).groups
+    valid_gdas_days = list ( days_g.keys ( ) )
 
-        # Get the paths
-        logger.debug ( 'start_nc' )
-        logger.debug ( f'path {haifa_station.lidar_src_folder}' )
-        bsc_paths = get_TROPOS_dataset_paths ( haifa_station , day_date , file_type = 'att_bsc' )
-        profile_paths = get_TROPOS_dataset_paths ( haifa_station , day_date , file_type = 'profiles' )
+    if GEN_MOL_DS :
+        # Check for existing molecular paths
+        '''molpaths = [ ]
+        for day_date in valid_gdas_days:
+            cpath = get_prep_dataset_paths ( station = station ,
+                                             day_date = day_date ,
+                                             lambda_nm = '*',
+                                             file_type = 'attbsc')
+            if cpath:
+                molpaths.extend(cpath)
 
-        waves_elastic = wavs_nm.get_elastic ( )  # [UV,G,IR]
+        timestamps = [
+            datetime.strptime ( '_'.join ( (os.path.basename ( cpath )).split ( '_' ) [ 0 :3 ] ) , '%Y_%m_%d' ) for
+            cpath in molpaths ]
+        df_times = pd.DataFrame ( data = timestamps , columns = [ 'timestamp' ] )
+        days_g = df_times.groupby ( [ df_times.timestamp.dt.date ] ).groups
+        mol_days = list ( days_g.keys ( ) )
+        # separate exiting days from required period (not to genarate again)
+        inds_exist = [ valid_gdas_days.index(mol_day)  for mol_day in mol_days ] 
+        logger.debug ( f"Existing days of 'attbsc' profiles: {mol_days}" )
+'''
+        # Generate and save molecular dataset for each valid day in valid_gdas_days :
+        len_mol_days = len(valid_gdas_days)
+        num_processes = np.min((cpu_count()-1, len_mol_days))
+        chunksize = np.ceil(np.float(len_mol_days)/num_processes).astype(int)
+        with Pool (num_processes ) as p :
+            p.map ( gen_daily_ds , valid_gdas_days, chunksize= chunksize)
 
-        # Extract the OC_attenuated_backscatter_{wavelen}nm and Lidar_calibration_constant_used for all
-        # files in bsc_paths and for all wavelengths
-        # TODO do something with the data!
-        extract_att_bsc ( bsc_paths , waves_elastic )
+        logger.debug (
+            f"Finished generating and saving of molecular datasets for period [{start_date.strftime ( '%Y-%m-%d' )},{end_date.strftime ( '%Y-%m-%d' )}]" )
 
-        # Query the db for a specific day & wavelength and calibration method
-        wavelength = wavs_nm.IR  # or wavelengths[0] # 1064 or
-        day_diff = timedelta ( days = 1 )
-        start_day = day_date.strftime ( '%Y-%m-%d' )
-        till_date = (day_date + day_diff).strftime ( '%Y-%m-%d' )
-        cali_method = 'Klett_Method'
 
-        query = f"""
-        SELECT lcc.liconst, lcc.cali_start_time, lcc.cali_stop_time, lcc.wavelength
-        FROM lidar_calibration_constant as lcc
-        WHERE
-            wavelength == {wavelength} AND
-            cali_method == '{cali_method}' AND
-            (cali_start_time BETWEEN '{start_day}' AND '{till_date}');
-        """
 
-        db_path = "data_example/pollyxt_tropos_calibration.db"
-        df = query_database ( query = query , database_path = db_path )
+    ''' Generate lidar datasets for required period'''
+    if GEN_LIDAR_DS :
+        lidarpaths = [ ]
+        for day_date in valid_gdas_days:
+            range_corr_ds = get_daily_range_corr ( station , day_date , height_units = 'Km' ,
+                                                        optim_size = True , verbose = False )
+            lidar_paths = save_range_corr_dataset ( station , range_corr_ds , save_mode = 'both' )
+            lidarpaths.extend ( lidar_paths )
+        logger.debug (
+            f"Done creation of lidar datasets for period [{start_date.strftime ( '%Y-%m-%d' )},{end_date.strftime ( '%Y-%m-%d' )}]" )
 
-        # Build matching_nc_file
-        # TODO ?? currently matches any two values
-        df [ 'nc_path' ] = "*" + df [ 'cali_start_time' ].dt.strftime ( '%Y_%m_%d' ) + \
-                           "_" + df [ 'cali_start_time' ].dt.day_name ( ).str.slice ( start = 0 , stop = 3 ) + \
-                           "_TROPOS_" + "??_00_01_" + \
-                           df [ 'cali_start_time' ].dt.strftime ( '%H%M' ) + "_" + \
-                           df [ 'cali_stop_time' ].dt.strftime ( '%H%M' ) + "_profiles.nc"
-
-        # Find Actual matching nc file (full path)
-        def get_file_match ( x ) :
-            matched_file = fnmatch.filter ( profile_paths , x )
-            if len ( matched_file ) == 1 :
-                return matched_file [ 0 ]
-            else :
-                raise Exception  # make sure only one file is returned
-
-        df [ 'matched_nc_file' ] = df [ 'nc_path' ].apply ( get_file_match )
-
-        # Get the altitude (r0) and delta_r
-        def get_info_from_profile_nc ( row ) :
-            data = Dataset ( row [ 'matched_nc_file' ] )
-            wavelen = row.wavelength
-            delta_r = data.variables [ f'reference_height_{wavelen}' ] [ : ].data [ 1 ] - \
-                      data.variables [ f'reference_height_{wavelen}' ] [ : ].data [ 0 ]
-            return data.variables [ 'altitude' ] [ : ].data.item ( ) , delta_r
-
-        df [ [ 'altitude' , 'delta_r' ] ] = df.apply ( get_info_from_profile_nc , axis = 1 , result_type = 'expand' )
-        # TODO do something with the df
-        pass  # add breakpoint here to see the df
+        print ( f'Lidar paths: {lidar_paths}' )
 
     if DO_DATASET :
-        df = create_dataset ( station_name = 'haifa' )
+
+        df = create_dataset ( station_name = 'haifa' , start_date = start_date , end_date = end_date )
         dataset = customDataSet ( df )
+        csv_path = f"dataset_{start_date.strftime('%Y-%m-%d')}_{end_date.strftime('%Y-%m-%d')}.csv"
+        df.to_csv (csv_path)
+    if LOAD_DATASET:
         dataloader = torch.utils.data.DataLoader ( dataset , batch_size = 4 ,
                                                    shuffle = True )
 
@@ -1202,4 +1190,7 @@ def main ( ) :
 
 
 if __name__ == '__main__' :
-    main ( )
+    station_name = 'haifa'
+    start_date = datetime ( 2017 , 9 , 1 )
+    end_date = datetime ( 2017 , 10 , 31)
+    main ( station_name , start_date , end_date )
