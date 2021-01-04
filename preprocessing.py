@@ -1137,6 +1137,28 @@ class customDataSet ( torch.utils.data.Dataset ) :
         # TODO transform X to torch.tensor!
         return X , torch.tensor ( Y )
 
+
+def convert_profiles_units(dataset, units=['1/m','1/Km'], scale=1e+3):
+    """
+    Converting units of or profiles in dataset,
+    :param dataset: lidar dataset or molecular dataset
+    :param units: list of strings: [str_source,str_dest], E.g.:
+                    For range corrected signal (pr^2) units=['m^2','Km^2']
+                    For beta (or sigma) converting units= ['1/m','1/Km']
+    :param scale: float, the scale to use for conversion. E.g.:
+                    For range corrected signal, converting distance units or r^2: scale = 10^-6
+                    For beta (or sigma), converting the distance units of 1/m: scale = 10^3
+    :return: the datasets with units converted profiles
+    """
+    profiles = [ var for var in dataset.data_vars if (len ( dataset [ var ].shape ) > 1) ]
+
+    for profile in profiles:
+        conv_profiles = xr.apply_ufunc(lambda x: x*scale, dataset[profile], keep_attrs=True)
+        conv_profiles.attrs["units"]= conv_profiles.units.replace(units[0],units[1])
+        dataset [ profile ] = conv_profiles
+    return  dataset
+
+
 def gen_daily_ds(day_date):
     logger = logging.getLogger ( )
     optim_size = True
@@ -1144,7 +1166,9 @@ def gen_daily_ds(day_date):
     logger.debug (f"Start generation of molecular dataset for {day_date.strftime ( '%Y-%m-%d' )}" )
     station = gs.Station ( stations_csv_path = 'stations.csv' , station_name = 'haifa' )
     mol_ds = generate_daily_molecular ( station , day_date , optim_size = optim_size )
-    ncpaths = save_molecular_dataset ( station , mol_ds , save_mode = save_mode)
+    # convert m to km
+    mol_ds_km = convert_profiles_units ( mol_ds , units = [ '1/m' , '1/Km' ] , scale = 1e+3 )
+    ncpaths = save_molecular_dataset ( station , mol_ds_km , save_mode = save_mode)
     logger.debug ( f"Done saving molecular datasets for {day_date.strftime ( '%Y-%m-%d' )}, to: {ncpaths}" )
 
 def main ( station_name = 'haifa' , start_date = datetime ( 2017 , 9 , 1 ) , end_date = datetime ( 2017 , 9 , 2 ) ) :
@@ -1152,13 +1176,13 @@ def main ( station_name = 'haifa' , start_date = datetime ( 2017 , 9 , 1 ) , end
     logging.getLogger ( 'PIL' ).setLevel ( logging.ERROR )  # Fix annoying PIL logs
     logger = create_and_configer_logger ( 'preprocessing_log.log' )
     CONV_GDAS = False
-    GEN_MOL_DS = False
-    GEN_LIDAR_DS = False
-    DO_DATASET = True
+    GEN_MOL_DS = True
+    GEN_LIDAR_DS = True
+    DO_DATASET = False
     LOAD_DATASET =  False
 
     """set day,location"""
-    station = gs.Station ( stations_csv_path = 'stations.csv' , station_name = station_name )  # haifa_shubi')
+    station = gs.Station ( stations_csv_path = 'stations.csv' , station_name = station_name )
     logger.debug ( f"Loading {station.location} station" )
     logger.debug ( f"station info: {station}" )
     logger.debug (
@@ -1221,7 +1245,10 @@ def main ( station_name = 'haifa' , start_date = datetime ( 2017 , 9 , 1 ) , end
         for day_date in valid_gdas_days:
             range_corr_ds = get_daily_range_corr ( station , day_date , height_units = 'Km' ,
                                                         optim_size = True , verbose = False )
-            lidar_paths = save_range_corr_dataset ( station , range_corr_ds , save_mode = 'both' )
+
+            # convert m to km
+            range_corr_ds_km = convert_profiles_units ( range_corr_ds , units = [ 'm^2' , 'Km^2' ] , scale = 1e-6 )
+            lidar_paths = save_range_corr_dataset ( station , range_corr_ds_km , save_mode = 'both' )
             lidarpaths.extend ( lidar_paths )
         logger.debug (
             f"Done creation of lidar datasets for period [{start_date.strftime ( '%Y-%m-%d' )},{end_date.strftime ( '%Y-%m-%d' )}]" )
@@ -1247,5 +1274,5 @@ def main ( station_name = 'haifa' , start_date = datetime ( 2017 , 9 , 1 ) , end
 if __name__ == '__main__' :
     station_name = 'haifa'
     start_date = datetime ( 2017 , 9 , 1 )
-    end_date = datetime ( 2017 , 10 , 31)
+    end_date = datetime ( 2017 , 10, 31)
     main ( station_name , start_date , end_date )
