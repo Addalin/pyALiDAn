@@ -437,14 +437,19 @@ def generate_daily_molecular_chan ( station , day_date , lambda_nm , time_res = 
     '''Calculate the molecular attenuated backscatter as :  beta_mol * exp(-2*tau_mol)'''
     if height_units == 'Km' :
         # converting height index to meters before tau calculations
-        km_index = interp_sigma_df.index.tolist ( )
-        meter_index = (np.array ( km_index.copy ( ) ) * 1e+3).tolist ( )
-        interp_sigma_df.reindex ( meter_index )
+        km_index = interp_sigma_df.index
+        idx_name = km_index.name
+        meter_index = 1e+3 * km_index.rename (idx_name.replace ( 'Km' , 'm' ) )
+        interp_sigma_df.reset_index ( inplace = True , drop = True )
+        interp_sigma_df.index = meter_index
     e_tau_df = interp_sigma_df.apply ( cal_e_tau_df , 0 , args = (station.altitude ,) , result_type = 'expand' )
     if height_units == 'Km' :
         # converting back height index to km before dataset creation
-        interp_sigma_df.reindex ( km_index )
-        e_tau_df.reindex ( km_index )
+        interp_sigma_df.reset_index ( inplace = True , drop = True )
+        interp_sigma_df.index = km_index
+        e_tau_df.reset_index ( inplace = True , drop = True )
+        e_tau_df.index = km_index
+
 
     att_bsc_mol_df = interp_beta_df.multiply ( e_tau_df )
 
