@@ -121,22 +121,8 @@ def get_daily_molecular_profiles ( station , day_date , lambda_nm = 532 , height
     The resulted profile has a grid height above (in 'Km' or 'm' - according to input), above sea level. start at min_height, end at top_height and extrapolated to have h_bins.
     """
     logger = logging.getLogger ( )
-    if height_units == 'Km' :
-        scale = 1E-3
-    elif height_units == 'm' :
-        scale = 1
 
-    # setting height vector above sea level (for interpolation of radiosonde / gdas files).
-    min_height = station.altitude + station.start_bin_height
-    top_height = station.altitude + station.end_bin_height
-    heights = np.linspace ( min_height * scale , top_height * scale , station.n_bins )
-    # uncomment the commands below for sanity check of the desired height resolution
-    # dr = heights[1]-heights[0]
-    # print('h_bins=',heights.shape,' min_height=', min_height,' top_height=', top_height,' dr=',dr )
-
-    df_sigma = pd.DataFrame ( index = heights ).rename_axis ( 'Height[{}]'.format ( height_units ) )
-    df_beta = pd.DataFrame ( index = heights ).rename_axis ( 'Height[{}]'.format ( height_units ) )
-
+    '''Load GDAS measurements through 24 hrs of day_date'''
     _ , gdas_curday_paths = get_daily_gdas_paths ( station , day_date , 'txt' )
     if not gdas_curday_paths :
         logger.debug ( f"For {day_date.strftime ( '%Y/%m/%d' )}, "
@@ -152,18 +138,31 @@ def get_daily_molecular_profiles ( station , day_date , lambda_nm = 532 , height
 
     gdas_txt_paths = gdas_curday_paths
     gdas_txt_paths.append ( gdas_nxtday_paths [ 0 ] )
+    timestamps = [ get_gdas_timestamp ( station , path ) for path in gdas_txt_paths ]
 
-    for path in gdas_txt_paths :
+    '''Setting height vector above sea level (for interpolation of radiosonde / gdas files).'''
+    if height_units == 'Km' :
+        scale = 1E-3
+    elif height_units == 'm' :
+        scale = 1
+
+    min_height = station.altitude + station.start_bin_height
+    top_height = station.altitude + station.end_bin_height
+    heights = np.linspace ( min_height * scale , top_height * scale , station.n_bins )
+    # uncomment the commands below for sanity check of the desired height resolution
+    # dr = heights[1]-heights[0]
+    # print('h_bins=',heights.shape,' min_height=', min_height,' top_height=', top_height,' dr=',dr )
+
+    df_sigma = pd.DataFrame ( index = heights ).rename_axis ( 'Height[{}]'.format ( height_units ) )
+    df_beta = pd.DataFrame ( index = heights ).rename_axis ( 'Height[{}]'.format ( height_units ) )
+
+    for path,timestamp in zip(gdas_txt_paths,timestamps) :
         df_sonde = RadiosondeProfile ( path ).get_df_sonde ( heights )
-        time = extract_date_time ( path ,
-                                   r'{}_(.*)_{:.1f}_{:.1f}.txt'.format ( station.location.lower ( ) , station.lat ,
-                                                                         station.lon ) ,
-                                   [ '%Y%m%d_%H' ] ) [ 0 ]
         '''Calculating molecular profiles from temperature and pressure'''
-        res = df_sonde.apply ( calc_sigma_profile_df , axis = 1 , args = (lambda_nm , time ,) ,
+        res = df_sonde.apply ( calc_sigma_profile_df , axis = 1 , args = (lambda_nm , timestamp ,) ,
                                result_type = 'expand' ).astype ( 'float64' )
         df_sigma [ res.columns ] = res
-        res = df_sonde.apply ( calc_beta_profile_df , axis = 1 , args = (lambda_nm , time ,) ,
+        res = df_sonde.apply ( calc_beta_profile_df , axis = 1 , args = (lambda_nm , timestamp ,) ,
                                result_type = 'expand' ).astype ( 'float64' )
         df_beta [ res.columns ] = res
 
@@ -236,7 +235,7 @@ def extract_att_bsc ( bsc_paths , wavelengths ) :
 def get_gdas_timestamp ( station , path , file_type = 'txt' ) :
     format_times = [ "%Y%m%d_%H" ]
     format_filename = f"{station.location.lower ( )}_(.*)_{station.lat:.1f}_{station.lon:.1f}.{file_type}"
-    date_time = extract_date_time ( path , format_filename , format_times )
+    date_time = extract_date_time ( path , format_filename , format_times )[0]
     return date_time
 
 
