@@ -1161,14 +1161,24 @@ def convert_profiles_units(dataset, units=['1/m','1/Km'], scale=1e+3):
 
 def gen_daily_ds(day_date):
     logger = logging.getLogger ( )
+
+    # TODO: Find a way to pass: optim_size, save_mode, USE_KM_UNITS
+    #  as variables when running with multiprocessing.
     optim_size = True
     save_mode = 'both'
+    USE_KM_UNITS = True
+
     logger.debug (f"Start generation of molecular dataset for {day_date.strftime ( '%Y-%m-%d' )}" )
     station = gs.Station ( stations_csv_path = 'stations.csv' , station_name = 'haifa' )
+    # generate molecular dataset
     mol_ds = generate_daily_molecular ( station , day_date , optim_size = optim_size )
+
     # convert m to km
-    mol_ds_km = convert_profiles_units ( mol_ds , units = [ '1/m' , '1/Km' ] , scale = 1e+3 )
-    ncpaths = save_molecular_dataset ( station , mol_ds_km , save_mode = save_mode)
+    if USE_KM_UNITS :
+        mol_ds = convert_profiles_units ( mol_ds , units = [ '1/m' , '1/Km' ] , scale = 1e+3 )
+
+    # save molecular dataset
+    ncpaths = save_molecular_dataset ( station , mol_ds , save_mode = save_mode)
     logger.debug ( f"Done saving molecular datasets for {day_date.strftime ( '%Y-%m-%d' )}, to: {ncpaths}" )
 
 def main ( station_name = 'haifa' , start_date = datetime ( 2017 , 9 , 1 ) , end_date = datetime ( 2017 , 9 , 2 ) ) :
@@ -1176,10 +1186,11 @@ def main ( station_name = 'haifa' , start_date = datetime ( 2017 , 9 , 1 ) , end
     logging.getLogger ( 'PIL' ).setLevel ( logging.ERROR )  # Fix annoying PIL logs
     logger = create_and_configer_logger ( 'preprocessing_log.log' )
     CONV_GDAS = False
-    GEN_MOL_DS = True
-    GEN_LIDAR_DS = True
-    DO_DATASET = False
+    GEN_MOL_DS = False
+    GEN_LIDAR_DS = False
+    DO_DATASET = True
     LOAD_DATASET =  False
+    USE_KM_UNITS = True
 
     """set day,location"""
     station = gs.Station ( stations_csv_path = 'stations.csv' , station_name = station_name )
@@ -1243,12 +1254,16 @@ def main ( station_name = 'haifa' , start_date = datetime ( 2017 , 9 , 1 ) , end
     if GEN_LIDAR_DS :
         lidarpaths = [ ]
         for day_date in valid_gdas_days:
+            # Generate daily range corrected
             range_corr_ds = get_daily_range_corr ( station , day_date , height_units = 'Km' ,
                                                         optim_size = True , verbose = False )
 
-            # convert m to km
-            range_corr_ds_km = convert_profiles_units ( range_corr_ds , units = [ 'm^2' , 'Km^2' ] , scale = 1e-6 )
-            lidar_paths = save_range_corr_dataset ( station , range_corr_ds_km , save_mode = 'both' )
+            # Convert m to km
+            if USE_KM_UNITS:
+                range_corr_ds = convert_profiles_units ( range_corr_ds , units = [ 'm^2' , 'Km^2' ] , scale = 1e-6 )
+
+            # Save lidar dataset
+            lidar_paths = save_range_corr_dataset ( station , range_corr_ds , save_mode = 'both' )
             lidarpaths.extend ( lidar_paths )
         logger.debug (
             f"Done creation of lidar datasets for period [{start_date.strftime ( '%Y-%m-%d' )},{end_date.strftime ( '%Y-%m-%d' )}]" )
@@ -1256,9 +1271,18 @@ def main ( station_name = 'haifa' , start_date = datetime ( 2017 , 9 , 1 ) , end
         print ( f'Lidar paths: {lidar_paths}' )
 
     if DO_DATASET :
-
+        # Generate dataset for learning
         df = create_dataset ( station_name = 'haifa' , start_date = start_date , end_date = end_date )
         dataset = customDataSet ( df )
+
+        # Convert m to km
+        if USE_KM_UNITS:
+            Y_features = [ 'LC' , 'LC_std' , 'r0' , 'r1' ]
+            scales = {'LC' : 1E-9 , 'LC_std' : 1E-9 , 'r0' : 1E-3 , 'r1' : 1E-3}
+            Y_scales = [ scales [ feature ] for feature in Y_features ]
+            for feature , scale in zip ( Y_features , Y_scales ) :
+                df [ feature ] *= scale
+
         csv_path = f"dataset_{start_date.strftime('%Y-%m-%d')}_{end_date.strftime('%Y-%m-%d')}.csv"
         df.to_csv (csv_path)
     if LOAD_DATASET:
