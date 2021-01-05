@@ -1218,7 +1218,7 @@ def main ( station_name = 'haifa' , start_date = datetime ( 2017 , 9 , 1 ) , end
     valid_gdas_days = list ( days_g.keys ( ) )
 
     if GEN_MOL_DS :
-        # Check for existing molecular paths
+        # TODO: Check for existing molecular paths, to avoid creation for them (Since it takes long time to generate these datasest)
         '''molpaths = [ ]
         for day_date in valid_gdas_days:
             cpath = get_prep_dataset_paths ( station = station ,
