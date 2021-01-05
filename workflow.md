@@ -53,7 +53,9 @@ Each sample contains the followings:
 6. Generate dataset of lidar and molecular to certain period - on going 
 7. update create_dataset() to work for a list of days and check it on the generated dataset (above)
 8. For Y loader - Convert height bins into heatmap
-9. For X loader - convert xarray.dataset to pytorch and split into time slices 
+9. For X loader - convert xarray.dataset to pytorch and split into time slices
+
+ 
 
 ## TODOS and Open issues to figure out:
 1. Troubleshooting of file and system errors (see TODOS in preprocessing.py) - done
@@ -64,6 +66,7 @@ Each sample contains the followings:
 ## General coding tasks:
 1. Separate and organize the modules:  preprocessing, micLidar , dataloader 
 2. Update environment installations documents (as ARLreader and pytorch )
+3. Add version number to dataset files (with relation to git version). - currenly will be solved as folder versions
 
 ## Possible issues that may require solutions: 
 1. Save space for the saved data: split each sataset of range corrected to 2 : one contains the exponent of 10 , and the other the base (less importanat for now)
