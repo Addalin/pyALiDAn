@@ -900,7 +900,10 @@ def get_prep_ds_timestamp ( station , path , data_source = 'molecular' ) :
     return date_time
 
 
-# %% Database functions
+# %% Generating Database of samples:
+# X = {range corrected signal (lidar source), attbsc signal (molecular source)}
+# Y = estimated values {LC,r0,r1} (and also LC_std is possible)
+
 def query_database ( query = "SELECT * FROM lidar_calibration_constant;" ,
                      database_path = "pollyxt_tropos_calibration.db" ) :
     """
@@ -1107,105 +1110,6 @@ def create_dataset ( station_name = 'haifa' , start_date = datetime ( 2017 , 9 ,
 
     return full_df.reset_index ( drop = True )
 
-
-class customDataSet ( torch.utils.data.Dataset ) :
-    """TODO"""
-
-    def __init__ ( self , csv_file ,
-                   top_height = 15.0 ,
-                   powers = {'range_corr' : 0.5 , 'attbsc' : 0.5 ,
-                             'LC' : 0.5 , 'LC_std' : 0.5 , 'r0' : 1 , 'r1' : 1} ) :
-        """
-        Args:
-            csv_file (string): Path to the csv file of the database.
-        """
-        self.data = pd.read_csv ( csv_file )
-        self.key = [ 'date' , 'wavelength' , 'cali_method' , 'telescope' , 'cali_start_time' , 'cali_stop_time' ,
-                     'start_time_period' , 'end_time_period' ]
-        self.Y_features = [ 'LC' , 'r0' , 'r1' ]  # , 'LC_std'
-        self.X_features = [ 'lidar_path' , 'molecular_path' ]
-        self.profiles = [ 'range_corr' , 'attbsc' ]
-        self.X_powers = [ powers [ profile ] for profile in self.profiles ]
-        self.Y_powers = [ powers [ feature ] for feature in self.Y_features ]
-        self.top_height = top_height
-
-    def __len__ ( self ) :
-        return len ( self.data )
-
-    def __getitem__ ( self , idx ) :
-        # load data
-        row = self.data.loc [ idx , : ]
-        X_paths = row [ self.X_features ]
-        datasets = [ load_dataset ( path ) for path in X_paths ]
-
-        # Calc sample height and time slices
-        hslices = [
-            slice ( ds.Height.min ( ).values.tolist ( ) , ds.Height.min ( ).values.tolist ( ) + self.top_height )
-            for ds in datasets ]
-        tslice = slice ( row.start_time_period , row.end_time_period )
-
-        # Get sample
-        X_ds = [ ds.sel ( Time = tslice , Height = hslice ) [ profile ]
-                 for ds , profile , hslice in zip ( datasets , self.profiles , hslices ) ]
-        Y_ds = row [ self.Y_features ]
-
-        # transform the sample (trim negative and gamma correction)
-        USE_POW = False
-        if USE_POW :
-            X_ds = self.pow_X ( X_ds )
-            Y_ds = self.pow_Y ( Y_ds )
-
-        # convert to tensors
-        X = torch.dstack ( (torch.from_numpy ( X_ds [ 0 ].values ) ,
-                            torch.from_numpy ( X_ds [ 1 ].values )) ).permute ( 2 , 0 , 1 )
-        Y = torch.from_numpy ( np.array ( Y_ds ).astype ( float ) )
-        sample = {'x' : X , 'y' : Y}
-        return sample
-
-    def pow_X ( self , X_ds ) :
-        """
-
-	    :param X_ds: List of 2 xr.dataset: the lidar and the corresponding molecular dataset
-	    :return: The dataset is raised (shrink in this case) by the powers set.
-	    Acts similarly to gamma correction aims to reduce the input values.
-	    """
-        # trim negative values
-        X_ds = [ x_i.where ( x_i >= 0 , np.finfo ( np.float ).eps ) for x_i in X_ds ]
-        # apply power
-        X_ds = [ xr.apply_ufunc ( lambda x : x ** pow , x_i , keep_attrs = True )
-                 for (pow , x_i) in zip ( self.X_powers , X_ds ) ]
-        return X_ds
-
-    def pow_Y ( self , Y_ds ) :
-        """
-
-	    :param Y_ds: List of np.float values to be estimates (as LC, ro, r1)
-	    :return: The values raised by the relevant powers set.
-	    """
-        return [ y_i ** pow for (pow , y_i) in zip ( self.Y_powers , Y_ds ) ]
-
-
-def convert_profiles_units ( dataset , units = [ '1/m' , '1/Km' ] , scale = 1e+3 ) :
-    """
-    Converting units of or profiles in dataset,
-    :param dataset: lidar dataset or molecular dataset
-    :param units: list of strings: [str_source,str_dest], E.g.:
-                    For range corrected signal (pr^2) units=['m^2','Km^2']
-                    For beta (or sigma) converting units= ['1/m','1/Km']
-    :param scale: float, the scale to use for conversion. E.g.:
-                    For range corrected signal, converting distance units or r^2: scale = 10^-6
-                    For beta (or sigma), converting the distance units of 1/m: scale = 10^3
-    :return: the datasets with units converted profiles
-    """
-    profiles = [ var for var in dataset.data_vars if (len ( dataset [ var ].shape ) > 1) ]
-
-    for profile in profiles :
-        conv_profiles = xr.apply_ufunc ( lambda x : x * scale , dataset [ profile ] , keep_attrs = True )
-        conv_profiles.attrs [ "units" ] = conv_profiles.units.replace ( units [ 0 ] , units [ 1 ] )
-        dataset [ profile ] = conv_profiles
-    return dataset
-
-
 def gen_daily_ds ( day_date ) :
     logger = logging.getLogger ( )
 
@@ -1229,6 +1133,28 @@ def gen_daily_ds ( day_date ) :
     logger.debug ( f"Done saving molecular datasets for {day_date.strftime ( '%Y-%m-%d' )}, to: {ncpaths}" )
 
 
+def convert_profiles_units ( dataset , units = [ '1/m' , '1/Km' ] , scale = 1e+3 ) :
+    """
+    Converting units of or profiles in dataset,
+    :param dataset: lidar dataset or molecular dataset
+    :param units: list of strings: [str_source,str_dest], E.g.:
+                    For range corrected signal (pr^2) units=['m^2','Km^2']
+                    For beta (or sigma) converting units= ['1/m','1/Km']
+    :param scale: float, the scale to use for conversion. E.g.:
+                    For range corrected signal, converting distance units or r^2: scale = 10^-6
+                    For beta (or sigma), converting the distance units of 1/m: scale = 10^3
+    :return: the datasets with units converted profiles
+    """
+    profiles = [ var for var in dataset.data_vars if (len ( dataset [ var ].shape ) > 1) ]
+
+    for profile in profiles :
+        conv_profiles = xr.apply_ufunc ( lambda x : x * scale , dataset [ profile ] , keep_attrs = True )
+        conv_profiles.attrs [ "units" ] = conv_profiles.units.replace ( units [ 0 ] , units [ 1 ] )
+        dataset [ profile ] = conv_profiles
+    return dataset
+
+#%%
+
 def main ( station_name = 'haifa' , start_date = datetime ( 2017 , 9 , 1 ) , end_date = datetime ( 2017 , 9 , 2 ) ) :
     logging.getLogger ( 'matplotlib' ).setLevel ( logging.ERROR )  # Fix annoying matplotlib logs
     logging.getLogger ( 'PIL' ).setLevel ( logging.ERROR )  # Fix annoying PIL logs
@@ -1236,8 +1162,7 @@ def main ( station_name = 'haifa' , start_date = datetime ( 2017 , 9 , 1 ) , end
     CONV_GDAS = False
     GEN_MOL_DS = False
     GEN_LIDAR_DS = False
-    DO_DATASET = False
-    LOAD_DATASET = True
+    DO_DATASET = True
     USE_KM_UNITS = True
 
     """set day,location"""
@@ -1248,22 +1173,23 @@ def main ( station_name = 'haifa' , start_date = datetime ( 2017 , 9 , 1 ) , end
         f"Start preprocessing for period: [{start_date.strftime ( '%Y-%m-%d' )},{end_date.strftime ( '%Y-%m-%d' )}]" )
 
     ''' Generate molecular datasets for required period'''
-    gdas_paths = [ ]
+
     if CONV_GDAS :
+        gdas_paths = [ ]
         # Convert gdas files for a period
         gdas_paths.extend ( convert_periodic_gdas ( station , start_date , end_date ) )
 
     # get all days having a converted (to txt) gdas files in the required period
-    if not gdas_paths :
+    if (GEN_MOL_DS or GEN_LIDAR_DS) and not gdas_paths :
         dates = pd.date_range ( start = start_date , end = end_date , freq = 'D' ).to_pydatetime ( ).tolist ( )
         for day in dates :
             _ , curpath = get_daily_gdas_paths ( station , day , f_type = 'txt' )
             if curpath :
                 gdas_paths.extend ( curpath )
-    timestamps = [ get_gdas_timestamp ( station , path ) for path in gdas_paths ]
-    df_times = pd.DataFrame ( data = timestamps , columns = [ 'timestamp' ] )
-    days_g = df_times.groupby ( [ df_times.timestamp.dt.date ] ).groups
-    valid_gdas_days = list ( days_g.keys ( ) )
+        timestamps = [ get_gdas_timestamp ( station , path ) for path in gdas_paths ]
+        df_times = pd.DataFrame ( data = timestamps , columns = [ 'timestamp' ] )
+        days_g = df_times.groupby ( [ df_times.timestamp.dt.date ] ).groups
+        valid_gdas_days = list ( days_g.keys ( ) )
 
     if GEN_MOL_DS :
         # TODO: Check for existing molecular paths, to avoid creation for them (Since it takes long time to generate these datasest)
@@ -1319,8 +1245,7 @@ def main ( station_name = 'haifa' , start_date = datetime ( 2017 , 9 , 1 ) , end
 
     if DO_DATASET :
         # Generate dataset for learning
-        df = create_dataset ( station_name = 'haifa' , start_date = start_date , end_date = end_date )
-        dataset = customDataSet ( df )
+        df = create_dataset ( station_name = station_name , start_date = start_date , end_date = end_date )
 
         # Convert m to km
         if USE_KM_UNITS :
@@ -1330,16 +1255,8 @@ def main ( station_name = 'haifa' , start_date = datetime ( 2017 , 9 , 1 ) , end
             for feature , scale in zip ( Y_features , Y_scales ) :
                 df [ feature ] *= scale
 
-        csv_path = f"dataset_{start_date.strftime ( '%Y-%m-%d' )}_{end_date.strftime ( '%Y-%m-%d' )}.csv"
+        csv_path = f"dataset_{station_name}_{start_date.strftime ( '%Y-%m-%d' )}_{end_date.strftime ( '%Y-%m-%d' )}.csv"
         df.to_csv ( csv_path )
-    if LOAD_DATASET :
-        csv_path = f"dataset_{start_date.strftime ( '%Y-%m-%d' )}_{end_date.strftime ( '%Y-%m-%d' )}.csv"
-        dataset = customDataSet ( csv_path )
-        dataloader = torch.utils.data.DataLoader ( dataset , batch_size = 4 ,
-                                                   shuffle = True )
-
-        for i_batch , sample_batched in enumerate ( dataloader ) :
-            print ( i_batch , sample_batched )
 
 
 if __name__ == '__main__' :
