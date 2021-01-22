@@ -14,24 +14,25 @@ import torch.nn as nn
 import time
 from utils import create_and_configer_logger
 from torch.utils.tensorboard import SummaryWriter
-
+torch.manual_seed(8318)
 
 
 class lidarDataSet ( torch.utils.data.Dataset ) :
     """TODO"""
 
     def __init__ ( self , csv_file , transform = None,
-                   top_height = 15.0 , Y_features = [ 'LC' , 'r0' , 'r1' ]) :
+                   top_height = 15.0 , Y_features = [ 'LC' , 'r0' , 'r1' ], wavelengths = [355,532,1064]) :
         """
         Args:
             csv_file (string): Path to the csv file of the database.
             :param transform:
         """
         self.data = pd.read_csv ( csv_file )
-        self.key = [ 'date' , 'wavelength' , 'cali_method' , 'telescope' , 'cali_start_time' , 'cali_stop_time' ,
+        self.key = ['idx', 'date' , 'wavelength' , 'cali_method' , 'telescope' , 'cali_start_time' , 'cali_stop_time' ,
                      'start_time_period' , 'end_time_period' ]
         self.Y_features = Y_features # [ 'LC' , 'r0' , 'r1' ]  # , 'LC_std'
         self.X_features = [ 'lidar_path' , 'molecular_path' ]
+        self.wavelengths = wavelengths  # TODO: make option to load data by desired wavelength/s
         self.profiles = [ 'range_corr' , 'attbsc' ]
         self.top_height = top_height
         self.transform = transform
@@ -43,10 +44,13 @@ class lidarDataSet ( torch.utils.data.Dataset ) :
         # load data
         X = self.load_X ( idx )
         Y = self.load_Y ( idx )
+        wavelength = self.get_key_val( idx, 'wavelength' ).astype(np.int32)
 
         sample = {'x' : X , 'y' : Y}
         if self.transform:
             sample = self.transform(sample)
+            wavelength = torch.from_numpy(np.asarray(wavelength))
+        sample['wavelength']= wavelength
         return sample
 
     def get_splits( self, n_test = 0.2 ):
@@ -90,6 +94,17 @@ class lidarDataSet ( torch.utils.data.Dataset ) :
         row = self.data.loc [ idx , : ]
         Y = row [ self.Y_features ]
         return Y
+
+    def get_key_val( self, idx, key='idx' ):
+        """
+
+        :param idx: index of the sample
+        :param key: key is any of self.key values. e.g, 'idx', 'wavelength' etc...
+        :return: The values of the required key for the sample
+        """
+        row = self.data.loc [ idx , : ]
+        key_val = row[self.key.index(key)]
+        return key_val
 
 
 class PowTransform(object):
@@ -147,10 +162,7 @@ class ToTensor ( object ) :
         Y = torch.from_numpy ( np.array ( Y ).astype ( np.float32 ) )
 
         return {'x' : X ,'y' : Y}
-
-# TODO : apply poisson noise (miscLidar.generate_poisson_signal(mu, n)), add gaussian noise for augmentation
-
-
+    # TODO : apply poisson noise (miscLidar.generate_poisson_signal(mu, n)), add gaussian noise for augmentation
 
 class DefaultCNN(nn.Module):
 
@@ -199,7 +211,9 @@ class DefaultCNN(nn.Module):
         out = self.fc_layer(x)
 
         return out
-def calculate_accuracy (model, loader,device):
+
+
+def calculate_statistics(model, loader,device, Y_features=None, wavelengths = None):
     """
 
     :param model:
@@ -209,21 +223,85 @@ def calculate_accuracy (model, loader,device):
     """
     model.eval ( )             # Evaluation mode
     criterion = nn.MSELoss ( )
-    running_loss = 0.0
-    #with torch.no_grad: #TODO: why this is not working?
-    for i,sample in enumerate(loader):
-        x = sample [ 'x' ].to ( device )
-        y = sample [ 'y' ].to ( device )
-        y_pred = model(x)
-        loss = criterion(y,y_pred)
-        running_loss += loss.data.item ( )
-    running_loss /= len ( loader )
-    return  running_loss
+
+    if Y_features:
+        count_less = {}
+        mare_loss_feature = {}
+        for idx_f , feature in enumerate ( Y_features ) :
+            mare_loss_feature.update ( {feature : {}} )
+            mare_loss_feature [ feature ].update ( {'all' : 0.0} )
+            for wav in wavelengths :
+                mare_loss_feature [ feature ].update ( {wav : 0.0} )
+                count_less.update({wav:0.0})
+
+    mse_loss = 0.0
+    with torch.no_grad():
+        for i,sample in enumerate(loader):
+            x = sample [ 'x' ].to ( device )
+            y = sample [ 'y' ].to ( device )
+            y_pred = model(x)
+            loss = criterion(y,y_pred)
+            mse_loss += loss.data.item ( )
+
+            if Y_features:
+                wavelength = sample['wavelength']
+                for idx_f , feature in enumerate ( Y_features ) :
+                    mare_loss_feature [ feature ]['all'] += MARELoss (  y_pred[ : , idx_f ] , y[ : , idx_f ])
+                    for wav in wavelengths :
+                        idx_w = torch.where ( wavelength == wav )[0]
+                        if idx_w.numel()>0 :
+                           mare_loss_feature [ feature ] [ wav ] += \
+                                MARELoss (  y_pred [ idx_w ][ : , idx_f ] , y[idx_w][ : , idx_f ])
+                        else:
+                            count_less[wav]+=1
+    mse_loss /= len ( loader )
+    stats = {'MSELoss': mse_loss}
+    if Y_features:
+        for idx_f , feature in enumerate ( Y_features ) :
+            for wav in wavelengths:
+                mare_loss_feature [ feature ] [ wav ] /= (len(loader) - count_less[wav] )
+        mare_loss_feature [ feature ] [ 'all' ] /= len(loader)
+        stats.update({'MARELoss':mare_loss_feature})
+    return  stats
+
+
+def MARELoss(y_pred, y):
+    """
+    Calculates the Mean Absolute Relative Error
+    :param y_pred:
+    :param y:
+    :return: MAREloss between y and y_pred
+    """
+    loss = torch.mean(torch.abs(y - y_pred)/y)
+    return loss
+
+def update_stats(writer, model,loaders ,device,run_params, epoch):
+    mse_loss = {}
+    for loader, mode in zip(loaders,['train','test']):
+        stats = calculate_statistics ( model , loader , device,
+                                       Y_features =run_params['Y_features'],
+                                       wavelengths = run_params['wavelengths'] )
+        writer.add_scalar ( f"MSELoss/{mode}" , stats ['MSELoss'] , epoch )
+        mse_loss.update({mode:stats ['MSELoss']})
+        for feature in run_params [ 'Y_features' ] :
+            for wav in run_params [ 'wavelengths' ] :
+                # add MARELoss per wavelength per feature
+                field_name = f"MARELoss_{mode}/{feature}_{wav}"
+                field_value = stats['MARELoss'] [ feature ] [ wav ]
+                writer.add_scalar ( field_name , field_value , epoch )
+
+            # add common MARELoss
+            field_name = f"MARELoss_{mode}/{feature}"
+            field_value = stats ['MARELoss'] [ feature] [ 'all' ]
+            writer.add_scalar ( field_name , field_value , epoch )
+    return mse_loss
 
 
 def main( station_name = 'haifa' , start_date = datetime ( 2017 , 9 , 1 ) , end_date = datetime ( 2017 , 9 , 2 ),
-          run_params={'model_n':0, 's_model':0,'powers':None,'lr':1e-3,'batch_size':4, 'Y_features':[ 'LC' , 'r0' , 'r1' ]} ):
+          run_params={'model_n':0, 's_model':0,'powers':None,'lr':1e-3,'batch_size':4,
+                      'Y_features':[ 'LC' , 'r0' , 'r1'] , 'wavelengths': [355,532,1064]} ):
     #logger = create_and_configer_logger ( 'data_loader.log' ) #TODO: Why this is causing the program to fall?
+
     # device - cpu or gpu?
     device = torch.device ( "cuda:0" if torch.cuda.is_available ( ) else "cpu" )
     print ( f"Using device: {device}")
@@ -290,33 +368,29 @@ def main( station_name = 'haifa' , start_date = datetime ( 2017 , 9 , 1 ) , end_
             # forward + backward + optimize
             y_pred = model(x)           # Forward
             loss = criterion(y,y_pred)  # set loss calculation
-            optimizer.zero_grad()   # zeroing parameters gradient
-            loss.backward()         # backpropagation
-            optimizer.step()        # update parameters
+            optimizer.zero_grad()       # zeroing parameters gradient
+            loss.backward()             # backpropagation
+            optimizer.step()            # update parameters
 
             # for statistics
             global_iter = len(train_loader)*(epoch-1)+i_batch
-            writer.add_scalar ( "batch_loss" , loss ,global_iter )
+            writer.add_scalar ( "MSELoss/global_iter" , loss ,global_iter )
             running_loss += loss.data.item()
 
         # Normalizing loss by the total batches in train loader
         running_loss/=len(train_loader)
-        writer.add_scalar ( "running_loss" , running_loss , epoch )
+        writer.add_scalar ( "MSELoss/running_loss" , running_loss , epoch )
 
         # Calculate training and test set MSEloss for current model
-        train_loss = calculate_accuracy(model, train_loader,device)
-        writer.add_scalar ( "train_loss" , train_loss , epoch )
-        test_loss = calculate_accuracy(model,test_loader,device)
-        writer.add_scalar ( "test_loss" , test_loss , epoch )
+        epoch_loss = update_stats ( writer , model , [train_loader,test_loader] , device , run_params , epoch )
+
         epoch_time = time.time ( ) - epoch_time
         log = f"Epoch: {epoch} | Running MSE Loss: {running_loss:.4f} |" \
-              f" Training MSE loss: {train_loss:.3f} | Test MSE loss: {test_loss:.3f} | " \
+              f" Train MSELoss: {epoch_loss['train']:.3f} | Test MSELoss: {epoch_loss['test']:.3f} | " \
               f" Epoch Time: {epoch_time:.2f} secs"
-        # print()
         print( log )
 
         # Save the model
-
         state = {
             'model_state_dict' : model.state_dict ( ) ,
             'optimizer_state_dict' : optimizer.state_dict() ,
@@ -344,11 +418,13 @@ if __name__ == '__main__' :
     batch_sizes = [8]
     Y_features = [['r0' , 'r1'],['r0' , 'r1' , 'LC']]
     powers = [None,{'range_corr' : 0.5 , 'attbsc' : 0.5 , 'LC' : 0.5 , 'LC_std' : 0.5 , 'r0' : 1 , 'r1' : 1}]
+    wavelengths = [ 355 , 532 , 1064 ]
     model_n = 0
     for s_model,yf in enumerate(Y_features):
         for lr in learning_rates:
             for pow in powers :
                 for batch_size in batch_sizes:
                     run_params = {'model':model_n, 's_model':s_model ,'powers':pow,
-                                  'Y_features': yf, 'lr':lr, 'batch_size':batch_size}
+                                  'Y_features': yf, 'wavelengths':wavelengths,
+                                  'lr':lr, 'batch_size':batch_size}
                     main ( station_name , start_date , end_date, run_params )
