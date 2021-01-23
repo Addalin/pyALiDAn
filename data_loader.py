@@ -164,6 +164,7 @@ class ToTensor ( object ) :
         return {'x' : X ,'y' : Y}
     # TODO : apply poisson noise (miscLidar.generate_poisson_signal(mu, n)), add gaussian noise for augmentation
 
+
 class DefaultCNN(nn.Module):
 
     def __init__(self, in_channels=2, output_size=3, hidden_sizes=[16,32,64]):
@@ -213,55 +214,60 @@ class DefaultCNN(nn.Module):
         return out
 
 
-def calculate_statistics(model, loader,device, Y_features=None, wavelengths = None):
+def calculate_statistics(model,criterion, run_params, loader,device, Y_features=None, wavelengths = None):
     """
 
-    :param model:
-    :param loader:
-    :param device:
-    :return:
+    :param model:torch.nn.Module
+    :param criterion: loss criterion function
+    :param run_params: dict of running parameters
+    :param loader: torch.utils.data.DataLoader
+    :param device: torch.device ()
+    :param Y_features: features list to calculate loss separately, for debug (this is an optional input)
+    :param wavelengths: wavelengths list to calculate loss separately, for debug (this is an optional input)
+    :return: stats - a dict containing train/test loss criterion, and separately feature losses (for debug)
     """
-    model.eval ( )             # Evaluation mode
-    criterion = nn.MSELoss ( )
+    model.eval ( )        # Evaluation mode
+    criterion = criterion
 
     if Y_features:
+        # Initializing FeatureLoss - For debug. this loss is not affecting the model.
         count_less = {}
-        mare_loss_feature = {}
+        feature_loss = {}
         for idx_f , feature in enumerate ( Y_features ) :
-            mare_loss_feature.update ( {feature : {}} )
-            mare_loss_feature [ feature ].update ( {'all' : 0.0} )
+            feature_loss.update ( {feature : {}} )
+            feature_loss [ feature ].update ( {'all' : 0.0} )
             for wav in wavelengths :
-                mare_loss_feature [ feature ].update ( {wav : 0.0} )
+                feature_loss [ feature ].update ( {wav : 0.0} )
                 count_less.update({wav:0.0})
 
-    mse_loss = 0.0
+    running_loss = 0.0
     with torch.no_grad():
         for i,sample in enumerate(loader):
             x = sample [ 'x' ].to ( device )
             y = sample [ 'y' ].to ( device )
             y_pred = model(x)
             loss = criterion(y,y_pred)
-            mse_loss += loss.data.item ( )
+            running_loss += loss.data.item ( )
 
             if Y_features:
                 wavelength = sample['wavelength']
                 for idx_f , feature in enumerate ( Y_features ) :
-                    mare_loss_feature [ feature ]['all'] += MARELoss (  y_pred[ : , idx_f ] , y[ : , idx_f ])
+                    feature_loss [ feature ][ 'all' ] += MARELoss ( y_pred[ : , idx_f ] , y[ : , idx_f ] )
                     for wav in wavelengths :
                         idx_w = torch.where ( wavelength == wav )[0]
                         if idx_w.numel()>0 :
-                           mare_loss_feature [ feature ] [ wav ] += \
+                           feature_loss [ feature ] [ wav ] += \
                                 MARELoss (  y_pred [ idx_w ][ : , idx_f ] , y[idx_w][ : , idx_f ])
                         else:
                             count_less[wav]+=1
-    mse_loss /= len ( loader )
-    stats = {'MSELoss': mse_loss}
+    running_loss /= len ( loader )
+    stats = {f"{run_params['loss_type']}": running_loss}
     if Y_features:
         for idx_f , feature in enumerate ( Y_features ) :
+            feature_loss [ feature ] [ 'all' ] /= len ( loader )
             for wav in wavelengths:
-                mare_loss_feature [ feature ] [ wav ] /= (len(loader) - count_less[wav] )
-        mare_loss_feature [ feature ] [ 'all' ] /= len(loader)
-        stats.update({'MARELoss':mare_loss_feature})
+                feature_loss [ feature ] [ wav ] /= (len( loader ) - count_less[wav ])
+        stats.update( {'FeatureLoss':feature_loss} )
     return  stats
 
 
@@ -275,30 +281,66 @@ def MARELoss(y_pred, y):
     loss = torch.mean(torch.abs(y - y_pred)/y)
     return loss
 
-def update_stats(writer, model,loaders ,device,run_params, epoch):
-    mse_loss = {}
+def update_stats(writer, model,loaders ,device,run_params,criterion, epoch):
+    """
+    Update current epoch's state to writer
+    :param writer: torch.utils.tensorboard.SummaryWriter
+    :param model: torch.nn.Module
+    :param loaders: a list of [train_loader,test_loader], each of type torch.utils.data.DataLoader
+    :param device:  torch.device ()
+    :param run_params: dict of running parameters
+    :param criterion: loss criterion function
+    :param epoch: current epoch
+    :return: curr_loss - current loss for train and for test 
+    """
+    curr_loss = {}
     for loader, mode in zip(loaders,['train','test']):
-        stats = calculate_statistics ( model , loader , device,
+        # calc current epoch statistics: train and test model, and feature loss for debug.
+        stats = calculate_statistics ( model , criterion, run_params,loader , device,
                                        Y_features =run_params['Y_features'],
                                        wavelengths = run_params['wavelengths'] )
-        writer.add_scalar ( f"MSELoss/{mode}" , stats ['MSELoss'] , epoch )
-        mse_loss.update({mode:stats ['MSELoss']})
+
+        # add loss for current epoch's model
+        field_name = f"{run_params['loss_type']}/{mode}"
+        field_value =stats [f"{run_params['loss_type']}"]
+        writer.add_scalar ( field_name, field_value, epoch )
+        curr_loss.update( {mode: field_value} )
+
+        # add feature losses for debug
         for feature in run_params [ 'Y_features' ] :
             for wav in run_params [ 'wavelengths' ] :
-                # add MARELoss per wavelength per feature
-                field_name = f"MARELoss_{mode}/{feature}_{wav}"
-                field_value = stats['MARELoss'] [ feature ] [ wav ]
+                # add FeatureLoss (per wavelength per feature) , currently the metric is MAERLoss.
+                # For debug , this loss is not affecting the model.
+                field_name = f"FeatureLoss_{mode}/{feature}_{wav}"
+                field_value = stats['FeatureLoss'] [ feature ] [ wav ]
                 writer.add_scalar ( field_name , field_value , epoch )
 
-            # add common MARELoss
-            field_name = f"MARELoss_{mode}/{feature}"
-            field_value = stats ['MARELoss'] [ feature] [ 'all' ]
+            # add common FeatureLoss, currently the metric is MAERLoss.
+            # For debug , this loss is not affecting the model.
+            field_name = f"FeatureLoss_{mode}/{feature}"
+            field_value = stats ['FeatureLoss'] [ feature] [ 'all' ]
             writer.add_scalar ( field_name , field_value , epoch )
-    return mse_loss
+    return curr_loss
 
+
+def write_hparams(writer,run_params,run_name, cur_result, best_result):
+
+    run_params [ 'Y_features' ] = '_'.join ( run_params [ 'Y_features' ] )
+    run_params [ 'hidden_sizes' ] = torch.from_numpy ( np.asarray ( run_params [ 'hidden_sizes' ] ) )
+    run_params [ 'wavelengths' ] = torch.from_numpy ( np.asarray ( run_params [ 'wavelengths' ] ) )
+    results = {'hparam_last/loss_train' : cur_result [ 'loss' ] [ 'train' ] ,
+               'hparam_last/loss_test' : cur_result [ 'loss' ] [ 'test' ],
+               'hparam_last/epoch' : cur_result [ 'epoch' ] ,
+               'hparam_best/loss_train' : best_result [ 'loss' ] [ 'train' ] ,
+               'hparam_best/epoch_train' : best_result [ 'epoch' ] [ 'train' ],
+               'hparam_best/loss_test' : best_result [ 'loss' ] [ 'test' ] ,
+               'hparam_best/epoch_test' : best_result [ 'epoch' ] [ 'test' ] ,
+               }
+    writer.add_hparams(hparam_dict = run_params,metric_dict =results,run_name=run_name )
 
 def main( station_name = 'haifa' , start_date = datetime ( 2017 , 9 , 1 ) , end_date = datetime ( 2017 , 9 , 2 ),
-          run_params={'model_n':0, 's_model':0,'powers':None,'lr':1e-3,'batch_size':4,
+          run_params={'model_n':0, 's_model':0,'hidden_sizes':[ 16 , 32 , 8 ],
+                      'powers':None,'loss_type' :'MSELoss','lr':1e-3,'batch_size':4,
                       'Y_features':[ 'LC' , 'r0' , 'r1'] , 'wavelengths': [355,532,1064]} ):
     #logger = create_and_configer_logger ( 'data_loader.log' ) #TODO: Why this is causing the program to fall?
 
@@ -323,11 +365,14 @@ def main( station_name = 'haifa' , start_date = datetime ( 2017 , 9 , 1 ) , end_
     s_model = run_params['s_model']
     in_channels = 2
     output_size = len(run_params['Y_features'])
-    hidden_sizes = [ 16, 32, 8] # TODO: add option - hidden_sizes = [ 8, 16, 32], [16, 32, 8], [ 64, 32, 16]
+    hidden_sizes = run_params['hidden_sizes']
     batch_size = run_params['batch_size']
-    n_iters = 3000
+    n_iters = run_params['n_iters']
+    loss_type = run_params['loss_type']
+
     epochs = int(round(n_iters / (len ( train_set ) / batch_size)))
     learning_rate = run_params['lr']
+
     print (f"Start train model. Hidden size:{hidden_sizes}, batch_size:{batch_size}, n_iters:{n_iters}, epochs:{epochs}")
     use_pow = 'use_' if powers else 'no_'
     run_name = f"{datetime.now().strftime('%Y_%m_%d_%H_%M')}_v{model_n}.{s_model}.{use_pow}pow_epochs_{epochs}_batch_size_{batch_size}_lr_{learning_rate}"
@@ -342,7 +387,10 @@ def main( station_name = 'haifa' , start_date = datetime ( 2017 , 9 , 1 ) , end_
 
 
     # Step 3. Instantiate Loss Class
-    criterion = nn.MSELoss()
+    if loss_type == 'MSELoss':
+        criterion = nn.MSELoss()
+    elif loss_type == 'MARELoss':
+        criterion = MARELoss()
 
     # Step 4. Instantiate Optimizer Class
     optimizer = torch.optim.Adam ( model.parameters ( ) , lr = learning_rate )
@@ -356,6 +404,8 @@ def main( station_name = 'haifa' , start_date = datetime ( 2017 , 9 , 1 ) , end_
 
     writer = SummaryWriter ( os.path.join('runs',run_name ))
     # Training loop
+    best_loss = None
+    best_epoch = None
     for epoch in range(1, epochs+1):
         model.train()   # Training mode
         running_loss = 0.0
@@ -374,19 +424,31 @@ def main( station_name = 'haifa' , start_date = datetime ( 2017 , 9 , 1 ) , end_
 
             # for statistics
             global_iter = len(train_loader)*(epoch-1)+i_batch
-            writer.add_scalar ( "MSELoss/global_iter" , loss ,global_iter )
+            writer.add_scalar ( f"{loss_type}/global_iter" , loss ,global_iter )
             running_loss += loss.data.item()
 
         # Normalizing loss by the total batches in train loader
         running_loss/=len(train_loader)
-        writer.add_scalar ( "MSELoss/running_loss" , running_loss , epoch )
+        writer.add_scalar ( f"{loss_type}/running_loss" , running_loss , epoch )
 
-        # Calculate training and test set MSEloss for current model
-        epoch_loss = update_stats ( writer , model , [train_loader,test_loader] , device , run_params , epoch )
+        # Calculate statistics for current model
+        epoch_loss = update_stats ( writer , model , [train_loader,test_loader] , device , run_params , criterion, epoch )
+
+        # Save best loss (and the epoch number) for train and test
+        if best_loss is None:
+            best_loss = epoch_loss
+            best_epoch = {'train': epoch, 'test':epoch}
+        else:
+            for mode in ['train','test']:
+                if best_loss[mode]> epoch_loss[mode]:
+                    best_loss [ mode ] = epoch_loss[mode]
+                    best_epoch[ mode ] = epoch
 
         epoch_time = time.time ( ) - epoch_time
-        log = f"Epoch: {epoch} | Running MSE Loss: {running_loss:.4f} |" \
-              f" Train MSELoss: {epoch_loss['train']:.3f} | Test MSELoss: {epoch_loss['test']:.3f} | " \
+
+        # log statistics
+        log = f"Epoch: {epoch} | Running {loss_type} Loss: {running_loss:.4f} |" \
+              f" Train {loss_type}: {epoch_loss['train']:.3f} | Test {loss_type}: {epoch_loss['test']:.3f} | " \
               f" Epoch Time: {epoch_time:.2f} secs"
         print( log )
 
@@ -407,6 +469,7 @@ def main( station_name = 'haifa' , start_date = datetime ( 2017 , 9 , 1 ) , end_
                       f"v{model_n}.{s_model}.{use_pow}pow_epoch_{epoch}-{epochs}_batch_size_{batch_size}_lr_{learning_rate}.pth"
         torch.save ( state , os.path.join(modelv_dir,model_fname) )
         print ( f"Finished training epoch {epoch}, saved model to: {model_fname}" )
+    write_hparams(writer,run_name='hparams', cur_result ={'loss':epoch_loss, 'epoch':epoch}, best_result={'loss':best_loss,'epoch':best_epoch})
     writer.flush ( )
 
 
@@ -416,15 +479,20 @@ if __name__ == '__main__' :
     end_date = datetime ( 2017 , 10 , 31 )
     learning_rates = [1e-3, 1e-4]
     batch_sizes = [8]
+    n_iters = 3000
     Y_features = [['r0' , 'r1'],['r0' , 'r1' , 'LC']]
     powers = [None,{'range_corr' : 0.5 , 'attbsc' : 0.5 , 'LC' : 0.5 , 'LC_std' : 0.5 , 'r0' : 1 , 'r1' : 1}]
     wavelengths = [ 355 , 532 , 1064 ]
+    loss_types = ['MSELoss', 'MARELoss']
+    hidden_sizes = [ 16 , 32 , 8 ] # TODO: add option - hidden_sizes = [ 8, 16, 32], [16, 32, 8], [ 64, 32, 16]
     model_n = 0
-    for s_model,yf in enumerate(Y_features):
-        for lr in learning_rates:
-            for pow in powers :
-                for batch_size in batch_sizes:
-                    run_params = {'model':model_n, 's_model':s_model ,'powers':pow,
-                                  'Y_features': yf, 'wavelengths':wavelengths,
-                                  'lr':lr, 'batch_size':batch_size}
-                    main ( station_name , start_date , end_date, run_params )
+    for loss_type in loss_types:
+        for s_model,yf in enumerate(Y_features):
+            for lr in learning_rates:
+                for pow in powers :
+                    for batch_size in batch_sizes:
+                        run_params = {'model':model_n, 's_model':s_model ,'hidden_sizes':hidden_sizes,
+                                      'loss_type' :loss_type,
+                                      'powers':pow,'Y_features': yf, 'wavelengths':wavelengths,
+                                      'lr':lr, 'batch_size':batch_size, 'n_iters': n_iters}
+                        main ( station_name , start_date , end_date, run_params )
