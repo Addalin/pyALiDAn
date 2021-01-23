@@ -301,7 +301,7 @@ def update_stats(writer, model,loaders ,device,run_params,criterion, epoch):
     :param run_params: dict of running parameters
     :param criterion: loss criterion function
     :param epoch: current epoch
-    :return: curr_loss - current loss for train and for test 
+    :return: curr_loss - current loss for train and for test
     """
     curr_loss = {}
     for loader, mode in zip(loaders,['train','test']):
@@ -479,7 +479,7 @@ def main( station_name = 'haifa' , start_date = datetime ( 2017 , 9 , 1 ) , end_
                       f"v{model_n}.{s_model}.{use_pow}pow_epoch_{epoch}-{epochs}_batch_size_{batch_size}_lr_{learning_rate}.pth"
         torch.save ( state , os.path.join(modelv_dir,model_fname) )
         print ( f"Finished training epoch {epoch}, saved model to: {model_fname}" )
-    write_hparams(writer,run_name='hparams', cur_result ={'loss':epoch_loss, 'epoch':epoch}, best_result={'loss':best_loss,'epoch':best_epoch})
+    write_hparams(writer,run_params, run_name='hparams', cur_result ={'loss':epoch_loss, 'epoch':epoch}, best_result={'loss':best_loss,'epoch':best_epoch})
     writer.flush ( )
 
 
