@@ -142,6 +142,16 @@ class PowTransform(object):
         """
         return [ y_i ** pow for (pow , y_i) in zip ( self.Y_powers , Y ) ]
 
+class TrimNegative(object):
+    def __init__( self):
+        pass
+
+    def __call__ ( self , sample ) :
+        X , Y = sample [ 'x' ] , sample [ 'y' ]
+        # trim negative values
+        X  = [x_i.where ( x_i >= 0 , np.finfo ( np.float ).eps ) for x_i in X]
+        return {'x' : X , 'y' : Y}
+
 
 class ToTensor ( object ) :
     """Convert a lidar sample {x,y}  to Tensors."""
