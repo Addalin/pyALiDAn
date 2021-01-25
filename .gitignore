@@ -255,3 +255,6 @@ cython_debug/
 /testfile.txt
 
 /20170401_20170415_Technion_Haifa_IL/
+/checkpoints/
+/runs/
+/runs_old_version/
