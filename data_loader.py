@@ -518,8 +518,10 @@ def main( station_name = 'haifa' , start_date = datetime ( 2017 , 9 , 1 ) , end_
     # Step 3. Instantiate Loss Class
     if loss_type == 'MSELoss':
         criterion = nn.MSELoss()
+    elif loss_type == 'MAELoss':
+        criterion = nn.L1Loss()
     elif loss_type == 'MARELoss':
-        criterion = MARELoss()
+        criterion = MARELoss() # MeanAbsoluteRelativeError() #MARELoss() ##
 
     # Step 4. Instantiate Optimizer Class
     optimizer = torch.optim.Adam ( model.parameters ( ) , lr = learning_rate )
@@ -624,13 +626,13 @@ if __name__ == '__main__' :
     station_name = 'haifa'
     start_date = datetime ( 2017 , 9 , 1 )
     end_date = datetime ( 2017 , 10 , 31 )
-    learning_rates = [1e-3, 1e-4]
+    learning_rates = [1e-3, 0.5*1e-3, 1e-4]
     batch_sizes = [8]
-    n_iters = 3000
-    Y_features = [['r0' , 'r1'],['r0' , 'r1' , 'LC']]
+    n_iters = 6000
+    Y_features = [['r0' , 'r1'], ['r0','r1','LC'],['r0','r1','dr'], ['r0','r1','dr','LC']]
     powers = [None,{'range_corr' : 0.5 , 'attbsc' : 0.5 , 'LC' : 0.5 , 'LC_std' : 0.5 , 'r0' : 1 , 'r1' : 1}]
     wavelengths = [ 355 , 532 , 1064 ]
-    loss_types = ['MSELoss', 'MARELoss']
+    loss_types = ['MSELoss','MAELoss'] #['MARELoss']
     hidden_sizes = [ 16 , 32 , 8 ] # TODO: add option - hidden_sizes = [ 8, 16, 32], [16, 32, 8], [ 64, 32, 16]
     model_n = 0
     for loss_type in loss_types:
