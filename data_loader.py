@@ -15,7 +15,7 @@ import time
 from utils import create_and_configer_logger
 from torch.utils.tensorboard import SummaryWriter
 torch.manual_seed(8318)
-
+import json
 
 class lidarDataSet ( torch.utils.data.Dataset ) :
     """TODO"""
@@ -387,6 +387,20 @@ def main( station_name = 'haifa' , start_date = datetime ( 2017 , 9 , 1 ) , end_
     use_pow = 'use_' if powers else 'no_'
     run_name = f"{datetime.now().strftime('%Y_%m_%d_%H_%M')}_v{model_n}.{s_model}.{use_pow}pow_epochs_{epochs}_batch_size_{batch_size}_lr_{learning_rate}"
 
+    # Create model run dir and save run_params: # TODO: split part this to a function
+    modelv_dir = os.path.join(os.getcwd(),"checkpoints",f"model_{model_n}")
+    if not os.path.isdir ( modelv_dir ) :
+        os.mkdir ( modelv_dir )
+    models_dir = os.path.join(modelv_dir,f"model_{model_n}.{s_model}")
+    if not os.path.isdir ( models_dir ) :
+        os.mkdir ( models_dir )
+    model_run_dir = os.path.join(models_dir,run_name)
+    if not os.path.isdir ( model_run_dir ) :
+        os.mkdir ( model_run_dir )
+    params_fname = os.path.join(model_run_dir,'run_params.json')
+    run_params.update({'csv_path':os.path.join(os.getcwd(),csv_path), 'in_channels':in_channels})
+    with open(params_fname,'w+') as f:
+        json.dump(run_params,f)
 
     model = DefaultCNN(in_channels = in_channels,output_size = output_size,hidden_sizes = hidden_sizes).to(device)
     numParams = 0
@@ -466,18 +480,20 @@ def main( station_name = 'haifa' , start_date = datetime ( 2017 , 9 , 1 ) , end_
         state = {
             'model_state_dict' : model.state_dict ( ) ,
             'optimizer_state_dict' : optimizer.state_dict() ,
-            'epoch': epoch,
+            'learning_rate' : learning_rate,
             'batch_size':batch_size,
             'global_iter':global_iter,
+            'epoch' : epoch ,
             'n_iters':n_iters,
-            'learning_rate': learning_rate
+            'in_channels' : in_channels,
+            'output_size' : output_size
         }
-        modelv_dir = f"checkpoints/model_{model_n}"
-        if not os.path.isdir ( modelv_dir ) :
-            os.mkdir (modelv_dir )
-        model_fname = f"{datetime.now ( ).strftime ( '%Y_%m_%d_%H_%M' )}_" \
-                      f"v{model_n}.{s_model}.{use_pow}pow_epoch_{epoch}-{epochs}_batch_size_{batch_size}_lr_{learning_rate}.pth"
-        torch.save ( state , os.path.join(modelv_dir,model_fname) )
+
+        model_fname = os.path.join(model_run_dir, f"checkpoint_epoch_{epoch}-{epochs}.pth")
+        torch.save ( state , model_fname )
+
+
+
         print ( f"Finished training epoch {epoch}, saved model to: {model_fname}" )
     write_hparams(writer,run_params, run_name='hparams', cur_result ={'loss':epoch_loss, 'epoch':epoch}, best_result={'loss':best_loss,'epoch':best_epoch})
     writer.flush ( )
