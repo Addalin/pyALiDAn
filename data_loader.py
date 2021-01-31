@@ -59,11 +59,12 @@ class lidarDataSet ( torch.utils.data.Dataset ) :
         sample['wavelength']= wavelength
         return sample
 
-    def get_splits( self, n_test = 0.2 ):
+    def get_splits( self, n_test = 0.2, n_val = 0.2 ):
         test_size = round (n_test * len(self))
-        train_size = len(self) - test_size
-        train_set , test_set = torch.utils.data.random_split ( self , [ train_size , test_size ] )
-        return train_set , test_set
+        val_size = round(n_val*len(self))
+        train_size = len(self) - val_size - test_size
+        train_set , val_set, test_set = torch.utils.data.random_split ( self , [ train_size ,val_size, test_size ] )
+        return train_set ,val_set, test_set
 
     def load_X( self, idx ):
         """
@@ -240,7 +241,7 @@ def calculate_statistics(model,criterion, run_params, loader,device, Y_features=
     :param device: torch.device ()
     :param Y_features: features list to calculate loss separately, for debug (this is an optional input)
     :param wavelengths: wavelengths list to calculate loss separately, for debug (this is an optional input)
-    :return: stats - a dict containing train/test loss criterion, and separately feature losses (for debug)
+    :return: stats - a dict containing train/validation loss criterion, and separately feature losses (for debug)
     """
     model.eval ( )        # Evaluation mode
     criterion = criterion
@@ -389,17 +390,17 @@ def update_stats(writer, model,loaders ,device,run_params,criterion, epoch):
     Update current epoch's state to writer
     :param writer: torch.utils.tensorboard.SummaryWriter
     :param model: torch.nn.Module
-    :param loaders: a list of [train_loader,test_loader], each of type torch.utils.data.DataLoader
+    :param loaders: a list of [train_loader,val_loader], each of type torch.utils.data.DataLoader
     :param device:  torch.device ()
     :param run_params: dict of running parameters
     :param criterion: loss criterion function
     :param epoch: current epoch
-    :return: curr_loss - current loss for train and for test
+    :return: curr_loss - current loss for train and for validation sets
     """
     curr_loss = {}
     feature_loss={}
-    for loader, mode in zip(loaders,['train','test']):
-        # calc current epoch statistics: train and test model, and feature loss for debug.
+    for loader, mode in zip(loaders,['train','val']):
+        # calc current epoch statistics: train and val model, and feature loss for debug.
         stats = calculate_statistics ( model , criterion, run_params,loader , device,
                                        Y_features =run_params['Y_features'],
                                        wavelengths = run_params['wavelengths'] )
@@ -432,19 +433,19 @@ def update_stats(writer, model,loaders ,device,run_params,criterion, epoch):
 def write_hparams(writer,run_params,run_name, cur_loss, best_loss, cur_loss_feature,best_loss_feature):
 
     results = {'hparam_last/loss_train' : cur_loss [ 'loss' ] [ 'train' ] ,
-               'hparam_last/loss_test' : cur_loss [ 'loss' ] [ 'test' ],
+               'hparam_last/loss_val' : cur_loss [ 'loss' ] [ 'val' ],
                'hparam_last/epoch' : cur_loss [ 'epoch' ] ,
                'hparam_best/loss_train' : best_loss [ 'loss' ] [ 'train' ] ,
                'hparam_best/epoch_train' : best_loss [ 'epoch' ] [ 'train' ],
-               'hparam_best/loss_test' : best_loss [ 'loss' ] [ 'test' ] ,
-               'hparam_best/epoch_test' : best_loss [ 'epoch' ] [ 'test' ] ,
+               'hparam_best/loss_val' : best_loss [ 'loss' ] [ 'val' ] ,
+               'hparam_best/epoch_val' : best_loss [ 'epoch' ] [ 'val' ] ,
                }
-    for mode in ['train','test']:
+    for mode in ['train','val']:
         for feature in run_params['Y_features']:
-            results.update({f"hparam_{feature}_last/loss_{mode}" : cur_loss_feature [ 'loss' ][mode][ feature ]} )
-            results.update({f"hparam_{feature}_last/epoch_{mode}" : cur_loss_feature [ 'epoch' ]} )
-            results.update({f"hparam_{feature}_best/loss_{mode}":best_loss_feature['loss'][ mode ][feature]})
-            results.update({f"hparam_{feature}_best/epoch_{mode}":best_loss_feature['epoch'][ mode ][feature]})
+            results.update({f"{feature}_last/loss_{mode}" : cur_loss_feature [ 'loss' ][mode][ feature ]} )
+            results.update({f"{feature}_last/epoch_{mode}" : cur_loss_feature [ 'epoch' ]} )
+            results.update({f"{feature}_best/loss_{mode}":best_loss_feature['loss'][ mode ][feature]})
+            results.update({f"{feature}_best/epoch_{mode}":best_loss_feature['epoch'][ mode ][feature]})
 
     run_params [ 'Y_features' ] = '_'.join ( run_params [ 'Y_features' ] )
     run_params [ 'hidden_sizes' ] = '_'.join ( [ str(val) for val in run_params [ 'hidden_sizes' ]] )
@@ -471,7 +472,7 @@ def main( station_name = 'haifa' , start_date = datetime ( 2017 , 9 , 1 ) , end_
     lidar_transforms = torchvision.transforms.Compose([PowTransform(powers),ToTensor()]) if powers\
                   else torchvision.transforms.Compose([ToTensor()])
     dataset = lidarDataSet ( csv_path , lidar_transforms, top_height = 15.3, Y_features = run_params['Y_features'] )
-    train_set , test_set = dataset.get_splits(n_test = 0.2)
+    train_set , val_set, _ = dataset.get_splits(n_test = 0.2, n_val = 0.2)
 
     # Step 2. Create Model Class
 
@@ -530,8 +531,8 @@ def main( station_name = 'haifa' , start_date = datetime ( 2017 , 9 , 1 ) , end_
     train_loader = torch.utils.data.DataLoader (
         train_set , batch_size = batch_size , shuffle = True , num_workers = 7 )
 
-    test_loader = torch.utils.data.DataLoader (
-        test_set , batch_size = batch_size , shuffle = False , num_workers = 7 )
+    val_loader = torch.utils.data.DataLoader (
+        val_set , batch_size = batch_size , shuffle = False , num_workers = 7 )
 
     writer = SummaryWriter ( os.path.join('runs',run_name ))
     # Training loop
@@ -565,18 +566,18 @@ def main( station_name = 'haifa' , start_date = datetime ( 2017 , 9 , 1 ) , end_
         # Calculate statistics for current model
         epoch_loss, feature_loss = update_stats ( writer , model , [train_loader,test_loader] , device , run_params , criterion, epoch )
 
-        # Save best loss (and the epoch number) for train and test
+        # Save best loss (and the epoch number) for train and validation
         if best_loss is None:
             best_loss = epoch_loss
-            best_epoch = {'train': epoch, 'test':epoch}
+            best_epoch = {'train': epoch, 'val':epoch}
             best_feture_loss = feature_loss
             best_feature_epoch={}
-            for mode in ['train','test']:
+            for mode in ['train','val']:
                 best_feature_epoch.update({mode:{}})
                 for feature in run_params['Y_features']:
                     best_feature_epoch[mode].update({feature: epoch})
         else:
-            for mode in ['train','test']:
+            for mode in ['train','val']:
                 if best_loss[mode]> epoch_loss[mode]:
                     best_loss [ mode ] = epoch_loss[mode]
                     best_epoch[ mode ] = epoch
@@ -591,7 +592,7 @@ def main( station_name = 'haifa' , start_date = datetime ( 2017 , 9 , 1 ) , end_
 
         # log statistics
         log = f"Epoch: {epoch} | Running {loss_type} Loss: {running_loss:.4f} |" \
-              f" Train {loss_type}: {epoch_loss['train']:.3f} | Test {loss_type}: {epoch_loss['test']:.3f} | " \
+              f" Train {loss_type}: {epoch_loss['train']:.3f} | Val {loss_type}: {epoch_loss['val']:.3f} | " \
               f" Epoch Time: {epoch_time:.2f} secs"
         print( log )
 
