@@ -569,7 +569,7 @@ def main( station_name = 'haifa' , start_date = datetime ( 2017 , 9 , 1 ) , end_
         writer.add_scalar ( f"{loss_type}/running_loss" , running_loss , epoch )
 
         # Calculate statistics for current model
-        epoch_loss, feature_loss = update_stats ( writer , model , [train_loader,test_loader] , device , run_params , criterion, epoch )
+        epoch_loss, feature_loss = update_stats ( writer , model , [ train_loader, val_loader ] , device , run_params , criterion , epoch )
 
         # Save best loss (and the epoch number) for train and validation
         if best_loss is None:
