@@ -116,8 +116,9 @@ class lidarDataSet ( torch.utils.data.Dataset ) :
 
 class PowTransform(object):
     def __init__( self,powers = {'range_corr' : 0.5 , 'attbsc' : 0.5 ,
-                             'LC' : 0.5 , 'LC_std' : 0.5 , 'r0' : 1 , 'r1' : 1} ):
-        self.Y_features = [ 'LC' , 'r0' , 'r1' ]  # , 'LC_std'
+                             'LC' : 0.5 , 'LC_std' : 0.5 , 'r0' : 1.0 , 'r1' : 1.0,'dr':1.0} ):
+        # TODO: Pass Y_features to the constructor
+        self.Y_features = [ 'LC' , 'r0' , 'r1' ,'dr']
         self.profiles = [ 'range_corr' , 'attbsc' ]
         self.X_powers = [ powers [ profile ] for profile in self.profiles ]
         self.Y_powers = [ powers [ feature ] for feature in self.Y_features ]
@@ -216,6 +217,7 @@ class DefaultCNN(nn.Module):
             nn.ReLU ( inplace = True ) ,
             nn.Dropout ( p = 0.1 ) ,
             nn.Linear ( 512 , output_size ) ,
+            nn.ReLU(inplace = True)
         )
 
     def forward(self, x):
@@ -635,12 +637,13 @@ if __name__ == '__main__' :
     learning_rates = [1e-3, 0.5*1e-3, 1e-4]
     batch_sizes = [8]
     n_iters = 6000
-    Y_features = [['r0' , 'r1'], ['r0','r1','LC'],['r0','r1','dr'], ['r0','r1','dr','LC']]
-    powers = [None,{'range_corr' : 0.5 , 'attbsc' : 0.5 , 'LC' : 0.5 , 'LC_std' : 0.5 , 'r0' : 1 , 'r1' : 1}]
+    Y_features = [['r0' , 'r1'], ['r0','r1','LC'],['r0','r1','dr'], ['r0','r1','dr','LC'],['LC']]
+    powers = [None,{'range_corr' : 0.5 , 'attbsc' : 0.5 , 'LC' : 0.5 ,
+                    'LC_std' : 0.5 , 'r0' : 1 , 'r1' : 1, 'dr' : 1}]
     wavelengths = [ 355 , 532 , 1064 ]
     loss_types = ['MSELoss','MAELoss'] #['MARELoss']
     hidden_sizes = [ 16 , 32 , 8 ] # TODO: add option - hidden_sizes = [ 8, 16, 32], [16, 32, 8], [ 64, 32, 16]
-    model_n = 0
+    model_n = 1
     for loss_type in loss_types:
         for s_model,yf in enumerate(Y_features):
             for lr in learning_rates:
