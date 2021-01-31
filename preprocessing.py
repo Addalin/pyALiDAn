@@ -976,18 +976,22 @@ def add_profiles_values ( df , station , day_date , file_type = 'profiles' ) :
                                                 else exec("raise(Exception('More than one File'))"))
     '''
 
-    # Get the altitude, delta_r and r0
     def _get_info_from_profile_nc ( row ) :
+        """
+        Get the r_0,r_1, and delta_r of the selcted row. The values are following rebasing according to sea-level height.
+        :param row:
+        :return:
+        """
         data = Dataset ( row [ 'matched_nc_profile' ] )
         wavelen = row.wavelength
-        r0 = data.variables [ f'reference_height_{wavelen}' ] [ : ].data [ 0 ]
-        r1 = data.variables [ f'reference_height_{wavelen}' ] [ : ].data [ 1 ]
+        # get altitude to rebase the reference heights according to sea-level-height
         altitude = data.variables [ 'altitude' ] [ : ].data.item ( )
-        # delta_r = r1 - r0
-        return altitude , r0 , r1  # ,delta_r
+        r0 = data.variables [ f'reference_height_{wavelen}' ] [ : ].data [ 0 ] + altitude
+        r1 = data.variables [ f'reference_height_{wavelen}' ] [ : ].data [ 1 ] + altitude
+        delta_r = r1 - r0
+        return r0 , r1 ,delta_r
 
-    df [ [ 'altitude' , 'r0' , 'r1' ] ] = df.apply ( _get_info_from_profile_nc , axis = 1 ,
-                                                     result_type = 'expand' )
+    df [ [ 'r0' , 'r1' , 'dr' ] ] = df.apply ( _get_info_from_profile_nc , axis = 1 , result_type = 'expand' )
     return df
 
 
@@ -1100,7 +1104,7 @@ def create_dataset ( station_name = 'haifa' , start_date = datetime ( 2017 , 9 ,
                 # reorder the columns
                 key = [ 'date' , 'wavelength' , 'cali_method' , 'telescope' , 'cali_start_time' , 'cali_stop_time' ,
                         'start_time_period' , 'end_time_period' ]
-                Y_features = [ 'LC' , 'LC_std' , 'r0' , 'r1' ]
+                Y_features = [ 'LC' , 'LC_std' , 'r0' , 'r1', 'dr' ]
                 X_features = [ 'lidar_path' , 'molecular_path' ]
                 expanded_df = expanded_df [ key + X_features + Y_features ]
                 full_df = full_df.append ( expanded_df )
@@ -1193,7 +1197,6 @@ def main ( station_name = 'haifa' , start_date = datetime ( 2017 , 9 , 1 ) , end
 
     if GEN_MOL_DS :
         # TODO: Check for existing molecular paths, to avoid creation for them (Since it takes long time to generate these datasest)
-        # TODO: check why this part is running when GEN_MOL_DS=False
         '''molpaths = [ ]
         for day_date in valid_gdas_days:
             cpath = get_prep_dataset_paths ( station = station ,
@@ -1249,8 +1252,8 @@ def main ( station_name = 'haifa' , start_date = datetime ( 2017 , 9 , 1 ) , end
 
         # Convert m to km
         if USE_KM_UNITS :
-            Y_features = [ 'LC' , 'LC_std' , 'r0' , 'r1' ]
-            scales = {'LC' : 1E-9 , 'LC_std' : 1E-9 , 'r0' : 1E-3 , 'r1' : 1E-3}
+            Y_features = [ 'LC' , 'LC_std' , 'r0' , 'r1' , 'dr']
+            scales = {'LC' : 1E-9 , 'LC_std' : 1E-9 , 'r0' : 1E-3 , 'r1' : 1E-3, 'dr': 1E-3}
             Y_scales = [ scales [ feature ] for feature in Y_features ]
             for feature , scale in zip ( Y_features , Y_scales ) :
                 df [ feature ] *= scale
