@@ -1258,6 +1258,35 @@ def main ( station_name = 'haifa' , start_date = datetime ( 2017 , 9 , 1 ) , end
             for feature , scale in zip ( Y_features , Y_scales ) :
                 df [ feature ] *= scale
 
+        # Get bins of r0,r1, and  calculate LC_stimated, LC_fixed
+        for indx , row in df.iterrows ( ) :
+            mol_path = row [ 'molecular_path' ]
+            lidar_path = row [ 'lidar_path' ]
+            r0 = row [ 'r0' ]
+            r1 = row [ 'r1' ]
+            t0 = row [ 'cali_start_time' ]
+            t1 = row [ 'cali_stop_time' ]
+            ds = [ load_dataset ( path ) for path in [ lidar_path , mol_path ] ]
+            [ bin_r0 , bin_r1 ] = [ np.argmin ( abs ( ds[0].Height.values - r ) ) for r in [ r0 , r1 ] ]
+            hslice = slice ( r0 , r1 )
+            tslice = slice ( t0 , t1 )
+            profiles = [ 'range_corr' , 'attbsc' ]
+            sliced_ds = [ ds_i.sel ( Time = tslice , Height = hslice ) [ profile ]
+                     for ds_i , profile in zip ( ds , profiles ) ]
+            # calculate LC
+            vals = [ slice_i.values for slice_i in sliced_ds ]
+            means = [ v.mean ( ) for v in vals ]
+            LC_stimated = means[0]/means[1]
+            # calculate LC for positive range_corr values
+            vals_pos = [slice_i.where ( slice_i >= 0 ).values for slice_i in sliced_ds]
+            vals_pos = [ v[ ~np.isnan ( v )]  for v in vals_pos]
+            means_pos = [v.mean() for v in vals_pos]
+            LC_fixed =  means_pos[0]/means_pos[1]
+            # TODO: Add bin_r0 , bin_r1, LC_stimated, and LC_fixed to each row in df
+
+
+
+
         csv_path = f"dataset_{station_name}_{start_date.strftime ( '%Y-%m-%d' )}_{end_date.strftime ( '%Y-%m-%d' )}.csv"
         df.to_csv ( csv_path )
 
