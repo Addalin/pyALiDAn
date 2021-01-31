@@ -450,9 +450,21 @@ def write_hparams(writer,run_params,run_name, cur_loss, best_loss, cur_loss_feat
     run_params [ 'Y_features' ] = '_'.join ( run_params [ 'Y_features' ] )
     run_params [ 'hidden_sizes' ] = '_'.join ( [ str(val) for val in run_params [ 'hidden_sizes' ]] )
     run_params [ 'wavelengths' ] = '_'.join ( [ str(val) for val in run_params [ 'wavelengths' ]] )
-    run_params ['powers'] = run_params['powers']['LC'] if run_params['powers'] is not None else None
+    run_params ['powers'] = run_params['powers']['LC'] if run_params['powers'] is not None else 1
 
     writer.add_hparams(hparam_dict = run_params,metric_dict =results,run_name=run_name )
+
+def get_model_dirs(run_name, model_n,s_model ):
+    model_dir = f"model_{model_n}"
+    submodel_dir = f"model_{model_n}.{s_model}"
+    main_dir = os.path.join( os.getcwd() ,"cnn_models" , model_dir , submodel_dir ,run_name)
+    checkpoints_dir = os.path.join(main_dir ,"checkpoints" )
+    run_dir = os.path.join( main_dir ,"run" )
+    if not os.path.isdir ( checkpoints_dir ) :
+        os.makedirs ( checkpoints_dir )
+    if not os.path.isdir ( run_dir ) :
+        os.makedirs ( run_dir )
+    return {'main': main_dir, 'checkpoints':checkpoints_dir, 'run':run_dir}
 
 def main( station_name = 'haifa' , start_date = datetime ( 2017 , 9 , 1 ) , end_date = datetime ( 2017 , 9 , 2 ),
           run_params={'model_n':0, 's_model':0,'hidden_sizes':[ 16 , 32 , 8 ],
@@ -494,16 +506,9 @@ def main( station_name = 'haifa' , start_date = datetime ( 2017 , 9 , 1 ) , end_
     run_name = f"{datetime.now().strftime('%Y_%m_%d_%H_%M')}_v{model_n}.{s_model}.{use_pow}pow_epochs_{epochs}_batch_size_{batch_size}_lr_{learning_rate}"
 
     # Create model run dir and save run_params: # TODO: split part this to a function
-    modelv_dir = os.path.join(os.getcwd(),"checkpoints",f"model_{model_n}")
-    if not os.path.isdir ( modelv_dir ) :
-        os.mkdir ( modelv_dir )
-    models_dir = os.path.join(modelv_dir,f"model_{model_n}.{s_model}")
-    if not os.path.isdir ( models_dir ) :
-        os.mkdir ( models_dir )
-    model_run_dir = os.path.join(models_dir,run_name)
-    if not os.path.isdir ( model_run_dir ) :
-        os.mkdir ( model_run_dir )
-    params_fname = os.path.join(model_run_dir,'run_params.json')
+    wdir = get_model_dirs ( run_name ,model_n,s_model)
+
+    params_fname = os.path.join(wdir['main'],'run_params.json')
     run_params.update({'csv_path':os.path.join(os.getcwd(),csv_path), 'in_channels':in_channels})
     with open(params_fname,'w+') as f:
         json.dump(run_params,f)
@@ -534,7 +539,7 @@ def main( station_name = 'haifa' , start_date = datetime ( 2017 , 9 , 1 ) , end_
     val_loader = torch.utils.data.DataLoader (
         val_set , batch_size = batch_size , shuffle = False , num_workers = 7 )
 
-    writer = SummaryWriter ( os.path.join('runs',run_name ))
+    writer = SummaryWriter ( wdir['run'])
     # Training loop
     best_loss = None
     best_epoch = None
@@ -609,7 +614,7 @@ def main( station_name = 'haifa' , start_date = datetime ( 2017 , 9 , 1 ) , end_
             'output_size' : output_size
         }
 
-        model_fname = os.path.join(model_run_dir, f"checkpoint_epoch_{epoch}-{epochs}.pth")
+        model_fname = os.path.join(wdir['checkpoints'], f"checkpoint_epoch_{epoch}-{epochs}.pth")
         torch.save ( state , model_fname )
 
 
