@@ -2,7 +2,7 @@ import csv
 import logging
 
 
-def create_and_configer_logger(log_name='log_file.log'):
+def create_and_configer_logger(log_name='log_file.log', level = logging.DEBUG):
     """
     Sets up a logger that works across files.
     The logger prints to console, and to log_name log file. 
@@ -25,7 +25,7 @@ def create_and_configer_logger(log_name='log_file.log'):
     # set up logging to file
     logging.basicConfig(
         filename=log_name,
-        level=logging.DEBUG,
+        level=level,
         format='[%(asctime)s] {%(pathname)s:%(lineno)d} %(levelname)s - %(message)s',
         datefmt = '%Y-%m-%d %H:%M:%S'
     )

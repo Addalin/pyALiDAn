@@ -961,37 +961,26 @@ def add_profiles_values ( df , station , day_date , file_type = 'profiles' ) :
         logger.exception (
             f"Non resolved 'matched_nc_profile' for {station.location} station, at date {day_date.strftime ( '%Y-%m-%d' )} " )
         pass
-    '''
-    df['nc_path'] = df.apply(lambda row: get_TROPOS_dataset_file_name(start_time = row.cali_start_time,
-                                                                      end_time = row.cali_stop_time,
-                                                                      file_type = 'profiles'),
-                                                                      axis = 1, result_type ='expand')
-    '''
-
-    # Find Actual matching nc profile  file (full path)
-    # makes sure only one file is returned
-    '''
-    df['matched_nc_profile'] = df['nc_path'].apply(lambda row: fnmatch.filter(profile_paths, row)[0]
-                                                if len(fnmatch.filter(profile_paths, row)) == 1
-                                                else exec("raise(Exception('More than one File'))"))
-    '''
 
     def _get_info_from_profile_nc ( row ) :
         """
-        Get the r_0,r_1, and delta_r of the selcted row. The values are following rebasing according to sea-level height.
+        Get the r_0,r_1, and delta_r of the selected row. The values are following rebasing according to sea-level height.
         :param row:
         :return:
         """
-        data = Dataset ( row [ 'matched_nc_profile' ] )
+        data = load_dataset ( row [ 'matched_nc_profile' ] )
         wavelen = row.wavelength
         # get altitude to rebase the reference heights according to sea-level-height
-        altitude = data.variables [ 'altitude' ] [ : ].data.item ( )
-        r0 = data.variables [ f'reference_height_{wavelen}' ] [ : ].data [ 0 ] + altitude
-        r1 = data.variables [ f'reference_height_{wavelen}' ] [ : ].data [ 1 ] + altitude
+        altitude = data.altitude.item ( )
+        [ r0 , r1 ] = data [ f'reference_height_{wavelen}' ].values
+        [ bin_r0 , bin_r1 ] = [ np.argmin ( abs ( data.height.values - r ) ) for r in [ r0 , r1 ] ]
         delta_r = r1 - r0
-        return r0 , r1 ,delta_r
+        return r0 + altitude , r1 + altitude ,delta_r, bin_r0 ,bin_r1
 
-    df [ [ 'r0' , 'r1' , 'dr' ] ] = df.apply ( _get_info_from_profile_nc , axis = 1 , result_type = 'expand' )
+
+
+
+    df [ [ 'r0' , 'r1' , 'dr','bin_r0','bin_r1' ] ] = df.apply ( _get_info_from_profile_nc , axis = 1 , result_type = 'expand' )
     return df
 
 
@@ -1088,7 +1077,7 @@ def create_dataset ( station_name = 'haifa' , start_date = datetime ( 2017 , 9 ,
 
                 df = get_time_frames ( df )
 
-                df = df.rename ( {'liconst' : 'LC' , 'uncertainty_liconst' : 'LC_std'} , axis = 'columns' )
+                df = df.rename ( {'liconst' : 'LC' , 'uncertainty_liconst' : 'LC_std','matched_nc_profile':'profile_path'} , axis = 'columns' )
                 expanded_df = pd.DataFrame ( )
                 for indx , row in df.iterrows ( ) :
                     for start_time , end_time in zip (
@@ -1103,8 +1092,8 @@ def create_dataset ( station_name = 'haifa' , start_date = datetime ( 2017 , 9 ,
 
                 # reorder the columns
                 key = [ 'date' , 'wavelength' , 'cali_method' , 'telescope' , 'cali_start_time' , 'cali_stop_time' ,
-                        'start_time_period' , 'end_time_period' ]
-                Y_features = [ 'LC' , 'LC_std' , 'r0' , 'r1', 'dr' ]
+                        'start_time_period' , 'end_time_period','profile_path' ]
+                Y_features = [ 'LC' , 'LC_std' , 'r0' , 'r1', 'dr' ,'bin_r0','bin_r1']
                 X_features = [ 'lidar_path' , 'molecular_path' ]
                 expanded_df = expanded_df [ key + X_features + Y_features ]
                 full_df = full_df.append ( expanded_df )
@@ -1157,12 +1146,19 @@ def convert_profiles_units ( dataset , units = [ '1/m' , '1/Km' ] , scale = 1e+3
         dataset [ profile ] = conv_profiles
     return dataset
 
+def convert_Y_features_units ( df ,Y_features = [ 'LC' , 'LC_std' , 'r0' , 'r1' , 'dr' ],
+                               scales = {'LC' : 1E-9 , 'LC_std' : 1E-9 , 'r0' : 1E-3 , 'r1' : 1E-3 , 'dr' : 1E-3} ) :
+    Y_scales = [ scales [ feature ] for feature in Y_features ]
+    for feature , scale in zip ( Y_features , Y_scales ) :
+        df [ feature ] *= scale
+    return df
+
 #%%
 
 def main ( station_name = 'haifa' , start_date = datetime ( 2017 , 9 , 1 ) , end_date = datetime ( 2017 , 9 , 2 ) ) :
     logging.getLogger ( 'matplotlib' ).setLevel ( logging.ERROR )  # Fix annoying matplotlib logs
     logging.getLogger ( 'PIL' ).setLevel ( logging.ERROR )  # Fix annoying PIL logs
-    logger = create_and_configer_logger ( 'preprocessing_log.log' )
+    logger = create_and_configer_logger ( 'preprocessing_log.log' , level = logging.INFO)
     CONV_GDAS = False
     GEN_MOL_DS = False
     GEN_LIDAR_DS = False
@@ -1171,15 +1167,14 @@ def main ( station_name = 'haifa' , start_date = datetime ( 2017 , 9 , 1 ) , end
 
     """set day,location"""
     station = gs.Station ( stations_csv_path = 'stations.csv' , station_name = station_name )
-    logger.debug ( f"Loading {station.location} station" )
-    logger.debug ( f"station info: {station}" )
-    logger.debug (
-        f"Start preprocessing for period: [{start_date.strftime ( '%Y-%m-%d' )},{end_date.strftime ( '%Y-%m-%d' )}]" )
+    logger.info ( f"\n Loading {station.location} station" )
+    logger.debug ( f"\n Station info: {station}" )
+    logger.info (
+        f"\n Start preprocessing for period: [{start_date.strftime ( '%Y-%m-%d' )},{end_date.strftime ( '%Y-%m-%d' )}]" )
 
     ''' Generate molecular datasets for required period'''
-
+    gdas_paths = [ ]
     if CONV_GDAS :
-        gdas_paths = [ ]
         # Convert gdas files for a period
         gdas_paths.extend ( convert_periodic_gdas ( station , start_date , end_date ) )
 
@@ -1223,8 +1218,8 @@ def main ( station_name = 'haifa' , start_date = datetime ( 2017 , 9 , 1 ) , end
         with Pool ( num_processes ) as p :
             p.map ( gen_daily_ds , valid_gdas_days , chunksize = chunksize )
 
-        logger.debug (
-            f"Finished generating and saving of molecular datasets for period [{start_date.strftime ( '%Y-%m-%d' )},{end_date.strftime ( '%Y-%m-%d' )}]" )
+        logger.info (
+            f"\n Finished generating and saving of molecular datasets for period [{start_date.strftime ( '%Y-%m-%d' )},{end_date.strftime ( '%Y-%m-%d' )}]" )
 
     ''' Generate lidar datasets for required period'''
     if GEN_LIDAR_DS :
@@ -1241,10 +1236,10 @@ def main ( station_name = 'haifa' , start_date = datetime ( 2017 , 9 , 1 ) , end
             # Save lidar dataset
             lidar_paths = save_range_corr_dataset ( station , range_corr_ds , save_mode = 'both' )
             lidarpaths.extend ( lidar_paths )
-        logger.debug (
-            f"Done creation of lidar datasets for period [{start_date.strftime ( '%Y-%m-%d' )},{end_date.strftime ( '%Y-%m-%d' )}]" )
+        logger.info (
+            f"\n Done creation of lidar datasets for period [{start_date.strftime ( '%Y-%m-%d' )},{end_date.strftime ( '%Y-%m-%d' )}]" )
 
-        print ( f'Lidar paths: {lidar_paths}' )
+        logger.debug( f'\n Lidar paths: {lidar_paths}' )
 
     if DO_DATASET :
         # Generate dataset for learning
@@ -1252,43 +1247,13 @@ def main ( station_name = 'haifa' , start_date = datetime ( 2017 , 9 , 1 ) , end
 
         # Convert m to km
         if USE_KM_UNITS :
-            Y_features = [ 'LC' , 'LC_std' , 'r0' , 'r1' , 'dr']
-            scales = {'LC' : 1E-9 , 'LC_std' : 1E-9 , 'r0' : 1E-3 , 'r1' : 1E-3, 'dr': 1E-3}
-            Y_scales = [ scales [ feature ] for feature in Y_features ]
-            for feature , scale in zip ( Y_features , Y_scales ) :
-                df [ feature ] *= scale
+            df = convert_Y_features_units ( df )
 
-        # Get bins of r0,r1, and  calculate LC_stimated, LC_fixed
-        for indx , row in df.iterrows ( ) :
-            mol_path = row [ 'molecular_path' ]
-            lidar_path = row [ 'lidar_path' ]
-            r0 = row [ 'r0' ]
-            r1 = row [ 'r1' ]
-            t0 = row [ 'cali_start_time' ]
-            t1 = row [ 'cali_stop_time' ]
-            ds = [ load_dataset ( path ) for path in [ lidar_path , mol_path ] ]
-            [ bin_r0 , bin_r1 ] = [ np.argmin ( abs ( ds[0].Height.values - r ) ) for r in [ r0 , r1 ] ]
-            hslice = slice ( r0 , r1 )
-            tslice = slice ( t0 , t1 )
-            profiles = [ 'range_corr' , 'attbsc' ]
-            sliced_ds = [ ds_i.sel ( Time = tslice , Height = hslice ) [ profile ]
-                     for ds_i , profile in zip ( ds , profiles ) ]
-            # calculate LC
-            vals = [ slice_i.values for slice_i in sliced_ds ]
-            means = [ v.mean ( ) for v in vals ]
-            LC_stimated = means[0]/means[1]
-            # calculate LC for positive range_corr values
-            vals_pos = [slice_i.where ( slice_i >= 0 ).values for slice_i in sliced_ds]
-            vals_pos = [ v[ ~np.isnan ( v )]  for v in vals_pos]
-            means_pos = [v.mean() for v in vals_pos]
-            LC_fixed =  means_pos[0]/means_pos[1]
-            # TODO: Add bin_r0 , bin_r1, LC_stimated, and LC_fixed to each row in df
-
-
-
-
+        for bin in ['bin_r1','bin_r1']:
+            df[bin] = np.uint16 ( df.bin_r1 )
         csv_path = f"dataset_{station_name}_{start_date.strftime ( '%Y-%m-%d' )}_{end_date.strftime ( '%Y-%m-%d' )}.csv"
         df.to_csv ( csv_path )
+        logger.info (f"\n Done creating database, saving to: {csv_path}")
 
 
 if __name__ == '__main__' :
