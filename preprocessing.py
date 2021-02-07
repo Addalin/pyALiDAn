@@ -977,9 +977,6 @@ def add_profiles_values ( df , station , day_date , file_type = 'profiles' ) :
         delta_r = r1 - r0
         return r0 + altitude , r1 + altitude ,delta_r, bin_r0 ,bin_r1
 
-
-
-
     df [ [ 'r0' , 'r1' , 'dr','bin_r0','bin_r1' ] ] = df.apply ( _get_info_from_profile_nc , axis = 1 , result_type = 'expand' )
     return df
 
@@ -1011,18 +1008,23 @@ def add_X_path ( df , station , day_date , lambda_nm = 532 , data_source = 'mole
     return df
 
 
-def get_time_frames ( df ) :
-    df [ 'start_time' ] = df [ 'cali_start_time' ].dt.round ( '30min' )
-    df.loc [ df [ 'start_time' ] < df [ 'cali_start_time' ] , 'start_time' ] += timedelta ( minutes = 30 )
-
-    df [ 'end_time' ] = df [ 'cali_stop_time' ].dt.round ( '30min' )
-    df.loc [ df [ 'end_time' ] - df [ 'cali_stop_time' ] > timedelta ( seconds = 30 ) , 'end_time' ] -= timedelta (
-        minutes = 30 )
-    return df
+def get_time_slots_expanded(df,sample_size):
+    expanded_df = pd.DataFrame ( )
+    for indx , row in df.iterrows ( ) :
+        time_slots = pd.date_range ( row.loc [ 'cali_start_time' ] , row.loc [ 'cali_stop_time' ] ,
+                                     freq = sample_size )
+        if len ( time_slots ) < 2 :
+            continue
+        for start_time , end_time in zip ( time_slots [ :-1 ] , time_slots [ 1 : ] ) :
+            mini_df = row.copy ( )
+            mini_df [ 'start_time_period' ] = start_time
+            mini_df [ 'end_time_period' ] = end_time
+            expanded_df = expanded_df.append ( mini_df )
+    return expanded_df
 
 
 def create_dataset ( station_name = 'haifa' , start_date = datetime ( 2017 , 9 , 1 ) ,
-                     end_date = datetime ( 2017 , 9 , 2 ) , sample_size = '30min' ) :
+                     end_date = datetime ( 2017 , 9 , 2 ) , sample_size = '29.5min' ) :
     """
     CHOOSE: telescope: far_range , METHOD: Klett_Method
     each sample will have 60 bins (aka 30 mins length)
@@ -1075,20 +1077,8 @@ def create_dataset ( station_name = 'haifa' , start_date = datetime ( 2017 , 9 ,
                 df = add_X_path ( df , station , day_date , lambda_nm = wavelength , data_source = 'molecular' ,
                                   file_type = 'attbsc' )
 
-                df = get_time_frames ( df )
-
                 df = df.rename ( {'liconst' : 'LC' , 'uncertainty_liconst' : 'LC_std','matched_nc_profile':'profile_path'} , axis = 'columns' )
-                expanded_df = pd.DataFrame ( )
-                for indx , row in df.iterrows ( ) :
-                    for start_time , end_time in zip (
-                            pd.date_range ( row.loc [ 'start_time' ] , row.loc [ 'end_time' ] , freq = sample_size ) [
-                            :-1 ] ,
-                            pd.date_range ( row.loc [ 'start_time' ] , row.loc [ 'end_time' ] ,
-                                            freq = sample_size ).shift ( 1 ) [ :-1 ] ) :
-                        mini_df = row.copy ( )
-                        mini_df [ 'start_time_period' ] = start_time
-                        mini_df [ 'end_time_period' ] = end_time - timedelta ( seconds = 30 )
-                        expanded_df = expanded_df.append ( mini_df )
+                expanded_df = get_time_slots_expanded ( df , sample_size )
 
                 # reorder the columns
                 key = [ 'date' , 'wavelength' , 'cali_method' , 'telescope' , 'cali_start_time' , 'cali_stop_time' ,
@@ -1101,6 +1091,9 @@ def create_dataset ( station_name = 'haifa' , start_date = datetime ( 2017 , 9 ,
                 logger.exception ( f"{e}, skipping to next day." )
                 continue
 
+    # convert height bins to int
+    full_df [ 'bin_r0' ] = full_df [ 'bin_r0' ].astype ( np.int )
+    full_df [ 'bin_r1' ] = full_df [ 'bin_r1' ].astype ( np.int )
     return full_df.reset_index ( drop = True )
 
 def gen_daily_ds ( day_date ) :
@@ -1249,8 +1242,6 @@ def main ( station_name = 'haifa' , start_date = datetime ( 2017 , 9 , 1 ) , end
         if USE_KM_UNITS :
             df = convert_Y_features_units ( df )
 
-        for bin in ['bin_r1','bin_r1']:
-            df[bin] = np.uint16 ( df.bin_r1 )
         csv_path = f"dataset_{station_name}_{start_date.strftime ( '%Y-%m-%d' )}_{end_date.strftime ( '%Y-%m-%d' )}.csv"
         df.to_csv ( csv_path )
         logger.info (f"\n Done creating database, saving to: {csv_path}")
