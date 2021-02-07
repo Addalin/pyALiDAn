@@ -1021,6 +1021,7 @@ def get_time_slots_expanded(df,sample_size):
         for indx , row in df.iterrows ( ) :
             time_slots = pd.date_range ( row.loc [ 'cali_start_time' ] , row.loc [ 'cali_stop_time' ] ,
                                          freq = sample_size )
+            time_slots.freq = None
             if len ( time_slots ) < 2 :
                 continue
             for start_time , end_time in zip ( time_slots [ :-1 ] , time_slots [ 1 : ] ) :
@@ -1242,8 +1243,8 @@ def main ( station_name = 'haifa' , start_date = datetime ( 2017 , 9 , 1 ) , end
 
     if DO_DATASET :
         # Generate dataset for learning
-        #sample_size = '29.5min'
-        sample_size = None
+        sample_size = '29.5min'
+        #sample_size = None
         df = create_dataset ( station_name = station_name , start_date = start_date ,
                               end_date = end_date, sample_size = sample_size )
 
@@ -1252,7 +1253,7 @@ def main ( station_name = 'haifa' , start_date = datetime ( 2017 , 9 , 1 ) , end
             df = convert_Y_features_units ( df )
 
         csv_path = f"dataset_{station_name}_{start_date.strftime ( '%Y-%m-%d' )}_{end_date.strftime ( '%Y-%m-%d' )}.csv"
-        df.to_csv ( csv_path )
+        df.to_csv ( csv_path,index=False )
         logger.info (f"\n Done creating database, saving to: {csv_path}")
 
 
