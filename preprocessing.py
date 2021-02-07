@@ -503,8 +503,8 @@ def generate_daily_molecular_chan ( station , day_date , lambda_nm , time_res = 
     return ds_chan
 
 
-def generate_daily_molecular ( station , day_date , time_res = '30S' ,
-                               height_units = 'Km' , optim_size = False , verbose = False ) :
+def generate_daily_molecular ( station , day_date , time_res = '30S' , height_units = 'Km' ,
+                               optim_size = False , verbose = False, USE_KM_UNITS = True ) :
     """
 	Generating daily molecular profiles for all elastic channels (355,532,1064)
 	:param station: gs.station() object of the lidar station
@@ -533,12 +533,15 @@ def generate_daily_molecular ( station , day_date , time_res = '30S' ,
         ds_list.append ( ds_chan )
     # t.toc()
     '''concatenating molecular profiles of all channels'''
-    ds_mol = xr.concat ( ds_list , dim = 'Wavelength' )
-    ds_mol [ 'date' ] = date_datetime
-    ds_mol.attrs = {'info' : 'Daily molecular profiles' ,
+    mol_ds = xr.concat ( ds_list , dim = 'Wavelength' )
+    mol_ds [ 'date' ] = date_datetime
+    mol_ds.attrs = {'info' : 'Daily molecular profiles' ,
                     'location' : station.name ,
                     'source_type' : 'gdas'}
-    return ds_mol
+    if USE_KM_UNITS :
+        mol_ds = convert_profiles_units ( mol_ds , units = [ '1/m' , '1/Km' ] , scale = 1e+3 )
+
+    return mol_ds
 
 
 def save_molecular_dataset ( station , dataset , save_mode = 'sep' ) :
@@ -591,10 +594,12 @@ def save_molecular_dataset ( station , dataset , save_mode = 'sep' ) :
 # %% lidar preprocessing and dataset functions
 
 
-def get_daily_range_corr ( station , day_date , height_units = 'Km' , optim_size = False , verbose = False ) :
+def get_daily_range_corr ( station , day_date , height_units = 'Km' ,
+                           optim_size = False , verbose = False ,USE_KM_UNITS = True) :
     """
 	Retrieving daily range corrected lidar signal (pr^2) from attenuated_backscatter signals in three channels (355,532,1064).
 	The attenuated_backscatter are from 4 files of 6-hours *att_bsc.nc for a given day_date and station
+    :param USE_KM_UNITS:
 	:param station: gs.station() object of the lidar station
 	:param day_date: datetime.date object of the required date
 	:param height_units:  Output units of height grid in 'Km' (default) or 'm'
@@ -637,20 +642,22 @@ def get_daily_range_corr ( station , day_date , height_units = 'Km' , optim_size
         ds_range_corrs.append ( cur_ds_range_corr )
 
     '''merge range corrected of lidar through 24-hours'''
-    ds_range_corr = xr.merge ( ds_range_corrs , compat = 'no_conflicts' )
+    range_corr_ds = xr.merge ( ds_range_corrs , compat = 'no_conflicts' )
 
     # Fixing missing timestamps values:
     time_indx = pd.date_range ( start = date_datetime ,
                                 end = (date_datetime + timedelta ( hours = 24 ) - timedelta ( seconds = 30 )) ,
                                 freq = '30S' )
-    ds_range_corr = ds_range_corr.reindex ( {"Time" : time_indx} , fill_value = 0 )
-    ds_range_corr = ds_range_corr.assign ( {'plot_min_range' : ('Wavelength' , min_range.min ( axis = 1 )) ,
+    range_corr_ds = range_corr_ds.reindex ( {"Time" : time_indx} , fill_value = 0 )
+    range_corr_ds = range_corr_ds.assign ( {'plot_min_range' : ('Wavelength' , min_range.min ( axis = 1 )) ,
                                             'plot_max_range' : ('Wavelength' , max_range.max ( axis = 1 ))} )
-    ds_range_corr [ 'date' ] = date_datetime
-    ds_range_corr.attrs = {'location' : station.location ,
+    range_corr_ds [ 'date' ] = date_datetime
+    range_corr_ds.attrs = {'location' : station.location ,
                            'info' : 'Daily range corrected lidar signal' ,
                            'source_type' : 'att_bsc'}
-    return ds_range_corr
+    if USE_KM_UNITS :
+        range_corr_ds = convert_profiles_units ( range_corr_ds , units = [ 'm^2' , 'Km^2' ] , scale = 1e-6 )
+    return range_corr_ds
 
 
 def get_range_corr_ds_chan ( darray , altitude , lambda_nm , height_units = 'Km' , optim_size = False ,
@@ -1009,17 +1016,22 @@ def add_X_path ( df , station , day_date , lambda_nm = 532 , data_source = 'mole
 
 
 def get_time_slots_expanded(df,sample_size):
-    expanded_df = pd.DataFrame ( )
-    for indx , row in df.iterrows ( ) :
-        time_slots = pd.date_range ( row.loc [ 'cali_start_time' ] , row.loc [ 'cali_stop_time' ] ,
-                                     freq = sample_size )
-        if len ( time_slots ) < 2 :
-            continue
-        for start_time , end_time in zip ( time_slots [ :-1 ] , time_slots [ 1 : ] ) :
-            mini_df = row.copy ( )
-            mini_df [ 'start_time_period' ] = start_time
-            mini_df [ 'end_time_period' ] = end_time
-            expanded_df = expanded_df.append ( mini_df )
+    if sample_size:
+        expanded_df = pd.DataFrame ( )
+        for indx , row in df.iterrows ( ) :
+            time_slots = pd.date_range ( row.loc [ 'cali_start_time' ] , row.loc [ 'cali_stop_time' ] ,
+                                         freq = sample_size )
+            if len ( time_slots ) < 2 :
+                continue
+            for start_time , end_time in zip ( time_slots [ :-1 ] , time_slots [ 1 : ] ) :
+                mini_df = row.copy ( )
+                mini_df [ 'start_time_period' ] = start_time
+                mini_df [ 'end_time_period' ] = end_time
+                expanded_df = expanded_df.append ( mini_df )
+    else:
+        expanded_df = df.copy()
+        expanded_df [ 'start_time_period' ] = expanded_df['cali_start_time']
+        expanded_df [ 'end_time_period' ] = expanded_df[ 'cali_stop_time' ]
     return expanded_df
 
 
@@ -1108,11 +1120,9 @@ def gen_daily_ds ( day_date ) :
     logger.debug ( f"Start generation of molecular dataset for {day_date.strftime ( '%Y-%m-%d' )}" )
     station = gs.Station ( stations_csv_path = 'stations.csv' , station_name = 'haifa' )
     # generate molecular dataset
-    mol_ds = generate_daily_molecular ( station , day_date , optim_size = optim_size )
+    mol_ds = generate_daily_molecular ( station , day_date ,
+                                        optim_size = optim_size,USE_KM_UNITS=USE_KM_UNITS )
 
-    # convert m to km
-    if USE_KM_UNITS :
-        mol_ds = convert_profiles_units ( mol_ds , units = [ '1/m' , '1/Km' ] , scale = 1e+3 )
 
     # save molecular dataset
     ncpaths = save_molecular_dataset ( station , mol_ds , save_mode = save_mode )
@@ -1220,11 +1230,7 @@ def main ( station_name = 'haifa' , start_date = datetime ( 2017 , 9 , 1 ) , end
         for day_date in valid_gdas_days :
             # Generate daily range corrected
             range_corr_ds = get_daily_range_corr ( station , day_date , height_units = 'Km' ,
-                                                   optim_size = True , verbose = False )
-
-            # Convert m to km
-            if USE_KM_UNITS :
-                range_corr_ds = convert_profiles_units ( range_corr_ds , units = [ 'm^2' , 'Km^2' ] , scale = 1e-6 )
+                                                   optim_size = True , verbose = False ,USE_KM_UNITS = USE_KM_UNITS)
 
             # Save lidar dataset
             lidar_paths = save_range_corr_dataset ( station , range_corr_ds , save_mode = 'both' )
@@ -1236,7 +1242,10 @@ def main ( station_name = 'haifa' , start_date = datetime ( 2017 , 9 , 1 ) , end
 
     if DO_DATASET :
         # Generate dataset for learning
-        df = create_dataset ( station_name = station_name , start_date = start_date , end_date = end_date )
+        #sample_size = '29.5min'
+        sample_size = None
+        df = create_dataset ( station_name = station_name , start_date = start_date ,
+                              end_date = end_date, sample_size = sample_size )
 
         # Convert m to km
         if USE_KM_UNITS :
