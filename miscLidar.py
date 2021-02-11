@@ -294,6 +294,7 @@ def generate_P(P0, c, A, dt, heights, sigma, beta, lidar_const=1, add_photon_noi
 # %%
 def calc_S(heights, P):
 	"""Calculate the Logaritmic range adjusted power S(r) = ln(r^2*P(r))"""
+	# TODO: return value after lan operation. chek where in the code this function were used to update as well!
 	rr = np.diag(np.power(heights, 2))
 	S = np.matmul(rr, P)
 	return S
@@ -302,14 +303,20 @@ def calc_S(heights, P):
 # %%
 def calc_extiction_klett(S, heights, sigma_0, ind_m, k=1):
 	"""
-	Calculate the inversion of the extinction coefficient using Klett method
+	Calculate the inversion of the extinction coefficient using Klett metho
+	:param S: Range corrected lidar signal a.k.a pr^2
+	:param heights: measurments heights (note that they should be relative to lidar height(ground) and not to sea level height)
+	:param sigma_0: initial solution (usually this should be molecular extiction)
+	:param ind_m: reference height index, usually this should be the middle bin between r_0 and r_1 (low and top heights of reference range)
+	:param k: set k=1
+	:return: extinction coefficient profile
 	"""
-	S_m = S[ind_m]
-	sigma_m = sigma_0[ind_m]
+	S_m = S[ind_m] + eps
+	sigma_m = sigma_0[ind_m] + eps
 
 	dr = heights[1] - heights[0]
 	exp_S = np.exp((S - S_m) / k)
-	denominator = (1 / (sigma_m) + (2 / k) * np.flip(np.cumsum(np.flip(exp_S, 0) * dr), 0))
+	denominator = (1 / (sigma_m) + (2 / k) * np.flip(np.cumsum(np.flip(exp_S, 0) * dr), 0)) #backward integration
 	sigma = exp_S / (denominator + eps)
 	return sigma
 
