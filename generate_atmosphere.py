@@ -94,17 +94,20 @@ class RadiosondeProfile(object):
 		:return: DataFrame of ['TEMPS','PRES','RELHS'] of radiosonde (or gdas) measurements,
 		interpolated according the height profile of the radiosonde file (1D grid in meters)
 		heights are relative to sea level
+		Temperature profiles is converted to Kelvin
 		"""
 
-		return pd.DataFrame(data={'TEMPS': self._temps, 'PRES': self._pressures,
+		return pd.DataFrame(data={'TEMPS': self.temp_kelvin(), 'PRES': self._pressures,
 		                          'RELHS': self._RelativeHumidity}, index = self._heights).astype('float64').fillna(0)
 
 	def get_df_sonde(self, heights):
 		"""
 		:param heights: profile with the min_height, top_height and resolution set by the user
 		:return: DataFrame of ['TEMPS','PRES','RELHS'] of radiosonde (or gdas) measurements interpolated according the input height
+		Temperature profiles is converted to Kelvin
 		"""
-		return pd.DataFrame( data= {'TEMPS': self.interpolateKmKelvin(heights),
+		return pd.DataFrame( data=
+		                     {'TEMPS': self.interpolateKmKelvin(heights),
 		                     'PRES': self.interpolateKMPres(heights),
 		                     'RELHS': self.interpolateKMRLH(heights)}, index = heights ).astype('float64').fillna(0)
 
