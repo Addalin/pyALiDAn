@@ -26,6 +26,7 @@ import xarray as xr
 import matplotlib.dates as mdates
 from pytictoc import TicToc
 from multiprocessing import Pool , cpu_count
+from tqdm import tqdm
 
 
 # %% General functions
@@ -109,17 +110,17 @@ def load_dataset ( ncpath ) :
 # %% Functions to handle TROPOS datasets (netcdf) files
 
 
-def get_daily_molecular_profiles ( station , day_date , lambda_nm = 532 , height_units = 'Km' ) :
+def get_daily_molecular_profiles ( station , day_date , lambda_nm = 532 , height_units = 'km' ) :
     """
     Generating daily molecular profile from gdas txt file
     :param station: gs.station() object of the lidar station
     :param gdas_txt_paths: paths to gdas txt files , containing table with the columns
     "PRES	HGHT	TEMP	UWND	VWND	WWND	RELH	TPOT	WDIR	WSPD"
     :param lambda_nm: wavelength [nm] e.g., for the green channel 532 [nm]
-    :param height_units: units of height grid in 'Km' (default) or 'm'
+    :param height_units: units of height grid in 'km' (default) or 'm'
     this parameter gives dr= heights[1]-heights[0] =~ 7.5e-3[km] -> the height resolution of pollyXT lidar)
     :return: Returns backscatter and extinction profiles as pandas-dataframes, according to Rayleigh scattering.
-    The resulted profile has a grid height above (in 'Km' or 'm' - according to input), above sea level. start at min_height, end at top_height and extrapolated to have h_bins.
+    The resulted profile has a grid height above (in 'km' or 'm' - according to input), above sea level. start at min_height, end at top_height and extrapolated to have h_bins.
     """
     logger = logging.getLogger ( )
 
@@ -142,7 +143,7 @@ def get_daily_molecular_profiles ( station , day_date , lambda_nm = 532 , height
     timestamps = [ get_gdas_timestamp ( station , path ) for path in gdas_txt_paths ]
 
     '''Setting height vector above sea level (for interpolation of radiosonde / gdas files).'''
-    if height_units == 'Km' :
+    if height_units == 'km' :
         scale = 1E-3
     elif height_units == 'm' :
         scale = 1
@@ -154,8 +155,8 @@ def get_daily_molecular_profiles ( station , day_date , lambda_nm = 532 , height
     # dr = heights[1]-heights[0]
     # print('h_bins=',heights.shape,' min_height=', min_height,' top_height=', top_height,' dr=',dr )
 
-    df_sigma = pd.DataFrame ( index = heights ).rename_axis ( 'Height[{}]'.format ( height_units ) )
-    df_beta = pd.DataFrame ( index = heights ).rename_axis ( 'Height[{}]'.format ( height_units ) )
+    df_sigma = pd.DataFrame ( index = heights ).rename_axis ( f'Height[{height_units}]' )
+    df_beta = pd.DataFrame ( index = heights ).rename_axis ( f'Height[{height_units}]' )
 
     for path , timestamp in zip ( gdas_txt_paths , timestamps ) :
         df_sonde = RadiosondeProfile ( path ).get_df_sonde ( heights )
@@ -407,14 +408,14 @@ def calc_beta_profile_df ( row , lambda_nm = 532.0 , ind_n = 'beta' ) :
 
 
 def generate_daily_molecular_chan ( station , day_date , lambda_nm , time_res = '30S' ,
-                                    height_units = 'Km' , optim_size = False , verbose = False ) :
+                                    height_units = 'km' , optim_size = False , verbose = False ) :
     """
 	Generating daily molecular profiles for a given channel's wavelength
 	:param station: gs.station() object of the lidar station
 	:param day_date: datetime.date object of the required date
 	:param lambda_nm: wavelength in [nm], e.g, for green lambda_nm = 532.0 [nm]
 	:param time_res: Output time resolution required. default is 30sec (according to time resolution of pollyXT measurements)
-	:param height_units:  Output units of height grid in 'Km' (default) or 'm'
+	:param height_units:  Output units of height grid in 'km' (default) or 'm'
 	:param optim_size: Boolean. False(default): the retrieved values are of type 'float64',
 	                            True: the retrieved values are of type 'float'.
 	:param verbose: Boolean. False(default). True: prints information regarding size optimization.
@@ -435,15 +436,15 @@ def generate_daily_molecular_chan ( station , day_date , lambda_nm , time_res = 
     interp_beta_df.columns.freq = None
 
     '''Calculate the molecular attenuated backscatter as :  beta_mol * exp(-2*tau_mol)'''
-    if height_units == 'Km' :
+    if height_units == 'km' :
         # converting height index to meters before tau calculations
         km_index = interp_sigma_df.index
         idx_name = km_index.name
-        meter_index = 1e+3 * km_index.rename ( idx_name.replace ( 'Km' , 'm' ) )
+        meter_index = 1e+3 * km_index.rename ( idx_name.replace ( 'km' , 'm' ) )
         interp_sigma_df.reset_index ( inplace = True , drop = True )
         interp_sigma_df.index = meter_index
     e_tau_df = interp_sigma_df.apply ( cal_e_tau_df , 0 , args = (station.altitude ,) , result_type = 'expand' )
-    if height_units == 'Km' :
+    if height_units == 'km' :
         # converting back height index to km before dataset creation
         interp_sigma_df.reset_index ( inplace = True , drop = True )
         interp_sigma_df.index = km_index
@@ -494,23 +495,23 @@ def generate_daily_molecular_chan ( station , day_date , lambda_nm , time_res = 
                           'info' : 'Molecular backscatter coefficient'}
     ds_chan.sigma.attrs = {'long_name' : r'$\sigma$' , 'units' : r'$1/m $' ,
                            'info' : 'Molecular attenuation coefficient'}
-    ds_chan.attbsc.attrs = {'long_name' : r'$\beta \cdot \exp(-2\tau)$' , 'units' : r'$1/m \cdot sr$' ,
+    ds_chan.attbsc.attrs = {'long_name' : r'$\beta$'+r'$\cdot$'+r'$\exp(-2\tau)$' , 'units' : r'$1/m$'+r'$\cdot$'+r'$sr$' ,
                             'info' : 'Molecular attenuated backscatter coefficient'}
     # set attributes of coordinates
-    ds_chan.Height.attrs = {'units' : '{}'.format ( height_units ) , 'info' : 'Measurements heights above sea level'}
+    ds_chan.Height.attrs = {'units' : fr'${height_units}$' , 'info' : 'Measurements heights above sea level'}
     ds_chan.Wavelength.attrs = {'long_name' : r'$\lambda$' , 'units' : r'$nm$'}
 
     return ds_chan
 
 
-def generate_daily_molecular ( station , day_date , time_res = '30S' , height_units = 'Km' ,
+def generate_daily_molecular ( station , day_date , time_res = '30S' , height_units = 'km' ,
                                optim_size = False , verbose = False, USE_KM_UNITS = True ) :
     """
 	Generating daily molecular profiles for all elastic channels (355,532,1064)
 	:param station: gs.station() object of the lidar station
 	:param day_date: datetime.date object of the required date
 	:param time_res: Output time resolution required. default is 30sec (according to time resolution of pollyXT measurements)
-	:param height_units:  Output units of height grid in 'Km' (default) or 'm'
+	:param height_units:  Output units of height grid in 'km' (default) or 'm'
 	:param optim_size: Boolean. False(default): the retrieved values are of type 'float64',
 	                            True: the retrieved values are of type 'float'.
 	:param verbose: Boolean. False(default). True: prints information regarding size optimization.
@@ -539,7 +540,7 @@ def generate_daily_molecular ( station , day_date , time_res = '30S' , height_un
                     'location' : station.name ,
                     'source_type' : 'gdas'}
     if USE_KM_UNITS :
-        mol_ds = convert_profiles_units ( mol_ds , units = [ '1/m' , '1/Km' ] , scale = 1e+3 )
+        mol_ds = convert_profiles_units ( mol_ds , units = [ '1/m' , '1/km' ] , scale = 1e+3 )
 
     return mol_ds
 
@@ -594,7 +595,7 @@ def save_molecular_dataset ( station , dataset , save_mode = 'sep' ) :
 # %% lidar preprocessing and dataset functions
 
 
-def get_daily_range_corr ( station , day_date , height_units = 'Km' ,
+def get_daily_range_corr ( station , day_date , height_units = 'km' ,
                            optim_size = False , verbose = False ,USE_KM_UNITS = True) :
     """
 	Retrieving daily range corrected lidar signal (pr^2) from attenuated_backscatter signals in three channels (355,532,1064).
@@ -602,7 +603,7 @@ def get_daily_range_corr ( station , day_date , height_units = 'Km' ,
     :param USE_KM_UNITS:
 	:param station: gs.station() object of the lidar station
 	:param day_date: datetime.date object of the required date
-	:param height_units:  Output units of height grid in 'Km' (default) or 'm'
+	:param height_units:  Output units of height grid in 'km' (default) or 'm'
     :param optim_size: Boolean. False(default): the retrieved values are of type 'float64',
 	                            True: the retrieved values are of type 'float'.
 	:param verbose: Boolean. False(default). True: prints information regarding size optimization.
@@ -656,11 +657,11 @@ def get_daily_range_corr ( station , day_date , height_units = 'Km' ,
                            'info' : 'Daily range corrected lidar signal' ,
                            'source_type' : 'att_bsc'}
     if USE_KM_UNITS :
-        range_corr_ds = convert_profiles_units ( range_corr_ds , units = [ 'm^2' , 'Km^2' ] , scale = 1e-6 )
+        range_corr_ds = convert_profiles_units ( range_corr_ds , units = [r'$m^2$' , r'$km^2$' ] , scale = 1e-6 )
     return range_corr_ds
 
 
-def get_range_corr_ds_chan ( darray , altitude , lambda_nm , height_units = 'Km' , optim_size = False ,
+def get_range_corr_ds_chan ( darray , altitude , lambda_nm , height_units = 'km' , optim_size = False ,
                              verbose = False ) :
     """
 	Retrieving a 6-hours range corrected lidar signal (pr^2) from attenuated_backscatter signals in three channels (355,532,1064).
@@ -668,7 +669,7 @@ def get_range_corr_ds_chan ( darray , altitude , lambda_nm , height_units = 'Km'
 	:param darray: is xarray.DataArray object, containing a 6-hours of attenuated_backscatter (loaded from TROPOS *att_bsc.nc)
 	:param altitude: altitude of the station [m]
 	:param lambda_nm: wavelength in [nm], e.g, for green lambda_nm = 532.0 [nm]
-	:param height_units:  Output units of height grid in 'Km' (default) or 'm'
+	:param height_units:  Output units of height grid in 'km' (default) or 'm'
 	:param optim_size: Boolean. False(default): the retrieved values are of type 'float64',
 	                            True: the retrieved values are of type 'float'.
 	:param verbose: Boolean. False(default). True: prints information regarding size optimization.
@@ -681,7 +682,7 @@ def get_range_corr_ds_chan ( darray , altitude , lambda_nm , height_units = 'Km'
     LC = darray.attrs [ 'Lidar_calibration_constant_used' ]
     times = pd.to_datetime (
         [ datetime.utcfromtimestamp ( np.round ( vtime ) ) for vtime in darray.time.values ] ).values
-    if height_units == 'Km' :
+    if height_units == 'km' :
         scale = 1e-3
     elif height_units == 'm' :
         scale = 1
@@ -713,11 +714,11 @@ def get_range_corr_ds_chan ( darray , altitude , lambda_nm , height_units = 'Km'
                   'Wavelength' : [ lambda_nm ]
                   }
     )
-    range_corr_ds_chan.range_corr.attrs = {'long_name' : r'$LC \beta \cdot \exp(-2\tau)$' ,
-                                           'units' : r'$photons \cdot m^2$' ,
+    range_corr_ds_chan.range_corr.attrs = {'long_name' : r'$LC$'+r'$\beta$'+r'$\cdot$'+r'$\exp(-2\tau)$' ,
+                                           'units' : r'$photons$'+r'$\cdot$'+r'$m^2$' ,
                                            'info' : 'Range corrected lidar signal from attenuated backscatter multiplied by LC'}
     # set attributes of coordinates
-    range_corr_ds_chan.Height.attrs = {'units' : '{}'.format ( '{}'.format ( height_units ) ) ,
+    range_corr_ds_chan.Height.attrs = {'units' : fr'${height_units}$' ,
                                        'info' : 'Measurements heights above sea level'}
     range_corr_ds_chan.Wavelength.attrs = {'long_name' : r'$\lambda$' , 'units' : r'$nm$'}
 
@@ -1071,8 +1072,8 @@ def create_dataset ( station_name = 'haifa' , start_date = datetime ( 2017 , 9 ,
 
     dates = pd.date_range ( start = start_date , end = end_date , freq = 'D' ).to_pydatetime ( ).tolist ( )
     full_df = pd.DataFrame ( )
-    for wavelength in wavelengths :
-        for day_date in dates :
+    for wavelength in tqdm(wavelengths) :
+        for day_date in tqdm(dates) :
 
             # Query the db for a specific day, wavelength and calibration method
             try :
@@ -1114,7 +1115,7 @@ def gen_daily_ds ( day_date ) :
 
     # TODO: Find a way to pass: optim_size, save_mode, USE_KM_UNITS
     #  as variables when running with multiprocessing.
-    optim_size = True
+    optim_size = False
     save_mode = 'both'
     USE_KM_UNITS = True
 
@@ -1130,13 +1131,13 @@ def gen_daily_ds ( day_date ) :
     logger.debug ( f"Done saving molecular datasets for {day_date.strftime ( '%Y-%m-%d' )}, to: {ncpaths}" )
 
 
-def convert_profiles_units ( dataset , units = [ '1/m' , '1/Km' ] , scale = 1e+3 ) :
+def convert_profiles_units ( dataset , units = [ r'$1/m$' , r'$1/km$' ] , scale = 1e+3 ) :
     """
     Converting units of or profiles in dataset,
     :param dataset: lidar dataset or molecular dataset
     :param units: list of strings: [str_source,str_dest], E.g.:
-                    For range corrected signal (pr^2) units=['m^2','Km^2']
-                    For beta (or sigma) converting units= ['1/m','1/Km']
+                    For range corrected signal (pr^2) units=['m^2','km^2']
+                    For beta (or sigma) converting units= ['1/m','1/km']
     :param scale: float, the scale to use for conversion. E.g.:
                     For range corrected signal, converting distance units or r^2: scale = 10^-6
                     For beta (or sigma), converting the distance units of 1/m: scale = 10^3
@@ -1164,8 +1165,8 @@ def main ( station_name = 'haifa' , start_date = datetime ( 2017 , 9 , 1 ) , end
     logging.getLogger ( 'PIL' ).setLevel ( logging.ERROR )  # Fix annoying PIL logs
     logger = create_and_configer_logger ( 'preprocessing_log.log' , level = logging.INFO)
     CONV_GDAS = False
-    GEN_MOL_DS = False
-    GEN_LIDAR_DS = False
+    GEN_MOL_DS = True
+    GEN_LIDAR_DS = True
     DO_DATASET = True
     USE_KM_UNITS = True
 
@@ -1184,8 +1185,9 @@ def main ( station_name = 'haifa' , start_date = datetime ( 2017 , 9 , 1 ) , end
 
     # get all days having a converted (to txt) gdas files in the required period
     if (GEN_MOL_DS or GEN_LIDAR_DS) and not gdas_paths :
+        logger.info('\n Get all days in the required period that have a converted gdas file')
         dates = pd.date_range ( start = start_date , end = end_date , freq = 'D' ).to_pydatetime ( ).tolist ( )
-        for day in dates :
+        for day in tqdm(dates) :
             _ , curpath = get_daily_gdas_paths ( station , day , f_type = 'txt' )
             if curpath :
                 gdas_paths.extend ( curpath )
@@ -1216,6 +1218,9 @@ def main ( station_name = 'haifa' , start_date = datetime ( 2017 , 9 , 1 ) , end
         logger.debug ( f"Existing days of 'attbsc' profiles: {mol_days}" )
 '''
         # Generate and save molecular dataset for each valid day in valid_gdas_days :
+        logger.info (
+            f"\n Start generating molecular datasets for period [{start_date.strftime ( '%Y-%m-%d' )},{end_date.strftime ( '%Y-%m-%d' )}]" )
+
         len_mol_days = len ( valid_gdas_days )
         num_processes = np.min ( (cpu_count ( ) - 1 , len_mol_days) )
         chunksize = np.ceil ( np.float ( len_mol_days ) / num_processes ).astype ( int )
@@ -1228,10 +1233,13 @@ def main ( station_name = 'haifa' , start_date = datetime ( 2017 , 9 , 1 ) , end
     ''' Generate lidar datasets for required period'''
     if GEN_LIDAR_DS :
         lidarpaths = [ ]
-        for day_date in valid_gdas_days :
+        logger.info (
+            f"\n Start generating lidar datasets for period [{start_date.strftime ( '%Y-%m-%d' )},{end_date.strftime ( '%Y-%m-%d' )}]" )
+
+        for day_date in tqdm(valid_gdas_days) :
             # Generate daily range corrected
-            range_corr_ds = get_daily_range_corr ( station , day_date , height_units = 'Km' ,
-                                                   optim_size = True , verbose = False ,USE_KM_UNITS = USE_KM_UNITS)
+            range_corr_ds = get_daily_range_corr ( station , day_date , height_units = 'km' ,
+                                                   optim_size = False , verbose = False ,USE_KM_UNITS = USE_KM_UNITS)
 
             # Save lidar dataset
             lidar_paths = save_range_corr_dataset ( station , range_corr_ds , save_mode = 'both' )
