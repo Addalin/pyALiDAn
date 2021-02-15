@@ -26,7 +26,7 @@ def create_and_configer_logger(log_name='log_file.log', level = logging.DEBUG):
     logging.basicConfig(
         filename=log_name,
         level=level,
-        format='[%(asctime)s] {%(pathname)s:%(lineno)d} %(levelname)s - %(message)s',
+        format='\n'+'[%(asctime)s - %(levelname)s] {%(pathname)s:%(lineno)d} -'+'\n'+' %(message)s'+'\n',
         datefmt = '%Y-%m-%d %H:%M:%S'
     )
 
