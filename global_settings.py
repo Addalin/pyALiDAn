@@ -71,6 +71,8 @@ class Station:
         self.molecular_dataset = station_df['molecular_dataset']
         self.lidar_dataset = station_df['lidar_dataset']
         self.db_file = station_df['db_file']
+        self.aeronet_folder = station_df['aeronet_folder']
+        self.aeronet_name = station_df['aeronet_name']
 
 
 
