@@ -413,17 +413,70 @@ def generate_poisson_signal(mu, n):
 	:return x: the poisson signal
 	:ref: https://people.smp.uq.edu.au/DirkKroese/mccourse.pdf, algorithm 3.4, p. 48
 	"""
+	if np.size(mu)>1:
+		if n == 1 :
+			n = mu.shape[0]
+			lambdav = mu
+		elif n==mu.shape[0]:
+			lambdav = mu
+		elif n!=mu.shape[0]:
+			return None
+	else:
+		lambdav = mu*np.ones(n)
+
 	x = np.zeros(n)
 	for ii in range(n):
 		k = 1
-		a = 1
-		a = a * np.random.rand()
-		while a >= np.exp(-mu):
-			a = a * np.random.rand()
+		p = 1
+		p = p * np.random.rand()
+		while p >= np.exp(-lambdav[ii]):
+			p = p * np.random.rand()
 			k = k + 1
 		x[ii] = k - 1
 	return x
 
+def generate_poisson_signal_STEP(mu, n=1):
+	"""
+	Generates a random value from the (discrete) Poisson distribution with parameter mu.Adjusted for high values of mu.
+	Since e−λ deminishes to zero for high values of λ (mainly λ>500), then a STEP is required to be done for
+	every portion of 500 out of the input mean (mu) of the Poisson distribution.
+	:param mu: the parameter of Poisson distribution.
+				Here : x~Poiss(mu):  mu = E(x) = Var(x)
+	:param n: the number of randomized events / size of vector to return.
+	:return x: the poisson signal
+	:ref: (https://en.wikipedia.org/wiki/Poisson_distribution#Generating_Poisson-distributed_random_variables)
+	"""
+	lambda_STEP = 500
+	if np.size(mu)>1:
+		if n == 1 :
+			n = mu.shape[0]
+			lambdav = mu
+		elif n==mu.shape[0]:
+			lambdav = mu
+		elif n!=mu.shape[0]:
+			return None
+	else:
+		lambdav = mu*np.ones(n)
+
+	x = np.zeros(n)
+	for ii in range(n):
+		k = 0
+		p = 1
+		lambda_LEFT = lambdav[ii]
+		UPDATE_K = True
+		while UPDATE_K:
+			k +=1
+			p *= np.random.rand ( )
+			while (p<1 and lambda_LEFT>0):
+				if lambda_LEFT>lambda_STEP:
+					p *=np.exp(lambda_STEP)
+					lambda_LEFT -= lambda_STEP
+				else:
+					p *= np.exp ( lambda_LEFT )
+					lambda_LEFT = 0
+			UPDATE_K = (p > 1 )
+		x[ii] = k - 1
+	return x
 
 # %%
 def create_times_list(datatime_start, datatime_end, delta_time, type_time='seconds'):
@@ -463,3 +516,10 @@ if __name__ == '__main__':
 	W = 383.33
 	print('gauss curve:', calc_gauss_curve(t, A, H, t0, W))
 	print('This is miscellaneous functions file to Lidar')
+	mu = np.array([2,4,5])
+	print(np.shape(mu))
+	n=1
+	x = generate_poisson_signal_STEP (mu,n)
+	print(f'Generate Poiss with lambda={mu} is {x}, mean{np.mean(x)}')
+	x2 = generate_poisson_signal(mu, n)
+	print ( f'Generate Poiss with lambda={mu} is {x2}, mean{np.mean(x2)}' )
