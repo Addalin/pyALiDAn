@@ -57,3 +57,6 @@ def write_row_to_csv(csv_path, msg):
         writer.writerow(msg)
     logger = logging.getLogger()
     logger.debug(f"Wrote to tracker{csv_path} message - {msg}")
+
+
+

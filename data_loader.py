@@ -463,10 +463,8 @@ def get_model_dirs(run_name, model_n, s_model):
     main_dir = os.path.join(os.getcwd(), "cnn_models", model_dir, submodel_dir, run_name)
     checkpoints_dir = os.path.join(main_dir, "checkpoints")
     run_dir = os.path.join(main_dir, "run")
-    if not os.path.isdir(checkpoints_dir):
-        os.makedirs(checkpoints_dir)
-    if not os.path.isdir(run_dir):
-        os.makedirs(run_dir)
+    os.makedirs(checkpoints_dir, exist_ok=True)
+    os.makedirs(run_dir, exist_ok=True)
     return {'main': main_dir, 'checkpoints': checkpoints_dir, 'run': run_dir}
 
 
@@ -474,18 +472,18 @@ def main(station_name='haifa', start_date=datetime(2017, 9, 1), end_date=datetim
          run_params={'model_n': 0, 's_model': 0, 'hidden_sizes': [16, 32, 8],
                      'powers': None, 'loss_type': 'MSELoss', 'lr': 1e-3, 'batch_size': 4,
                      'Y_features': ['LC', 'r0', 'r1'], 'wavelengths': [355, 532, 1064]}):
-    # logger = create_and_configer_logger ( 'data_loader.log' ) #TODO: Why this is causing the program to fall?
-
+    logger = create_and_configer_logger('data_loader.log')  # TODO: Why this is causing the program to fall?
+    logger.debug('Hello')
     # device - cpu or gpu?
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
     print(f"Using device: {device}")
 
     # Step 1. Load Dataset
-    csv_path = f"dataset_{station_name}_{start_date.strftime('%Y-%m-%d')}_{end_date.strftime('%Y-%m-%d')}_on_D.csv"
+    csv_path = f"dataset_{station_name}_{start_date.strftime('%Y-%m-%d')}_{end_date.strftime('%Y-%m-%d')}.csv"
     powers = run_params['powers']
     # TODO: add option - y = {bin(r0),bin(r1)}
-    lidar_transforms = torchvision.transforms.Compose([PowTransform(powers), ToTensor()]) if powers \
-        else torchvision.transforms.Compose([ToTensor()])
+    transformations_list = [PowTransform(powers), ToTensor()] if powers else [ToTensor()]
+    lidar_transforms = torchvision.transforms.Compose(transformations_list)
     dataset = lidarDataSet(csv_path, lidar_transforms, top_height=15.3, Y_features=run_params['Y_features'])
     train_set, val_set, _ = dataset.get_splits(n_test=0.2, n_val=0.2)
 
@@ -519,7 +517,7 @@ def main(station_name='haifa', start_date=datetime(2017, 9, 1), end_date=datetim
     model = DefaultCNN(in_channels=in_channels, output_size=output_size, hidden_sizes=hidden_sizes).to(device)
     numParams = 0
     for parameter in model.parameters():
-        if (parameter.requires_grad):
+        if parameter.requires_grad:
             numParams += parameter.numel()
     print(f"Number of parameters in model: {numParams}")
 
