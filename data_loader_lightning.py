@@ -3,12 +3,14 @@ import warnings
 from data_modules.lidar_data_module import lidarDataSet, MyDataModule
 from models.defaultCNN import DefaultCNN
 from utils_.custom_operations import PowTransform, LidarToTensor
+from ray.tune.integration.pytorch_lightning import TuneReportCallback
 
 warnings.filterwarnings("ignore")
 import pandas as pd
 import os
 from datetime import datetime, time
 import numpy as np
+from ray import tune
 
 import torch, torchvision
 import torch.utils.data
@@ -163,29 +165,14 @@ def get_model_dirs(run_name, model_n, s_model):
     return {'main': main_dir, 'checkpoints': checkpoints_dir, 'run': run_dir}
 
 
-def main(station_name='haifa', start_date=datetime(2017, 9, 1), end_date=datetime(2017, 9, 2),
-         run_params={'model_n': 0, 's_model': 0, 'hidden_sizes': [16, 32, 8],
-                     'powers': None, 'loss_type': 'MSELoss', 'lr': 1e-3, 'batch_size': 4,
-                     'Y_features': ['LC', 'r0', 'r1'], 'wavelengths': [355, 532, 1064]}):
+def main(config, station_name, start_date, end_date):
     # logger = create_and_configer_logger('data_loader.log')  # TODO: Why this is causing the program to fall?
     # logger.debug('Hello')
     # device - cpu or gpu?
     # device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
     # print(f"Using device: {device}")
 
-
-    # Hyper parameters
-    model_n = run_params['model']
-    s_model = run_params['s_model']
-    in_channels = 2
-    output_size = len(run_params['Y_features'])
-    hidden_sizes = run_params['hidden_sizes']
-    batch_size = run_params['batch_size']
-    n_iters = run_params['n_iters']
-    loss_type = run_params['loss_type']
-
     # epochs = int(round(n_iters / (len(train_set) / batch_size)))
-    learning_rate = run_params['lr']
 
     # print(f"Start train model. Hidden size:{hidden_sizes}, batch_size:{batch_size}, n_iters:{n_iters}, epochs:{epochs}")
     # use_pow = 'use_' if powers else 'no_'
@@ -199,15 +186,21 @@ def main(station_name='haifa', start_date=datetime(2017, 9, 1), end_date=datetim
     # with open(params_fname, 'w+') as f:
     #     json.dump(run_params, f)
 
-    model = DefaultCNN(in_channels=in_channels,
-                       output_size=output_size,
-                       hidden_sizes=hidden_sizes,
-                       loss_type=loss_type)
+    # Hyper parameters
+    in_channels = 2
+    output_size = len(config['Y_features'])
 
-    powers = run_params['powers']
-    Y_features = run_params['Y_features']
-    lidar_dm = MyDataModule(station_name, start_date, end_date, powers, Y_features, batch_size)
-    trainer = Trainer()
+    model = DefaultCNN(in_channels=in_channels, output_size=output_size,
+                       hidden_sizes=config['hidden_sizes'], loss_type=config['loss_type'])
+
+    lidar_dm = MyDataModule(station_name=station_name, start_date=start_date, end_date=end_date,
+                            powers=config['powers'], Y_features=config['Y_features'], batch_size=config['batch_size'])
+
+    metrics = {"loss": "ptl/val_loss"}
+    callbacks = [TuneReportCallback(metrics, on="validation_end")]
+
+    trainer = Trainer(max_epochs=1, callbacks=callbacks)
+    # trainer = Trainer(max_epochs=1)
     trainer.fit(model, lidar_dm)
 
     # writer = SummaryWriter(wdir['run'])
@@ -301,24 +294,49 @@ if __name__ == '__main__':
     start_date = datetime(2017, 9, 1)
     end_date = datetime(2017, 10, 31)
 
+    # Defining a search space! # TODO replace choice with grid_search if want all possible combinations
+    run_params = {
+        "learning_rates": tune.choice([1e-3, 0.5 * 1e-3, 1e-4]),
+        "batch_size": tune.choice([8]),
+        "wavelengths": tune.choice([355, 532, 1064]),
+        "hidden_sizes": tune.choice([[16, 32, 8]]),
+        # TODO: add option - hidden_sizes = [ 8, 16, 32], [16, 32, 8], [ 64, 32, 16]
+        "loss_type": tune.choice(['MSELoss', 'MAELoss']),  # ['MARELoss']
+        # "Y_features": tune.choice([['r0', 'r1'], ['r0', 'r1', 'LC'], ['r0', 'r1', 'dr'], ['r0', 'r1', 'dr', 'LC'], ['LC']]), # TODO with dr
+        "Y_features": tune.choice([['r0', 'r1'], ['r0', 'r1', 'LC'], ['LC']]),
+        "powers": tune.grid_search([None, {'range_corr': 0.5, 'attbsc': 0.5, 'LC': 0.5,
+                                           'LC_std': 0.5, 'r0': 1, 'r1': 1, 'dr': 1}])
+    }
 
-    learning_rates = [1e-3, 0.5 * 1e-3, 1e-4]
-    batch_sizes = [8]
-    n_iters = 6000
-    Y_features = [['r0', 'r1'], ['r0', 'r1', 'LC'], ['r0', 'r1', 'dr'], ['r0', 'r1', 'dr', 'LC'], ['LC']]
-    powers = [None, {'range_corr': 0.5, 'attbsc': 0.5, 'LC': 0.5,
-                     'LC_std': 0.5, 'r0': 1, 'r1': 1, 'dr': 1}]
-    wavelengths = [355, 532, 1064]
-    loss_types = ['MSELoss', 'MAELoss']  # ['MARELoss']
-    hidden_sizes = [16, 32, 8]  # TODO: add option - hidden_sizes = [ 8, 16, 32], [16, 32, 8], [ 64, 32, 16]
-    model_n = 1
-    for loss_type in loss_types:
-        for s_model, yf in enumerate(Y_features):
-            for lr in learning_rates:
-                for pow in powers:
-                    for batch_size in batch_sizes:
-                        run_params = {'model': model_n, 's_model': s_model, 'hidden_sizes': hidden_sizes,
-                                      'loss_type': loss_type,
-                                      'powers': pow, 'Y_features': yf, 'wavelengths': wavelengths,
-                                      'lr': lr, 'batch_size': batch_size, 'n_iters': n_iters}
-                        main(station_name, start_date, end_date, run_params)
+    analysis = tune.run(
+        tune.with_parameters(main, station_name=station_name, start_date=start_date, end_date=end_date),
+        config=run_params,
+        metric="loss",
+        mode="min",
+        resources_per_trial={"cpu": 6, "gpu": 0})
+
+    print(f"best_trial {analysis.best_trial}")
+    print(f"best_config {analysis.best_config}")
+    print(f"best_logdir {analysis.best_logdir}")
+    print(f"best_checkpoint {analysis.best_checkpoint}")
+    print(f"best_result {analysis.best_result}")
+
+    DEBUG = False
+    if DEBUG:
+        run_param = {
+            "Y_features": [
+                "r0",
+                "r1",
+            ],
+            "batch_size": 8,
+            "hidden_sizes": [
+                16,
+                32,
+                8
+            ],
+            "learning_rates": 0.0005,
+            "loss_type": "MSELoss",
+            "powers": None,
+            "wavelengths": 532
+        }
+        main(config=run_param, station_name=station_name, start_date=start_date, end_date=end_date)

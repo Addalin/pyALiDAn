@@ -109,7 +109,7 @@ class MyDataModule(LightningDataModule):
 
     def __init__(self, station_name, start_date, end_date, powers, Y_features, batch_size):
         super().__init__()
-        self.csv_path = f"dataset_{station_name}_{start_date.strftime('%Y-%m-%d')}_{end_date.strftime('%Y-%m-%d')}_shubi_mini.csv"
+        self.csv_path = f"/home/shubi/PycharmProjects/learning_lidar/dataset_{station_name}_{start_date.strftime('%Y-%m-%d')}_{end_date.strftime('%Y-%m-%d')}_shubi_mini.csv"
         self.powers = powers
         self.Y_features = Y_features
         self.batch_size = batch_size
@@ -130,11 +130,11 @@ class MyDataModule(LightningDataModule):
 
     def train_dataloader(self):
         # transforms = ...
-        return DataLoader(self.train, batch_size=self.batch_size, shuffle=True, num_workers=7)
+        return DataLoader(self.train, batch_size=self.batch_size, shuffle=True, num_workers=0)
 
     def val_dataloader(self):
         # transforms = ...
-        return DataLoader(self.val, batch_size=self.batch_size, shuffle=False, num_workers=7)
+        return DataLoader(self.val, batch_size=self.batch_size, shuffle=False, num_workers=0)
 
     def test_dataloader(self):
         # transforms = ...

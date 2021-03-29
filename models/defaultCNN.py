@@ -1,3 +1,4 @@
+import torch
 from torch.nn import functional as F
 from torch import nn
 from pytorch_lightning.core.lightning import LightningModule
@@ -70,7 +71,21 @@ class DefaultCNN(LightningModule):
         y = batch['y']
         y_pred = self(x)
         loss = self.criterion(y, y_pred)
+        self.log("ptl/train_loss", loss)
         return loss
+
+    def validation_step(self, batch, batch_idx):
+        x = batch['x']
+        y = batch['y']
+        y_pred = self(x)
+        loss = self.criterion(y, y_pred)
+        self.log("ptl/val_loss", loss)
+        return {"val_loss": loss}
+
+    def validation_epoch_end(self, outputs):
+        avg_loss = torch.stack(
+            [x["val_loss"] for x in outputs]).mean()
+        self.log("ptl/val_loss", avg_loss)
 
     def configure_optimizers(self):
         return Adam(self.parameters(), lr=self.lr)
