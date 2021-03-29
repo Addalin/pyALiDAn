@@ -204,8 +204,8 @@ def main(station_name='haifa', start_date=datetime(2017, 9, 1), end_date=datetim
                        hidden_sizes=hidden_sizes,
                        loss_type=loss_type)
 
-    print(f"Number of parameters in model: {model.get_num_params()}")
-
+    powers = run_params['powers']
+    Y_features = run_params['Y_features']
     lidar_dm = MyDataModule(station_name, start_date, end_date, powers, Y_features, batch_size)
     trainer = Trainer()
     trainer.fit(model, lidar_dm)
@@ -300,6 +300,8 @@ if __name__ == '__main__':
     station_name = 'haifa'
     start_date = datetime(2017, 9, 1)
     end_date = datetime(2017, 10, 31)
+
+
     learning_rates = [1e-3, 0.5 * 1e-3, 1e-4]
     batch_sizes = [8]
     n_iters = 6000

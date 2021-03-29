@@ -55,7 +55,7 @@ class DefaultCNN(LightningModule):
     def forward(self, x):
         batch_size, channels, width, height = x.size()
         # conv layers
-        x = self.conv_layer(x)
+        x = self.conv_layer(x.float()) # TODO show adi addition of .float
 
         # flatten
         x = x.view(batch_size, -1)
@@ -75,9 +75,3 @@ class DefaultCNN(LightningModule):
     def configure_optimizers(self):
         return Adam(self.parameters(), lr=self.lr)
 
-    def get_num_params(self):
-        numParams = 0
-        for parameter in self.parameters():
-            if parameter.requires_grad:
-                numParams += parameter.numel()
-        return numParams
