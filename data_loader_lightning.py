@@ -168,123 +168,23 @@ def get_model_dirs(run_name, model_n, s_model):
 
 
 def main(config, consts):
-    # logger = create_and_configer_logger('data_loader.log')  # TODO: Why this is causing the program to fall?
-    # logger.debug('Hello')
-    # device - cpu or gpu?
-    # device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
-    # print(f"Using device: {device}")
 
-    # epochs = int(round(n_iters / (len(train_set) / batch_size)))
-
-    # print(f"Start train model. Hidden size:{hidden_sizes}, batch_size:{batch_size}, n_iters:{n_iters}, epochs:{epochs}")
-    # use_pow = 'use_' if powers else 'no_'
-    # run_name = f"{datetime.now().strftime('%Y_%m_%d_%H_%M')}_v{model_n}.{s_model}.{use_pow}pow_epochs_{epochs}_batch_size_{batch_size}_lr_{learning_rate}"
-    #
-    # Create model run dir and save run_params: # TODO: split part this to a function
-    # wdir = get_model_dirs(run_name, model_n, s_model)
-
-    # params_fname = os.path.join(wdir['main'], 'run_params.json')
-    # run_params.update({'csv_path': os.path.join(os.getcwd(), csv_path), 'in_channels': in_channels})
-    # with open(params_fname, 'w+') as f:
-    #     json.dump(run_params, f)
-
+    # Define Model
     model = DefaultCNN(in_channels=consts['in_channels'], output_size=len(config['Y_features']),
-                       hidden_sizes=consts['hidden_sizes'], loss_type=config['loss_type'])
+                       hidden_sizes=consts['hidden_sizes'], loss_type=config['loss_type'], learning_rate=config['lr'])
 
+    # Define Data
     lidar_dm = MyDataModule(station_name=consts['station_name'], start_date=consts['start_date'],
                             end_date=consts['end_date'], powers=config['powers'], Y_features=config['Y_features'],
                             batch_size=config['batch_size'])
 
+    # Define minimization parameter
     metrics = {"loss": f"{config['loss_type']}_val"}
     callbacks = [TuneReportCallback(metrics, on="validation_end")]
 
-    trainer = Trainer(max_epochs=consts['max_num_epochs'], callbacks=callbacks)
-    trainer.fit(model, lidar_dm)
-
-    # writer = SummaryWriter(wdir['run'])
-    # # Training loop
-    # best_loss = None
-    # best_epoch = None
-    # for epoch in range(1, epochs + 1):
-    #     model.train()  # Training mode
-    #     running_loss = 0.0
-    #     epoch_time = time.time()
-    #     for i_batch, sample_batched in enumerate(train_loader):
-    #         # get inputs of x,y & send to device
-    #         x = sample_batched['x'].to(device)
-    #         y = sample_batched['y'].to(device)
-    #
-    #         # forward + backward + optimize
-    #         y_pred = model(x)  # Forward
-    #         loss = criterion(y, y_pred)  # set loss calculation
-    #         optimizer.zero_grad()  # zeroing parameters gradient
-    #         loss.backward()  # backpropagation
-    #         optimizer.step()  # update parameters
-    #
-    #         # for statistics
-    #         global_iter = len(train_loader) * (epoch - 1) + i_batch
-    #         writer.add_scalar(f"{loss_type}/global_iter", loss, global_iter)
-    #         running_loss += loss.data.item()
-    #
-    #     # Normalizing loss by the total batches in train loader
-    #     running_loss /= len(train_loader)
-    #     writer.add_scalar(f"{loss_type}/running_loss", running_loss, epoch)
-    #
-    #     # Calculate statistics for current model
-    #     epoch_loss, feature_loss = update_stats(writer, model, [train_loader, val_loader], device, run_params,
-    #                                             criterion, epoch)
-    #
-    #     # Save best loss (and the epoch number) for train and validation
-    #     if best_loss is None:
-    #         best_loss = epoch_loss
-    #         best_epoch = {'train': epoch, 'val': epoch}
-    #         best_feture_loss = feature_loss
-    #         best_feature_epoch = {}
-    #         for mode in ['train', 'val']:
-    #             best_feature_epoch.update({mode: {}})
-    #             for feature in run_params['Y_features']:
-    #                 best_feature_epoch[mode].update({feature: epoch})
-    #     else:
-    #         for mode in ['train', 'val']:
-    #             if best_loss[mode] > epoch_loss[mode]:
-    #                 best_loss[mode] = epoch_loss[mode]
-    #                 best_epoch[mode] = epoch
-    #             for feature in run_params['Y_features']:
-    #                 if best_feture_loss[mode][feature] > feature_loss[mode][feature]:
-    #                     best_feture_loss[mode][feature] = feature_loss[mode][feature]
-    #                     best_feature_epoch[mode][feature] = epoch
-    #
-    #     epoch_time = time.time() - epoch_time
-    #
-    #     # log statistics
-    #     log = f"Epoch: {epoch} | Running {loss_type} Loss: {running_loss:.4f} |" \
-    #           f" Train {loss_type}: {epoch_loss['train']:.3f} | Val {loss_type}: {epoch_loss['val']:.3f} | " \
-    #           f" Epoch Time: {epoch_time:.2f} secs"
-    #     print(log)
-    #
-    #     # Save the model
-    #     state = {
-    #         'model_state_dict': model.state_dict(),
-    #         'optimizer_state_dict': optimizer.state_dict(),
-    #         'learning_rate': learning_rate,
-    #         'batch_size': batch_size,
-    #         'global_iter': global_iter,
-    #         'epoch': epoch,
-    #         'n_iters': n_iters,
-    #         'in_channels': in_channels,
-    #         'output_size': output_size
-    #     }
-    #
-    #     model_fname = os.path.join(wdir['checkpoints'], f"checkpoint_epoch_{epoch}-{epochs}.pth")
-    #     torch.save(state, model_fname)
-    #
-    #     print(f"Finished training epoch {epoch}, saved model to: {model_fname}")
-    # write_hparams(writer, run_params, run_name='hparams',
-    #               cur_loss={'loss': epoch_loss, 'epoch': epoch},
-    #               best_loss={'loss': best_loss, 'epoch': best_epoch},
-    #               cur_loss_feature={'loss': feature_loss, 'epoch': epoch},
-    #               best_loss_feature={'loss': best_feture_loss, 'epoch': best_feature_epoch})
-    # writer.flush()
+    # Setup the pytorchlighting trainer and run the model
+    trainer = Trainer(max_steps=consts['max_steps'], callbacks=callbacks)
+    trainer.fit(model, datamodule=lidar_dm)
 
 
 if __name__ == '__main__':
@@ -292,18 +192,18 @@ if __name__ == '__main__':
     if DEBUG:
         ray.init(local_mode=True)
 
-    constants = {
+    consts = {
         'station_name': 'haifa',
         'start_date': datetime(2017, 9, 1),
         'end_date': datetime(2017, 10, 31),
         "hidden_sizes": [16, 32, 8],
         'in_channels': 2,
-        'max_num_epochs': 2,
+        'max_steps': 30,
     }
 
     # Defining a search space TODO replace choice with grid_search if want all possible combinations
     hyper_params = {
-        "learning_rates": tune.choice([1e-3, 0.5 * 1e-3, 1e-4]),
+        "lr": tune.choice([1e-3, 0.5 * 1e-3, 1e-4]),
         "batch_size": tune.choice([8]),
         "wavelengths": tune.choice([355, 532, 1064]),
         # TODO: add option - hidden_sizes = [ 8, 16, 32], [16, 32, 8], [ 64, 32, 16]
@@ -313,9 +213,9 @@ if __name__ == '__main__':
         "powers": tune.grid_search([None, {'range_corr': 0.5, 'attbsc': 0.5, 'LC': 0.5,
                                            'LC_std': 0.5, 'r0': 1, 'r1': 1, 'dr': 1}])
     }
-
+    #
     analysis = tune.run(
-        tune.with_parameters(main, consts=constants),
+        tune.with_parameters(main, consts=consts),
         config=hyper_params,
         # name="cnn",
         local_dir="./results",
@@ -330,6 +230,16 @@ if __name__ == '__main__':
     print(f"best_checkpoint {analysis.best_checkpoint}")
     print(f"best_result {analysis.best_result}")
 
+    #
+    # PATH="results/_inner_2021-03-29_17-37-01/_inner_3917a_00000_0_Y_features=['LC'],batch_size=8,loss_type=MSELoss,lr=0.0005,powers=None,wavelengths=532_2021-03-29_17-37-01/lightning_logs/version_0/checkpoints/epoch=1-step=19.ckpt"
+    # model = DefaultCNN.load_from_checkpoint(PATH)
+    # trainer = Trainer()
+    # lidar_dm = MyDataModule(station_name=consts['station_name'], start_date=consts['start_date'],
+    #                         end_date=consts['end_date'], powers=None, Y_features=['LC'],
+    #                         batch_size=8)
+    # x=trainer.test(model, datamodule=lidar_dm)
+    # x=trainer.test(model, ckpt_path=PATH, test_dataloaders=[lidar_dm.train_dataloader(), lidar_dm.val_dataloader()])
+
     DEBUG_WITHOUT_RAY = False
     if DEBUG_WITHOUT_RAY:
         run_param = {
@@ -343,9 +253,9 @@ if __name__ == '__main__':
                 32,
                 8
             ],
-            "learning_rates": 0.0005,
+            "lr": 0.0005,
             "loss_type": "MSELoss",
             "powers": None,
             "wavelengths": 532
         }
-        main(config=run_param, consts=constants)
+        main(config=run_param, consts=consts)

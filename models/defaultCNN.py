@@ -9,8 +9,9 @@ from utils_.custom_losses import MARELoss
 
 class DefaultCNN(LightningModule):
 
-    def __init__(self, in_channels=2, output_size=3, hidden_sizes=[16, 32, 64], loss_type='MSELoss', learning_rate=1e-3):
+    def __init__(self, in_channels, output_size, hidden_sizes, loss_type, learning_rate):
         super().__init__()
+        self.save_hyperparameters()
         self.lr = learning_rate
 
         self.conv_layer = nn.Sequential(
