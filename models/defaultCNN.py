@@ -46,6 +46,7 @@ class DefaultCNN(LightningModule):
         )
 
         # Step 3. Instantiate Loss Class
+        self.loss_type = loss_type
         if loss_type == 'MSELoss':
             self.criterion = nn.MSELoss()
         elif loss_type == 'MAELoss':
@@ -71,7 +72,7 @@ class DefaultCNN(LightningModule):
         y = batch['y']
         y_pred = self(x)
         loss = self.criterion(y, y_pred)
-        self.log("ptl/train_loss", loss)
+        self.log(f"{self.loss_type}_train", loss)
         return loss
 
     def validation_step(self, batch, batch_idx):
@@ -79,13 +80,8 @@ class DefaultCNN(LightningModule):
         y = batch['y']
         y_pred = self(x)
         loss = self.criterion(y, y_pred)
-        self.log("ptl/val_loss", loss)
-        return {"val_loss": loss}
-
-    def validation_epoch_end(self, outputs):
-        avg_loss = torch.stack(
-            [x["val_loss"] for x in outputs]).mean()
-        self.log("ptl/val_loss", avg_loss)
+        self.log(f"{self.loss_type}_val", loss)
+        return loss
 
     def configure_optimizers(self):
         return Adam(self.parameters(), lr=self.lr)

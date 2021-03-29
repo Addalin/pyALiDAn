@@ -1,5 +1,7 @@
 import warnings
 
+import ray
+
 from data_modules.lidar_data_module import lidarDataSet, MyDataModule
 from models.defaultCNN import DefaultCNN
 from utils_.custom_operations import PowTransform, LidarToTensor
@@ -165,7 +167,7 @@ def get_model_dirs(run_name, model_n, s_model):
     return {'main': main_dir, 'checkpoints': checkpoints_dir, 'run': run_dir}
 
 
-def main(config, station_name, start_date, end_date):
+def main(config, consts):
     # logger = create_and_configer_logger('data_loader.log')  # TODO: Why this is causing the program to fall?
     # logger.debug('Hello')
     # device - cpu or gpu?
@@ -186,21 +188,17 @@ def main(config, station_name, start_date, end_date):
     # with open(params_fname, 'w+') as f:
     #     json.dump(run_params, f)
 
-    # Hyper parameters
-    in_channels = 2
-    output_size = len(config['Y_features'])
+    model = DefaultCNN(in_channels=consts['in_channels'], output_size=len(config['Y_features']),
+                       hidden_sizes=consts['hidden_sizes'], loss_type=config['loss_type'])
 
-    model = DefaultCNN(in_channels=in_channels, output_size=output_size,
-                       hidden_sizes=config['hidden_sizes'], loss_type=config['loss_type'])
+    lidar_dm = MyDataModule(station_name=consts['station_name'], start_date=consts['start_date'],
+                            end_date=consts['end_date'], powers=config['powers'], Y_features=config['Y_features'],
+                            batch_size=config['batch_size'])
 
-    lidar_dm = MyDataModule(station_name=station_name, start_date=start_date, end_date=end_date,
-                            powers=config['powers'], Y_features=config['Y_features'], batch_size=config['batch_size'])
-
-    metrics = {"loss": "ptl/val_loss"}
+    metrics = {"loss": f"{config['loss_type']}_val"}
     callbacks = [TuneReportCallback(metrics, on="validation_end")]
 
-    trainer = Trainer(max_epochs=1, callbacks=callbacks)
-    # trainer = Trainer(max_epochs=1)
+    trainer = Trainer(max_epochs=consts['max_num_epochs'], callbacks=callbacks)
     trainer.fit(model, lidar_dm)
 
     # writer = SummaryWriter(wdir['run'])
@@ -290,16 +288,24 @@ def main(config, station_name, start_date, end_date):
 
 
 if __name__ == '__main__':
-    station_name = 'haifa'
-    start_date = datetime(2017, 9, 1)
-    end_date = datetime(2017, 10, 31)
+    DEBUG = False
+    if DEBUG:
+        ray.init(local_mode=True)
 
-    # Defining a search space! # TODO replace choice with grid_search if want all possible combinations
-    run_params = {
+    constants = {
+        'station_name': 'haifa',
+        'start_date': datetime(2017, 9, 1),
+        'end_date': datetime(2017, 10, 31),
+        "hidden_sizes": [16, 32, 8],
+        'in_channels': 2,
+        'max_num_epochs': 2,
+    }
+
+    # Defining a search space TODO replace choice with grid_search if want all possible combinations
+    hyper_params = {
         "learning_rates": tune.choice([1e-3, 0.5 * 1e-3, 1e-4]),
         "batch_size": tune.choice([8]),
         "wavelengths": tune.choice([355, 532, 1064]),
-        "hidden_sizes": tune.choice([[16, 32, 8]]),
         # TODO: add option - hidden_sizes = [ 8, 16, 32], [16, 32, 8], [ 64, 32, 16]
         "loss_type": tune.choice(['MSELoss', 'MAELoss']),  # ['MARELoss']
         # "Y_features": tune.choice([['r0', 'r1'], ['r0', 'r1', 'LC'], ['r0', 'r1', 'dr'], ['r0', 'r1', 'dr', 'LC'], ['LC']]), # TODO with dr
@@ -309,8 +315,11 @@ if __name__ == '__main__':
     }
 
     analysis = tune.run(
-        tune.with_parameters(main, station_name=station_name, start_date=start_date, end_date=end_date),
-        config=run_params,
+        tune.with_parameters(main, consts=constants),
+        config=hyper_params,
+        # name="cnn",
+        local_dir="./results",
+        fail_fast=True,
         metric="loss",
         mode="min",
         resources_per_trial={"cpu": 6, "gpu": 0})
@@ -321,8 +330,8 @@ if __name__ == '__main__':
     print(f"best_checkpoint {analysis.best_checkpoint}")
     print(f"best_result {analysis.best_result}")
 
-    DEBUG = False
-    if DEBUG:
+    DEBUG_WITHOUT_RAY = False
+    if DEBUG_WITHOUT_RAY:
         run_param = {
             "Y_features": [
                 "r0",
@@ -339,4 +348,4 @@ if __name__ == '__main__':
             "powers": None,
             "wavelengths": 532
         }
-        main(config=run_param, station_name=station_name, start_date=start_date, end_date=end_date)
+        main(config=run_param, consts=constants)
