@@ -3,14 +3,9 @@ import pandas as pd
 import torch
 import torchvision
 from pytorch_lightning import LightningDataModule
-
-import preprocessing as prep
-
-from torch.nn import functional as F
-from torch import nn
-from pytorch_lightning.core.lightning import LightningModule
 from torch.utils.data import DataLoader, random_split
 
+import preprocessing as prep
 from utils_.custom_operations import PowTransform, LidarToTensor
 
 
@@ -107,12 +102,13 @@ class lidarDataSet(torch.utils.data.Dataset):
 
 class MyDataModule(LightningDataModule):
 
-    def __init__(self, station_name, start_date, end_date, powers, Y_features, batch_size):
+    def __init__(self, csv_path, powers, Y_features, batch_size):
         super().__init__()
-        self.csv_path = f"/home/shubi/PycharmProjects/learning_lidar/dataset_{station_name}_{start_date.strftime('%Y-%m-%d')}_{end_date.strftime('%Y-%m-%d')}_shubi_mini.csv"
+        self.csv_path = csv_path
         self.powers = powers
         self.Y_features = Y_features
         self.batch_size = batch_size
+
     def prepare_data(self):
         # called only on 1 GPU
         pass

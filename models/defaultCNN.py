@@ -1,7 +1,5 @@
-import torch
-from torch.nn import functional as F
-from torch import nn
 from pytorch_lightning.core.lightning import LightningModule
+from torch import nn
 from torch.optim import Adam
 
 from utils_.custom_losses import MARELoss

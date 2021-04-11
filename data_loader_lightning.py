@@ -9,7 +9,7 @@ from pytorch_lightning import Trainer, seed_everything
 from data_modules.lidar_data_module import MyDataModule
 from models.defaultCNN import DefaultCNN
 
-seed_everything(8318) # Note, for full deterministic result add deterministic=True to trainer
+seed_everything(8318)  # Note, for full deterministic result add deterministic=True to trainer
 
 
 def main(config, consts):
@@ -18,8 +18,9 @@ def main(config, consts):
                        hidden_sizes=consts['hidden_sizes'], loss_type=config['loss_type'], learning_rate=config['lr'])
 
     # Define Data
-    lidar_dm = MyDataModule(station_name=consts['station_name'], start_date=consts['start_date'],
-                            end_date=consts['end_date'], powers=config['powers'], Y_features=config['Y_features'],
+    csv_path = f"/home/shubi/PycharmProjects/learning_lidar/dataset_{consts['station_name']}_" \
+               f"{consts['start_date'].strftime('%Y-%m-%d')}_{consts['end_date'].strftime('%Y-%m-%d')}_shubi_mini.csv"
+    lidar_dm = MyDataModule(csv_path=csv_path, powers=config['powers'], Y_features=config['Y_features'],
                             batch_size=config['batch_size'])
 
     # Define minimization parameter
@@ -40,7 +41,7 @@ if __name__ == '__main__':
         'station_name': 'haifa',
         'start_date': datetime(2017, 9, 1),
         'end_date': datetime(2017, 10, 31),
-        "hidden_sizes": [16, 32, 8],   # TODO: add options of [ 8, 16, 32], [16, 32, 8], [ 64, 32, 16]
+        "hidden_sizes": [16, 32, 8],  # TODO: add options of [ 8, 16, 32], [16, 32, 8], [ 64, 32, 16]
         'in_channels': 2,
         'max_steps': 30,
     }
@@ -52,7 +53,8 @@ if __name__ == '__main__':
         "batch_size": tune.choice([8]),
         "wavelengths": tune.choice([355, 532, 1064]),
         "loss_type": tune.choice(['MSELoss', 'MAELoss']),  # ['MARELoss']
-        "Y_features": tune.choice([['r0', 'r1'], ['r0', 'r1', 'LC'], ['LC']]), # TODO with dr - ['r0', 'r1', 'dr'], ['r0', 'r1', 'dr', 'LC']
+        "Y_features": tune.choice([['r0', 'r1'], ['r0', 'r1', 'LC'], ['LC']]),
+        # TODO with dr - ['r0', 'r1', 'dr'], ['r0', 'r1', 'dr', 'LC']
         "powers": tune.grid_search([None,
                                     {'range_corr': 0.5, 'attbsc': 0.5, 'LC': 0.5,
                                      'LC_std': 0.5, 'r0': 1, 'r1': 1, 'dr': 1}])
