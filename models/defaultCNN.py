@@ -50,12 +50,12 @@ class DefaultCNN(LightningModule):
         elif loss_type == 'MAELoss':
             self.criterion = nn.L1Loss()
         elif loss_type == 'MARELoss':
-            self.criterion = MARELoss()  # MeanAbsoluteRelativeError() #MARELoss() ##
+            self.criterion = MARELoss()
 
     def forward(self, x):
         batch_size, channels, width, height = x.size()
         # conv layers
-        x = self.conv_layer(x.float())  # TODO show adi addition of .float
+        x = self.conv_layer(x.float())
 
         # flatten
         x = x.view(batch_size, -1)

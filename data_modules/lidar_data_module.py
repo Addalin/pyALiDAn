@@ -9,11 +9,10 @@ import preprocessing as prep
 from utils_.custom_operations import PowTransform, LidarToTensor
 
 
-class lidarDataSet(torch.utils.data.Dataset):
+class LidarDataSet(torch.utils.data.Dataset):
     """TODO"""
 
-    def __init__(self, csv_file, transform=None,
-                 top_height=15.0, Y_features=['LC', 'r0', 'r1'], wavelengths=[355, 532, 1064]):
+    def __init__(self, csv_file, transform, top_height, Y_features, wavelengths):
         """
         Args:
             csv_file (string): Path to the csv file of the database.
@@ -22,7 +21,7 @@ class lidarDataSet(torch.utils.data.Dataset):
         self.data = pd.read_csv(csv_file)
         self.key = ['idx', 'date', 'wavelength', 'cali_method', 'telescope', 'cali_start_time', 'cali_stop_time',
                     'start_time_period', 'end_time_period']
-        self.Y_features = Y_features  # [ 'LC' , 'r0' , 'r1' ]  # , 'LC_std'
+        self.Y_features = Y_features
         self.X_features = ['lidar_path', 'molecular_path']
         self.wavelengths = wavelengths  # TODO: make option to load data by desired wavelength/s
         self.profiles = ['range_corr', 'attbsc']
@@ -102,13 +101,15 @@ class lidarDataSet(torch.utils.data.Dataset):
 
 class LidarDataModule(LightningDataModule):
 
-    def __init__(self, csv_path, powers, Y_features, batch_size, num_workers):
+    def __init__(self, csv_path, powers, Y_features, batch_size, num_workers, val_length=0.2, test_length=0.2):
         super().__init__()
         self.csv_path = csv_path
         self.powers = powers
         self.Y_features = Y_features
         self.batch_size = batch_size
         self.num_workers = num_workers
+        self.val_length = val_length
+        self.test_length = test_length
 
     def prepare_data(self):
         # called only on 1 GPU
@@ -122,9 +123,9 @@ class LidarDataModule(LightningDataModule):
         transformations_list = [PowTransform(self.powers), LidarToTensor()] if self.powers else [LidarToTensor()]
         lidar_transforms = torchvision.transforms.Compose(transformations_list)
 
-        dataset = lidarDataSet(self.csv_path, lidar_transforms, top_height=15.3, Y_features=self.Y_features)
+        dataset = LidarDataSet(self.csv_path, transform=lidar_transforms, top_height=15.3, Y_features=self.Y_features)
 
-        self.train, self.val, self.test = dataset.get_splits(n_test=0.2, n_val=0.2)
+        self.train, self.val, self.test = dataset.get_splits(n_test=self.test_length, n_val=self.val_length)
 
     def train_dataloader(self):
         return DataLoader(self.train, batch_size=self.batch_size, shuffle=True, num_workers=self.num_workers)
@@ -133,4 +134,4 @@ class LidarDataModule(LightningDataModule):
         return DataLoader(self.val, batch_size=self.batch_size, shuffle=False, num_workers=self.num_workers)
 
     def test_dataloader(self):
-        return DataLoader(self.test, batch_size=64)
+        return DataLoader(self.test, batch_size=self.batch_size)

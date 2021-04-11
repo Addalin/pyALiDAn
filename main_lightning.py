@@ -1,3 +1,4 @@
+import os.path
 from datetime import datetime
 
 import ray
@@ -18,11 +19,8 @@ def main(config, consts):
                        hidden_sizes=consts['hidden_sizes'], loss_type=config['loss_type'], learning_rate=config['lr'])
 
     # Define Data
-    csv_path = f"/home/shubi/PycharmProjects/learning_lidar/dataset_{consts['station_name']}_" \
-               f"{consts['start_date'].strftime('%Y-%m-%d')}_{consts['end_date'].strftime('%Y-%m-%d')}_shubi_mini.csv"
-
-    lidar_dm = LidarDataModule(csv_path=csv_path, powers=config['powers'], Y_features=config['Y_features'],
-                            batch_size=config['batch_size'], num_workers=consts['num_workers'])
+    lidar_dm = LidarDataModule(csv_path=consts["csv_path"], powers=config['powers'], Y_features=config['Y_features'],
+                               batch_size=config['batch_size'], num_workers=consts['num_workers'])
 
     # Define minimization parameter
     metrics = {"loss": f"{config['loss_type']}_val"}
@@ -39,11 +37,19 @@ if __name__ == '__main__':
     if DEBUG:
         ray.init(local_mode=True)
 
-    # Constants - should correspond to data, dataloader and model
-    consts = {
+    data_params = {
+        'base_path': ".",
         'station_name': 'haifa',
         'start_date': datetime(2017, 9, 1),
         'end_date': datetime(2017, 10, 31),
+    }
+
+    csv_path = os.path.join(data_params['base_path'], f"dataset_{data_params['station_name']}_"
+                                                      f"{data_params['start_date'].strftime('%Y-%m-%d')}_"
+                                                      f"{data_params['end_date'].strftime('%Y-%m-%d')}_shubi_mini.csv")
+
+    # Constants - should correspond to data, dataloader and model
+    consts = {
         "hidden_sizes": [16, 32, 8],  # TODO: add options of [ 8, 16, 32], [16, 32, 8], [ 64, 32, 16]
         'in_channels': 2,
         'max_steps': 30,
@@ -55,10 +61,10 @@ if __name__ == '__main__':
     hyper_params = {
         "lr": tune.choice([1e-3, 0.5 * 1e-3, 1e-4]),
         "batch_size": tune.choice([8]),
-        "wavelengths": tune.grid_search([355, 532, 1064]), # TODO change to const - all wavelenghts
+        "wavelengths": tune.grid_search([355, 532, 1064]),  # TODO change to const - all wavelenghts
         "loss_type": tune.choice(['MSELoss', 'MAELoss']),  # ['MARELoss']
-        "Y_features": tune.choice([['LC'], ['r0', 'r1', 'LC'], ['r0', 'r1']]),
-        # TODO with dr - ['r0', 'r1', 'dr'], ['r0', 'r1', 'dr', 'LC']
+        "Y_features": tune.choice(
+            [['LC'], ['r0', 'r1', 'LC'], ['r0', 'r1'], ['r0', 'r1', 'dr'], ['r0', 'r1', 'dr', 'LC']]),
         "powers": tune.grid_search([None,
                                     {'range_corr': 0.5, 'attbsc': 0.5, 'LC': 0.5,
                                      'LC_std': 0.5, 'r0': 1, 'r1': 1, 'dr': 1}])
