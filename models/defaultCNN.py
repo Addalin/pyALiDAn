@@ -28,8 +28,7 @@ class DefaultCNN(LightningModule):
             nn.MaxPool2d(kernel_size=(4, 2), stride=(4, 2)),
 
             # Conv layer 2
-            nn.Conv2d(in_channels=hidden_sizes[1], out_channels=hidden_sizes[2], kernel_size=3,
-                      padding=1),
+            nn.Conv2d(in_channels=hidden_sizes[1], out_channels=hidden_sizes[2], kernel_size=3, padding=1),
             nn.BatchNorm2d(hidden_sizes[2]),
             nn.ReLU(inplace=True),
             nn.Dropout2d(p=0.15),

@@ -6,7 +6,7 @@ from ray.tune.integration.pytorch_lightning import TuneReportCallback
 
 from pytorch_lightning import Trainer, seed_everything
 
-from data_modules.lidar_data_module import MyDataModule
+from data_modules.lidar_data_module import LidarDataModule
 from models.defaultCNN import DefaultCNN
 
 seed_everything(8318)  # Note, for full deterministic result add deterministic=True to trainer
@@ -20,7 +20,8 @@ def main(config, consts):
     # Define Data
     csv_path = f"/home/shubi/PycharmProjects/learning_lidar/dataset_{consts['station_name']}_" \
                f"{consts['start_date'].strftime('%Y-%m-%d')}_{consts['end_date'].strftime('%Y-%m-%d')}_shubi_mini.csv"
-    lidar_dm = MyDataModule(csv_path=csv_path, powers=config['powers'], Y_features=config['Y_features'],
+
+    lidar_dm = LidarDataModule(csv_path=csv_path, powers=config['powers'], Y_features=config['Y_features'],
                             batch_size=config['batch_size'])
 
     # Define minimization parameter
@@ -33,10 +34,12 @@ def main(config, consts):
 
 
 if __name__ == '__main__':
+    # Debug flag to enable debugging
     DEBUG = False
     if DEBUG:
         ray.init(local_mode=True)
 
+    # Constants - should correspond to data, dataloader and model
     consts = {
         'station_name': 'haifa',
         'start_date': datetime(2017, 9, 1),
@@ -51,7 +54,7 @@ if __name__ == '__main__':
     hyper_params = {
         "lr": tune.choice([1e-3, 0.5 * 1e-3, 1e-4]),
         "batch_size": tune.choice([8]),
-        "wavelengths": tune.choice([355, 532, 1064]),
+        "wavelengths": tune.grid_search([355, 532, 1064]),
         "loss_type": tune.choice(['MSELoss', 'MAELoss']),  # ['MARELoss']
         "Y_features": tune.choice([['r0', 'r1'], ['r0', 'r1', 'LC'], ['LC']]),
         # TODO with dr - ['r0', 'r1', 'dr'], ['r0', 'r1', 'dr', 'LC']

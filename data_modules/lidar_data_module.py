@@ -100,7 +100,7 @@ class lidarDataSet(torch.utils.data.Dataset):
         return key_val
 
 
-class MyDataModule(LightningDataModule):
+class LidarDataModule(LightningDataModule):
 
     def __init__(self, csv_path, powers, Y_features, batch_size):
         super().__init__()
