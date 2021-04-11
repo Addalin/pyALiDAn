@@ -12,7 +12,7 @@ from utils_.custom_operations import PowTransform, LidarToTensor
 class LidarDataSet(torch.utils.data.Dataset):
     """TODO"""
 
-    def __init__(self, csv_file, transform, top_height, Y_features, wavelengths):
+    def __init__(self, csv_file, transform, top_height, Y_features, wavelengths=None):
         """
         Args:
             csv_file (string): Path to the csv file of the database.
