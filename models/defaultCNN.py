@@ -55,7 +55,7 @@ class DefaultCNN(LightningModule):
     def forward(self, x):
         batch_size, channels, width, height = x.size()
         # conv layers
-        x = self.conv_layer(x.float()) # TODO show adi addition of .float
+        x = self.conv_layer(x.float())  # TODO show adi addition of .float
 
         # flatten
         x = x.view(batch_size, -1)
@@ -78,9 +78,11 @@ class DefaultCNN(LightningModule):
         y = batch['y']
         y_pred = self(x)
         loss = self.criterion(y, y_pred)
+        # for feature_num, feature in enumerate(features):
+        #     loss_mare = MARELoss(y, y_pred)
+        #     self.log(f"{"MARE_{feature_num}_val", loss_mare)
         self.log(f"{self.loss_type}_val", loss)
         return loss
 
     def configure_optimizers(self):
         return Adam(self.parameters(), lr=self.lr)
-

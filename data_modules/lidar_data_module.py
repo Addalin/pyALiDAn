@@ -120,11 +120,13 @@ class LidarDataModule(LightningDataModule):
         # TODO: add option - y = {bin(r0),bin(r1)}
         transformations_list = [PowTransform(self.powers), LidarToTensor()] if self.powers else [LidarToTensor()]
         lidar_transforms = torchvision.transforms.Compose(transformations_list)
+
         dataset = lidarDataSet(self.csv_path, lidar_transforms, top_height=15.3, Y_features=self.Y_features)
+
         self.train, self.val, self.test = dataset.get_splits(n_test=0.2, n_val=0.2)
 
     def train_dataloader(self):
-        return DataLoader(self.train, batch_size=self.batch_size, shuffle=True, num_workers=0)
+        return DataLoader(self.train, batch_size=self.batch_size, shuffle=True, num_workers=0) # TODO increase num works
 
     def val_dataloader(self):
         return DataLoader(self.val, batch_size=self.batch_size, shuffle=False, num_workers=0)

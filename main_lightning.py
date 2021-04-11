@@ -54,9 +54,9 @@ if __name__ == '__main__':
     hyper_params = {
         "lr": tune.choice([1e-3, 0.5 * 1e-3, 1e-4]),
         "batch_size": tune.choice([8]),
-        "wavelengths": tune.grid_search([355, 532, 1064]),
+        "wavelengths": tune.grid_search([355, 532, 1064]), # TODO change to const - all wavelenghts
         "loss_type": tune.choice(['MSELoss', 'MAELoss']),  # ['MARELoss']
-        "Y_features": tune.choice([['r0', 'r1'], ['r0', 'r1', 'LC'], ['LC']]),
+        "Y_features": tune.choice([['LC'], ['r0', 'r1', 'LC'], ['r0', 'r1']]),
         # TODO with dr - ['r0', 'r1', 'dr'], ['r0', 'r1', 'dr', 'LC']
         "powers": tune.grid_search([None,
                                     {'range_corr': 0.5, 'attbsc': 0.5, 'LC': 0.5,
@@ -67,8 +67,8 @@ if __name__ == '__main__':
         tune.with_parameters(main, consts=consts),
         config=hyper_params,
         # name="cnn",
-        local_dir="./results",
-        fail_fast=True,
+        local_dir="./results",  # where to save the results
+        fail_fast=True,  # if one run fails - stop all runs
         metric="loss",
         mode="min",
         resources_per_trial={"cpu": 6, "gpu": 0})
