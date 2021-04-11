@@ -258,3 +258,6 @@ cython_debug/
 /checkpoints/
 /runs/
 /runs_old_version/
+/lightning_logs/
+/results/
+/.ipynb_checkpoints/
