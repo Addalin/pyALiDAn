@@ -298,12 +298,11 @@ def create_calibration_ds ( df , station , source_file ) :
             coords = {
                 'Time' : times [ list ( df [ df [ 'wavelength' ] == wavelength ] [ 'LC' ].index.values ) ] ,
                 'Wavelength' : np.uint16 ( [ wavelength ] )} )
-        ds_cur.LC.attrs = {'units' : r'$photons$ ' + r'$sr$ ' + r'$km^3$' , 'long_name' : r'$LC_{TROPOS}$' ,
+        ds_cur.LC.attrs = {'units' : r'$\rm{photons\,sr\,km^3}$' , 'long_name' : r'$\rm{ LC_{TROPOS}}$' ,
                            'info' : 'LC - Lidar constant - by TROPOS'}
-        ds_cur.LCrecalc.attrs = {'units' : r'$photons$ ' + r'$sr$ ' + r'$km^3$' , 'long_name' : r'$LC_{recalc}$' ,
+        ds_cur.LCrecalc.attrs = {'units' : r'$\rm{photons\,sr\,km^3}$' , 'long_name' : r'$\rm{LC_{recalc}}$' ,
                                  'info' : 'LC - Lidar constant - recalculated'}
-        ds_cur.LCprecalc.attrs = {'units' : r'$photons$ ' + r'$sr$ ' + r'$km^3$' ,
-                                  'long_name' : r'$LC_{pos-recalc}$' ,
+        ds_cur.LCprecalc.attrs = {'units' : r'$\rm{photons\,sr\,km^3}$' , 'long_name' : r'$\rm{LC_{pos-recalc}}$' ,
                                   'info' : 'LC - Lidar constant - recalculated on non negative range corrected dignal'}
         ds_cur.r0.attrs = {'units' : r'$km$' , 'long_name' : r'$r_0$' , 'info' : 'Lower calibration height'}
         ds_cur.r1.attrs = {'units' : r'$km$' , 'long_name' : r'$r_1$' , 'info' : 'Upper calibration height'}
@@ -347,7 +346,6 @@ def _df_split ( tup_arg , **kwargs ) :
     split_ind , df_split , df_f_name = tup_arg
     return (split_ind , getattr ( df_split , df_f_name ) ( **kwargs ))
 
-
 def df_multi_core ( df , df_f_name , subset = None , njobs = -1 , **kwargs ) :
     # %% testing multiproccesing from: https://gist.github.com/morkrispil/3944242494e08de4643fd42a76cb37ee
     if njobs == -1 :
@@ -368,7 +366,6 @@ def df_multi_core ( df , df_f_name , subset = None , njobs = -1 , **kwargs ) :
     results = pd.concat ( [ split [ 1 ] for split in results ] )
     return results
 
-
 def get_sample_ds ( row ) :
     mol_path = row.molecular_path
     lidar_path = row.lidar_path
@@ -385,7 +382,6 @@ def get_sample_ds ( row ) :
                   for ds_i , profile in zip ( full_ds , profiles ) ]
     return sliced_ds , full_ds
 
-
 def make_interpolated_image ( nsamples , im ) :
     """Make an interpolated image from a random selection of pixels.
 
@@ -400,7 +396,6 @@ def make_interpolated_image ( nsamples , im ) :
     samples = im [ iy , ix ]
     int_im = griddata ( (iy , ix) , samples , (Y , X) , method = 'nearest' , fill_value = 0 )
     return int_im
-
 
 def get_aerBsc_profile_ds ( path , profile_df ) :
     cur_profile = prep.load_dataset ( path )
@@ -443,7 +438,6 @@ def get_aerBsc_profile_ds ( path , profile_df ) :
         ds_chans.append ( aerBsc_ds_chan )
     return xr.concat ( ds_chans , dim = 'Wavelength' )
 
-
 # %% MAIN
 def main ( station_name , start_date , end_date ) :
     logging.getLogger ( 'matplotlib' ).setLevel ( logging.ERROR )  # Fix annoying matplotlib logs
@@ -451,7 +445,7 @@ def main ( station_name , start_date , end_date ) :
     logger = create_and_configer_logger ( 'dataseting_log.log' , level = logging.INFO )
 
     # set operating mode
-    DO_DATASET = True
+    DO_DATASET = False
     EXTEND_DATASET = True
     DO_CALIB_DATASET = True
     USE_KM_UNITS = True
