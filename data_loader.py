@@ -18,25 +18,23 @@ from torch import functional as F
 from torch import Tensor
 from torch.nn.modules.loss import _Loss,_Reduction
 from torch.overrides import has_torch_function , handle_torch_function
-
-#from ignite.contrib.metrics.regression import MeanAbsoluteRelativeError #This method is not working yet
 torch.manual_seed(8318)
 import json
 
 class lidarDataSet ( torch.utils.data.Dataset ) :
     """TODO"""
 
-    def __init__ ( self , csv_file , transform = None,
+    def __init__ ( self , csv_path , transform = None,
                    top_height = 15.0 , Y_features = [ 'LC' , 'r0' , 'r1' ], wavelengths = [355,532,1064]) :
         """
         Args:
             csv_file (string): Path to the csv file of the database.
             :param transform:
         """
-        self.data = pd.read_csv ( csv_file )
+        self.data = pd.read_csv ( csv_path )
         self.key = ['idx', 'date' , 'wavelength' , 'cali_method' , 'telescope' , 'cali_start_time' , 'cali_stop_time' ,
                      'start_time_period' , 'end_time_period' ]
-        self.Y_features = Y_features # [ 'LC' , 'r0' , 'r1' ]  # , 'LC_std'
+        self.Y_features = Y_features
         self.X_features = [ 'lidar_path' , 'molecular_path' ]
         self.wavelengths = wavelengths  # TODO: make option to load data by desired wavelength/s
         self.profiles = [ 'range_corr' , 'attbsc' ]
@@ -57,6 +55,7 @@ class lidarDataSet ( torch.utils.data.Dataset ) :
             sample = self.transform(sample)
             wavelength = torch.from_numpy(np.asarray(wavelength))
         sample['wavelength']= wavelength
+        sample['idx'] = idx
         return sample
 
     def get_splits( self, n_test = 0.2, n_val = 0.2 ):
@@ -112,7 +111,6 @@ class lidarDataSet ( torch.utils.data.Dataset ) :
         row = self.data.loc [ idx , : ]
         key_val = row[self.key.index(key)]
         return key_val
-
 
 class PowTransform(object):
     def __init__( self,powers = {'range_corr' : 0.5 , 'attbsc' : 0.5 ,
@@ -288,7 +286,6 @@ def calculate_statistics(model,criterion, run_params, loader,device, Y_features=
                 feature_loss [ feature ] [ wav ] /= (len( loader ) - count_less[wav ])
         stats.update( {'FeatureLoss':feature_loss} )
     return  stats
-
 
 
 def mare_loss ( input , target , size_average = None , reduce = None , reduction = 'mean' ) :
@@ -482,10 +479,10 @@ def main( station_name = 'haifa' , start_date = datetime ( 2017 , 9 , 1 ) , end_
     # Step 1. Load Dataset
     csv_path = f"dataset_{station_name}_{start_date.strftime ( '%Y-%m-%d' )}_{end_date.strftime ( '%Y-%m-%d' )}_on_D.csv"
     powers = run_params['powers']
-    # TODO: add option - y = {bin(r0),bin(r1)}
     lidar_transforms = torchvision.transforms.Compose([PowTransform(powers),ToTensor()]) if powers\
                   else torchvision.transforms.Compose([ToTensor()])
-    dataset = lidarDataSet ( csv_path , lidar_transforms, top_height = 15.3, Y_features = run_params['Y_features'] )
+    dataset = lidarDataSet ( csv_path , lidar_transforms , top_height = 15.3 ,
+                             Y_features = run_params [ 'Y_features' ] )
     train_set , val_set, _ = dataset.get_splits(n_test = 0.2, n_val = 0.2)
 
     # Step 2. Create Model Class
@@ -548,6 +545,7 @@ def main( station_name = 'haifa' , start_date = datetime ( 2017 , 9 , 1 ) , end_
     for epoch in range(1, epochs+1):
         model.train()   # Training mode
         running_loss = 0.0
+        count_less = 0.0
         epoch_time = time.time ( )
         for i_batch , sample_batched in enumerate ( train_loader ) :
             # get inputs of x,y & send to device
@@ -555,8 +553,17 @@ def main( station_name = 'haifa' , start_date = datetime ( 2017 , 9 , 1 ) , end_
             y = sample_batched [ 'y' ].to ( device )
 
             # forward + backward + optimize
-            y_pred = model(x)           # Forward
-            loss = criterion(y,y_pred)  # set loss calculation
+            y_pred = model(x)   # Forward
+            try:
+                loss = criterion(y,y_pred)  # set loss calculation
+            except Exception as e:
+                print(f"Exception: {e}")
+                print (f"Current sample: \n x = {x}\n y = {y}")
+                print (f"Current prediction:\n y_pred = {y}")
+                print(f"Current indexes = {sample_batched [ 'idx' ]}")
+                print(f"Skipping the current batch")
+                count_less+=1
+                continue
             optimizer.zero_grad()       # zeroing parameters gradient
             loss.backward()             # backpropagation
             optimizer.step()            # update parameters
@@ -567,7 +574,7 @@ def main( station_name = 'haifa' , start_date = datetime ( 2017 , 9 , 1 ) , end_
             running_loss += loss.data.item()
 
         # Normalizing loss by the total batches in train loader
-        running_loss/=len(train_loader)
+        running_loss/= (len(train_loader)+count_less)
         writer.add_scalar ( f"{loss_type}/running_loss" , running_loss , epoch )
 
         # Calculate statistics for current model
@@ -641,13 +648,19 @@ if __name__ == '__main__' :
     powers = [None,{'range_corr' : 0.5 , 'attbsc' : 0.5 , 'LC' : 0.5 ,
                     'LC_std' : 0.5 , 'r0' : 1 , 'r1' : 1, 'dr' : 1}]
     wavelengths = [ 355 , 532 , 1064 ]
-    loss_types = ['MSELoss','MAELoss'] #['MARELoss']
+    loss_types = ['MAELoss']  # 'MARELoss' 'MSELoss'
     hidden_sizes = [ 16 , 32 , 8 ] # TODO: add option - hidden_sizes = [ 8, 16, 32], [16, 32, 8], [ 64, 32, 16]
     model_n = 1
     for loss_type in loss_types:
         for s_model,yf in enumerate(Y_features):
+            if s_model<3:
+                continue
             for lr in learning_rates:
+                if s_model ==3 and lr>1e-4:
+                    continue
                 for pow in powers :
+                    if s_model == 3 and pow==None:
+                        continue
                     for batch_size in batch_sizes:
                         run_params = {'model':model_n, 's_model':s_model ,'hidden_sizes':hidden_sizes,
                                       'loss_type' :loss_type,

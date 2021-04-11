@@ -445,7 +445,7 @@ def main ( station_name , start_date , end_date ) :
     logger = create_and_configer_logger ( 'dataseting_log.log' , level = logging.INFO )
 
     # set operating mode
-    DO_DATASET = True
+    DO_DATASET = False
     EXTEND_DATASET = True
     DO_CALIB_DATASET = True
     USE_KM_UNITS = True

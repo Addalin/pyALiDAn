@@ -73,6 +73,7 @@ class Station:
         self.db_file = station_df['db_file']
         self.aeronet_folder = station_df['aeronet_folder']
         self.aeronet_name = station_df['aeronet_name']
+        self.generation_folder = station_df['generation_folder']
 
 
 
@@ -84,9 +85,9 @@ class CHANNELS():
 
         ''' Class of pollyXT lidar channel numbers '''
         self.UV = 0  # UV channel - 355[nm]
-        self.UVs = 1  # UV polarized chnanel - 355 [nm]
-        self.V_1 = 2  # V_1 Ramman channel of Nitrogen N2 - 387[nm]
-        self.V_2 = 3  # V_2 Ramman channel of water H2O - 407[nm]
+        self.UVs = 1  # UV polarized channel - 355 [nm]
+        self.V_1 = 2  # V_1 Raman channel of Nitrogen N2 - 387[nm]
+        self.V_2 = 3  # V_2 Raman channel of water H2O - 407[nm]
         self.G = 4  # Green channel - 532[nm]
         self.Gs = 5  # Green channel - 532[nm]
         self.R = 6  # Red Raman channel - 607[nm]
@@ -94,7 +95,7 @@ class CHANNELS():
         self.GNF = 8  # Near Field green channel - 532[nm]
         self.RNF = 9  # Near Field red channel - 607[nm]
         self.UVNF = 10  # Near Field UV channel - 355[nm]
-        self.V1NF = 11  # Near field Ramman channel - 387[nm]
+        self.V1NF = 11  # Near field Raman channel - 387[nm]
 
     def get_elastic ( self ) :
         return [ self.UV , self.G , self.IR ]

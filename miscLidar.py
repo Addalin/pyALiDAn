@@ -395,8 +395,8 @@ def calc_gauss_curve(t, A, H, t0, W):
 	:param t: Time parameter (or x-axis)
 	:param A: Bias term (above y=0)
 	:param H: The height of Gaussian curve
-	:param t0: The center of the Gaussian lobe
-	:param W: The width of Gaussian lobe
+	:param t0: The center of the Gaussian lobe (mean)
+	:param W: The width of Gaussian (std)
 	:return: y = A+H*np.exp(-(t-t0)**2/(2*(W**2)))
 	"""
 	return A + H * np.exp(-(t - t0) ** 2 / (2 * (W ** 2)))
@@ -446,20 +446,17 @@ def generate_poisson_signal_STEP(mu, n=1):
 	:return x: the poisson signal
 	:ref: (https://en.wikipedia.org/wiki/Poisson_distribution#Generating_Poisson-distributed_random_variables)
 	"""
+	from tqdm import trange
 	lambda_STEP = 500
-	if np.size(mu)>1:
-		if n == 1 :
-			n = mu.shape[0]
-			lambdav = mu
-		elif n==mu.shape[0]:
-			lambdav = mu
-		elif n!=mu.shape[0]:
-			return None
+	if mu.size==1 and n>1:
+		lambdav= mu*np.ones(n)
 	else:
-		lambdav = mu*np.ones(n)
-
+		lambdav = mu
+	n = lambdav.size
+	orig_shape = lambdav.shape
+	lambdav = lambdav.reshape(n)
 	x = np.zeros(n)
-	for ii in range(n):
+	for ii in trange(n, desc='poisson STEP', leave=True):
 		k = 0
 		p = 1
 		lambda_LEFT = lambdav[ii]
@@ -476,6 +473,7 @@ def generate_poisson_signal_STEP(mu, n=1):
 					lambda_LEFT = 0
 			UPDATE_K = (p > 1 )
 		x[ii] = k - 1
+	x = x.reshape(orig_shape).astype(int)
 	return x
 
 # %%
