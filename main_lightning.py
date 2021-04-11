@@ -22,7 +22,7 @@ def main(config, consts):
                f"{consts['start_date'].strftime('%Y-%m-%d')}_{consts['end_date'].strftime('%Y-%m-%d')}_shubi_mini.csv"
 
     lidar_dm = LidarDataModule(csv_path=csv_path, powers=config['powers'], Y_features=config['Y_features'],
-                            batch_size=config['batch_size'])
+                            batch_size=config['batch_size'], num_workers=consts['num_workers'])
 
     # Define minimization parameter
     metrics = {"loss": f"{config['loss_type']}_val"}
@@ -47,6 +47,7 @@ if __name__ == '__main__':
         "hidden_sizes": [16, 32, 8],  # TODO: add options of [ 8, 16, 32], [16, 32, 8], [ 64, 32, 16]
         'in_channels': 2,
         'max_steps': 30,
+        'num_workers': 0,
     }
 
     # Defining a search space

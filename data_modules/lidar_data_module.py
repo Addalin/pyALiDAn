@@ -102,12 +102,13 @@ class lidarDataSet(torch.utils.data.Dataset):
 
 class LidarDataModule(LightningDataModule):
 
-    def __init__(self, csv_path, powers, Y_features, batch_size):
+    def __init__(self, csv_path, powers, Y_features, batch_size, num_workers):
         super().__init__()
         self.csv_path = csv_path
         self.powers = powers
         self.Y_features = Y_features
         self.batch_size = batch_size
+        self.num_workers = num_workers
 
     def prepare_data(self):
         # called only on 1 GPU
@@ -126,10 +127,10 @@ class LidarDataModule(LightningDataModule):
         self.train, self.val, self.test = dataset.get_splits(n_test=0.2, n_val=0.2)
 
     def train_dataloader(self):
-        return DataLoader(self.train, batch_size=self.batch_size, shuffle=True, num_workers=0) # TODO increase num works
+        return DataLoader(self.train, batch_size=self.batch_size, shuffle=True, num_workers=self.num_workers)
 
     def val_dataloader(self):
-        return DataLoader(self.val, batch_size=self.batch_size, shuffle=False, num_workers=0)
+        return DataLoader(self.val, batch_size=self.batch_size, shuffle=False, num_workers=self.num_workers)
 
     def test_dataloader(self):
         return DataLoader(self.test, batch_size=64)
