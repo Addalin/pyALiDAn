@@ -2,7 +2,7 @@
 import warnings
 
 warnings.filterwarnings ( "ignore" )
-import os
+import os,sys
 from time import time
 from datetime import datetime , timedelta  # time,
 import multiprocess as mp
@@ -31,7 +31,7 @@ from utils import create_and_configer_logger
 
 # %% Dataset creating helper functions
 def create_dataset ( station_name = 'haifa' , start_date = datetime ( 2017 , 9 , 1 ) ,
-                     end_date = datetime ( 2017 , 9 , 2 ) , sample_size = '29.5min' ) :
+                     end_date = datetime ( 2017 , 9 , 2 ) , sample_size = '29.5min' ,list_dates =[]) :
     """
     CHOOSE: telescope: far_range , METHOD: Klett_Method
     each sample will have 60 bins (aka 30 mins length)
@@ -71,7 +71,15 @@ def create_dataset ( station_name = 'haifa' , start_date = datetime ( 2017 , 9 ,
     wavelengths = gs.LAMBDA_nm ( ).get_elastic ( )
     cali_method = 'Klett_Method'
 
-    dates = pd.date_range ( start = start_date , end = end_date , freq = 'D' ).to_pydatetime ( ).tolist ( )
+    if len(list_dates)>0:
+        try:
+            dates = [datetime.combine(t.date(), t.time()) for t in list_dates]
+        except TypeError as e :
+            logger.exception ( f"{e}: `list_dates`, when not empty, is excepted to have datetime.datetime() objects.")
+            return
+    else:
+        dates = pd.date_range ( start = start_date , end = end_date , freq = 'D' ).to_pydatetime ( ).tolist ( )
+
     full_df = pd.DataFrame ( )
     for wavelength in tqdm ( wavelengths ) :
         for day_date in dates :  # tqdm(dates) #TODO: find a way to run inner loop of tqdm, in a convenient way
@@ -111,6 +119,7 @@ def create_dataset ( station_name = 'haifa' , start_date = datetime ( 2017 , 9 ,
     # convert height bins to int
     full_df [ 'bin_r0' ] = full_df [ 'bin_r0' ].astype ( np.uint16 )
     full_df [ 'bin_r1' ] = full_df [ 'bin_r1' ].astype ( np.uint16 )
+
     return full_df.reset_index ( drop = True )
 
 
@@ -150,11 +159,18 @@ def query_database ( query = "SELECT * FROM lidar_calibration_constant;" ,
         (cali_start_time BETWEEN '2017-09-01' AND '2017-09-02');
     "
     """
+    # logger = logging.getLogger ( )
+
     # Connect to the db and query it directly into pandas df.
+    #try:
     with sqlite3.connect ( database_path ) as c :
         # Query to df
         # optionally parse 'id' as index column and 'cali_start_time', 'cali_stop_time' as dates
         df = pd.read_sql ( sql = query , con = c , parse_dates = [ 'cali_start_time' , 'cali_stop_time' ] )
+    #except sqlite3.OperationalError as e:
+    #    logger.exception ( f"{e}: Unable to load dataset." )
+    #    sys.exit(1)
+    # TODO: raise load exception if file does not exsits. the above commented solution is not really catching this and continues to run
 
     return df
 
