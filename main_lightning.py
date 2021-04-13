@@ -29,46 +29,40 @@ def main(config, consts):
     callbacks = [TuneReportCallback(metrics, on="validation_end")]
 
     # Setup the pytorchlighting trainer and run the model
-    trainer = Trainer(max_steps=consts['max_steps'], callbacks=callbacks) # TODO use with ray
-    trainer = Trainer(max_epochs=3, callbacks=callbacks) # TODO use with ray
+    trainer = Trainer(max_epochs=consts['max_epochs'], callbacks=callbacks)
     # trainer = Trainer(max_steps=consts['max_steps'])
     trainer.fit(model, datamodule=lidar_dm)
 
 
 if __name__ == '__main__':
     # Debug flag to enable debugging
-    DEBUG = True
+    DEBUG = False
     if DEBUG:
         ray.init(local_mode=True)
 
     data_params = {
-        'base_path': ".",
+        'base_path': r'C:\Users\addalin\Dropbox\Lidar\code',
         'station_name': 'haifa',
         'start_date': datetime(2017, 9, 1),
         'end_date': datetime(2017, 10, 31),
     }
 
-    #csv_path = os.path.join(data_params['base_path'], f"dataset_{data_params['station_name']}_"
-    #                                                  f"{data_params['start_date'].strftime('%Y-%m-%d')}_"
-    #                                                  f"{data_params['end_date'].strftime('%Y-%m-%d')}_on_D.csv")
-    #csv_path = os.path.join(r'C:\Users\addalin\Dropbox\Lidar\code','dataset_haifa_2017-09-01_2017-10-31_on_D.csv')
-    csv_path = os.path.join(r'C:\Users\addalin\Dropbox\Lidar\code','D.csv')
+    csv_path = os.path.join(data_params['base_path'], f"dataset_{data_params['station_name']}_"
+                                                     f"{data_params['start_date'].strftime('%Y-%m-%d')}_"
+                                                     f"{data_params['end_date'].strftime('%Y-%m-%d')}_on_D.csv")
 
     # Constants - should correspond to data, dataloader and model
     consts = {
         "hidden_sizes": [16, 32, 8],  # TODO: add options of [ 8, 16, 32], [16, 32, 8], [ 64, 32, 16]
         'in_channels': 2,
-        'max_steps': 30,
-        'num_workers': 0,
+        'max_epochs': 3,
+        'num_workers': 7,
         'csv_path':csv_path,
         'powers': {'range_corr': 0.5, 'attbsc': 0.5, 'LC': 0.5, 'LC_std': 0.5, 'r0': 1, 'r1': 1, 'dr': 1}
     }
 
     # Defining a search space
     # Note, replace choice with grid_search if want all possible combinations
-    hyper_params = {"Y_features" : [ "r0" , "r1" , "LC" ] , "bsize" : 8 , "loss_type" : "MSELoss" ,
-                    "lr" : 0.001 , "powers" : None}
-
     use_ray=True
     if use_ray:
         hyper_params =  {
@@ -98,4 +92,6 @@ if __name__ == '__main__':
         print(f"best_checkpoint {analysis.best_checkpoint}")
         print(f"best_result {analysis.best_result}")
     else:
+        hyper_params = {"Y_features" : [ "r0" , "r1" , "LC" ] , "bsize" : 8 , "loss_type" : "MSELoss" ,
+                        "lr" : 0.001 , "powers" : None}
         main ( hyper_params , consts )
