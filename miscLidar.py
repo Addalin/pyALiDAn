@@ -103,8 +103,6 @@ class RadiosondeProfile(object):
 
 	This object facilitates handling temperature and pressure profiles.
 
-	TODO
-
 	Args:
 		radiosonde_path (str): path to radiosonde file.
 	"""
