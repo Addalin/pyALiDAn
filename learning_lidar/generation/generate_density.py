@@ -116,30 +116,6 @@ if __name__ == '__main__':
     3. Sample procedure is done in :`KDE_estimation_sample.ipynb`, and data is loaded from `ds_month_params`
     """
 
-    RUN_SINGLE_SAMPLE = False
-    if RUN_SINGLE_SAMPLE:
-        nc_name_aeronet = f"{month_start_day.strftime('%Y%m%d')}_{month_end_day.strftime('%Y%m%d')}_haifa_ang.nc"
-        ds_ang = prep.load_dataset(os.path.join(station.aeronet_folder, nc_name_aeronet))
-
-        t_slice = slice(cur_day, cur_day + timedelta(days=1))
-        means = []
-        for wavelengths in ds_ang.Wavelengths:
-            angstrom_mean = learning_lidar.generation.generate_density_utils.angstrom.sel(Wavelengths=wavelengths,
-                                                                                          Time=t_slice).mean().item()
-            angstrom_std = learning_lidar.generation.generate_density_utils.angstrom.sel(Wavelengths=wavelengths,
-                                                                                         Time=t_slice).std().item()
-
-            textstr = ' '.join((
-                r'$\mu=%.2f$, ' % (angstrom_mean,),
-                r'$\sigma=%.2f$' % (angstrom_std,)))
-            learning_lidar.generation.generate_density_utils.angstrom.sel(Wavelengths=wavelengths, Time=t_slice). \
-                plot(x='Time', label=fr"$ \AA \, {wavelengths.item()}$, " + textstr)
-            means.append(angstrom_mean)
-        plt.legend()
-        plt.show()
-        ang_532_10264 = means[2]
-        ang_355_532 = means[0]
-
     LRs, ang_355_532, ang_532_10264 = calculate_LRs_and_ang(ds_day_params=ds_day_params, time_index=time_index,
                                                             plot_results=PLOT_RESULTS)
 
