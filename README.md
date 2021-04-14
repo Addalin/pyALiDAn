@@ -1,4 +1,13 @@
-# Code Structure
+# Project Structure
+
+- [Source Code](code-structure)
+- [Data]()
+
+
+
+## Code Structure
+
+Under `learning_lidar`:
 
 - [generation](generation)
 
@@ -10,20 +19,20 @@
 
 
 
-## generation
+### generation
 
 - Generates data
 
 
-## dataseting
+### dataseting
 
 - ?
 
 
-## preprocessing
+### preprocessing
 
 - converts raw data into clean format
 
-## learning_phase
+### learning_phase
 
 - deep learning module to predict y
