@@ -825,7 +825,7 @@ def get_prep_dataset_paths(station, day_date, data_source='molecular', lambda_nm
 
 
 def visualize_ds_profile_chan(dataset, lambda_nm=532, profile_type='range_corr', USE_RANGE=None,
-                              SAVE_FIG=False, dst_folder=os.path.join('../..', 'Figures'), format_fig='png',
+                              SAVE_FIG=False, dst_folder=os.path.join('../../..', 'Figures'), format_fig='png',
                               dpi=1000):
     logger = logging.getLogger()
     date_datetime = get_daily_ds_date(dataset)
@@ -917,7 +917,7 @@ def gen_daily_ds(day_date):
     USE_KM_UNITS = True
 
     logger.debug(f"Start generation of molecular dataset for {day_date.strftime('%Y-%m-%d')}")
-    station = gs.Station(stations_csv_path='../stations.csv', station_name='haifa')
+    station = gs.Station(stations_csv_path='../../stations.csv', station_name='haifa')
     # generate molecular dataset
     mol_ds = generate_daily_molecular(station, day_date,
                                       optim_size=optim_size, USE_KM_UNITS=USE_KM_UNITS)
@@ -959,7 +959,7 @@ def main(station_name='haifa', start_date=datetime(2017, 9, 1), end_date=datetim
     USE_KM_UNITS = False
 
     """set day,location"""
-    station = gs.Station(stations_csv_path='../stations.csv', station_name=station_name)
+    station = gs.Station(stations_csv_path='../../stations.csv', station_name=station_name)
     logger.info(f"Loading {station.location} station")
     logger.debug(f"Station info: {station}")
     logger.info(
