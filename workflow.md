@@ -216,7 +216,7 @@ Each sample contains the followings:
    - molecular/ lidar_molecular   - ask Ioannis Binietoglou, Mike Kottas - for link to updated repo inorder to cite their work. ***OPEM**
    - pytorch. ***OPEN***
 5. Add version number to dataset files (with relation to git version). - currently will be solved as folder versions  ***OPEN***
-
+6. mere visualization and plotting settings
 ## Possible issues that may require solutions: 
 1. Save space for the saved data: split each dataset of range corrected to 2 : one contains the exponent of 10 , and the other the base. ***IGNORE***
 2. Figure out the plot_range values of TROPOS dataset and how they were decided. ***IGNORE***
