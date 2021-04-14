@@ -1,7 +1,0 @@
-syntax: glob
-*.pyc
-*.py~
-*.orig
-re:^molecular\.egg-info/
-re:^\.idea/
-re:^notebooks/\.ipynb_checkpoints/

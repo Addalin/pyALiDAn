@@ -196,6 +196,7 @@ Each sample contains the followings:
     - failed_gdas_files_path : `gdas2radiosonde_failed_files.csv`, usage `datasetting.py` & `fix_gdas_errors.py`
     - dataset for learinng dataloader: `.\dataset_haifa_2017-09-01_2017-10-31_on_D.csv` or `dataset_haifa_2017-09-01_2017-10-31.csv` - created in `datasetting.py`, usage in: `dataloader.py`
     - extended dataset used for analysis and generation: `dataset_haifa_2017-09-01_2017-10-31_extended.csv` & `dataset_haifa_2017-09-01_2017-10-31_extended.nc` - created in `datasetting.py`, usage in:`KDE_estimation_sample.ipynb`, `generate_profiles_from_measurments.ipynb`, `generate_profiles_from_TROPOS_retrievals.ipynb`
+    - take care of relative paths for loading/saving the above files . ***OPEN***
 2. Logging folder:
    - create folder per phase of the system
 3. Utils folder: 
