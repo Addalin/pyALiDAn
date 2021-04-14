@@ -227,9 +227,9 @@ cython_debug/
 
 /ARLreader/
 /ARLreader/chk_data.f
-/background_signal/
+/data/background_signal/
 /code from Zhenping/
-/data examples/
+/data/data examples/
 /exportToHTML/
 /git-filter-repo/
 /legacy_code/

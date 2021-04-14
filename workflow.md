@@ -198,8 +198,11 @@ Each sample contains the followings:
     - `miscLidar.py`
     - `smooth.py`
     - `utils.py`
-2. Update environment installations documents (as ARLreader and pytorch ) ***OPEN***
-3. Add version number to dataset files (with relation to git version). - currently will be solved as folder versions  ***OPEN***
+4. Update environment installations documents. as: 
+   - ARLreader ***OPEM**
+   - molecular/ lidar_molecular   - ask Ioannis Binietoglou, Mike Kottas - for link to updated repo inorder to cite their work. ***OPEM**
+   - pytorch. ***OPEN***
+5. Add version number to dataset files (with relation to git version). - currently will be solved as folder versions  ***OPEN***
 
 ## Possible issues that may require solutions: 
 1. Save space for the saved data: split each dataset of range corrected to 2 : one contains the exponent of 10 , and the other the base. ***IGNORE***
