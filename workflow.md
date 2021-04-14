@@ -41,6 +41,7 @@ Separate/merge and organize the following modules:
 6. update create_dataset() to work for a list of days and check it on the generated dataset (above) ***DONE***
 7. Split the dataset to have "test" and "train/valid" examples.  such test examples will be used only when needed. - ***OPEN***
 8. Generate a similar train/test dataset - from the generation procedure - ***OPEN***
+9. Incorporate beta max info per signal from `KDE_estimation_sample.ipynb` to `dataseting.py`
 ## Database structure
 Each sample contains the followings: 
 
@@ -181,6 +182,22 @@ Each sample contains the followings:
 
 # Others
 ## Other repo and coding issues:
+1. Data folder containing: 
+    - particals distribution (LR- A) : `C:\Users\addalin\Dropbox\Lidar\code\Angstrom_LidarRatio\plot_data\plot_data\data_points_with_error_bars.csv`. usage:`KDE_estimation_sample.ipynb`
+    - iradiance-angle  graph :  `C:\Users\addalin\Dropbox\Lidar\code\background_signal\irradiance_solarElevation.csv` , usage: `generate_bg_signals.ipynb`
+    - bg mean curve : `C:\Users\addalin\Dropbox\Lidar\code\background_signal\curve_params.yml` usage: `generate_bg_signals.ipynb`
+    - stations csv: `C:\Users\addalin\Dropbox\Lidar\code\stations.csv`
+    - failed_gdas_files_path : `gdas2radiosonde_failed_files.csv`, usage `datasetting.py` & `fix_gdas_errors.py`
+    - dataset for learinng dataloader: `.\dataset_haifa_2017-09-01_2017-10-31_on_D.csv` or `dataset_haifa_2017-09-01_2017-10-31.csv` - created in `datasetting.py`, usage in: `dataloader.py`
+    - extended dataset used for analysis and generation: `dataset_haifa_2017-09-01_2017-10-31_extended.csv` & `dataset_haifa_2017-09-01_2017-10-31_extended.nc` - created in `datasetting.py`, usage in:`KDE_estimation_sample.ipynb`, `generate_profiles_from_measurments.ipynb`, `generate_profiles_from_TROPOS_retrievals.ipynb`
+2. Logging folder:
+   - create folder per phase of the system
+3. Utils folder: 
+    - `bezier.py`
+    - `img_interp.py`
+    - `miscLidar.py`
+    - `smooth.py`
+    - `utils.py`
 2. Update environment installations documents (as ARLreader and pytorch ) ***OPEN***
 3. Add version number to dataset files (with relation to git version). - currently will be solved as folder versions  ***OPEN***
 

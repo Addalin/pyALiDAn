@@ -246,8 +246,8 @@ cython_debug/
 /generating_background_signal.out
 /generating_background_signal.synctex.gz
 /iannis_b-lidar_molecular-de3d2ef2f36b.zip
-/named_colors.ipynb
-/optimize_lidar_const.py
+/Analysis/named_colors.ipynb
+/legacy_code/optimize_lidar_const.py
 /pois.m
 /r_m.eps
 /protokol_linfit_20170913.dat
