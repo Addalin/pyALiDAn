@@ -7,8 +7,8 @@ from ray.tune.integration.pytorch_lightning import TuneReportCallback
 
 from pytorch_lightning import Trainer, seed_everything
 
-from data_modules.lidar_data_module import LidarDataModule
-from models.defaultCNN import DefaultCNN
+from learning_lidar.learning_phase.data_modules.lidar_data_module import LidarDataModule
+from learning_lidar.learning_phase.models.defaultCNN import DefaultCNN
 
 seed_everything(8318)  # Note, for full deterministic result add deterministic=True to trainer
 
@@ -80,11 +80,11 @@ if __name__ == '__main__':
             tune.with_parameters(main, consts=consts),
             config=hyper_params,
             # name="cnn",
-            local_dir="./results",  # where to save the results
+            local_dir="../../results",  # where to save the results
             fail_fast=True,  # if one run fails - stop all runs
             metric="loss",
             mode="min",
-            resources_per_trial={"cpu": 7, "gpu": 1})
+            resources_per_trial={"cpu": 7, "gpu": 0})
 
         print(f"best_trial {analysis.best_trial}")
         print(f"best_config {analysis.best_config}")
