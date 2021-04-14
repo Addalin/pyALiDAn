@@ -1,129 +1,18 @@
 import numpy as np
-from scipy.interpolate import griddata
 from sklearn.model_selection import train_test_split
 from scipy.stats import multivariate_normal
 import pandas as pd
 
-
-def dt2binscale(dt_time, res_sec=30):
-    """
-        Returns the bin index corresponds to dt_time
-        binscale - is the time scale [0,2880], of a daily lidar bin index from 00:00:00 to 23:59:30.
-        The lidar has a bin measure every 30 sec, in total 2880 bins per day.
-        :param dt_time: datetime.datetime object
-        :return: binscale - float in [0,2880]
-    """
-    res_minute = 60 / res_sec
-    res_hour = 60 * res_minute
-    res_musec = (1e-6) / res_sec
-    tind = dt_time.hour * res_hour + dt_time.minute * res_minute + dt_time.second / res_sec + dt_time.microsecond * res_musec
-    return tind
-
-
-def get_random_sample_grid(nx, ny, orig_x, orig_y, std_ratio=.125):
-    delta_x = (orig_x[-1] - orig_x[0]) / nx
-    delta_y = (orig_y[-1] - orig_y[0]) / ny
-
-    # generate a new grid (points are set to be in the middle of each patch)
-    center_x = .5 * delta_x + (np.arange(nx) * delta_x).astype(int).reshape((1, nx)).repeat(ny, axis=0) + orig_x[0]
-    center_y = .5 * delta_y + (np.arange(ny) * delta_y).astype(int).reshape((ny, 1)).repeat(nx, axis=1) + orig_y[0]
-
-    # set random distances from centers of the new grid
-    dx = (std_ratio * delta_x * np.random.randn(nx, ny)).astype(int).T
-    dy = (std_ratio * delta_y * np.random.randn(nx, ny)).astype(int).T
-
-    # set random point in each patch of the new grid
-    points_x = center_x + dx
-    points_y = center_y + dy
-
-    new_grid = {'x': center_x.flatten(), 'y': center_y.flatten()}
-    sample_points = {'x': points_x.flatten(), 'y': points_y.flatten()}
-    return new_grid, sample_points
-
-
-def get_random_cov_mat(lbound_x=.5, lbound_y=.1):
-    # generating covariance matrix with higher x diagonal of gaussian
-    # set : lbound_x< std_x <= 1
-    std_x = 1 - lbound_x * np.random.rand()
-    # set : lbound_y < std_y <= std_x
-    std_y = std_x - (std_x - lbound_y) * np.random.rand()
-    # %%
-    # generate random correlation [-1,1]
-    # this is to make sure that the covariance matrix is PSD : std_x*std_y - std_xy*std_xy >= 0
-    rho = -1 + 2 * np.random.rand()
-    std_xy = rho * std_y * std_x
-    cov = np.array([[std_x, std_xy], [std_xy, std_y]])
-    return cov
-
-
-def make_interpolated_image(nsamples, im):
-    """Make an interpolated image from a random selection of pixels.
-
-    Take nsamples random pixels from im and reconstruct the image using
-    scipy.interpolate.griddata.
-
-    """
-    nx, ny = im.shape[1], im.shape[0]
-    X, Y = np.meshgrid(np.arange(0, nx, 1), np.arange(0, ny, 1))
-    ix = np.random.randint(im.shape[1], size=nsamples)
-    iy = np.random.randint(im.shape[0], size=nsamples)
-    samples = im[iy, ix]
-    int_im = griddata((iy, ix), samples, (Y, X), method='nearest', fill_value=0)
-    return int_im
-
-
-def create_gaussians_level(grid, nx, ny, grid_x, grid_y, std_ratio=.125, choose_ratio=1.0,
-                           cov_size=1E-5, cov_r_lbounds=[.8, .1]):
-    # create centers of Gaussians:
-    new_grid, sample_points = get_random_sample_grid(nx, ny, grid_x, grid_y, std_ratio)
-    if choose_ratio < 1.0:
-        center_x, _, center_y, _ = train_test_split(sample_points['x'], sample_points['y'],
-                                                    train_size=choose_ratio, shuffle=True)
-    else:
-        center_x = sample_points['x']
-        center_y = sample_points['y']
-
-    # Create covariance to each gaussian and adding each
-    Z_level = np.zeros((grid.shape[0], grid.shape[1]))
-    for x0, y0 in zip(center_x, center_y):
-        cov = cov_size * get_random_cov_mat(lbound_x=cov_r_lbounds[0], lbound_y=cov_r_lbounds[1])
-        rv = multivariate_normal((x0, y0), cov)
-        Z_level += rv.pdf(grid)
-    # normalizing:
-    Z_level = (Z_level - Z_level.min()) / (Z_level.max() - Z_level.min())
-    return Z_level
-
-
-def angstrom(tau_1, tau_2, lambda_1, lambda_2):
-    """
-    calculates angstrom exponent
-    :param tau_1: AOD Aerosol optical depth at wavelength lambda_1
-    :param tau_2: AOD Aerosol optical depth at wavelength lambda_2
-    :param lambda_1: wavelength lambda_1 , lambda_1<lambda_2 (e.g. 355 nm)
-    :param lambda_2: wavelength lambda_2 , lambda_1<lambda_2 (e.g. 532 nm)
-    :return: angstrom exponent A_1,2
-    """
-    return -np.log(tau_1 / tau_2) / np.log(lambda_1 / lambda_2)
-
-
-def get_sub_sample_level(level, source_indexes, target_indexes):
-    z_samples = level[:, source_indexes]
-    df_sigma = pd.DataFrame(z_samples, columns=target_indexes)
-    interp_sigma_df = (df_sigma.T.resample('30S').interpolate(method='linear')).T
-    sampled_interp = interp_sigma_df.values
-    sampled_interp = (sampled_interp - sampled_interp.min()) / (sampled_interp.max() - sampled_interp.min())
-    return sampled_interp
-
-
-def normalize(x, max_value=1):
-    return max_value * (x - x.min()) / (x.max() - x.min())
-
-
+import learning_lidar.generation.generate_density_utils
 import learning_lidar.global_settings as gs
 from datetime import datetime, date, timedelta
 import os
+
+from learning_lidar.generation.generate_density_utils import dt2binscale, get_random_sample_grid, get_random_cov_mat, \
+    make_interpolated_image, create_gaussians_level, get_sub_sample_level, normalize
+
 from learning_lidar.preprocessing import preprocessing as prep
-import  xarray as xr
+import xarray as xr
 from scipy.ndimage import gaussian_filter1d, gaussian_filter
 import matplotlib.pyplot as plt
 from scipy import signal
@@ -217,13 +106,7 @@ if __name__ == '__main__':
 
     smooth_ratio = np.ones_like(y)
 
-    # %% md
-
-    #### Set grid of Gaussian's - component 0
-
-    # %%
-
-    # %% Set a grid of Gaussian's - component 0
+    # Set a grid of Gaussian's - component 0
     nx = 5
     ny = 1
     cov_size = 1E+6
@@ -245,15 +128,8 @@ if __name__ == '__main__':
         plt.gca().set_aspect('equal')
         plt.gca().invert_yaxis()
         plt.show()
-    # %%
 
-    # %% md
-
-    #### Set grid of Gaussian's - component 1
-
-    # %%
-
-    # %% Set a grid of gaussians - component 1
+    # Set a grid of gaussians - component 1
     nx = 6
     ny = 2
     cov_size = 5 * 1E+4
@@ -275,16 +151,8 @@ if __name__ == '__main__':
         plt.gca().set_aspect('equal')
         plt.gca().invert_yaxis()
         plt.show()
-    # %%
 
-    # %% md
-
-    #### Set grid of Gaussian's - component 2 (for features)
-
-    # %%
-
-    # %%Set a grid of gaussians - component 2 - for features
-
+    # Set a grid of gaussians - component 2 - for features
     nx = 9
     ny = 1
     # setting height bounds for randomizing Gaussians
@@ -341,16 +209,8 @@ if __name__ == '__main__':
         plt.gca().set_aspect('equal')
         plt.gca().invert_yaxis()
         plt.show()
-    # %%
 
-    # %% md
-
-    #### Gradients of component 2
-
-    # %%
-
-    # %%Gradients of component 2
-
+    # Gradients of component 2
     g_filter = np.array([[0, -1, 0],
                          [-1, 0, 1],
                          [0, 1, 0]])
@@ -384,16 +244,8 @@ if __name__ == '__main__':
         ax_i.invert_yaxis()
         ax_i.set_title('gradient - angle')
         plt.show()
-    # %%
 
-    # %% md
-
-    #### Subsample and interpolation of the absolute of gradients - component 2
-
-    # %%
-
-    # %%Subsample and interpolation of the absolute of gradients - component 2
-
+    # Subsample and interpolation of the absolute of gradients - component 2
     nsamples = int(total_bins * total_time_bins * .0005)
     interp_features = make_interpolated_image(nsamples, grad_norm_amplitude)
     blur_features = gaussian_filter(interp_features, sigma=(21, 61))
@@ -406,12 +258,8 @@ if __name__ == '__main__':
         plt.gca().invert_yaxis()
         plt.title('gradient - absolut interpolated')
         plt.show()
-    # %%
 
-    # %% md
-
-    #### Subsample & interpolation of 1/4 part of the component (stretching to one day of measurments)
-
+    # Subsample & interpolation of 1/4 part of the component (stretching to one day of measurments)
     # %% # TODO: create 4 X 4 X 4 combinations per evaluation , save for each
 
     indexes = np.round(np.linspace(0, 720, 97)).astype(int)
@@ -427,13 +275,7 @@ if __name__ == '__main__':
     bins_interval,interval_size, bins_interval/30
     2880/30+1 , len(target_indexes),96*30, source_indexes"""
 
-    # %% md
-
-    ## Summing up the components to an aerosol density $\rho_{aer}$
-
-    # %%
-
-    # %%
+    # Summing up the components to an aerosol density $\rho_{aer}$
     k = np.random.uniform(0.5, 2.5)
     shift_bins = int(720 * k)
     print(f'component 0 shift bins {shift_bins}')
@@ -451,9 +293,6 @@ if __name__ == '__main__':
     print(f'component 2 shift bins {shift_bins}')
     source_indexes = indexes + shift_bins
     sampled_level2_interp = get_sub_sample_level(blur_features, source_indexes, tt_index)
-    # %%
-
-    # %%
 
     components = []
     for indl, component in enumerate([sampled_level0_interp, sampled_level1_interp, sampled_level2_interp]):
@@ -470,8 +309,6 @@ if __name__ == '__main__':
     ds_density.Height.attrs = {'units': 'km'}
     # ds_density
 
-    # %%
-
     if PLOT_RESULTS:
         fig, axes = plt.subplots(nrows=3, ncols=1, figsize=(8, 10), sharex=True)
         for l, ax in zip(ds_density.Component, axes.ravel()):
@@ -484,19 +321,13 @@ if __name__ == '__main__':
 
         plt.show()
 
-    # %%
-
     ds_density.density.plot(x='Time', y='Height', row='Component', cmap='turbo', figsize=(10, 10), sharex=True)
     ax = plt.gca()
     ax.xaxis.set_major_formatter(timeformat)
     ax.xaxis.set_tick_params(rotation=0)
     plt.show()
 
-    # %% md
-
     ## Profiles at different times
-
-    # %%
 
     if PLOT_RESULTS:
         t_index = [500, 1500, 2500]
@@ -507,20 +338,15 @@ if __name__ == '__main__':
         # plt.tight_layout()
         plt.show()
 
-    # %% md
-
-    ## Merged density level
-    #### Built as a linear combination of the levels above
-
-    # %%
-
-    weight_0 = 0.6 + (0.25) * np.random.randn()
+    # Merged density level
+    # Built as a linear combination of the levels above
+    weight_0 = 0.6 + 0.25 * np.random.randn()
     if weight_0 < 0.3:
         weight_0 = 0.5 + abs(weight_0)
-    weight_1 = 0.3 + (0.25) * np.random.randn()
+    weight_1 = 0.3 + 0.25 * np.random.randn()
     if weight_1 < 0:
         weight_1 = 0.3 + abs(weight_1)
-    weight_2 = 0.4 + (0.25) * np.random.randn()
+    weight_2 = 0.4 + 0.25 * np.random.randn()
     if weight_2 < 0:
         weight_2 = 0.4 + abs(weight_2)
     print([weight_0, weight_1, weight_2])
@@ -529,8 +355,6 @@ if __name__ == '__main__':
     for l in ds_density.Component:
         merged += ds_density.density.sel(Component=l) * atmosphere_ds.weights.sel(Component=l)
     merged = (merged - merged.min()) / (merged.max() - merged.min())
-
-    # %%
 
     atmosphere_ds = atmosphere_ds.assign(merged=merged)
     atmosphere_ds.merged.attrs = {'info': "Aerosol's density", 'long_name': 'density'}
@@ -543,13 +367,8 @@ if __name__ == '__main__':
         ax.xaxis.set_tick_params(rotation=0)
         plt.show()
 
-    # %% md
-
     """Create
     empty $\beta$ and $\sigma$ densities"""
-
-    # %%
-
     atmosphere_ds = atmosphere_ds.assign_coords(Wavelength=[355, 532, 1064])
     sigma = xr.zeros_like(merged).reset_coords(drop=True).expand_dims(dim={'Wavelength': [355, 532, 1064]})
     sigma.name = 'sigma'
@@ -560,10 +379,8 @@ if __name__ == '__main__':
     atmosphere_ds = atmosphere_ds.assign({'ratio': ('Height', smooth_ratio)})
     atmosphere_ds
 
-    # %% md
-
-    ## Creating $\sigma_{532}$
-    #### To create the aerosol, the density is:
+    # Creating $\sigma_{532}$
+    # To create the aerosol, the density is:
     """1.
     Normalized
     2.
@@ -576,20 +393,12 @@ if __name__ == '__main__':
     multiplied
     with a typical $\sigma_{aer, 532}$, e.g.$\sigma_{max}=0.025[1 / km]$"""
 
-    # %%
-
     sigma_ratio = xr.apply_ufunc(lambda x, r: gaussian_filter(r * x, sigma=(9, 5)),
                                  atmosphere_ds.merged, atmosphere_ds.ratio, keep_attrs=False)
 
     sigma_g = xr.apply_ufunc(lambda x: normalize(x, sigma_532_max),
                              sigma_ratio.copy(deep=True), keep_attrs=False)
     sigma_g['Wavelength'] = 532
-
-    # %%
-
-    sigma_g
-
-    # %%
 
     if PLOT_RESULTS:
         fig, axes = plt.subplots(nrows=1, ncols=1, figsize=(7, 5))
@@ -612,12 +421,8 @@ if __name__ == '__main__':
         plt.tight_layout()
         plt.show()
 
-    # %% md
-
-    ## Calculate Aearosol Optical Depth (AOD)
-    ## $\tau_{aer,\lambda} = \int \sigma_{aer,\lambda} (r) dr\;\; \forall \, r \leq r_{ref} $
-
-    # %%
+    # Calculate Aearosol Optical Depth (AOD)
+    # $\tau_{aer,\lambda} = \int \sigma_{aer,\lambda} (r) dr\;\; \forall \, r \leq r_{ref} $
 
     tau_g = dr * sigma_g.sum(dim='Height')
     tau_g.name = r'$\tau$'
@@ -629,9 +434,7 @@ if __name__ == '__main__':
         ax.xaxis.set_tick_params(rotation=0)
         plt.show()
 
-    # %% md
-
-    ## Angstrom Exponent
+    # Angstrom Exponent
     """ 1.
     To
     convert $\sigma_
@@ -655,8 +458,6 @@ if __name__ == '__main__':
 
     `ds_month_params`"""
 
-    # %%
-
     RUN_SINGLE_SAMPLE = False
     if RUN_SINGLE_SAMPLE:
         nc_name_aeronet = f"{month_start_day.strftime('%Y%m%d')}_{month_end_day.strftime('%Y%m%d')}_haifa_ang.nc"
@@ -665,13 +466,15 @@ if __name__ == '__main__':
         t_slice = slice(cur_day, cur_day + timedelta(days=1))
         means = []
         for wavelengths in ds_ang.Wavelengths:
-            angstrom_mean = ds_ang.angstrom.sel(Wavelengths=wavelengths, Time=t_slice).mean().item()
-            angstrom_std = ds_ang.angstrom.sel(Wavelengths=wavelengths, Time=t_slice).std().item()
+            angstrom_mean = learning_lidar.generation.generate_density_utils.angstrom.sel(Wavelengths=wavelengths,
+                                                                                          Time=t_slice).mean().item()
+            angstrom_std = learning_lidar.generation.generate_density_utils.angstrom.sel(Wavelengths=wavelengths,
+                                                                                         Time=t_slice).std().item()
 
             textstr = ' '.join((
                 r'$\mu=%.2f$, ' % (angstrom_mean,),
                 r'$\sigma=%.2f$' % (angstrom_std,)))
-            ds_ang.angstrom.sel(Wavelengths=wavelengths, Time=t_slice). \
+            learning_lidar.generation.generate_density_utils.angstrom.sel(Wavelengths=wavelengths, Time=t_slice). \
                 plot(x='Time', label=fr"$ \AA \, {wavelengths.item()}$, " + textstr)
             means.append(angstrom_mean)
         plt.legend()
@@ -679,9 +482,7 @@ if __name__ == '__main__':
         ang_532_10264 = means[2]
         ang_355_532 = means[0]
 
-    # %% md
-
-    ## Estimate AOD of $\lambda=1064nm$ and  $\lambda=355nm$
+    # Estimate AOD of $\lambda=1064nm$ and  $\lambda=355nm$
 
     """$\tau_
     {1064} = \frac
@@ -807,7 +608,7 @@ if __name__ == '__main__':
     """convert $\sigma_
     {1064}$"""
 
-    ### $\sigma_{1064}^{max}(t) = \frac{\tau_{1064}(t)}{\tau_N(t)}, \;\forall\, t \in Time_{day} $
+    # $\sigma_{1064}^{max}(t) = \frac{\tau_{1064}(t)}{\tau_N(t)}, \;\forall\, t \in Time_{day} $
 
     # %%
 
@@ -833,7 +634,7 @@ if __name__ == '__main__':
     """convert $\sigma_
     {1064}$"""
 
-    ### $\sigma_{355}^{max}(t) = \frac{\tau_{355}(t)}{\tau_N(t)}, \;\forall\, t \in Time_{day} $
+    # $\sigma_{355}^{max}(t) = \frac{\tau_{355}(t)}{\tau_N(t)}, \;\forall\, t \in Time_{day} $
 
     # %%
 
@@ -855,7 +656,7 @@ if __name__ == '__main__':
 
     # %% md
 
-    ## Extinction profiles of $\sigma_{aer}$ at different times
+    # Extinction profiles of $\sigma_{aer}$ at different times
 
     # %%
 
@@ -882,7 +683,7 @@ if __name__ == '__main__':
 
     # %% md
 
-    ## Calculate $\beta_{aer}$ assuming the lidar ratio $LR=60[sr]$
+    # Calculate $\beta_{aer}$ assuming the lidar ratio $LR=60[sr]$
 
     # %%
 
@@ -906,10 +707,10 @@ if __name__ == '__main__':
 
     # %% md
 
-    ## Adding molecular profiles
-    ### $\beta = \beta_{aer}+\beta_{mol}$
-    ### $\sigma = \sigma_{aer}+\sigma_{mol}$
-    ### The molecular profiles were calculated from radiosondes measurements from NOA
+    # Adding molecular profiles
+    # $\beta = \beta_{aer}+\beta_{mol}$
+    # $\sigma = \sigma_{aer}+\sigma_{mol}$
+    # The molecular profiles were calculated from radiosondes measurements from NOA
     """> Loading: 2017_09_01
     _Haifa_molecular.nc"""
 
@@ -1028,26 +829,38 @@ if __name__ == '__main__':
     # %%
     ds_aer = ds_aer.assign(max_sigm_g=xr.Variable(dims=(), data=sigma_532_max,
                                                   attrs={'long_name': r'$\sigma_{532}^{max}$', 'units': r'$1/km$',
-                                                         'info': r'A generation parameter. The maximum extinction value from '
-                                                                 r'Tropos retrievals calculated as $\beta_{532}^{max}\cdot LR$, $LR=55sr$'}),
-                           ang_532_1064=xr.Variable(dims=('Time'), data=ang_532_10264,
+                                                         'info': r'A generation parameter. The maximum extinction '
+                                                                 r'value from '
+                                                                 r'Tropos retrievals calculated as $\beta_{532}^{'
+                                                                 r'max}\cdot LR$, $LR=55sr$'}),
+                           ang_532_1064=xr.Variable(dims='Time', data=ang_532_10264,
                                                     attrs={'long_name': r'$A_{532,1064}$',
-                                                           'info': r'A generation parameter. Angstrom exponent of 532-1064.'
-                                                                   r' The daily mean value calculated from AERONET level 2.0'}),
-                           ang_355_532=xr.Variable(dims=('Time'), data=ang_355_532,
+                                                           'info': r'A generation parameter. Angstrom exponent of '
+                                                                   r'532-1064. '
+                                                                   r'The daily mean value calculated from AERONET '
+                                                                   r'level 2.0'}),
+                           ang_355_532=xr.Variable(dims='Time', data=ang_355_532,
                                                    attrs={'long_name': r'$A_{355,532}$',
-                                                          'info': r'A generation parameter. Angstrom exponent of 355-532.'
-                                                                  r' The daily mean value calculated from AERONET level 2.0'}),
-                           LR=xr.Variable(dims=('Time'), data=LR, attrs={'long_name': r'$\rm LR$', 'units': r'$sr$',
-                                                                         'info': r'A generation parameter. A lidar ratio, corresponds to Angstroms values (based on literature and TROPOS)'}),
+                                                          'info': r'A generation parameter. Angstrom exponent of '
+                                                                  r'355-532. '
+                                                                  r'The daily mean value calculated from AERONET '
+                                                                  r'level 2.0'}),
+                           LR=xr.Variable(dims='Time', data=LR, attrs={'long_name': r'$\rm LR$', 'units': r'$sr$',
+                                                                       'info': r'A generation parameter. A lidar '
+                                                                               r'ratio, corresponds to Angstroms '
+                                                                               r'values (based on literature and '
+                                                                               r'TROPOS)'}),
                            r_max=xr.Variable(dims=(), data=ref_height,
                                              attrs={'long_name': r'$r_{max}$', 'units': r'$km$',
                                                     'info': r'A generation parameter. Top height of aerosol layer.'
-                                                            r' Taken as $\sim1.25\cdot r_{max}$, $s.t.\; r_{max}$ is the maximum value of'
-                                                            r' the reference range from TROPOS retrievals, for the date.'}),
+                                                            r'Taken as $\sim1.25\cdot r_{max}$, $s.t.\; r_{max}$ is '
+                                                            r'the maximum value of '
+                                                            r'the reference range from TROPOS retrievals, for the '
+                                                            r'date.'}),
                            params_source=xr.Variable(dims=(), data=os.path.join(gen_source_path),
                                                      attrs={
-                                                         'info': 'netcdf file name, containing generated density parameters,'
+                                                         'info': 'netcdf file name, containing generated density '
+                                                                 'parameters, '
                                                                  ' using: KDE_estimation_sample.ipynb .'})
                            )
 
@@ -1071,7 +884,6 @@ if __name__ == '__main__':
     ang and LR"""
 
     # assign $\beta$ and $\sigma$ values
-
 
     # %%
     ds_aer.sigma.attrs['info'] = 'Aerosol attenuation coefficient'
