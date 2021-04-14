@@ -80,11 +80,11 @@ if __name__ == '__main__':
             tune.with_parameters(main, consts=consts),
             config=hyper_params,
             # name="cnn",
-            local_dir="./results",  # where to save the results
+            local_dir="../results",  # where to save the results
             fail_fast=True,  # if one run fails - stop all runs
             metric="loss",
             mode="min",
-            resources_per_trial={"cpu": 7, "gpu": 1})
+            resources_per_trial={"cpu": 7, "gpu": 0})
 
         print(f"best_trial {analysis.best_trial}")
         print(f"best_config {analysis.best_config}")
