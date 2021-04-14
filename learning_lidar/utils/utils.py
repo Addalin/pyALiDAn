@@ -90,3 +90,28 @@ def write_row_to_csv(csv_path, msg):
         writer.writerow(msg)
     logger = logging.getLogger()
     logger.debug(f"Wrote to tracker{csv_path} message - {msg}")
+
+
+def get_time_slice_dataset(dataset, start_time, end_time):
+    sub_ds = dataset.sel(Time=slice(start_time, end_time))
+    return (sub_ds)
+
+
+def humanbytes(B):
+    'Return the given bytes as a human friendly KB, MB, GB, or TB string'
+    B = float(B)
+    KB = float(1024)
+    MB = float(KB ** 2)  # 1,048,576
+    GB = float(KB ** 3)  # 1,073,741,824
+    TB = float(KB ** 4)  # 1,099,511,627,776
+
+    if B < KB:
+        return '{0} {1}'.format(B, 'Bytes' if 0 == B > 1 else 'Byte')
+    elif KB <= B < MB:
+        return '{0:.2f} KB'.format(B / KB)
+    elif MB <= B < GB:
+        return '{0:.2f} MB'.format(B / MB)
+    elif GB <= B < TB:
+        return '{0:.2f} GB'.format(B / GB)
+    elif TB <= B:
+        return '{0:.2f} TB'.format(B / TB)
