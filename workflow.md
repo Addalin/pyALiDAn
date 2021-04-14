@@ -198,6 +198,19 @@ Each sample contains the followings:
     - `miscLidar.py`
     - `smooth.py`
     - `utils.py`
+4. Dataset Folder:
+   - data_station
+        - AERONET (Requires rearangment)
+        - DATA FROM TROPOS : 
+          - lidar_dataset (X)
+          - molecular_dataset (X)
+          - GDAS:
+            - haifa (files form NOAA)
+            - haifa_preproc (created in preproccesing.py) 
+          - data ( FROM TROPOS)
+        - GENERATION:
+          - aerosol_dataset
+          - bg_dataset
 4. Update environment installations documents. as: 
    - ARLreader ***OPEM**
    - molecular/ lidar_molecular   - ask Ioannis Binietoglou, Mike Kottas - for link to updated repo inorder to cite their work. ***OPEM**
