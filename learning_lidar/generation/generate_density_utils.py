@@ -630,4 +630,39 @@ def get_params(station, year, month, cur_day):
 
     # Set grid parameters
 
-    return dr, heights, ds_day_params
+    return dr, heights, ds_day_params, gen_source_path
+
+
+def plot_extinction_profiles_sigme_diff_times(sigma_uv, sigma_ir, sigma_g, times):
+    # Extinction profiles of $\sigma_{aer}$ at different times
+    fig, axes = plt.subplots(nrows=1, ncols=3, figsize=(10, 6), sharey=True)
+    for t, ax in zip(times, axes.ravel()):
+        sigma_uv.sel(Time=t).plot.line(ax=ax, y='Height', label=sigma_uv.Wavelength.item())
+        sigma_ir.sel(Time=t).plot.line(ax=ax, y='Height', label=sigma_ir.Wavelength.item())
+        sigma_g.sel(Time=t).plot.line(ax=ax, y='Height', label=r'$532$')
+
+        ax.set_title(t)
+    plt.legend()
+    plt.tight_layout()
+    plt.show()
+
+
+def calc_beta(sigma_uv, sigma_ir, sigma_g, LR, plot_results):
+    # Calculate $\beta_{aer}$ assuming the lidar ratio $LR=60[sr]$
+    beta_uv = sigma_uv / LR
+    beta_uv.attrs = {'long_name': r'$\beta$', 'units': r'$1/km \cdot sr$'}
+    beta_ir = sigma_ir / LR
+    beta_ir.attrs = {'long_name': r'$\beta$', 'units': r'$1/km \cdot sr$'}
+    beta_g = sigma_g / LR
+    beta_g.attrs = {'long_name': r'$\beta$', 'units': r'$1/km \cdot sr$'}
+
+    if plot_results:
+        fig, axes = plt.subplots(nrows=1, ncols=3, figsize=(18, 8))
+        ax = axes.ravel()
+        beta_uv.plot(ax=ax[0], cmap='turbo')
+        beta_ir.plot(ax=ax[2], cmap='turbo')
+        beta_g.plot(ax=ax[1], cmap='turbo')
+        plt.tight_layout()
+        plt.show()
+
+    return beta_uv, beta_ir, beta_g

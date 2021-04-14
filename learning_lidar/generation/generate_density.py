@@ -1,7 +1,6 @@
 import numpy as np
 import pandas as pd
 
-import learning_lidar.generation.generate_density_utils
 import learning_lidar.global_settings as gs
 from datetime import datetime, timedelta
 import os
@@ -9,18 +8,23 @@ import os
 from learning_lidar.generation.generate_density_utils import create_ratio, set_gaussian_grid, \
     create_Z_level2, create_blur_features, create_sampled_level_interp, create_ds_density, TIMEFORMAT, \
     create_atmosphere_ds, create_sigma, calc_aod, calculate_LRs_and_ang, calc_tau_ir_uv, calc_normalized_density, \
-    plot_max_density_per_time, calc_normalized_tau, convert_sigma, get_params
+    plot_max_density_per_time, calc_normalized_tau, convert_sigma, get_params, \
+    plot_extinction_profiles_sigme_diff_times, calc_beta
 
 from learning_lidar.preprocessing import preprocessing as prep
 import xarray as xr
 import matplotlib.pyplot as plt
+import seaborn as sns
 
 plt.rcParams['figure.dpi'] = 300
 plt.rcParams['savefig.dpi'] = 300
 
+colors = ["darkblue", "darkgreen", "darkred"]
+sns.set_palette(sns.color_palette(colors))
+customPalette = sns.set_palette(sns.color_palette(colors))
+
 if __name__ == '__main__':
     PLOT_RESULTS = True
-    colors = ["darkblue", "darkgreen", "darkred"]
 
     # Set location and density parameters
     month = 9
@@ -28,7 +32,7 @@ if __name__ == '__main__':
     cur_day = datetime(2017, 9, 2, 0, 0)
     station = gs.Station(station_name='haifa')
 
-    dr, heights, ds_day_params = get_params(station=station, year=year, month=month, cur_day=cur_day)
+    dr, heights, ds_day_params, gen_source_path = get_params(station=station, year=year, month=month, cur_day=cur_day)
 
     LR_tropos = 55
     ref_height = np.float(ds_day_params.rm.sel(Time=cur_day).values)
@@ -134,45 +138,14 @@ if __name__ == '__main__':
     sigma_uv = convert_sigma(tau=tau_uv, wavelen=355, tau_normalized=tau_normalized, sigma_normalized=sigma_normalized,
                              plot_results=PLOT_RESULTS)
 
-    # Extinction profiles of $\sigma_{aer}$ at different times
-
-    # Set your custom color palette
-    import seaborn as sns
-
-    sns.set_palette(sns.color_palette(colors))
-    customPalette = sns.set_palette(sns.color_palette(colors))
-
     if PLOT_RESULTS:
-        t_index = [500, 1500, 2500]
-        times = [ds_density.Time[ind].values for ind in t_index]
+        plot_extinction_profiles_sigme_diff_times(sigma_uv=sigma_uv, sigma_ir=sigma_ir, sigma_g=sigma_g, times=times)
 
-        fig, axes = plt.subplots(nrows=1, ncols=3, figsize=(10, 6), sharey=True)
-        for t, ax in zip(times, axes.ravel()):
-            sigma_uv.sel(Time=t).plot.line(ax=ax, y='Height', label=sigma_uv.Wavelength.item())
-            sigma_ir.sel(Time=t).plot.line(ax=ax, y='Height', label=sigma_ir.Wavelength.item())
-            sigma_g.sel(Time=t).plot.line(ax=ax, y='Height', label=r'$532$')
+    beta_uv, beta_ir, beta_g = calc_beta(sigma_uv=sigma_uv, sigma_ir=sigma_ir, sigma_g=sigma_g,
+                                         LR=LR, plot_results=PLOT_RESULTS)
 
-            ax.set_title(t)
-        plt.legend()
-        plt.tight_layout()
-        plt.show()
 
-    # Calculate $\beta_{aer}$ assuming the lidar ratio $LR=60[sr]$
-    beta_uv = sigma_uv / LR
-    beta_uv.attrs = {'long_name': r'$\beta$', 'units': r'$1/km \cdot sr$'}
-    beta_ir = sigma_ir / LR
-    beta_ir.attrs = {'long_name': r'$\beta$', 'units': r'$1/km \cdot sr$'}
-    beta_g = sigma_g / LR
-    beta_g.attrs = {'long_name': r'$\beta$', 'units': r'$1/km \cdot sr$'}
-
-    if PLOT_RESULTS:
-        fig, axes = plt.subplots(nrows=1, ncols=3, figsize=(18, 8))
-        ax = axes.ravel()
-        beta_uv.plot(ax=ax[0], cmap='turbo')
-        beta_ir.plot(ax=ax[2], cmap='turbo')
-        beta_g.plot(ax=ax[1], cmap='turbo')
-        plt.tight_layout()
-        plt.show()
+    ########### TODO refactored till here #########
 
     mol_month_folder = prep.get_month_folder_name(station.molecular_dataset, cur_day)
     nc_mol = fr"{cur_day.strftime('%Y_%m_%d')}_{station.location}_molecular.nc"
