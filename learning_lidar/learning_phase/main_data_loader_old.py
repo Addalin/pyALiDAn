@@ -462,7 +462,7 @@ def write_hparams(writer, run_params, run_name, cur_loss, best_loss, cur_loss_fe
 def get_model_dirs(run_name, model_n, s_model):
     model_dir = f"model_{model_n}"
     submodel_dir = f"model_{model_n}.{s_model}"
-    main_dir = os.path.join(os.getcwd(), "cnn_models", model_dir, submodel_dir, run_name)
+    main_dir = os.path.join(os.getcwd(), "../../cnn_models", model_dir, submodel_dir, run_name)
     checkpoints_dir = os.path.join(main_dir, "checkpoints")
     run_dir = os.path.join(main_dir, "run")
     os.makedirs(checkpoints_dir, exist_ok=True)
