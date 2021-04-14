@@ -31,10 +31,10 @@ if __name__ == '__main__':
     year = 2017
     cur_day = datetime(2017, 9, 2, 0, 0)
     station = gs.Station(station_name='haifa')
+    LR_tropos = 55
 
     dr, heights, ds_day_params, gen_source_path = get_params(station=station, year=year, month=month, cur_day=cur_day)
 
-    LR_tropos = 55
     ref_height = np.float(ds_day_params.rm.sel(Time=cur_day).values)
     ref_height_bin = np.int(ref_height / dr)
     sigma_532_max = np.float(ds_day_params.beta532.sel(Time=cur_day).values) * LR_tropos
@@ -57,8 +57,7 @@ if __name__ == '__main__':
     # %% set ratio
 
     smooth_ratio = create_ratio(station=station, ref_height=ref_height, ref_height_bin=ref_height_bin,
-                                total_bins=total_bins, y=y,
-                                plot_results=PLOT_RESULTS)
+                                total_bins=total_bins, y=y, plot_results=PLOT_RESULTS)
 
     # Set a grid of Gaussian's - component 0
     Z_level0 = set_gaussian_grid(nx=5, ny=1, cov_size=1E+6, choose_ratio=.95, std_ratio=.25, cov_r_lbounds=[.8, .1],
@@ -109,8 +108,8 @@ if __name__ == '__main__':
 
     atmosphere_ds = create_atmosphere_ds(ds_density=ds_density, smooth_ratio=smooth_ratio, plot_results=PLOT_RESULTS)
 
-    sigma_g, sigma_ratio = create_sigma(atmosphere_ds=atmosphere_ds, sigma_532_max=sigma_532_max,
-                                        times=times, plot_results=PLOT_RESULTS)
+    sigma_g, sigma_ratio = create_sigma(atmosphere_ds=atmosphere_ds, sigma_532_max=sigma_532_max, times=times,
+                                        plot_results=PLOT_RESULTS)
 
     tau_g = calc_aod(dr=dr, sigma_g=sigma_g, plot_results=PLOT_RESULTS)
     """ 

@@ -18,6 +18,7 @@ TIMEFORMAT = mdates.DateFormatter('%H:%M')
 plt.rcParams['figure.dpi'] = 300
 plt.rcParams['savefig.dpi'] = 300
 
+
 def dt2binscale(dt_time, res_sec=30):
     """
         Returns the bin index corresponds to dt_time
@@ -148,7 +149,7 @@ def create_ratio(station, ref_height, ref_height_bin, total_bins, y, plot_result
     ratio_interp = np.interp(t_interp, t_r, ratios)
     overlap_interp = np.interp(t_interp, t_o, overlaps)
 
-    smooth_ratio = gaussian_filter1d(ratio_interp, sigma=40)  # TODO delete? not in use
+    smooth_ratio = gaussian_filter1d(ratio_interp, sigma=40)  # TODO apply smooth ratio as overlap function
     smooth_overlap = gaussian_filter1d(overlap_interp, sigma=20)
     smooth_ratio = np.ones_like(y)
 
@@ -361,7 +362,7 @@ def create_ds_density(sampled_level0_interp, sampled_level1_interp, sampled_leve
             ds_density.density.sel(Time=t).plot.line(ax=ax, y='Height')
         # plt.tight_layout()
         plt.show()
-    
+
     return ds_density, times
 
 
@@ -451,7 +452,7 @@ def create_sigma(atmosphere_ds, sigma_532_max, times, plot_results):
             sigma_g.sel(Time=t).plot(ax=ax, y='Height')
         plt.tight_layout()
         plt.show()
-        
+
     return sigma_g, sigma_ratio
 
 
@@ -468,7 +469,7 @@ def calc_aod(dr, sigma_g, plot_results):
         ax.xaxis.set_major_formatter(TIMEFORMAT)
         ax.xaxis.set_tick_params(rotation=0)
         plt.show()
-    
+
     return tau_g
 
 
@@ -496,7 +497,7 @@ def calculate_LRs_and_ang(ds_day_params, time_index, plot_results):
 
     cs_355532 = CubicSpline(tbins, ang355532s)
     cs_5321064 = CubicSpline(tbins, ang5321064s)
-    cs_LR = CubicSpline(tbins, LRs)
+    cs_LR = CubicSpline(tbins, LRs)  # TODO replace to bazier interpolation
     LR = cs_LR(np.arange(time_index.size))
     if plot_results:
         fig, ax = plt.subplots(nrows=1, ncols=1, figsize=(7, 5))
@@ -520,7 +521,7 @@ def calculate_LRs_and_ang(ds_day_params, time_index, plot_results):
         ax.set_ylabel(r'$\AA$')
         plt.legend()
         plt.show()
-        
+
     return LRs, ang_355_532, ang_532_10264
 
 
@@ -537,7 +538,7 @@ def calc_tau_ir_uv(tau_g, ang_355_532, ang_532_10264, plot_results):
         plt.title('AOD')
         plt.legend()
         plt.show()
-        
+
     return tau_ir, tau_uv
 
 
@@ -617,8 +618,8 @@ def get_params(station, year, month, cur_day):
     month_end_day = datetime(year, month, monthdays, 0, 0)
 
     nc_name = f"generated_density_params_{station.name}_{month_start_day.strftime('%Y-%m-%d')}_{month_end_day.strftime('%Y-%m-%d')}.nc"
-    # gen_source_path = os.path.join(station.generation_folder, nc_name) # TODO fix path
-    gen_source_path = os.path.join('..', '..', 'data/generated_data', nc_name)
+    gen_source_path = os.path.join(station.generation_folder, nc_name)
+    # gen_source_path = os.path.join('..', '..', 'data/generated_data', nc_name) # TODO fix path
     ds_month_params = prep.load_dataset(gen_source_path)
 
     ds_day_params = ds_month_params.sel(Time=slice(cur_day, cur_day + timedelta(days=1)))
