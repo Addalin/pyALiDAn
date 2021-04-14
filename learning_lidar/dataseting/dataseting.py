@@ -467,7 +467,7 @@ def main ( station_name , start_date , end_date ) :
     USE_KM_UNITS = True
 
     # Load data of station
-    station = gs.Station ( stations_csv_path = 'stations.csv' , station_name = station_name )
+    station = gs.Station (stations_csv_path ='../../stations.csv', station_name = station_name)
     logger.info ( f"Loading {station.location} station" )
 
     # Set new paths

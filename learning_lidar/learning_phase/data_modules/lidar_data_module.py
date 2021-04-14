@@ -5,8 +5,8 @@ import torchvision
 from pytorch_lightning import LightningDataModule
 from torch.utils.data import DataLoader, random_split
 
-import preprocessing as prep
-from utils_.custom_operations import PowTransform, LidarToTensor
+from learning_lidar.preprocessing import preprocessing as prep
+from learning_lidar.learning_phase.utils_.custom_operations import PowTransform, LidarToTensor
 
 
 class LidarDataSet(torch.utils.data.Dataset):
