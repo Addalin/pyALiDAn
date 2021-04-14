@@ -230,29 +230,20 @@ cython_debug/
 /data/background_signal/
 /code from Zhenping/
 /data/data examples/
-/exportToHTML/
-/git-filter-repo/
 /legacy_code/
 /Matlab_code_Polly_Haifa/
 /molecular_old/
 /Pollynet_Processing_Chain/
-/git-filter-repo/
 /bsc_profiles_26042017.zip
 /clusterable_data.npy
 /data from eshkol
 /generate_air_aerosol_from vadim.m
-/generating_background_signal.aux
-/generating_background_signal.log
-/generating_background_signal.out
-/generating_background_signal.synctex.gz
 /iannis_b-lidar_molecular-de3d2ef2f36b.zip
 /Analysis/named_colors.ipynb
 /legacy_code/optimize_lidar_const.py
 /pois.m
-/r_m.eps
 /protokol_linfit_20170913.dat
-/test_file_0.txt
-/testfile.txt
+
 
 /20170401_20170415_Technion_Haifa_IL/
 /checkpoints/
@@ -261,3 +252,10 @@ cython_debug/
 /lightning_logs/
 /results/
 /.ipynb_checkpoints/
+/data/data_example/
+/data/data_examples/
+/cnn_models/
+/data/tmp2/
+/data/downloaded_gdas/
+/data/converted_gdas/
+.idea
