@@ -42,6 +42,7 @@ Separate/merge and organize the following modules:
 7. Split the dataset to have "test" and "train/valid" examples.  such test examples will be used only when needed. - ***OPEN***
 8. Generate a similar train/test dataset - from the generation procedure - ***OPEN***
 9. Incorporate beta max info per signal from `KDE_estimation_sample.ipynb` to `dataseting.py` - ***OPEN***
+
 ## Database structure
 Each sample contains the followings: 
 
@@ -87,8 +88,10 @@ Each sample contains the followings:
 -
 
 # 3. Generation - workflow
+
 ## Current Workflow:
 1. "Ingredients" generation:
+   
     1. **Daily mean background signal**
        - Notebook: `generate_bg_signals.ipynb`.
        - The 4th part of notebook creates mean bg for every day in a given period.
@@ -96,7 +99,7 @@ Each sample contains the followings:
        - Output: nc file of generate mean bg is saved per month
             - Folder : `D:\data_haifa\GENERATION\bg_dataset`.
             - NC file name: `generated_bg_haifa_2017-01-01_2017-01-31.nc`
-    
+        
     2. **Daily Angstrom Exponent and Optical Depth**
        - Notebook: `read_AERONET_data.ipynb`
        - Read Aeronet measurement for a month, and generate per month, the angstrom and aerosols optical depth (aod) datasets.
@@ -182,6 +185,7 @@ Each sample contains the followings:
 
 # Others
 ## Other repo and coding issues:
+
 1. Data folder containing: 
     - particals distribution (LR- A) : `C:\Users\addalin\Dropbox\Lidar\code\Angstrom_LidarRatio\plot_data\plot_data\data_points_with_error_bars.csv`. usage:`KDE_estimation_sample.ipynb`
     - iradiance-angle  graph :  `C:\Users\addalin\Dropbox\Lidar\code\background_signal\irradiance_solarElevation.csv` , usage: `generate_bg_signals.ipynb`
@@ -216,7 +220,8 @@ Each sample contains the followings:
    - molecular/ lidar_molecular   - ask Ioannis Binietoglou, Mike Kottas - for link to updated repo inorder to cite their work. ***OPEM**
    - pytorch. ***OPEN***
 5. Add version number to dataset files (with relation to git version). - currently will be solved as folder versions  ***OPEN***
-6. mere visualization and plotting settings
+6. merge visualization and plotting settings
+
 ## Possible issues that may require solutions: 
 1. Save space for the saved data: split each dataset of range corrected to 2 : one contains the exponent of 10 , and the other the base. ***IGNORE***
 2. Figure out the plot_range values of TROPOS dataset and how they were decided. ***IGNORE***
