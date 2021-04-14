@@ -41,7 +41,7 @@ Separate/merge and organize the following modules:
 6. update create_dataset() to work for a list of days and check it on the generated dataset (above) ***DONE***
 7. Split the dataset to have "test" and "train/valid" examples.  such test examples will be used only when needed. - ***OPEN***
 8. Generate a similar train/test dataset - from the generation procedure - ***OPEN***
-9. Incorporate beta max info per signal from `KDE_estimation_sample.ipynb` to `dataseting.py`
+9. Incorporate beta max info per signal from `KDE_estimation_sample.ipynb` to `dataseting.py` - ***OPEN***
 ## Database structure
 Each sample contains the followings: 
 
