@@ -123,7 +123,7 @@ def extract_single_profile(day, hour, lat, lon, yearmonthday_to_retrieve, new_fi
 
     gdas_file = Ar.fname_from_date(yearmonthday_to_retrieve)
     logger.debug(f'{gdas_file} converted to {os.path.join(save_path,new_file_name)}')
-    gdas = Ar.reader( os.path.join( 'data/downloaded_gdas' , gdas_file ) )
+    gdas = Ar.reader(os.path.join('../../data/downloaded_gdas', gdas_file))
     profile, sfcdata, indexinfo, ind = gdas.load_profile(day, hour, (lat, lon))
 
     if not os.path.exists(save_path):
