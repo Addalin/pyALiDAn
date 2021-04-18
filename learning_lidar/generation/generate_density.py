@@ -1,3 +1,4 @@
+import logging
 from datetime import datetime
 
 import matplotlib.pyplot as plt
@@ -8,6 +9,7 @@ import learning_lidar.global_settings as gs
 from learning_lidar.generation.generate_density_utils import explore_gen_day, PLOT_RESULTS, wrap_dataset, \
     generate_aerosol, calc_time_index, get_ds_day_params_and_path, get_dr_and_heights, generate_atmosphere
 from learning_lidar.generation.generation_utils import save_generated_dataset
+from learning_lidar.utils.utils import create_and_configer_logger
 
 plt.rcParams['figure.dpi'] = 300
 plt.rcParams['savefig.dpi'] = 300
@@ -42,7 +44,7 @@ def generate_density(station, cur_day, month, year):
     start_height = 1e-3 * (station.start_bin_height + station.altitude)
 
     atmosphere_ds = generate_atmosphere(heights=heights, start_height=start_height, total_bins=station.n_bins,
-                                               ref_height=ref_height, dr=dr, time_index=time_index)
+                                        ref_height=ref_height, dr=dr, time_index=time_index)
     # Generate the aerosol
     sigma_ds, beta_ds, sigma_532_max, ang_532_10264, ang_355_532, LR = generate_aerosol(ds_day_params=ds_day_params,
                                                                                         dr=dr,
@@ -69,6 +71,9 @@ def generate_density(station, cur_day, month, year):
 
 
 if __name__ == '__main__':
+    logging.getLogger('PIL').setLevel(logging.ERROR)  # Fix annoying PIL logs
+    logging.getLogger('matplotlib').setLevel(logging.ERROR)  # Fix annoying matplotlib logs
+    logger = create_and_configer_logger('generate_density.log', level=logging.DEBUG)
     station = gs.Station(station_name='haifa')
 
     days_list = [datetime(2017, 9, 2, 0, 0)]
@@ -77,4 +82,4 @@ if __name__ == '__main__':
 
         EXPLORE_GEN_DAY = False
         if EXPLORE_GEN_DAY:
-            explore_gen_day(station, cur_day,ds_aer, atmosphere_ds)
+            explore_gen_day(station, cur_day, ds_aer, atmosphere_ds)

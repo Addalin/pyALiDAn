@@ -15,14 +15,15 @@ from sklearn.model_selection import train_test_split
 from learning_lidar.preprocessing import preprocessing as prep
 
 TIMEFORMAT = mdates.DateFormatter('%H:%M')
-PLOT_RESULTS = True
+PLOT_RESULTS = True # TODO param for generate_density somehow
 plt.rcParams['figure.dpi'] = 300
 plt.rcParams['savefig.dpi'] = 300
 LR_tropos = 55
 total_time_bins = 2880
 # Profiles at different times
-t_index = [500, 1500, 2500]
+t_index = [500, 1500, 2500]  # TODO param for generate_density somehow
 
+# TODO print --> logger.debug
 
 def dt2binscale(dt_time, res_sec=30):
     """
@@ -315,10 +316,10 @@ def create_blur_features(Z_level2, nsamples):
     return blur_features
 
 
-def create_sampled_level_interp(Z_level, k, indexes, tt_index):
+def create_sampled_level_interp(Z_level, k, indexes, tt_index, level_id):
     # Summing up the components to an aerosol density $\rho_{aer}$
     shift_bins = int(720 * k)
-    print(f'component 0 shift bins {shift_bins}')
+    print(f'component {level_id} shift bins {shift_bins}')
     source_indexes = indexes + shift_bins
     sampled_level_interp = get_sub_sample_level(Z_level, source_indexes, tt_index)
     return sampled_level_interp
@@ -703,13 +704,13 @@ def generate_density_components(total_time_bins, ref_height_bin, time_index, hei
     2880/30+1 , len(target_indexes),96*30, source_indexes
     """
     sampled_level0_interp = create_sampled_level_interp(Z_level=Z_level0, k=np.random.uniform(0.5, 2.5),
-                                                        indexes=indexes, tt_index=tt_index)
+                                                        indexes=indexes, tt_index=tt_index, level_id='0')
 
     sampled_level1_interp = create_sampled_level_interp(Z_level=Z_level1, k=np.random.uniform(0, 3),
-                                                        indexes=indexes, tt_index=tt_index)
+                                                        indexes=indexes, tt_index=tt_index, level_id='1')
 
     sampled_level2_interp = create_sampled_level_interp(Z_level=blur_features, k=np.random.uniform(0, 3),
-                                                        indexes=indexes, tt_index=tt_index)
+                                                        indexes=indexes, tt_index=tt_index, level_id='2')
 
     ds_density = create_ds_density(sampled_level0_interp=sampled_level0_interp,
                                    sampled_level1_interp=sampled_level1_interp,
