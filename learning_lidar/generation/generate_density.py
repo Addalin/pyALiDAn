@@ -41,13 +41,12 @@ def generate_density(station, cur_day, month, year):
     time_index = calc_time_index(cur_day)
     start_height = 1e-3 * (station.start_bin_height + station.altitude)
 
-    atmosphere_ds, times = generate_atmosphere(heights=heights, start_height=start_height, total_bins=station.n_bins,
+    atmosphere_ds = generate_atmosphere(heights=heights, start_height=start_height, total_bins=station.n_bins,
                                                ref_height=ref_height, dr=dr, time_index=time_index)
     # Generate the aerosol
     sigma_ds, beta_ds, sigma_532_max, ang_532_10264, ang_355_532, LR = generate_aerosol(ds_day_params=ds_day_params,
                                                                                         dr=dr,
                                                                                         atmosphere_ds=atmosphere_ds,
-                                                                                        times=times,
                                                                                         time_index=time_index,
                                                                                         cur_day=cur_day)
 

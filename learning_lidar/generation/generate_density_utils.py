@@ -20,7 +20,8 @@ plt.rcParams['figure.dpi'] = 300
 plt.rcParams['savefig.dpi'] = 300
 LR_tropos = 55
 total_time_bins = 2880
-
+# Profiles at different times
+t_index = [500, 1500, 2500]
 
 def dt2binscale(dt_time, res_sec=30):
     """
@@ -335,11 +336,8 @@ def create_ds_density(sampled_level0_interp, sampled_level1_interp, sampled_leve
     ds_density = xr.concat(components, dim='Component')
     ds_density.Height.attrs = {'units': 'km'}
 
-    # Profiles at different times
-    t_index = [500, 1500, 2500]
-    times = [ds_density.Time[ind].values for ind in t_index]
-
     if PLOT_RESULTS:
+        times = [ds_density.Time[ind].values for ind in t_index]
         fig, axes = plt.subplots(nrows=3, ncols=1, figsize=(8, 10), sharex=True)
         for l, ax in zip(ds_density.Component, axes.ravel()):
             ds_density.density.sel(Component=l).plot(cmap='turbo', ax=ax)
@@ -363,7 +361,7 @@ def create_ds_density(sampled_level0_interp, sampled_level1_interp, sampled_leve
         # plt.tight_layout()
         plt.show()
 
-    return ds_density, times
+    return ds_density
 
 
 def create_atmosphere_ds(ds_density, smooth_ratio):
@@ -417,6 +415,7 @@ def create_sigma(atmosphere_ds, sigma_532_max, times):
     sigma_g['Wavelength'] = 532
 
     if PLOT_RESULTS:
+        times = [atmosphere_ds.Time[ind].values for ind in t_index]
         fig, axes = plt.subplots(nrows=1, ncols=1, figsize=(7, 5))
         ax = axes
         sigma_ratio.plot(cmap='turbo', ax=ax)
@@ -709,17 +708,17 @@ def generate_density_components(total_time_bins, ref_height_bin, time_index, hei
     sampled_level2_interp = create_sampled_level_interp(Z_level=blur_features, k=np.random.uniform(0, 3),
                                                         indexes=indexes, tt_index=tt_index)
 
-    ds_density, times = create_ds_density(sampled_level0_interp=sampled_level0_interp,
+    ds_density = create_ds_density(sampled_level0_interp=sampled_level0_interp,
                                           sampled_level1_interp=sampled_level1_interp,
                                           sampled_level2_interp=sampled_level2_interp,
                                           heights=heights, time_index=time_index)
 
-    return ds_density, times
+    return ds_density
 
 
 def generate_atmosphere(heights, total_bins, ref_height,start_height, dr, time_index):
     ref_height_bin = np.int(ref_height / dr)
-    ds_density, times = generate_density_components(total_time_bins=total_time_bins, ref_height_bin=ref_height_bin,
+    ds_density = generate_density_components(total_time_bins=total_time_bins, ref_height_bin=ref_height_bin,
                                                     time_index=time_index, heights=heights, total_bins=total_bins)
 
     # set ratio
@@ -727,14 +726,14 @@ def generate_atmosphere(heights, total_bins, ref_height,start_height, dr, time_i
                                 total_bins=total_bins)
 
     atmosphere_ds = create_atmosphere_ds(ds_density=ds_density, smooth_ratio=smooth_ratio)
-    return atmosphere_ds, times
+    return atmosphere_ds
 
 
-def generate_aerosol(ds_day_params, dr, atmosphere_ds, times, time_index, cur_day):
+def generate_aerosol(ds_day_params, dr, atmosphere_ds, time_index, cur_day):
 
     sigma_532_max = np.float(ds_day_params.sel(Time=cur_day).beta532.values) * LR_tropos
 
-    sigma_g, sigma_ratio = create_sigma(atmosphere_ds=atmosphere_ds, sigma_532_max=sigma_532_max, times=times)
+    sigma_g, sigma_ratio = create_sigma(atmosphere_ds=atmosphere_ds, sigma_532_max=sigma_532_max)
 
     tau_g = calc_aod(dr=dr, sigma_g=sigma_g)
 
