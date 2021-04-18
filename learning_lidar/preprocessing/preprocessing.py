@@ -94,9 +94,9 @@ def load_dataset(ncpath):
         dataset = xr.open_dataset(ncpath, engine='netcdf4').expand_dims()
         dataset.close()
         logger.debug(f"Loading dataset file: {ncpath}")
-    except Exception:
+    except Exception as e:
         logger.exception(f"Failed to load dataset file: {ncpath}")
-        return None
+        raise e
     return dataset
 
 

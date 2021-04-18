@@ -153,7 +153,7 @@ def create_ratio(start_height, ref_height, ref_height_bin, total_bins):
 
     smooth_ratio = gaussian_filter1d(ratio_interp, sigma=40)  # TODO apply smooth ratio as overlap function
     smooth_overlap = gaussian_filter1d(overlap_interp, sigma=20)
-    y = np.arrange(total_bins)
+    y = np.arange(total_bins)
     smooth_ratio = np.ones_like(y)
 
     if PLOT_RESULTS:
@@ -611,7 +611,7 @@ def get_ds_day_params_and_path(station, year, month, cur_day):
 
     nc_name = f"generated_density_params_{station.name}_{month_start_day.strftime('%Y-%m-%d')}_{month_end_day.strftime('%Y-%m-%d')}.nc"
     gen_source_path = os.path.join(station.generation_folder, nc_name)
-    gen_source_path = os.path.join('..', '..', 'data/generated_data', nc_name) # TODO fix path
+    # gen_source_path = os.path.join('..', '..', 'data/generated_data', nc_name) # TODO fix path
     ds_month_params = prep.load_dataset(gen_source_path)
 
     ds_day_params = ds_month_params.sel(Time=slice(cur_day, cur_day + timedelta(days=1)))
@@ -721,7 +721,7 @@ def generate_density_components(total_time_bins, ref_height_bin, time_index, hei
     return ds_density, times
 
 
-def generate_aerosol(ds_day_params, dr, heights, total_bins, ref_height, time_index, start_height):
+def generate_aerosol(ds_day_params, dr, heights, total_bins, ref_height, time_index, start_height, cur_day):
     ref_height_bin = np.int(ref_height / dr)
     ds_density, times = generate_density_components(total_time_bins=total_time_bins, ref_height_bin=ref_height_bin,
                                                     time_index=time_index, heights=heights, total_bins=total_bins)
@@ -732,7 +732,7 @@ def generate_aerosol(ds_day_params, dr, heights, total_bins, ref_height, time_in
 
     atmosphere_ds = create_atmosphere_ds(ds_density=ds_density, smooth_ratio=smooth_ratio)
 
-    sigma_532_max = np.float(ds_day_params.beta532.values) * LR_tropos # TODO make sure okay deleted .sel(Time=cur_day)
+    sigma_532_max = np.float(ds_day_params.sel(Time=cur_day).beta532.values) * LR_tropos
 
     sigma_g, sigma_ratio = create_sigma(atmosphere_ds=atmosphere_ds, sigma_532_max=sigma_532_max, times=times)
 

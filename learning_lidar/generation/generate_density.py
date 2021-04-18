@@ -47,7 +47,8 @@ def generate_density(station, cur_day, month, year):
                                                                                         total_bins=station.n_bins,
                                                                                         ref_height=ref_height,
                                                                                         time_index=time_index,
-                                                                                        start_height=start_height)
+                                                                                        start_height=start_height,
+                                                                                        cur_day=cur_day)
 
     # Creating Daily Lidar Aerosols' dataset
     ds_aer = wrap_dataset(sigma_ds=sigma_ds, beta_ds=beta_ds, sigma_532_max=sigma_532_max, ang_532_10264=ang_532_10264,
