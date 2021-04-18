@@ -23,10 +23,9 @@ from functools import partial
 eps = np.finfo ( np.float ).eps
 
 # %% Local modules imports
-import global_settings as gs
-import data_loader as dl
-import preprocessing as prep
-from utils import create_and_configer_logger
+import learning_lidar.global_settings as gs
+import learning_lidar.preprocessing.preprocessing as prep
+from learning_lidar.utils.utils import create_and_configer_logger
 
 
 # %% Dataset creating helper functions
@@ -467,13 +466,14 @@ def main ( station_name , start_date , end_date ) :
     USE_KM_UNITS = True
 
     # Load data of station
-    station = gs.Station (stations_csv_path ='../../stations.csv', station_name = station_name)
+    station = gs.Station (station_name = station_name)
     logger.info ( f"Loading {station.location} station" )
 
     # Set new paths
-    csv_path = f"dataset_{station_name}_{start_date.strftime ( '%Y-%m-%d' )}_{end_date.strftime ( '%Y-%m-%d' )}.csv"
-    csv_path_extended = f"dataset_{station_name}_{start_date.strftime ( '%Y-%m-%d' )}_{end_date.strftime ( '%Y-%m-%d' )}_extended.csv"
-    ds_path_extended = f"dataset_{station_name}_{start_date.strftime ( '%Y-%m-%d' )}_{end_date.strftime ( '%Y-%m-%d' )}_extended.nc"
+    data_folder = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))),'data')
+    csv_path = os.path.join(data_folder, f"dataset_{station_name}_{start_date.strftime ( '%Y-%m-%d' )}_{end_date.strftime ( '%Y-%m-%d' )}.csv")
+    csv_path_extended = os.path.join(data_folder,f"dataset_{station_name}_{start_date.strftime ( '%Y-%m-%d' )}_{end_date.strftime ( '%Y-%m-%d' )}_extended.csv")
+    ds_path_extended = os.path.join(data_folder,f"dataset_{station_name}_{start_date.strftime ( '%Y-%m-%d' )}_{end_date.strftime ( '%Y-%m-%d' )}_extended.nc")
 
     if DO_DATASET :
         logger.info (
