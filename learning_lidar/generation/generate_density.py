@@ -1,20 +1,13 @@
+from datetime import datetime
+
+import matplotlib.pyplot as plt
 import numpy as np
-import pandas as pd
+import seaborn as sns
 
 import learning_lidar.global_settings as gs
-from datetime import datetime, timedelta
-import os
-
-from learning_lidar.generation.generate_density_utils import create_ratio, set_gaussian_grid, \
-    create_Z_level2, create_blur_features, create_sampled_level_interp, create_ds_density, TIMEFORMAT, \
-    create_atmosphere_ds, create_sigma, calc_aod, calculate_LRs_and_ang, calc_tau_ir_uv, calc_normalized_density, \
-    plot_max_density_per_time, calc_normalized_tau, convert_sigma, get_params, \
-    plot_extinction_profiles_sigme_diff_times, calc_beta
-
-from learning_lidar.preprocessing import preprocessing as prep
-import xarray as xr
-import matplotlib.pyplot as plt
-import seaborn as sns
+from learning_lidar.generation.generate_density_utils import explore_gen_day, PLOT_RESULTS, wrap_dataset, \
+    generate_aerosol, calc_time_index, get_ds_day_params_and_path,  get_dr_and_heights
+from learning_lidar.generation.generation_utils import save_generated_dataset
 
 plt.rcParams['figure.dpi'] = 300
 plt.rcParams['savefig.dpi'] = 300
@@ -23,239 +16,64 @@ colors = ["darkblue", "darkgreen", "darkred"]
 sns.set_palette(sns.color_palette(colors))
 customPalette = sns.set_palette(sns.color_palette(colors))
 
-if __name__ == '__main__':
-    PLOT_RESULTS = True
 
-    # Set location and density parameters
-    month = 9
-    year = 2017
-    cur_day = datetime(2017, 9, 2, 0, 0)
-    station = gs.Station(station_name='haifa')
-    LR_tropos = 55
+def generate_density(station, cur_day, month, year):
+    """
+    Creating Daily Lidar Aerosols' dataset with:
+    - beta
+    - sigma
+    - Generation parameters
+        1. $\sigma_{532}^{max}$ - max value from Tropos retrievals calculated as $\beta_{532}^{max}\cdot LR$, $LR=55sr$  (Tropos assumption)
+        2. $A_{532,1064}$ - Angstrom exponent of 532-1064, as a daily mean value calculated from AERONET
+        3. $A_{355,532}$ - Angstrom exponent of 355-532, as a daily mean value calculated from AERONET
+        4. $LR$ - Lidar ratio, corresponding to Angstroms values (based on literature and TROPOS)
+        5. $r_{max}$ - top height of aerosol layer. Taken as $\sim1.25\cdot r_{max}$, $s.t.\; r_{max}$ is the maximum value of the reference range from TROPOS retrievals of that day.
+    - Source files:
+        1. nc_name_aeronet - netcdf file post-processed from AERONET retrivals, using: read_AERONET_dat.py ( for angstrom values)
+        2. ds_extended - calibration dataset processed from TROPOS retrivals, using dataseting.py (for r_mx, sigma_max values)
+    """
 
-    dr, heights, ds_day_params, gen_source_path = get_params(station=station, year=year, month=month, cur_day=cur_day)
-
+    # Get and compute the different basic parameters
+    dr, heights = get_dr_and_heights(station)
+    ds_day_params, gen_source_path = get_ds_day_params_and_path(station=station, year=year, month=month,
+                                                                cur_day=cur_day)
     ref_height = np.float(ds_day_params.rm.sel(Time=cur_day).values)
-    ref_height_bin = np.int(ref_height / dr)
-    sigma_532_max = np.float(ds_day_params.beta532.sel(Time=cur_day).values) * LR_tropos
-    # TODO not in use. Delete?
-    # ang_532_10264 = np.float(ds_day_params.ang5321064.sel(Time=cur_day).values)
-    # ang_355_532 = np.float(ds_day_params.ang355532.sel(Time=cur_day).values)
+    time_index = calc_time_index(cur_day)
+    start_height = 1e-3 * (station.start_bin_height + station.altitude)
 
-    LR = np.float(ds_day_params.LR.sel(Time=cur_day).values)
+    # Generate the aerosol
+    sigma_ds, beta_ds, sigma_532_max, ang_532_10264, ang_355_532, LR = generate_aerosol(ds_day_params=ds_day_params,
+                                                                                        dr=dr, heights=heights,
+                                                                                        total_bins=station.n_bins,
+                                                                                        ref_height=ref_height,
+                                                                                        time_index=time_index,
+                                                                                        start_height=start_height)
 
-    end_t = cur_day + timedelta(hours=24) - timedelta(seconds=30)
-    time_index = pd.date_range(start=cur_day, end=end_t, freq='30S')
-    total_time_bins = len(time_index)  # 2880
-
-    total_bins = station.n_bins
-    x = np.arange(total_time_bins)
-    y = np.arange(total_bins)
-    X, Y = np.meshgrid(x, y, indexing='xy')
-    grid = np.dstack((X, Y))
-
-    # %% set ratio
-
-    smooth_ratio = create_ratio(station=station, ref_height=ref_height, ref_height_bin=ref_height_bin,
-                                total_bins=total_bins, y=y, plot_results=PLOT_RESULTS)
-
-    # Set a grid of Gaussian's - component 0
-    Z_level0 = set_gaussian_grid(nx=5, ny=1, cov_size=1E+6, choose_ratio=.95, std_ratio=.25, cov_r_lbounds=[.8, .1],
-                                 grid=grid, x=x, y=y, start_bin=0, top_bin=int(0.5 * ref_height_bin),
-                                 plot_results=PLOT_RESULTS)
-
-    # Set a grid of gaussians - component 1
-    Z_level1 = set_gaussian_grid(nx=6, ny=2, cov_size=5 * 1E+4, choose_ratio=.9, std_ratio=.15, cov_r_lbounds=[.8, .1],
-                                 grid=grid, x=x, y=y, start_bin=int(0.1 * ref_height_bin),
-                                 top_bin=int(0.8 * ref_height_bin), plot_results=PLOT_RESULTS)
-
-    Z_level2 = create_Z_level2(grid=grid, x=x, y=y, grid_cov_size=1E+4, ref_height_bin=ref_height_bin,
-                               plot_results=PLOT_RESULTS)
-
-    blur_features = create_blur_features(Z_level2=Z_level2, nsamples=int(total_bins * total_time_bins * .0005),
-                                         plot_results=PLOT_RESULTS)
-
-    # Subsample & interpolation of 1/4 part of the component (stretching to one day of measurments)
-    # %% # TODO: create 4 X 4 X 4 combinations per evaluation , save for each
-
-    indexes = np.round(np.linspace(0, 720, 97)).astype(int)
-    target_indexes = [i * 30 for i in range(97)]
-    target_indexes[-1] -= 1
-    tt_index = time_index[target_indexes]
-
-    # %% trying to set different sizes of croping : 6,8,12 or 24 hours . This is not finished yet, thus commented
-
-    """
-    interval_size = np.random.choice([6,8,12,24])
-    bins_interval = 120*interval_size
-    bins_interval,interval_size, bins_interval/30
-    2880/30+1 , len(target_indexes),96*30, source_indexes"""
-
-    sampled_level0_interp = create_sampled_level_interp(Z_level=Z_level0, k=np.random.uniform(0.5, 2.5),
-                                                        indexes=indexes, tt_index=tt_index)
-
-    sampled_level1_interp = create_sampled_level_interp(Z_level=Z_level1, k=np.random.uniform(0, 3),
-                                                        indexes=indexes, tt_index=tt_index)
-
-    sampled_level2_interp = create_sampled_level_interp(Z_level=blur_features, k=np.random.uniform(0, 3),
-                                                        indexes=indexes, tt_index=tt_index)
-
-    ds_density, times = create_ds_density(sampled_level0_interp=sampled_level0_interp,
-                                          sampled_level1_interp=sampled_level1_interp,
-                                          sampled_level2_interp=sampled_level2_interp,
-                                          heights=heights, time_index=time_index,
-                                          plot_results=PLOT_RESULTS)
-
-    atmosphere_ds = create_atmosphere_ds(ds_density=ds_density, smooth_ratio=smooth_ratio, plot_results=PLOT_RESULTS)
-
-    sigma_g, sigma_ratio = create_sigma(atmosphere_ds=atmosphere_ds, sigma_532_max=sigma_532_max, times=times,
-                                        plot_results=PLOT_RESULTS)
-
-    tau_g = calc_aod(dr=dr, sigma_g=sigma_g, plot_results=PLOT_RESULTS)
-    """ 
-    Angstrom Exponent
-    1. To convert $\sigma_{aer}$ from $532[nm]$ to $355[nm]$ and $1064[nm]$
-    2. Typical values of angstrom exponent are from `20170901_20170930_haifa_ang.nc`
-    3. Sample procedure is done in :`KDE_estimation_sample.ipynb`, and data is loaded from `ds_month_params`
-    """
-
-    LRs, ang_355_532, ang_532_10264 = calculate_LRs_and_ang(ds_day_params=ds_day_params, time_index=time_index,
-                                                            plot_results=PLOT_RESULTS)
-
-    tau_ir, tau_uv = calc_tau_ir_uv(tau_g=tau_g, ang_355_532=ang_355_532, ang_532_10264=ang_532_10264,
-                                    plot_results=PLOT_RESULTS)
-
-    sigma_normalized = calc_normalized_density(sigma_ratio=sigma_ratio, plot_results=PLOT_RESULTS)
+    # Creating Daily Lidar Aerosols' dataset
+    ds_aer = wrap_dataset(sigma_ds=sigma_ds, beta_ds=beta_ds, sigma_532_max=sigma_532_max, ang_532_10264=ang_532_10264,
+                          ang_355_532=ang_355_532, LR=LR, ref_height=ref_height, station_name=station.name,
+                          gen_source_path=gen_source_path, cur_day=cur_day)
 
     if PLOT_RESULTS:
-        plot_max_density_per_time(sigma_ratio)
-
-    tau_normalized = calc_normalized_tau(dr=dr, sigma_normalized=sigma_normalized, plot_results=PLOT_RESULTS)
-
-    sigma_ir = convert_sigma(tau=tau_ir, wavelen=1064, tau_normalized=tau_normalized, sigma_normalized=sigma_normalized,
-                             plot_results=PLOT_RESULTS)
-    sigma_uv = convert_sigma(tau=tau_uv, wavelen=355, tau_normalized=tau_normalized, sigma_normalized=sigma_normalized,
-                             plot_results=PLOT_RESULTS)
-
-    if PLOT_RESULTS:
-        plot_extinction_profiles_sigme_diff_times(sigma_uv=sigma_uv, sigma_ir=sigma_ir, sigma_g=sigma_g, times=times)
-
-    beta_uv, beta_ir, beta_g = calc_beta(sigma_uv=sigma_uv, sigma_ir=sigma_ir, sigma_g=sigma_g,
-                                         LR=LR, plot_results=PLOT_RESULTS)
-
-
-    ########### TODO refactored till here #########
-
-    mol_month_folder = prep.get_month_folder_name(station.molecular_dataset, cur_day)
-    nc_mol = fr"{cur_day.strftime('%Y_%m_%d')}_{station.location}_molecular.nc"
-    ds_mol = prep.load_dataset(os.path.join(mol_month_folder, nc_mol))
-
-    """
-    Generation parameters
-    1. $\sigma_{532}^{max}$ - max value from Tropos retrievals calculated as $\beta_{532}^{max}\cdot LR$, $LR=55sr$  (Tropos assumption)
-    2. $A_{532,1064}$ - Angstrom exponent of 532-1064, as a daily mean value calculated from AERONET
-    3. $A_{355,532}$ - Angstrom exponent of 355-532, as a daily mean value calculated from AERONET
-    4. $LR$ - Lidar ratio, corresponding to Angstroms values (based on literature and TROPOS)
-    5. $r_{max}$ - top height of aerosol layer. Taken as $\sim1.25\cdot r_{max}$, $s.t.\; r_{max}$ is the maximum value of the reference range from TROPOS retrievals of that day.
-    
-    Source files:
-    1. nc_name_aeronet - netcdf file post-processed from AERONET retrivals, using: read_AERONET_dat.py ( for angstrom values)
-    2. ds_extended - calibration dataset processed from TROPOS retrivals, using dataseting.py (for r_mx, sigma_max values)
-    
-    Create the aerosol dataset
-    """
-
-    # initializing the dataset
-    ds_aer = xr.zeros_like(ds_mol)
-    ds_aer = ds_aer.drop('attbsc')
-    ds_aer = ds_aer.assign(date=ds_mol.date)
-    ds_aer.attrs = {'info': 'Daily generated aerosol profiles',
-                    'source_file': 'generate_density.ipynb',
-                    'location': station.name,
-                    }
-    ds_aer.lambda_nm.loc[:] = [355, 532, 1064]
-
-    # adding generation info
-    ds_aer = ds_aer.assign(max_sigm_g=xr.Variable(dims=(), data=sigma_532_max,
-                                                  attrs={'long_name': r'$\sigma_{532}^{max}$', 'units': r'$1/km$',
-                                                         'info': r'A generation parameter. The maximum extinction '
-                                                                 r'value from '
-                                                                 r'Tropos retrievals calculated as $\beta_{532}^{'
-                                                                 r'max}\cdot LR$, $LR=55sr$'}),
-                           ang_532_1064=xr.Variable(dims='Time', data=ang_532_10264,
-                                                    attrs={'long_name': r'$A_{532,1064}$',
-                                                           'info': r'A generation parameter. Angstrom exponent of '
-                                                                   r'532-1064. '
-                                                                   r'The daily mean value calculated from AERONET '
-                                                                   r'level 2.0'}),
-                           ang_355_532=xr.Variable(dims='Time', data=ang_355_532,
-                                                   attrs={'long_name': r'$A_{355,532}$',
-                                                          'info': r'A generation parameter. Angstrom exponent of '
-                                                                  r'355-532. '
-                                                                  r'The daily mean value calculated from AERONET '
-                                                                  r'level 2.0'}),
-                           LR=xr.Variable(dims='Time', data=LR, attrs={'long_name': r'$\rm LR$', 'units': r'$sr$',
-                                                                       'info': r'A generation parameter. A lidar '
-                                                                               r'ratio, corresponds to Angstroms '
-                                                                               r'values (based on literature and '
-                                                                               r'TROPOS)'}),
-                           r_max=xr.Variable(dims=(), data=ref_height,
-                                             attrs={'long_name': r'$r_{max}$', 'units': r'$km$',
-                                                    'info': r'A generation parameter. Top height of aerosol layer.'
-                                                            r'Taken as $\sim1.25\cdot r_{max}$, $s.t.\; r_{max}$ is '
-                                                            r'the maximum value of '
-                                                            r'the reference range from TROPOS retrievals, for the '
-                                                            r'date.'}),
-                           params_source=xr.Variable(dims=(), data=os.path.join(gen_source_path),
-                                                     attrs={
-                                                         'info': 'netcdf file name, containing generated density '
-                                                                 'parameters, '
-                                                                 ' using: KDE_estimation_sample.ipynb .'})
-                           )
-    # TODO
-    """ 
-    1. Addapt the folowing variable to have dimention of Time : ang_532_1064, ang_355_532, LR
-    2. fix 5,10,15,20,25,30,28 18 of september ang and LR
-    """
-
-    # assign $\beta$ and $\sigma$ values
-    ds_aer.sigma.attrs['info'] = 'Aerosol attenuation coefficient'
-    ds_aer.sigma.loc[dict(Wavelength=532)] = sigma_g.values
-    ds_aer.sigma.loc[dict(Wavelength=355)] = sigma_uv.values
-    ds_aer.sigma.loc[dict(Wavelength=1064)] = sigma_ir.values
-    ds_aer.beta.attrs['info'] = 'Aerosol backscatter coefficient'
-    ds_aer.beta.loc[dict(Wavelength=532)] = beta_g.values
-    ds_aer.beta.loc[dict(Wavelength=355)] = beta_uv.values
-    ds_aer.beta.loc[dict(Wavelength=1064)] = beta_ir.values
-
-    # TODO: create ds_aer from scratch (without loading ds_mol)
+        fig, axes = plt.subplots(nrows=1, ncols=3, figsize=(18, 8))
+        for wavelength, ax in zip(ds_aer.Wavelength.values, axes.ravel()):
+            ds_aer.beta.sel(Wavelength=wavelength).plot(ax=ax, cmap='turbo')
+        plt.tight_layout()
+        plt.show()
 
     # Save the aerosols dataset
-    month_str = f'0{month}' if month < 10 else f'{month}'
-    nc_aer = fr"{cur_day.strftime('%Y_%m_%d')}_Haifa_aerosol_check.nc"
-    nc_aer_folder = fr'D:\data_haifa\GENERATION\aerosol_dataset\{month_str}'
-    prep.save_dataset(ds_aer, nc_aer_folder, nc_aer)
+    save_generated_dataset(station, ds_aer, data_source='aerosol', save_mode='single')
 
-    # Show relative ratios between aerosols and molecular backscatter
-    ratio_beta = ds_aer.beta / (ds_mol.beta + ds_aer.beta)
-    ratio_beta.where(ratio_beta < 0.1).plot(x='Time', y='Height', row='Wavelength',
-                                            cmap='turbo_r', figsize=(10, 10), sharex=True)
-    ax = plt.gca()
-    ax.xaxis.set_major_formatter(TIMEFORMAT)
-    ax.xaxis.set_tick_params(rotation=0)
-    plt.show()
+    return ds_aer
 
-    ratio_sigma = ds_aer.sigma / (ds_mol.sigma + ds_aer.sigma)
-    ratio_sigma.where(ratio_sigma < 0.1).plot(x='Time', y='Height', row='Wavelength',
-                                              cmap='turbo_r', figsize=(10, 10), sharex=True)
-    ax = plt.gca()
-    ax.xaxis.set_major_formatter(TIMEFORMAT)
-    ax.xaxis.set_tick_params(rotation=0)
-    plt.show()
 
-    atmosphere_ds.density.plot(x='Time', y='Height', row='Component',
-                               cmap='turbo', figsize=(10, 10), sharex=True)
-    ax = plt.gca()
-    ax.xaxis.set_major_formatter(TIMEFORMAT)
-    ax.xaxis.set_tick_params(rotation=0)
-    plt.show()
+if __name__ == '__main__':
+    station = gs.Station(station_name='haifa')
+
+    days_list = [datetime(2017, 9, 2, 0, 0)]
+    for cur_day in days_list:
+        ds_aer = generate_density(station, cur_day=cur_day, month=9, year=2017)
+
+        EXPLORE_GEN_DAY = False
+        if EXPLORE_GEN_DAY:
+            explore_gen_day(station, ds_aer, cur_day)
