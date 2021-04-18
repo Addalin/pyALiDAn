@@ -322,18 +322,15 @@ def create_sampled_level_interp(Z_level, k, indexes, tt_index):
     return sampled_level_interp
 
 
-def create_ds_density(sampled_level0_interp, sampled_level1_interp, sampled_level2_interp, heights, time_index,
-                      ):
+def create_ds_density(sampled_level0_interp, sampled_level1_interp, sampled_level2_interp, heights, time_index):
     components = []
     for indl, component in enumerate([sampled_level0_interp, sampled_level1_interp, sampled_level2_interp]):
         ds_component = xr.Dataset(
             data_vars={'density': (('Height', 'Time'), component),
-                       'component': ('Component', [indl])
-                       },
+                       'component': ('Component', [indl])},
             coords={'Height': heights,
                     'Time': time_index.tolist(),
-                    'Component': [indl]
-                    })
+                    'Component': [indl]})
         components.append(ds_component)
     ds_density = xr.concat(components, dim='Component')
     ds_density.Height.attrs = {'units': 'km'}
@@ -715,13 +712,12 @@ def generate_density_components(total_time_bins, ref_height_bin, time_index, hei
     ds_density, times = create_ds_density(sampled_level0_interp=sampled_level0_interp,
                                           sampled_level1_interp=sampled_level1_interp,
                                           sampled_level2_interp=sampled_level2_interp,
-                                          heights=heights, time_index=time_index,
-                                          )
+                                          heights=heights, time_index=time_index)
 
     return ds_density, times
 
 
-def generate_aerosol(ds_day_params, dr, heights, total_bins, ref_height, time_index, start_height, cur_day):
+def generate_atmosphere(heights, total_bins, ref_height,start_height, dr, time_index):
     ref_height_bin = np.int(ref_height / dr)
     ds_density, times = generate_density_components(total_time_bins=total_time_bins, ref_height_bin=ref_height_bin,
                                                     time_index=time_index, heights=heights, total_bins=total_bins)
@@ -731,6 +727,10 @@ def generate_aerosol(ds_day_params, dr, heights, total_bins, ref_height, time_in
                                 total_bins=total_bins)
 
     atmosphere_ds = create_atmosphere_ds(ds_density=ds_density, smooth_ratio=smooth_ratio)
+    return atmosphere_ds, times
+
+
+def generate_aerosol(ds_day_params, dr, atmosphere_ds, times, time_index, cur_day):
 
     sigma_532_max = np.float(ds_day_params.sel(Time=cur_day).beta532.values) * LR_tropos
 
@@ -819,7 +819,7 @@ def wrap_dataset(sigma_ds, beta_ds, sigma_532_max, ang_532_10264, ang_355_532, L
     return ds_aer
 
 
-def explore_gen_day(station, ds_aer, cur_day):
+def explore_gen_day(station, cur_day, ds_aer, atmosphere_ds):
     # Show relative ratios between aerosols and molecular backscatter
 
     mol_month_folder = prep.get_month_folder_name(station.molecular_dataset, cur_day)
@@ -841,11 +841,9 @@ def explore_gen_day(station, ds_aer, cur_day):
     ax.xaxis.set_tick_params(rotation=0)
     plt.show()
 
-    # TODO currently atmosphere_ds is not returned, only ds_aer.
-    #   If really needed, return it through the functions
-    # atmosphere_ds.density.plot(x='Time', y='Height', row='Component',
-    #                            cmap='turbo', figsize=(10, 10), sharex=True)
-    # ax = plt.gca()
-    # ax.xaxis.set_major_formatter(TIMEFORMAT)
-    # ax.xaxis.set_tick_params(rotation=0)
-    # plt.show()
+    atmosphere_ds.density.plot(x='Time', y='Height', row='Component',
+                               cmap='turbo', figsize=(10, 10), sharex=True)
+    ax = plt.gca()
+    ax.xaxis.set_major_formatter(TIMEFORMAT)
+    ax.xaxis.set_tick_params(rotation=0)
+    plt.show()
