@@ -86,17 +86,17 @@ def save_dataset(dataset, folder_name, nc_name):
 def load_dataset(ncpath):
     """
     Load Dataset stored in the netcdf file path (ncpath)
-	:param ncpath: a netcdf file path
-	:return: xarray.Dataset, if fails return none
-	"""
+    :param ncpath: a netcdf file path
+    :return: xarray.Dataset, if fails return none
+    """
     logger = logging.getLogger()
     try:
         dataset = xr.open_dataset(ncpath, engine='netcdf4').expand_dims()
         dataset.close()
         logger.debug(f"Loading dataset file: {ncpath}")
-    except Exception:
+    except Exception as e:
         logger.exception(f"Failed to load dataset file: {ncpath}")
-        return None
+        raise e
     return dataset
 
 
