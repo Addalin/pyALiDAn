@@ -23,7 +23,7 @@ Separate/merge and organize the following modules:
       - TODOS - ***OPEN***
    2. micLidar:
       - cleanup- ***DONE***
-      - cleanup duplicated code - make sure only micLidar.py are used , and move `generate_atmosphere.py` to  `legacy code` ***OPEN*** 
+      - cleanup duplicated code - make sure only micLidar.py are used , and move `generate_atmosphere.py` to  `legacy code` ***DONE*** 
       - TODOS - not urgent - ***OPEN***
 
 # 2. Dataseting Workflow
