@@ -400,7 +400,7 @@ def create_atmosphere_ds(ds_density, smooth_ratio):
     return atmosphere_ds
 
 
-def create_sigma(atmosphere_ds, sigma_532_max, times):
+def create_sigma(atmosphere_ds, sigma_532_max):
     # Creating $\sigma_{532}$
     # To create the aerosol, the density is:
     """1. Normalized
@@ -606,8 +606,8 @@ def get_ds_day_params_and_path(station, year, month, cur_day):
     month_end_day = datetime(year, month, monthdays, 0, 0)
 
     nc_name = f"generated_density_params_{station.name}_{month_start_day.strftime('%Y-%m-%d')}_{month_end_day.strftime('%Y-%m-%d')}.nc"
-    gen_source_path = os.path.join(station.generation_folder, nc_name)
-    # gen_source_path = os.path.join('..', '..', 'data/generated_data', nc_name) # TODO fix path
+    # gen_source_path = os.path.join(station.generation_folder, nc_name)
+    gen_source_path = os.path.join('..', '..', 'data/generated_data', nc_name) # TODO fix path
     ds_month_params = prep.load_dataset(gen_source_path)
 
     ds_day_params = ds_month_params.sel(Time=slice(cur_day, cur_day + timedelta(days=1)))
@@ -625,8 +625,10 @@ def get_dr_and_heights(station):
     return dr, heights
 
 
-def plot_extinction_profiles_sigme_diff_times(sigma_uv, sigma_ir, sigma_g, times):
+def plot_extinction_profiles_sigme_diff_times(sigma_uv, sigma_ir, sigma_g):
     # Extinction profiles of $\sigma_{aer}$ at different times
+    times = [sigma_uv.Time[ind].values for ind in t_index]
+
     fig, axes = plt.subplots(nrows=1, ncols=3, figsize=(10, 6), sharey=True)
     for t, ax in zip(times, axes.ravel()):
         sigma_uv.sel(Time=t).plot.line(ax=ax, y='Height', label=sigma_uv.Wavelength.item())
@@ -754,8 +756,7 @@ def generate_aerosol(ds_day_params, dr, atmosphere_ds, time_index, cur_day):
                              sigma_normalized=sigma_normalized)
 
     if PLOT_RESULTS:
-        plot_extinction_profiles_sigme_diff_times(sigma_uv=sigma_uv, sigma_ir=sigma_ir, sigma_g=sigma_g,
-                                                  times=times)
+        plot_extinction_profiles_sigme_diff_times(sigma_uv=sigma_uv, sigma_ir=sigma_ir, sigma_g=sigma_g)
 
     # Creating Daily Lidar Aerosols' sigma dataset
     sigma_ds = xr.concat([sigma_uv, sigma_g, sigma_ir], dim='Wavelength')
