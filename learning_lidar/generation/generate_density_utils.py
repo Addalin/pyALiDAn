@@ -23,6 +23,7 @@ total_time_bins = 2880
 # Profiles at different times
 t_index = [500, 1500, 2500]
 
+
 def dt2binscale(dt_time, res_sec=30):
     """
         Returns the bin index corresponds to dt_time
@@ -606,8 +607,8 @@ def get_ds_day_params_and_path(station, year, month, cur_day):
     month_end_day = datetime(year, month, monthdays, 0, 0)
 
     nc_name = f"generated_density_params_{station.name}_{month_start_day.strftime('%Y-%m-%d')}_{month_end_day.strftime('%Y-%m-%d')}.nc"
-    # gen_source_path = os.path.join(station.generation_folder, nc_name)
-    gen_source_path = os.path.join('..', '..', 'data/generated_data', nc_name) # TODO fix path
+    gen_source_path = os.path.join(station.generation_folder, nc_name)
+    # gen_source_path = os.path.join('..', '..', 'data/generated_data', nc_name) # TODO fix path
     ds_month_params = prep.load_dataset(gen_source_path)
 
     ds_day_params = ds_month_params.sel(Time=slice(cur_day, cur_day + timedelta(days=1)))
@@ -711,17 +712,17 @@ def generate_density_components(total_time_bins, ref_height_bin, time_index, hei
                                                         indexes=indexes, tt_index=tt_index)
 
     ds_density = create_ds_density(sampled_level0_interp=sampled_level0_interp,
-                                          sampled_level1_interp=sampled_level1_interp,
-                                          sampled_level2_interp=sampled_level2_interp,
-                                          heights=heights, time_index=time_index)
+                                   sampled_level1_interp=sampled_level1_interp,
+                                   sampled_level2_interp=sampled_level2_interp,
+                                   heights=heights, time_index=time_index)
 
     return ds_density
 
 
-def generate_atmosphere(heights, total_bins, ref_height,start_height, dr, time_index):
+def generate_atmosphere(heights, total_bins, ref_height, start_height, dr, time_index):
     ref_height_bin = np.int(ref_height / dr)
     ds_density = generate_density_components(total_time_bins=total_time_bins, ref_height_bin=ref_height_bin,
-                                                    time_index=time_index, heights=heights, total_bins=total_bins)
+                                             time_index=time_index, heights=heights, total_bins=total_bins)
 
     # set ratio
     smooth_ratio = create_ratio(start_height=start_height, ref_height=ref_height, ref_height_bin=ref_height_bin,
@@ -732,7 +733,6 @@ def generate_atmosphere(heights, total_bins, ref_height,start_height, dr, time_i
 
 
 def generate_aerosol(ds_day_params, dr, atmosphere_ds, time_index, cur_day):
-
     sigma_532_max = np.float(ds_day_params.sel(Time=cur_day).beta532.values) * LR_tropos
 
     sigma_g, sigma_ratio = create_sigma(atmosphere_ds=atmosphere_ds, sigma_532_max=sigma_532_max)
