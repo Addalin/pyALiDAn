@@ -74,7 +74,9 @@ class Station:
         self.aeronet_folder = station_df['aeronet_folder']
         self.aeronet_name = station_df['aeronet_name']
         self.generation_folder = station_df['generation_folder']
-
+        self.gen_lidar_dataset = station_df['gen_lidar_dataset']
+        self.gen_aerosol_dataset = station_df['gen_aerosol_dataset']
+        self.gen_bg_dataset = station_df['gen_bg_dataset']
 
 
     def __str__(self):
