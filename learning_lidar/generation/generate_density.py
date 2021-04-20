@@ -7,7 +7,7 @@ import seaborn as sns
 
 import learning_lidar.global_settings as gs
 from learning_lidar.generation.generate_density_utils import explore_gen_day, PLOT_RESULTS, wrap_dataset, \
-    generate_aerosol, calc_time_index, get_ds_day_params_and_path, get_height_params, generate_density
+    generate_aerosol, calc_time_index, get_ds_day_params_and_path, generate_density
 from learning_lidar.generation.generation_utils import save_generated_dataset
 from learning_lidar.utils.utils import create_and_configer_logger
 
@@ -35,14 +35,12 @@ def generate_aerosol_density(station, cur_day, month, year):
         2. ds_extended - calibration dataset processed from TROPOS retrivals, using dataseting.py (for r_mx, sigma_max values)
     """
 
-    # Get and compute the different basic parameters
-    #heights, km_scale = get_height_params(station)
-    heights = station.get_height_bins_values()
+
     ds_day_params, gen_source_path = get_ds_day_params_and_path(station=station, year=year, month=month,
                                                                 cur_day=cur_day)
     ref_height = np.float(ds_day_params.rm.sel(Time=cur_day).values)
     time_index = calc_time_index(cur_day)
-
+    heights = station.get_height_bins_values()
     ds_density = generate_density(heights=heights, time_index=time_index, ref_height=ref_height)
 
 

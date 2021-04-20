@@ -406,12 +406,26 @@ def merge_density_components(ds_density):
     merged = normalize (merged)
 
     ds_density = ds_density.assign(merged=merged)
-    ds_density.merged.attrs = {'info': "Aerosol's density", 'name': 'density', 'long_name': r'$\rho$'}
+    ds_density.merged.attrs = {'info': "Merged density", 'name': 'Density', 'long_name': 'merged density'}
+
+    # Normalizing and smooth the final density
+    rho = xr.apply_ufunc(lambda x, r: normalize(gaussian_filter(r * x, sigma=(9, 5))),
+                                 ds_density.merged, ds_density.ratio, keep_attrs=False)
+
+    ds_density = ds_density.assign(rho=rho)
+    ds_density.rho.attrs = {'info': "Merged smooth normalized density", 'name': 'Density', 'long_name': r'$\rho$'}
+
     if PLOT_RESULTS:
-        plt.figure(figsize=(9, 6))
-        ds_density.merged.plot(cmap='turbo')
+        fig, ax = plt.subplots(nrows=1, ncols=1, figsize=(7, 5))
+        ds_density.merged.plot(cmap='turbo', ax=ax)
         plt.title(ds_density.merged.attrs['info'])
-        ax = plt.gca()
+        ax.xaxis.set_major_formatter(TIMEFORMAT)
+        ax.xaxis.set_tick_params(rotation=0)
+        plt.show()
+
+        fig, ax = plt.subplots(nrows=1, ncols=1, figsize=(7, 5))
+        ds_density.rho.plot(cmap='turbo', ax=ax)
+        ax.set_title(ds_density.rho.attrs['info'])
         ax.xaxis.set_major_formatter(TIMEFORMAT)
         ax.xaxis.set_tick_params(rotation=0)
         plt.show()
@@ -428,36 +442,24 @@ def create_sigma(ds_density, sigma_532_max):
     2. Corrected according to ratio above
     3. multiplied with a typical $\sigma_{aer, 532}$, e.g.$\sigma_{max}=0.025[1 / km]$"""
 
-    sigma_ratio = xr.apply_ufunc(lambda x, r: gaussian_filter(r * x, sigma=(9, 5)),
-                                 ds_density.merged, ds_density.ratio, keep_attrs=False)
-
     sigma_g = xr.apply_ufunc(lambda x: normalize(x, sigma_532_max),
-                             sigma_ratio.copy(deep=True), keep_attrs=False)
+                             ds_density.rho.copy(deep=True), keep_attrs=False)
     sigma_g['Wavelength'] = 532
 
     if PLOT_RESULTS:
-        times = [ds_density.Time[ind].values for ind in t_index]
-        fig, axes = plt.subplots(nrows=1, ncols=1, figsize=(7, 5))
-        ax = axes
-        sigma_ratio.plot(cmap='turbo', ax=ax)
-        ax.set_title('Normalized weighted density')
-        ax.xaxis.set_major_formatter(TIMEFORMAT)
-        ax.xaxis.set_tick_params(rotation=0)
-
-        fig, axes = plt.subplots(nrows=1, ncols=1, figsize=(7, 5))
-        ax = axes
+        fig, ax = plt.subplots(nrows=1, ncols=1, figsize=(7, 5))
         sigma_g.plot(cmap='turbo', ax=ax)
         ax.xaxis.set_major_formatter(TIMEFORMAT)
         ax.xaxis.set_tick_params(rotation=0)
 
-        fig, axes = plt.subplots(nrows=1, ncols=1, figsize=(5, 6))
-        ax = axes
+        fig, ax = plt.subplots(nrows=1, ncols=1, figsize=(5, 6))
+        times = [ds_density.Time[ind].values for ind in t_index]
         for t in times:
             sigma_g.sel(Time=t).plot(ax=ax, y='Height')
         plt.tight_layout()
         plt.show()
 
-    return sigma_g, sigma_ratio
+    return sigma_g
 
 
 def calc_aod(sigma):
@@ -553,30 +555,29 @@ def calc_tau_ir_uv(tau_g, ang_355_532, ang_532_10264):
     return tau_ir, tau_uv
 
 
-def calc_temporal_normalized_density(sigma_ratio):
+def calc_temporal_normalized_density(rho):
     """Normalizing the original density of sigma per time"""
-    # normalized density
-    sigma_normalized = xr.apply_ufunc(lambda x: normalize(x), sigma_ratio, keep_attrs=True).copy(deep=True)
-    for t in sigma_normalized.Time:
-        sigma_t = sigma_normalized.sel(Time=t).copy(deep=True)
-        sigma_t = xr.apply_ufunc(lambda x: normalize(x), sigma_t)
-        sigma_normalized.loc[dict(Time=t)] = sigma_t
+    rho_norm_t = []
+    for t in rho.Time:
+        rho_norm_t.append(xr.apply_ufunc(lambda x: normalize(x), rho.sel(Time=t), keep_attrs=True))
 
+    rho_temp_norm = xr.concat(rho_norm_t, dim='Time')
+    rho_temp_norm = rho_temp_norm.transpose('Height', 'Time')
     if PLOT_RESULTS:
         fig, ax = plt.subplots(nrows=1, ncols=1, figsize=(7, 5))
-        sigma_normalized.plot(cmap='turbo')
+        rho_temp_norm.plot(cmap='turbo')
         plt.title('Temporally Normalized density')
         ax.xaxis.set_major_formatter(TIMEFORMAT)
         ax.xaxis.set_tick_params(rotation=0)
         plt.show()
 
-    return sigma_normalized
+    return rho_temp_norm
 
 
-def plot_max_density_per_time(sigma_ratio):
+def plot_max_density_per_time(rho):
     # maximum density values per time
     fig, ax = plt.subplots(nrows=1, ncols=1, figsize=(7, 5))
-    sigma_ratio.max(dim='Height').plot(ax=ax)
+    rho.max(dim='Height').plot(ax=ax)
     ax.set_title(r'$\rho_{aer}^{max}(t)$')
     ax.xaxis.set_major_formatter(TIMEFORMAT)
     ax.xaxis.set_tick_params(rotation=0)
@@ -598,7 +599,7 @@ def calc_normalized_tau(dr, sigma_normalized):
     return tau_normalized
 
 
-def convert_sigma(tau, wavelen, tau_normalized, sigma_normalized):
+def convert_sigma(tau, wavelength, tau_normalized, sigma_normalized):
     """convert $\sigma_{X}$"""
     # X = 1064 or 355
     # $\sigma_{X}^{max}(t) = \frac{\tau_{X}(t)}{\tau_N(t)}, \;\forall\, t \in Time_{day} $
@@ -608,7 +609,7 @@ def convert_sigma(tau, wavelen, tau_normalized, sigma_normalized):
     if PLOT_RESULTS:
         fig, ax = plt.subplots(nrows=1, ncols=1, figsize=(7, 5))
         sigma_max.plot()
-        title = r'$\sigma^{max}_{' + str(wavelen) + '}(t) $'
+        title = r'$\sigma^{max}_{' + str(wavelength) + '}(t) $'
         ax.set_title(title)
         ax.xaxis.set_major_formatter(TIMEFORMAT)
         ax.xaxis.set_tick_params(rotation=0)
@@ -636,20 +637,6 @@ def get_ds_day_params_and_path(station, year, month, cur_day):
     ds_day_params = ds_month_params.sel(Time=slice(cur_day, cur_day + timedelta(days=1)))
 
     return ds_day_params, gen_source_path
-
-
-def get_height_params(station,USE_KM_UNITS=True ):
-    if USE_KM_UNITS:
-        scale = 1E-3
-    else:
-        scale = 1
-    min_height = station.altitude + station.start_bin_height
-    top_height = station.altitude + station.end_bin_height
-    heights = np.linspace(min_height * scale, top_height * scale, station.n_bins)
-    #dr = heights[1] - heights[0]  # 7.4714e-3
-
-    return heights
-
 
 def plot_extinction_profiles_sigme_diff_times(sigma_uv, sigma_ir, sigma_g):
     # Extinction profiles of $\sigma_{aer}$ at different times
@@ -735,13 +722,14 @@ def generate_density(heights, time_index,ref_height):
     ds_density = generate_density_components(total_time_bins=total_time_bins, ref_height_bin=ref_height_bin,
                                              time_index=time_index, heights=heights, total_bins=total_bins)
 
+
+
     # set ratio - this is mainly for overlap function
     ratio = create_ratio(start_height=heights[0], ref_height=ref_height,
                                 ref_height_bin=ref_height_bin, total_bins=total_bins)
     ds_density = ds_density.assign({'ratio': ('Height', ratio)})
 
     ds_density = merge_density_components(ds_density)
-    ds_density = ds_density.assign_coords(Wavelength=[355, 532, 1064])
     return ds_density
 
 
@@ -749,7 +737,7 @@ def generate_aerosol(ds_day_params, ds_density, time_index, cur_day):
 
     sigma_532_max = np.float(ds_day_params.sel(Time=cur_day).beta532.values) * LR_tropos
 
-    sigma_g, sigma_ratio = create_sigma(ds_density=ds_density, sigma_532_max=sigma_532_max)
+    sigma_g = create_sigma(ds_density=ds_density, sigma_532_max=sigma_532_max)
 
     tau_g = calc_aod( sigma = sigma_g)
 
@@ -757,17 +745,16 @@ def generate_aerosol(ds_day_params, ds_density, time_index, cur_day):
 
     tau_ir, tau_uv = calc_tau_ir_uv(tau_g=tau_g, ang_355_532=ang_355_532, ang_532_10264=ang_532_10264)
 
-    sigma_normalized = calc_temporal_normalized_density(sigma_ratio=sigma_ratio)
+    rho_normalized = calc_temporal_normalized_density(rho=ds_density.rho)
 
     if PLOT_RESULTS:
-        plot_max_density_per_time(sigma_ratio)
+        plot_max_density_per_time(ds_density.rho)
 
-    tau_normalized = calc_aod( sigma = sigma_normalized)
+    tau_normalized = calc_aod( sigma = rho_normalized)
 
-    sigma_ir = convert_sigma(tau=tau_ir, wavelen=1064, tau_normalized=tau_normalized,
-                             sigma_normalized=sigma_normalized)
-    sigma_uv = convert_sigma(tau=tau_uv, wavelen=355, tau_normalized=tau_normalized,
-                             sigma_normalized=sigma_normalized)
+    sigma_ir = convert_sigma(tau=tau_ir, wavelength=1064, tau_normalized=tau_normalized,
+                             sigma_normalized=rho_normalized)
+    sigma_uv = convert_sigma(tau=tau_uv, wavelength=355, tau_normalized=tau_normalized, sigma_normalized=rho_normalized)
 
     if PLOT_RESULTS:
         plot_extinction_profiles_sigme_diff_times(sigma_uv=sigma_uv, sigma_ir=sigma_ir, sigma_g=sigma_g)
