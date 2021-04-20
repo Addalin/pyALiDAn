@@ -468,8 +468,6 @@ def calc_aod(sigma):
     dr_vec = xr.apply_ufunc(lambda x: np.insert(x[1:] - x[0:-1], 0, x[0]), sigma.Height, keep_attrs=True)
     tau = dr_vec * sigma
     aod = tau.sum(dim='Height')
-
-    #tau_g = dr * sigma_g.sum(dim='Height')
     aod.attrs = {'name':'aod', 'long_name': r'$\tau$', 'info':'Aerosol Optical Depth'}
     if PLOT_RESULTS:
         fig, ax = plt.subplots(nrows=1, ncols=1, figsize=(7, 5))
