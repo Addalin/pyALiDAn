@@ -7,7 +7,7 @@ import seaborn as sns
 
 import learning_lidar.global_settings as gs
 from learning_lidar.generation.generate_density_utils import explore_gen_day, PLOT_RESULTS, wrap_dataset, \
-    generate_aerosol, calc_time_index, get_ds_day_params_and_path, get_dr_and_heights, generate_atmosphere
+    generate_aerosol, calc_time_index, get_ds_day_params_and_path, get_height_params, generate_density
 from learning_lidar.generation.generation_utils import save_generated_dataset
 from learning_lidar.utils.utils import create_and_configer_logger
 
@@ -19,7 +19,7 @@ sns.set_palette(sns.color_palette(colors))
 customPalette = sns.set_palette(sns.color_palette(colors))
 
 
-def generate_density(station, cur_day, month, year):
+def generate_aerosol_density(station, cur_day, month, year):
     """
     Creating Daily Lidar Aerosols' dataset with:
     - beta
@@ -36,19 +36,19 @@ def generate_density(station, cur_day, month, year):
     """
 
     # Get and compute the different basic parameters
-    dr, heights = get_dr_and_heights(station)
+    dr, heights, km_scale = get_height_params(station)
     ds_day_params, gen_source_path = get_ds_day_params_and_path(station=station, year=year, month=month,
                                                                 cur_day=cur_day)
     ref_height = np.float(ds_day_params.rm.sel(Time=cur_day).values)
     time_index = calc_time_index(cur_day)
-    start_height = 1e-3 * (station.start_bin_height + station.altitude)
 
-    atmosphere_ds = generate_atmosphere(heights=heights, start_height=start_height, total_bins=station.n_bins,
-                                        ref_height=ref_height, dr=dr, time_index=time_index)
+    ds_density = generate_density(heights=heights, time_index=time_index, ref_height=ref_height)
+
+
+
     # Generate the aerosol
     sigma_ds, beta_ds, sigma_532_max, ang_532_10264, ang_355_532, LR = generate_aerosol(ds_day_params=ds_day_params,
-                                                                                        dr=dr,
-                                                                                        atmosphere_ds=atmosphere_ds,
+                                                                                        ds_density=ds_density,
                                                                                         time_index=time_index,
                                                                                         cur_day=cur_day)
 
@@ -67,7 +67,7 @@ def generate_density(station, cur_day, month, year):
     # Save the aerosols dataset
     save_generated_dataset(station, ds_aer, data_source='aerosol', save_mode='single')
 
-    return ds_aer, atmosphere_ds
+    return ds_aer, ds_density
 
 
 if __name__ == '__main__':
@@ -78,8 +78,8 @@ if __name__ == '__main__':
 
     days_list = [datetime(2017, 9, 2, 0, 0)]
     for cur_day in days_list:
-        ds_aer, atmosphere_ds = generate_density(station, cur_day=cur_day, month=9, year=2017)
+        ds_aer, ds_density = generate_aerosol_density(station, cur_day=cur_day, month=9, year=2017)
 
         EXPLORE_GEN_DAY = False
         if EXPLORE_GEN_DAY:
-            explore_gen_day(station, cur_day, ds_aer, atmosphere_ds)
+            explore_gen_day(station, cur_day, ds_aer, ds_density)

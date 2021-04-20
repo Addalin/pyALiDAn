@@ -283,16 +283,10 @@ def generate_P(P0, c, A, dt, heights, sigma, beta, lidar_const=1, add_photon_noi
     if sigma.ndim > 1:
         heights = np.tile(heights.reshape(heights.shape[0], 1), sigma.shape[1])
     tau = calc_tau(sigma,heights)
-    #dr = heights[1:] - heights[0:-1]  # dr for integration
-    #dr = np.insert(dr.flatten(), 0, heights[0])
 
-    #if sigma.ndim > 1:
-    #	dr = np.tile(dr.reshape(dr.shape[0], 1), sigma.shape[1])
-    #	heights = np.tile(heights.reshape(heights.shape[0], 1), sigma.shape[1])
     if lidar_const is None:
         lidar_const = 0.5 * P0 * c * dt * A
 
-    #tau = np.cumsum(sigma * dr, axis=0)
     numerator = beta * np.exp(-2 * tau)  # add axis
     denominator = np.power(heights, 2) + eps  # epsilon is to avoid NaN
     P = lidar_const * numerator / denominator

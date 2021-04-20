@@ -92,9 +92,10 @@ def make_interpolated_image(nsamples, im):
     return int_im
 
 
-def create_gaussians_level(grid, nx, ny, grid_x, grid_y, std_ratio=.125, choose_ratio=1.0,
-                           cov_size=1E-5, cov_r_lbounds=[.8, .1]):
-    # create centers of Gaussians:
+def create_multi_gaussian_density(grid, nx, ny, grid_x, grid_y, std_ratio=.125, choose_ratio=1.0,
+                                  cov_size=1E-5, cov_r_lbounds=[.8, .1]):
+    # Set a grid of Gaussian's
+    # 1. Define centers of Gaussians:
     new_grid, sample_points = get_random_sample_grid(nx, ny, grid_x, grid_y, std_ratio)
     if choose_ratio < 1.0:
         center_x, _, center_y, _ = train_test_split(sample_points['x'], sample_points['y'],
@@ -103,15 +104,15 @@ def create_gaussians_level(grid, nx, ny, grid_x, grid_y, std_ratio=.125, choose_
         center_x = sample_points['x']
         center_y = sample_points['y']
 
-    # Create covariance to each gaussian and adding each
-    Z_level = np.zeros((grid.shape[0], grid.shape[1]))
+    # 2. Define covariance and distribution to each gaussian, and calculated the total density
+    density = np.zeros((grid.shape[0], grid.shape[1]))
     for x0, y0 in zip(center_x, center_y):
         cov = cov_size * get_random_cov_mat(lbound_x=cov_r_lbounds[0], lbound_y=cov_r_lbounds[1])
         rv = multivariate_normal((x0, y0), cov)
-        Z_level += rv.pdf(grid)
+        density += rv.pdf(grid)
     # normalizing:
-    Z_level = (Z_level - Z_level.min()) / (Z_level.max() - Z_level.min())
-    return Z_level
+    density = normalize(density)
+    return density
 
 
 def angstrom(tau_1, tau_2, lambda_1, lambda_2):
@@ -126,12 +127,12 @@ def angstrom(tau_1, tau_2, lambda_1, lambda_2):
     return -np.log(tau_1 / tau_2) / np.log(lambda_1 / lambda_2)
 
 
-def get_sub_sample_level(level, source_indexes, target_indexes):
-    z_samples = level[:, source_indexes]
-    df_sigma = pd.DataFrame(z_samples, columns=target_indexes)
+def get_sub_sample_level(density, source_indexes, target_indexes):
+    density_samples = density[:, source_indexes]
+    df_sigma = pd.DataFrame(density_samples, columns=target_indexes)
     interp_sigma_df = (df_sigma.T.resample('30S').interpolate(method='linear')).T
     sampled_interp = interp_sigma_df.values
-    sampled_interp = (sampled_interp - sampled_interp.min()) / (sampled_interp.max() - sampled_interp.min())
+    sampled_interp = normalize (sampled_interp)
     return sampled_interp
 
 
@@ -170,7 +171,7 @@ def create_ratio(start_height, ref_height, ref_height_bin, total_bins):
     return smooth_ratio
 
 
-def set_gaussian_grid(nx, ny, cov_size, choose_ratio, std_ratio, cov_r_lbounds, grid,
+def set_gaussian_component(nx, ny, cov_size, choose_ratio, std_ratio, cov_r_lbounds, grid,
                       x, y, start_bin, top_bin):
     """
     TODO
@@ -189,17 +190,17 @@ def set_gaussian_grid(nx, ny, cov_size, choose_ratio, std_ratio, cov_r_lbounds, 
     grid_y = y[start_bin:top_bin]
     grid_x = x
 
-    Z_level = create_gaussians_level(grid, nx, ny, grid_x, grid_y, std_ratio,
-                                     choose_ratio, cov_size, cov_r_lbounds)
+    density = create_multi_gaussian_density(grid, nx, ny, grid_x, grid_y, std_ratio,
+                                            choose_ratio, cov_size, cov_r_lbounds)
     if PLOT_RESULTS:
         plt.figure()
-        im = plt.imshow(Z_level, cmap='turbo')
+        im = plt.imshow(density, cmap='turbo')
         plt.colorbar(im)
         plt.gca().set_aspect('equal')
         plt.gca().invert_yaxis()
         plt.show()
 
-    return Z_level
+    return density
 
 
 def set_gaussian_grid_features(nx, ny, x, y, start_bin, top_bin):
@@ -221,10 +222,18 @@ def set_gaussian_grid_features(nx, ny, x, y, start_bin, top_bin):
     return center_x, center_y
 
 
+def set_features_component(grid, x, y, grid_cov_size, ref_height_bin):
+    density = create_Z_level2(grid, x, y, grid_cov_size, ref_height_bin)
+
+    blur_features = create_blur_features(density = density, nsamples= int(grid.shape[0]*grid.shape[1] * .0005))
+    return  blur_features
+
+
+
 def create_Z_level2(grid, x, y, grid_cov_size, ref_height_bin):
     # Create Z_level2
 
-    # Set a grid of gaussians - component 2 - for features
+    # Set a grid of Gaussians - component 2 - for features
     center_x, center_y = set_gaussian_grid_features(nx=9, ny=1, x=x, y=y, start_bin=int(0 * ref_height_bin),
                                                     top_bin=int(.3 * ref_height_bin))
     center_x1, center_y1 = set_gaussian_grid_features(nx=8, ny=1, x=x, y=y, start_bin=int(.2 * ref_height_bin),
@@ -237,42 +246,44 @@ def create_Z_level2(grid, x, y, grid_cov_size, ref_height_bin):
                          np.concatenate((center_y, center_y1, center_y2), axis=0),
                          train_size=.5)
 
-    Z_level2 = np.zeros((grid.shape[0], grid.shape[1]))
+    density = np.zeros((grid.shape[0], grid.shape[1]))
 
     for x0, y0 in zip(center_x_split_1, center_y_split_1):
         cov = grid_cov_size * get_random_cov_mat(lbound_x=.7, lbound_y=.01)
         rv = multivariate_normal((x0, y0), cov)
         r = 1
-        Z_level2 += r * rv.pdf(grid)
+        density += r * rv.pdf(grid)
 
     for x0, y0 in zip(center_x_split_2, center_y_split_2):
         cov = grid_cov_size * get_random_cov_mat(lbound_x=.7, lbound_y=.01)
         rv = multivariate_normal((x0, y0), cov)
         r = -1
-        Z_level2 += r * rv.pdf(grid)
+        density += r * rv.pdf(grid)
 
-    Z_level2 = (Z_level2 - Z_level2.min()) / (Z_level2.max() - Z_level2.min())
+    density = normalize(density)
 
     if PLOT_RESULTS:
         plt.figure()
-        im = plt.imshow(Z_level2, cmap='turbo')
+        im = plt.imshow(density, cmap='turbo')
         plt.colorbar(im)
         plt.gca().set_aspect('equal')
         plt.gca().invert_yaxis()
         plt.show()
 
-    return Z_level2
+    return density
 
 
-def create_blur_features(Z_level2, nsamples):
+def create_blur_features(density, nsamples):
+
+
     # Gradients of component 2
     g_filter = np.array([[0, -1, 0],
                          [-1, 0, 1],
                          [0, 1, 0]])
-    grad = signal.convolve2d(Z_level2, g_filter, boundary='symm', mode='same')
-    grad_norm = (grad - grad.min()) / (grad.max() - grad.min())
+    grad = signal.convolve2d(density, g_filter, boundary='symm', mode='same')
+    grad_norm = normalize(grad)
     grad_amplitude = np.absolute(grad)
-    grad_norm_amplitude = (grad_amplitude - grad_amplitude.min()) / (grad_amplitude.max() - grad_amplitude.min())
+    grad_norm_amplitude = normalize(grad_amplitude)
 
     if PLOT_RESULTS:
         fig, axes = plt.subplots(nrows=3, ncols=1, figsize=(15, 10))
@@ -303,7 +314,8 @@ def create_blur_features(Z_level2, nsamples):
     # Subsample and interpolation of the absolute of gradients - component 2
     interp_features = make_interpolated_image(nsamples, grad_norm_amplitude)
     blur_features = gaussian_filter(interp_features, sigma=(21, 61))
-    blur_features = (blur_features - blur_features.min()) / (blur_features.max() - blur_features.min())
+    blur_features = normalize(blur_features)
+
     if PLOT_RESULTS:
         plt.figure()
         im = plt.imshow(blur_features, cmap='turbo')
@@ -316,16 +328,30 @@ def create_blur_features(Z_level2, nsamples):
     return blur_features
 
 
-def create_sampled_level_interp(Z_level, k, indexes, tt_index, level_id):
-    # Summing up the components to an aerosol density $\rho_{aer}$
+def random_subsampled_density(density, k, time_index, level_id):
+    # Subsample & interpolation of 1/4 part of the component (stretching to one day of measurments)
+    # TODO: create 4 X 4 X 4 combinations per evaluation , save for each
+
+    indexes = np.round(np.linspace(0, 720, 97)).astype(int)
+    target_indexes = [i * 30 for i in range(97)]
+    target_indexes[-1] -= 1
+    tt_index = time_index[target_indexes]
+
+    # trying to set different sizes of cropping : 6,8,12 or 24 hours . This is not finished yet, thus commented
+    """
+    interval_size = np.random.choice([6,8,12,24])
+    bins_interval = 120*interval_size
+    bins_interval,interval_size, bins_interval/30
+    2880/30+1 , len(target_indexes),96*30, source_indexes
+    """
     shift_bins = int(720 * k)
     print(f'component {level_id} shift bins {shift_bins}')
     source_indexes = indexes + shift_bins
-    sampled_level_interp = get_sub_sample_level(Z_level, source_indexes, tt_index)
+    sampled_level_interp = get_sub_sample_level(density, source_indexes, tt_index)
     return sampled_level_interp
 
 
-def create_ds_density(sampled_level0_interp, sampled_level1_interp, sampled_level2_interp, heights, time_index):
+def generate_daily_density(sampled_level0_interp, sampled_level1_interp, sampled_level2_interp, heights, time_index):
     components = []
     for indl, component in enumerate([sampled_level0_interp, sampled_level1_interp, sampled_level2_interp]):
         ds_component = xr.Dataset(
@@ -339,26 +365,17 @@ def create_ds_density(sampled_level0_interp, sampled_level1_interp, sampled_leve
     ds_density.Height.attrs = {'units': 'km'}
 
     if PLOT_RESULTS:
-        times = [ds_density.Time[ind].values for ind in t_index]
-        fig, axes = plt.subplots(nrows=3, ncols=1, figsize=(8, 10), sharex=True)
-        for l, ax in zip(ds_density.Component, axes.ravel()):
-            ds_density.density.sel(Component=l).plot(cmap='turbo', ax=ax)
-            ax.xaxis.set_major_formatter(TIMEFORMAT)
-            ax.xaxis.set_tick_params(rotation=0)
-            ax.set_title('')
-        # ax.xticks(rotation=0)
-        plt.tight_layout()
 
-        plt.show()
-
-        ds_density.density.plot(x='Time', y='Height', row='Component', cmap='turbo', figsize=(10, 10), sharex=True)
+        ds_density.density.plot(x='Time', y='Height', row='Component', cmap='turbo', figsize=(8, 10), sharex=True)
         ax = plt.gca()
         ax.xaxis.set_major_formatter(TIMEFORMAT)
         ax.xaxis.set_tick_params(rotation=0)
         plt.show()
 
         fig, axes = plt.subplots(nrows=1, ncols=3, figsize=(10, 6), sharey=True)
-        for t, ax in zip(times, axes.ravel()):
+        times = [ds_density.Time[ind].values for ind in t_index]
+        for t, ax in zip(times,
+                         axes.ravel()):
             ds_density.density.sel(Time=t).plot.line(ax=ax, y='Height')
         # plt.tight_layout()
         plt.show()
@@ -366,9 +383,9 @@ def create_ds_density(sampled_level0_interp, sampled_level1_interp, sampled_leve
     return ds_density
 
 
-def create_atmosphere_ds(ds_density, smooth_ratio):
-    # Merged density level
-    # Built as a linear combination of the levels above
+def merge_density_components(ds_density):
+    # Random Merge of  density components
+    # Built as a linear combination of density components
     weight_0 = 0.6 + 0.25 * np.random.randn()
     if weight_0 < 0.3:
         weight_0 = 0.5 + abs(weight_0)
@@ -379,30 +396,32 @@ def create_atmosphere_ds(ds_density, smooth_ratio):
     if weight_2 < 0:
         weight_2 = 0.4 + abs(weight_2)
     print("weights:", [weight_0, weight_1, weight_2])
-    atmosphere_ds = ds_density.assign({'weights': ('Component', [weight_0, weight_1, weight_2])})
+    ds_density = ds_density.assign({'weights': ('Component', [weight_0, weight_1, weight_2])})
     merged = xr.zeros_like(ds_density.density[0])
-    for l in ds_density.Component:
-        merged += ds_density.density.sel(Component=l) * atmosphere_ds.weights.sel(Component=l)
-    merged = (merged - merged.min()) / (merged.max() - merged.min())
 
-    atmosphere_ds = atmosphere_ds.assign(merged=merged)
-    atmosphere_ds.merged.attrs = {'info': "Aerosol's density", 'long_name': 'density'}
+    # Summing up the components to an aerosol density $\rho_{aer}$
+    for l in ds_density.Component:
+        merged += ds_density.density.sel(Component=l) * ds_density.weights.sel(Component=l)
+    # Normalizing the final merged density
+    merged = normalize (merged)
+
+    ds_density = ds_density.assign(merged=merged)
+    ds_density.merged.attrs = {'info': "Aerosol's density", 'name': 'density', 'long_name': r'$\rho$'}
     if PLOT_RESULTS:
         plt.figure(figsize=(9, 6))
-        atmosphere_ds.merged.plot(cmap='turbo')
-        plt.title(atmosphere_ds.merged.attrs['info'])
+        ds_density.merged.plot(cmap='turbo')
+        plt.title(ds_density.merged.attrs['info'])
         ax = plt.gca()
         ax.xaxis.set_major_formatter(TIMEFORMAT)
         ax.xaxis.set_tick_params(rotation=0)
         plt.show()
 
-    atmosphere_ds = atmosphere_ds.assign_coords(Wavelength=[355, 532, 1064])
-    atmosphere_ds = atmosphere_ds.assign({'ratio': ('Height', smooth_ratio)})
-    #  TODO SAVE atmosphere_ds
-    return atmosphere_ds
+
+    #  TODO SAVE ds_density
+    return ds_density
 
 
-def create_sigma(atmosphere_ds, sigma_532_max):
+def create_sigma(ds_density, sigma_532_max):
     # Creating $\sigma_{532}$
     # To create the aerosol, the density is:
     """1. Normalized
@@ -410,14 +429,14 @@ def create_sigma(atmosphere_ds, sigma_532_max):
     3. multiplied with a typical $\sigma_{aer, 532}$, e.g.$\sigma_{max}=0.025[1 / km]$"""
 
     sigma_ratio = xr.apply_ufunc(lambda x, r: gaussian_filter(r * x, sigma=(9, 5)),
-                                 atmosphere_ds.merged, atmosphere_ds.ratio, keep_attrs=False)
+                                 ds_density.merged, ds_density.ratio, keep_attrs=False)
 
     sigma_g = xr.apply_ufunc(lambda x: normalize(x, sigma_532_max),
                              sigma_ratio.copy(deep=True), keep_attrs=False)
     sigma_g['Wavelength'] = 532
 
     if PLOT_RESULTS:
-        times = [atmosphere_ds.Time[ind].values for ind in t_index]
+        times = [ds_density.Time[ind].values for ind in t_index]
         fig, axes = plt.subplots(nrows=1, ncols=1, figsize=(7, 5))
         ax = axes
         sigma_ratio.plot(cmap='turbo', ax=ax)
@@ -441,21 +460,23 @@ def create_sigma(atmosphere_ds, sigma_532_max):
     return sigma_g, sigma_ratio
 
 
-def calc_aod(dr, sigma_g):
-    # Calculate Aearosol Optical Depth (AOD)
+def calc_aod(sigma):
+    # Calculate Aerosol Optical Depth (AOD)
     # $\tau_{aer,\lambda} = \int \sigma_{aer,\lambda} (r) dr\;\; \forall \, r \leq r_{ref} $
+    dr_vec = xr.apply_ufunc(lambda x: np.insert(x[1:] - x[0:-1], 0, x[0]), sigma.Height, keep_attrs=True)
+    tau = dr_vec * sigma
+    aod = tau.sum(dim='Height')
 
-    tau_g = dr * sigma_g.sum(dim='Height')
-    tau_g.name = r'$\tau$'
+    #tau_g = dr * sigma_g.sum(dim='Height')
+    aod.attrs = {'name':'aod', 'long_name': r'$\tau$', 'info':'Aerosol Optical Depth'}
     if PLOT_RESULTS:
-        fig, axes = plt.subplots(nrows=1, ncols=1, figsize=(7, 5))
-        ax = axes
-        tau_g.plot(ax=ax)
+        fig, ax = plt.subplots(nrows=1, ncols=1, figsize=(7, 5))
+        aod.plot(ax=ax)
         ax.xaxis.set_major_formatter(TIMEFORMAT)
         ax.xaxis.set_tick_params(rotation=0)
         plt.show()
 
-    return tau_g
+    return aod
 
 
 def calculate_LR_and_ang(ds_day_params, time_index):
@@ -617,14 +638,14 @@ def get_ds_day_params_and_path(station, year, month, cur_day):
     return ds_day_params, gen_source_path
 
 
-def get_dr_and_heights(station):
+def get_height_params(station):
     km_scale = 1E-3
     min_height = station.altitude + station.start_bin_height
     top_height = station.altitude + station.end_bin_height
     heights = np.linspace(min_height * km_scale, top_height * km_scale, station.n_bins)
     dr = heights[1] - heights[0]  # 7.4714e-3
 
-    return dr, heights
+    return dr, heights, km_scale
 
 
 def plot_extinction_profiles_sigme_diff_times(sigma_uv, sigma_ir, sigma_g):
@@ -670,75 +691,64 @@ def generate_density_components(total_time_bins, ref_height_bin, time_index, hei
     X, Y = np.meshgrid(x, y, indexing='xy')
     grid = np.dstack((X, Y))
 
-    # Set a grid of Gaussian's - component 0
-    Z_level0 = set_gaussian_grid(nx=5, ny=1, cov_size=1E+6, choose_ratio=.95, std_ratio=.25, cov_r_lbounds=[.8, .1],
-                                 grid=grid, x=x, y=y, start_bin=0, top_bin=int(0.5 * ref_height_bin),
-                                 )
+    # Set component 0
+    component_0 = set_gaussian_component(nx=5, ny=1, cov_size=1E+6, choose_ratio=.95, std_ratio=.25,
+                                         cov_r_lbounds=[.8, .1], grid=grid, x=x, y=y, start_bin=0,
+                                         top_bin=int(0.5 * ref_height_bin))
 
-    # Set a grid of gaussians - component 1
-    Z_level1 = set_gaussian_grid(nx=6, ny=2, cov_size=5 * 1E+4, choose_ratio=.9, std_ratio=.15,
-                                 cov_r_lbounds=[.8, .1],
-                                 grid=grid, x=x, y=y, start_bin=int(0.1 * ref_height_bin),
-                                 top_bin=int(0.8 * ref_height_bin))
+    # Set component 1
+    component_1 = set_gaussian_component(nx=6, ny=2, cov_size=5 * 1E+4, choose_ratio=.9, std_ratio=.15,
+                                         cov_r_lbounds=[.8, .1], grid=grid, x=x, y=y,
+                                         start_bin=int(0.1 * ref_height_bin), top_bin=int(0.8 * ref_height_bin))
 
-    Z_level2 = create_Z_level2(grid=grid, x=x, y=y, grid_cov_size=1E+4, ref_height_bin=ref_height_bin,
-                               )
+    # Set component 2
+    component_2 = set_features_component(grid=grid, x=x, y=y, grid_cov_size=1E+4, ref_height_bin=ref_height_bin)
 
-    blur_features = create_blur_features(Z_level2=Z_level2, nsamples=int(total_bins * total_time_bins * .0005),
-                                         )
 
-    # Subsample & interpolation of 1/4 part of the component (stretching to one day of measurments)
-    # TODO: create 4 X 4 X 4 combinations per evaluation , save for each
 
-    indexes = np.round(np.linspace(0, 720, 97)).astype(int)
-    target_indexes = [i * 30 for i in range(97)]
-    target_indexes[-1] -= 1
-    tt_index = time_index[target_indexes]
+    # Randomly subsampled components
+    subsamp_component_0 = random_subsampled_density(density=component_0, k=np.random.uniform(0.5, 2.5),
+                                                      time_index=time_index, level_id='0')
 
-    # trying to set different sizes of cropping : 6,8,12 or 24 hours . This is not finished yet, thus commented
+    subsamp_component_1 = random_subsampled_density(density=component_1, k=np.random.uniform(0, 3),
+                                                      time_index=time_index, level_id='1')
 
-    """
-    interval_size = np.random.choice([6,8,12,24])
-    bins_interval = 120*interval_size
-    bins_interval,interval_size, bins_interval/30
-    2880/30+1 , len(target_indexes),96*30, source_indexes
-    """
-    sampled_level0_interp = create_sampled_level_interp(Z_level=Z_level0, k=np.random.uniform(0.5, 2.5),
-                                                        indexes=indexes, tt_index=tt_index, level_id='0')
+    subsamp_component_2 = random_subsampled_density(density=component_2, k=np.random.uniform(0, 3),
+                                                      time_index=time_index, level_id='2')
 
-    sampled_level1_interp = create_sampled_level_interp(Z_level=Z_level1, k=np.random.uniform(0, 3),
-                                                        indexes=indexes, tt_index=tt_index, level_id='1')
-
-    sampled_level2_interp = create_sampled_level_interp(Z_level=blur_features, k=np.random.uniform(0, 3),
-                                                        indexes=indexes, tt_index=tt_index, level_id='2')
-
-    ds_density = create_ds_density(sampled_level0_interp=sampled_level0_interp,
-                                   sampled_level1_interp=sampled_level1_interp,
-                                   sampled_level2_interp=sampled_level2_interp,
-                                   heights=heights, time_index=time_index)
+    ds_density = generate_daily_density(sampled_level0_interp = subsamp_component_0,
+                                        sampled_level1_interp = subsamp_component_1,
+                                        sampled_level2_interp = subsamp_component_2, heights=heights,
+                                        time_index=time_index)
 
     return ds_density
 
 
-def generate_atmosphere(heights, total_bins, ref_height, start_height, dr, time_index):
+def generate_density(heights, time_index,ref_height):
+    dr = heights[1]-heights[0]
+    total_bins = heights.size
     ref_height_bin = np.int(ref_height / dr)
+
     ds_density = generate_density_components(total_time_bins=total_time_bins, ref_height_bin=ref_height_bin,
                                              time_index=time_index, heights=heights, total_bins=total_bins)
 
-    # set ratio
-    smooth_ratio = create_ratio(start_height=start_height, ref_height=ref_height, ref_height_bin=ref_height_bin,
-                                total_bins=total_bins)
+    # set ratio - this is mainly for overlap function
+    ratio = create_ratio(start_height=heights[0], ref_height=ref_height,
+                                ref_height_bin=ref_height_bin, total_bins=total_bins)
+    ds_density = ds_density.assign({'ratio': ('Height', ratio)})
 
-    atmosphere_ds = create_atmosphere_ds(ds_density=ds_density, smooth_ratio=smooth_ratio)
-    return atmosphere_ds
+    ds_density = merge_density_components(ds_density)
+    ds_density = ds_density.assign_coords(Wavelength=[355, 532, 1064])
+    return ds_density
 
 
-def generate_aerosol(ds_day_params, dr, atmosphere_ds, time_index, cur_day):
+def generate_aerosol(ds_day_params, ds_density, time_index, cur_day):
+
     sigma_532_max = np.float(ds_day_params.sel(Time=cur_day).beta532.values) * LR_tropos
 
-    sigma_g, sigma_ratio = create_sigma(atmosphere_ds=atmosphere_ds, sigma_532_max=sigma_532_max)
+    sigma_g, sigma_ratio = create_sigma(ds_density=ds_density, sigma_532_max=sigma_532_max)
 
-    tau_g = calc_aod(dr=dr, sigma_g=sigma_g)
+    tau_g = calc_aod( sigma = sigma_g)
 
     LR, ang_355_532, ang_532_10264 = calculate_LR_and_ang(ds_day_params=ds_day_params, time_index=time_index)
 
@@ -749,7 +759,7 @@ def generate_aerosol(ds_day_params, dr, atmosphere_ds, time_index, cur_day):
     if PLOT_RESULTS:
         plot_max_density_per_time(sigma_ratio)
 
-    tau_normalized = calc_normalized_tau(dr=dr, sigma_normalized=sigma_normalized)
+    tau_normalized = calc_aod( sigma = sigma_normalized)
 
     sigma_ir = convert_sigma(tau=tau_ir, wavelen=1064, tau_normalized=tau_normalized,
                              sigma_normalized=sigma_normalized)
@@ -779,7 +789,9 @@ def calc_time_index(cur_day):
     return time_index
 
 
-def wrap_dataset(sigma_ds, beta_ds, sigma_532_max, ang_532_10264, ang_355_532, LR, ref_height, station_name,
+def wrap_dataset(sigma_ds, beta_ds, sigma_532_max,
+                 ang_532_10264, ang_355_532,
+                 LR, ref_height, station_name,
                  gen_source_path, cur_day):
     ds_aer = xr.Dataset()
     ds_aer = ds_aer.assign(
@@ -820,7 +832,7 @@ def wrap_dataset(sigma_ds, beta_ds, sigma_532_max, ang_532_10264, ang_355_532, L
     return ds_aer
 
 
-def explore_gen_day(station, cur_day, ds_aer, atmosphere_ds):
+def explore_gen_day(station, cur_day, ds_aer, ds_density):
     # Show relative ratios between aerosols and molecular backscatter
 
     mol_month_folder = prep.get_month_folder_name(station.molecular_dataset, cur_day)
@@ -842,7 +854,7 @@ def explore_gen_day(station, cur_day, ds_aer, atmosphere_ds):
     ax.xaxis.set_tick_params(rotation=0)
     plt.show()
 
-    atmosphere_ds.density.plot(x='Time', y='Height', row='Component',
+    ds_density.density.plot(x='Time', y='Height', row='Component',
                                cmap='turbo', figsize=(10, 10), sharex=True)
     ax = plt.gca()
     ax.xaxis.set_major_formatter(TIMEFORMAT)
