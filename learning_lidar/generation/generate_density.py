@@ -36,7 +36,8 @@ def generate_aerosol_density(station, cur_day, month, year):
     """
 
     # Get and compute the different basic parameters
-    dr, heights, km_scale = get_height_params(station)
+    #heights, km_scale = get_height_params(station)
+    heights = station.get_height_bins_values()
     ds_day_params, gen_source_path = get_ds_day_params_and_path(station=station, year=year, month=month,
                                                                 cur_day=cur_day)
     ref_height = np.float(ds_day_params.rm.sel(Time=cur_day).values)

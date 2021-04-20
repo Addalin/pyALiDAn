@@ -553,7 +553,7 @@ def calc_tau_ir_uv(tau_g, ang_355_532, ang_532_10264):
     return tau_ir, tau_uv
 
 
-def calc_normalized_density(sigma_ratio):
+def calc_temporal_normalized_density(sigma_ratio):
     """Normalizing the original density of sigma per time"""
     # normalized density
     sigma_normalized = xr.apply_ufunc(lambda x: normalize(x), sigma_ratio, keep_attrs=True).copy(deep=True)
@@ -638,14 +638,17 @@ def get_ds_day_params_and_path(station, year, month, cur_day):
     return ds_day_params, gen_source_path
 
 
-def get_height_params(station):
-    km_scale = 1E-3
+def get_height_params(station,USE_KM_UNITS=True ):
+    if USE_KM_UNITS:
+        scale = 1E-3
+    else:
+        scale = 1
     min_height = station.altitude + station.start_bin_height
     top_height = station.altitude + station.end_bin_height
-    heights = np.linspace(min_height * km_scale, top_height * km_scale, station.n_bins)
-    dr = heights[1] - heights[0]  # 7.4714e-3
+    heights = np.linspace(min_height * scale, top_height * scale, station.n_bins)
+    #dr = heights[1] - heights[0]  # 7.4714e-3
 
-    return dr, heights, km_scale
+    return heights
 
 
 def plot_extinction_profiles_sigme_diff_times(sigma_uv, sigma_ir, sigma_g):
@@ -754,7 +757,7 @@ def generate_aerosol(ds_day_params, ds_density, time_index, cur_day):
 
     tau_ir, tau_uv = calc_tau_ir_uv(tau_g=tau_g, ang_355_532=ang_355_532, ang_532_10264=ang_532_10264)
 
-    sigma_normalized = calc_normalized_density(sigma_ratio=sigma_ratio)
+    sigma_normalized = calc_temporal_normalized_density(sigma_ratio=sigma_ratio)
 
     if PLOT_RESULTS:
         plot_max_density_per_time(sigma_ratio)

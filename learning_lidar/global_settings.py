@@ -82,6 +82,17 @@ class Station:
     def __str__(self):
         return  ("\n " + str(self.__class__) + ": " + str(self.__dict__)).replace(" {","\n  {").replace(",",",\n  ")
 
+    def get_height_bins_values(self, USE_KM_UNITS=True):
+        '''Setting height vector above sea level (for interpolation of radiosonde / gdas files).'''
+        if USE_KM_UNITS:
+            scale = 1E-3
+        else:
+            scale = 1
+        min_height = self.altitude + self.start_bin_height
+        top_height = self.altitude + self.end_bin_height
+        heights = np.linspace(min_height * scale, top_height * scale, self.n_bins)
+        return  heights
+
 class CHANNELS():
     def __init__(self):
 

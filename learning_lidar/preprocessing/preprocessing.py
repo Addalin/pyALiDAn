@@ -135,18 +135,7 @@ def get_daily_molecular_profiles(station, day_date, lambda_nm=532, height_units=
     gdas_txt_paths.append(gdas_nxtday_paths[0])
     timestamps = [get_gdas_timestamp(station, path) for path in gdas_txt_paths]
 
-    '''Setting height vector above sea level (for interpolation of radiosonde / gdas files).'''
-    if height_units == 'km':
-        scale = 1E-3
-    elif height_units == 'm':
-        scale = 1
-
-    min_height = station.altitude + station.start_bin_height
-    top_height = station.altitude + station.end_bin_height
-    heights = np.linspace(min_height * scale, top_height * scale, station.n_bins)
-    # uncomment the commands below for sanity check of the desired height resolution
-    # dr = heights[1]-heights[0]
-    # print('h_bins=',heights.shape,' min_height=', min_height,' top_height=', top_height,' dr=',dr )
+    heights = station.get_height_bins_values()
 
     df_sigma = pd.DataFrame(index=heights).rename_axis(f'Height[{height_units}]')
     df_beta = pd.DataFrame(index=heights).rename_axis(f'Height[{height_units}]')
