@@ -634,9 +634,7 @@ def get_daily_range_corr(station, day_date, height_units='km',
     range_corr_ds = xr.merge(ds_range_corrs, compat='no_conflicts')
 
     # Fixing missing timestamps values:
-    time_indx = pd.date_range(start=date_datetime,
-                              end=(date_datetime + timedelta(hours=24) - timedelta(seconds=30)),
-                              freq='30S')
+    time_indx = station.calc_daily_time_index(date_datetime)
     range_corr_ds = range_corr_ds.reindex({"Time": time_indx}, fill_value=0)
     range_corr_ds = range_corr_ds.assign({'plot_min_range': ('Wavelength', min_range.min(axis=1)),
                                           'plot_max_range': ('Wavelength', max_range.max(axis=1))})

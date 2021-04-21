@@ -26,6 +26,7 @@ import pandas as pd
 import numpy as np
 from dataclasses import dataclass
 import os
+from datetime import datetime,timedelta
 # %% Basic physics constants
 
 eps = np.finfo(np.float).eps
@@ -60,11 +61,13 @@ class Station:
         self.location = station_df['location']
         self.lon = np.float(station_df['longitude'])
         self.lat = np.float(station_df['latitude'])
-        self.altitude = np.float(station_df['altitude'])  # [m] The Lidar's altitude   ( above sea level, see 'altitude' in ' *_att_bsc.nc)
+        self.altitude = np.float(station_df['altitude'])                  # [m] The Lidar's altitude   ( above sea level, see 'altitude' in ' *_att_bsc.nc)
         self.start_bin_height = np.float(station_df['start_bin_height'])  # [m] The first bin's height ( above ground level - a.k.a above the lidar, see height[0]  in *_att_bsc.nc)
-        self.end_bin_height = np.float(station_df['end_bin_height'])  # [m] The last bin's height  ( see height[-1] in *_att_bsc.nc)
-        self.n_bins = np.int(station_df['n_bins'])      # [#] Number of height bins         ( see height.shape  in  *_att_bsc.nc)
-        self.dt = np.float(eval(station_df['dt']))     # [sec] temporal pulse width of the lidar
+        self.end_bin_height = np.float(station_df['end_bin_height'])      # [m] The last bin's height  ( see height[-1] in *_att_bsc.nc)
+        self.n_bins = np.int(station_df['n_bins'])                        # [#] Number of height bins         ( see height.shape  in  *_att_bsc.nc)
+        self.dt = np.float(eval(station_df['dt']))                        # [sec] temporal pulse width of the lidar note: dr = C*dt/2
+        self.freq = 30                                                    # [sec] Frequency of measurments, currently every 30 sec, if this value changes, add it to the stations.csv
+        self.total_time_bins = 2880                                       # Total measurment per day, currently 2880 time bins, if this value changes, add it to the stations.csv
         self.gdas1_folder = station_df['gdas1_folder']
         self.gdastxt_folder = station_df['gdastxt_folder']
         self.lidar_src_folder = station_df['lidar_src_folder']
@@ -92,6 +95,12 @@ class Station:
         top_height = self.altitude + self.end_bin_height
         heights = np.linspace(min_height * scale, top_height * scale, self.n_bins)
         return  heights
+
+    def calc_daily_time_index(self, cur_day):
+        end_t = cur_day + timedelta(hours=24) - timedelta(seconds=self.freq)
+        time_index = pd.date_range(start=cur_day, end=end_t, freq=f'{self.freq}S')
+        assert self.total_time_bins == len(time_index)
+        return time_index
 
 class CHANNELS():
     def __init__(self):

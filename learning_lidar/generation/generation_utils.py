@@ -1,5 +1,6 @@
 import learning_lidar.preprocessing.preprocessing as prep
-
+from datetime import datetime,date
+import os
 
 def get_gen_dataset_file_name(station, day_date, wavelength='*', data_source='lidar', file_type='range_corr'):
     """
@@ -70,3 +71,15 @@ def save_generated_dataset(station, dataset, data_source='lidar', save_mode='bot
         if ncpath:
             ncpaths.append(ncpath)
     return ncpaths
+
+def get_month_density_gen_fname(station, day_date):
+    year = day_date.year
+    month = day_date.month
+    month_start_day = datetime(year, month, 1, 0, 0)
+    monthdays = (date(year, month + 1, 1) - date(year, month, 1)).days
+    month_end_day = datetime(year, month, monthdays, 0, 0)
+
+    nc_name = f"generated_density_params_{station.name}_{month_start_day.strftime('%Y-%m-%d')}_{month_end_day.strftime('%Y-%m-%d')}.nc"
+    gen_source_path = os.path.join(station.generation_folder, nc_name)
+    return gen_source_path
+
