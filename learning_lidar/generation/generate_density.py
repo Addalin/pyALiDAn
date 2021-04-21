@@ -41,7 +41,7 @@ if __name__ == '__main__':
     logger = create_and_configer_logger('generate_density.log', level=logging.DEBUG)
     station = gs.Station(station_name='haifa')
 
-    days_list = [datetime(2017, 9, 2, 0, 0)]
+    days_list = [datetime(2017, 9, 3, 0, 0)]
     for cur_day in days_list:
         # TODO: Parallel days creation + tqdm (if possible - to asses the progress)
         ds_aer, ds_density = generate_aerosol_density(station, day_date=cur_day)

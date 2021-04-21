@@ -1,6 +1,5 @@
 import os
 from datetime import datetime, date, timedelta
-
 import matplotlib.dates as mdates
 import numpy as np
 import pandas as pd
@@ -25,7 +24,10 @@ t_index = [500, 1500, 2500]  # TODO param for generate_density somehow
 PLOT_RESULTS = False  # TODO param for generate_density somehow
 LR_tropos = 55
 
+
 # TODO print --> logger.debug
+
+# %% Functions of Daily Aerosols' Density Generation
 
 def dt2binscale(dt_time, res_sec=30):
     """
@@ -43,6 +45,15 @@ def dt2binscale(dt_time, res_sec=30):
 
 
 def get_random_sample_grid(nx, ny, orig_x, orig_y, std_ratio=.125):
+    """
+    # TODO
+    :param nx:
+    :param ny:
+    :param orig_x:
+    :param orig_y:
+    :param std_ratio:
+    :return:
+    """
     delta_x = (orig_x[-1] - orig_x[0]) / nx
     delta_y = (orig_y[-1] - orig_y[0]) / ny
 
@@ -64,6 +75,12 @@ def get_random_sample_grid(nx, ny, orig_x, orig_y, std_ratio=.125):
 
 
 def get_random_cov_mat(lbound_x=.5, lbound_y=.1):
+    """
+    # TODO
+    :param lbound_x:
+    :param lbound_y:
+    :return:
+    """
     # generating covariance matrix with higher x diagonal of gaussian
     # set : lbound_x< std_x <= 1
     std_x = 1 - lbound_x * np.random.rand()
@@ -78,17 +95,17 @@ def get_random_cov_mat(lbound_x=.5, lbound_y=.1):
     return cov
 
 
-def make_interpolated_image(nsamples, im):
-    """Make an interpolated image from a random selection of pixels.
+def make_interpolated_image(n_samples, im):
+    """
 
-    Take nsamples random pixels from im and reconstruct the image using
-    scipy.interpolate.griddata.
-
+    :param n_samples: int object. Number of samples to make.
+    :param im: np.array. Input 2D image
+    :return: Create an interpolated image from a random selection of pixels from the original image im.
     """
     nx, ny = im.shape[1], im.shape[0]
     X, Y = np.meshgrid(np.arange(0, nx, 1), np.arange(0, ny, 1))
-    ix = np.random.randint(im.shape[1], size=nsamples)
-    iy = np.random.randint(im.shape[0], size=nsamples)
+    ix = np.random.randint(im.shape[1], size=n_samples)
+    iy = np.random.randint(im.shape[0], size=n_samples)
     samples = im[iy, ix]
     int_im = griddata((iy, ix), samples, (Y, X), method='nearest', fill_value=0)
     return int_im
@@ -96,6 +113,19 @@ def make_interpolated_image(nsamples, im):
 
 def create_multi_gaussian_density(grid, nx, ny, grid_x, grid_y, std_ratio=.125, choose_ratio=1.0,
                                   cov_size=1E-5, cov_r_lbounds=[.8, .1]):
+    """
+    # TODO
+    :param grid:
+    :param nx:
+    :param ny:
+    :param grid_x:
+    :param grid_y:
+    :param std_ratio:
+    :param choose_ratio:
+    :param cov_size:
+    :param cov_r_lbounds:
+    :return:
+    """
     # Set a grid of Gaussian's
     # 1. Define centers of Gaussians:
     new_grid, sample_points = get_random_sample_grid(nx, ny, grid_x, grid_y, std_ratio)
@@ -130,6 +160,13 @@ def angstrom(tau_1, tau_2, lambda_1, lambda_2):
 
 
 def get_sub_sample_level(density, source_indexes, target_indexes):
+    """
+    # TODO
+    :param density:
+    :param source_indexes:
+    :param target_indexes:
+    :return:
+    """
     density_samples = density[:, source_indexes]
     df_sigma = pd.DataFrame(density_samples, columns=target_indexes)
     interp_sigma_df = (df_sigma.T.resample('30S').interpolate(method='linear')).T
@@ -139,10 +176,24 @@ def get_sub_sample_level(density, source_indexes, target_indexes):
 
 
 def normalize(x, max_value=1):
+    """
+
+    :param x: np.array. Input signal to normalize. can be 1D, 2D ,3D ...
+    :param max_value: np.float. The max number to normalize the signal
+    :return: Normalized signal
+    """
     return max_value * (x - x.min()) / (x.max() - x.min())
 
 
 def create_ratio(start_height, ref_height, ref_height_bin, total_bins):
+    """
+    # TODO
+    :param start_height:
+    :param ref_height:
+    :param ref_height_bin:
+    :param total_bins:
+    :return:
+    """
     t_start = start_height / ref_height
     r_start = 0.7
     t_r = np.array(
@@ -207,7 +258,7 @@ def set_gaussian_component(nx, ny, cov_size, choose_ratio, std_ratio, cov_r_lbou
 
 def set_gaussian_grid_features(nx, ny, x, y, start_bin, top_bin):
     """
-
+    TODO
     :param nx:
     :param ny:
     :param x:
@@ -225,13 +276,31 @@ def set_gaussian_grid_features(nx, ny, x, y, start_bin, top_bin):
 
 
 def set_features_component(grid, x, y, grid_cov_size, ref_height_bin):
+    """
+    TODO
+    :param grid:
+    :param x:
+    :param y:
+    :param grid_cov_size:
+    :param ref_height_bin:
+    :return:
+    """
     density = create_Z_level2(grid, x, y, grid_cov_size, ref_height_bin)
 
-    blur_features = create_blur_features(density=density, nsamples=int(grid.shape[0] * grid.shape[1] * .0005))
+    blur_features = create_blur_features(density=density, n_samples=int(grid.shape[0] * grid.shape[1] * .0005))
     return blur_features
 
 
 def create_Z_level2(grid, x, y, grid_cov_size, ref_height_bin):
+    """
+    TODO , and rename
+    :param grid:
+    :param x:
+    :param y:
+    :param grid_cov_size:
+    :param ref_height_bin:
+    :return:
+    """
     # Create Z_level2
 
     # Set a grid of Gaussians - component 2 - for features
@@ -274,7 +343,13 @@ def create_Z_level2(grid, x, y, grid_cov_size, ref_height_bin):
     return density
 
 
-def create_blur_features(density, nsamples):
+def create_blur_features(density, n_samples):
+    """
+    TODO
+    :param density:
+    :param n_samples:
+    :return:
+    """
     # Gradients of component 2
     g_filter = np.array([[0, -1, 0],
                          [-1, 0, 1],
@@ -311,7 +386,7 @@ def create_blur_features(density, nsamples):
         plt.show()
 
     # Subsample and interpolation of the absolute of gradients - component 2
-    interp_features = make_interpolated_image(nsamples, grad_norm_amplitude)
+    interp_features = make_interpolated_image(n_samples, grad_norm_amplitude)
     blur_features = gaussian_filter(interp_features, sigma=(21, 61))
     blur_features = normalize(blur_features)
 
@@ -328,6 +403,14 @@ def create_blur_features(density, nsamples):
 
 
 def random_subsampled_density(density, k, time_index, level_id):
+    """
+    TODO
+    :param density:
+    :param k:
+    :param time_index:
+    :param level_id:
+    :return:
+    """
     # Subsample & interpolation of 1/4 part of the component (stretching to one day of measurments)
     # TODO: create 4 X 4 X 4 combinations per evaluation , save for each
 
@@ -351,6 +434,15 @@ def random_subsampled_density(density, k, time_index, level_id):
 
 
 def generate_daily_density(sampled_level0_interp, sampled_level1_interp, sampled_level2_interp, heights, time_index):
+    """
+    TODO
+    :param sampled_level0_interp:
+    :param sampled_level1_interp:
+    :param sampled_level2_interp:
+    :param heights:
+    :param time_index:
+    :return:
+    """
     components = []
     for indl, component in enumerate([sampled_level0_interp, sampled_level1_interp, sampled_level2_interp]):
         ds_component = xr.Dataset(
@@ -383,6 +475,11 @@ def generate_daily_density(sampled_level0_interp, sampled_level1_interp, sampled
 
 
 def merge_density_components(ds_density):
+    """
+    TODO
+    :param ds_density:
+    :return:
+    """
     # Random Merge of  density components
     # Built as a linear combination of density components
     weight_0 = 0.6 + 0.25 * np.random.randn()
@@ -420,6 +517,169 @@ def merge_density_components(ds_density):
         plt.show()
 
     return ds_density
+
+
+def calc_temporal_normalized_density(rho):
+    """
+
+    :param rho: xarray.Dataset(). A 2D normalized density with dimensions of : Height, Time
+    :return: Normalizing the original density of sigma per time measurement
+    """
+    rho_norm_t = []
+    for t in rho.Time:
+        rho_norm_t.append(xr.apply_ufunc(lambda x: normalize(x), rho.sel(Time=t), keep_attrs=True))
+
+    rho_temp_norm = xr.concat(rho_norm_t, dim='Time')
+    rho_temp_norm = rho_temp_norm.transpose('Height', 'Time')
+    if PLOT_RESULTS:
+        fig, ax = plt.subplots(nrows=1, ncols=1, figsize=(7, 5))
+        rho_temp_norm.plot(cmap='turbo')
+        plt.title('Temporally Normalized density')
+        ax.xaxis.set_major_formatter(TIMEFORMAT)
+        ax.xaxis.set_tick_params(rotation=0)
+        plt.show()
+
+    return rho_temp_norm
+
+
+def plot_max_density_per_time(rho):
+    # maximum density values per time
+    fig, ax = plt.subplots(nrows=1, ncols=1, figsize=(7, 5))
+    rho.max(dim='Height').plot(ax=ax)
+    ax.set_title(r'$\rho_{aer}^{max}(t)$')
+    ax.xaxis.set_major_formatter(TIMEFORMAT)
+    ax.xaxis.set_tick_params(rotation=0)
+    plt.show()
+
+
+def generate_density_components(total_time_bins, total_height_bins, time_index, heights, ref_height_bin):
+    """
+    TODO
+    :param total_time_bins:
+    :param total_height_bins:
+    :param time_index:
+    :param heights:
+    :param ref_height_bin:
+    :return:
+    """
+    x = np.arange(total_time_bins)
+    y = np.arange(total_height_bins)
+    X, Y = np.meshgrid(x, y, indexing='xy')
+    grid = np.dstack((X, Y))
+
+    # Set component 0
+    component_0 = set_gaussian_component(nx=5, ny=1, cov_size=1E+6, choose_ratio=.95, std_ratio=.25,
+                                         cov_r_lbounds=[.8, .1], grid=grid, x=x, y=y, start_bin=0,
+                                         top_bin=int(0.5 * ref_height_bin))
+
+    # Set component 1
+    component_1 = set_gaussian_component(nx=6, ny=2, cov_size=5 * 1E+4, choose_ratio=.9, std_ratio=.15,
+                                         cov_r_lbounds=[.8, .1], grid=grid, x=x, y=y,
+                                         start_bin=int(0.1 * ref_height_bin), top_bin=int(0.8 * ref_height_bin))
+
+    # Set component 2
+    component_2 = set_features_component(grid=grid, x=x, y=y, grid_cov_size=1E+4, ref_height_bin=ref_height_bin)
+
+    # Randomly subsampled components
+    subsamp_component_0 = random_subsampled_density(density=component_0, k=np.random.uniform(0.5, 2.5),
+                                                    time_index=time_index, level_id='0')
+
+    subsamp_component_1 = random_subsampled_density(density=component_1, k=np.random.uniform(0, 3),
+                                                    time_index=time_index, level_id='1')
+
+    subsamp_component_2 = random_subsampled_density(density=component_2, k=np.random.uniform(0, 3),
+                                                    time_index=time_index, level_id='2')
+
+    ds_density = generate_daily_density(sampled_level0_interp=subsamp_component_0,
+                                        sampled_level1_interp=subsamp_component_1,
+                                        sampled_level2_interp=subsamp_component_2, heights=heights,
+                                        time_index=time_index)
+
+    return ds_density
+
+
+def generate_density(station, day_date, ds_day_params):
+    """
+    TODO
+    :param station:
+    :param day_date:
+    :param ds_day_params:
+    :return:
+    """
+    # TODO: add log.debug "start generating density for day_date..."
+
+    # Set generation parameters of density
+    ref_height = np.float(ds_day_params.rm.sel(Time=day_date).values)
+    time_index = station.calc_daily_time_index(day_date)
+    heights = station.get_height_bins_values()
+    dr = heights[1] - heights[0]
+    total_bins = heights.size
+    ref_height_bin = np.int(ref_height / dr)
+
+    # Create density components
+    ds_density = generate_density_components(total_time_bins=station.total_time_bins, total_height_bins=station.n_bins,
+                                             time_index=time_index, heights=heights, ref_height_bin=ref_height_bin)
+
+    # set ratio - this is mainly for overlap function and/ or applying differnet endings on the daily profile.
+    # currently the ratio is "1" for all bins.
+    ratio = create_ratio(start_height=heights[0], ref_height=ref_height, ref_height_bin=ref_height_bin,
+                         total_bins=total_bins)
+    ds_density = ds_density.assign({'ratio': ('Height', ratio)})
+
+    # Merge density components
+    ds_density = merge_density_components(ds_density)
+
+    # TODO: add log.debug "finished generating density for day_date..."
+    return ds_density
+
+
+# %%
+# %% Function of Daily Aerosols' Optical Density Generation
+
+def calc_beta(sigma_uv, sigma_ir, sigma_g, LR):
+    # Calculate $\beta_{aer}$ assuming the lidar ratio $LR=60[sr]$
+    beta_uv = sigma_uv / LR
+    beta_uv.attrs = {'long_name': r'$\beta$', 'units': r'$1/km \cdot sr$'}
+    beta_ir = sigma_ir / LR
+    beta_ir.attrs = {'long_name': r'$\beta$', 'units': r'$1/km \cdot sr$'}
+    beta_g = sigma_g / LR
+    beta_g.attrs = {'long_name': r'$\beta$', 'units': r'$1/km \cdot sr$'}
+
+    if PLOT_RESULTS:
+        fig, axes = plt.subplots(nrows=1, ncols=3, figsize=(18, 8))
+        ax = axes.ravel()
+        beta_uv.plot(ax=ax[0], cmap='turbo')
+        beta_ir.plot(ax=ax[2], cmap='turbo')
+        beta_g.plot(ax=ax[1], cmap='turbo')
+        plt.tight_layout()
+        plt.show()
+
+    return beta_uv, beta_ir, beta_g
+
+
+def convert_sigma(tau, wavelength, tau_normalized, sigma_normalized):
+    """convert $\sigma_{X}$"""
+    # X = 1064 or 355
+    # $\sigma_{X}^{max}(t) = \frac{\tau_{X}(t)}{\tau_N(t)}, \;\forall\, t \in Time_{day} $
+    sigma_max = tau / tau_normalized
+    sigma_ir = sigma_normalized * sigma_max
+
+    if PLOT_RESULTS:
+        fig, ax = plt.subplots(nrows=1, ncols=1, figsize=(7, 5))
+        sigma_max.plot()
+        title = r'$\sigma^{max}_{' + str(wavelength) + '}(t) $'
+        ax.set_title(title)
+        ax.xaxis.set_major_formatter(TIMEFORMAT)
+        ax.xaxis.set_tick_params(rotation=0)
+        plt.show()
+
+        fig, ax = plt.subplots(nrows=1, ncols=1, figsize=(7, 5))
+        sigma_ir.plot(cmap='turbo', ax=ax)
+        ax.xaxis.set_major_formatter(TIMEFORMAT)
+        ax.xaxis.set_tick_params(rotation=0)
+        plt.show()
+
+    return sigma_ir
 
 
 def create_sigma(ds_density, sigma_532_max):
@@ -466,9 +726,24 @@ def calc_aod(sigma):
     return aod
 
 
+def calc_normalized_tau(dr, sigma_normalized):
+    # normalized tau
+    tau_normalized = dr * sigma_normalized.sum(dim='Height')
+    tau_normalized.name = r'$\tau_N$'
+    if PLOT_RESULTS:
+        fig, ax = plt.subplots(nrows=1, ncols=1, figsize=(7, 5))
+        plt.title('Normalized AOD')
+        tau_normalized.plot(ax=ax)
+        ax.xaxis.set_major_formatter(TIMEFORMAT)
+        ax.xaxis.set_tick_params(rotation=0)
+        plt.show()
+
+    return tau_normalized
+
+
 def calculate_LR_and_ang(ds_day_params, time_index):
     # Estimate AOD of $\lambda=1064nm$ and  $\lambda=355nm$
-    """ 
+    """
         Angstrom Exponent
         1. To convert $\sigma_{aer}$ from $532[nm]$ to $355[nm]$ and $1064[nm]$
         2. Typical values of angstrom exponent are from `20170901_20170930_haifa_ang.nc`
@@ -552,185 +827,6 @@ def calc_tau_ir_uv(tau_g, ang_355_532, ang_532_10264):
     return tau_ir, tau_uv
 
 
-def calc_temporal_normalized_density(rho):
-    """Normalizing the original density of sigma per time"""
-    rho_norm_t = []
-    for t in rho.Time:
-        rho_norm_t.append(xr.apply_ufunc(lambda x: normalize(x), rho.sel(Time=t), keep_attrs=True))
-
-    rho_temp_norm = xr.concat(rho_norm_t, dim='Time')
-    rho_temp_norm = rho_temp_norm.transpose('Height', 'Time')
-    if PLOT_RESULTS:
-        fig, ax = plt.subplots(nrows=1, ncols=1, figsize=(7, 5))
-        rho_temp_norm.plot(cmap='turbo')
-        plt.title('Temporally Normalized density')
-        ax.xaxis.set_major_formatter(TIMEFORMAT)
-        ax.xaxis.set_tick_params(rotation=0)
-        plt.show()
-
-    return rho_temp_norm
-
-
-def plot_max_density_per_time(rho):
-    # maximum density values per time
-    fig, ax = plt.subplots(nrows=1, ncols=1, figsize=(7, 5))
-    rho.max(dim='Height').plot(ax=ax)
-    ax.set_title(r'$\rho_{aer}^{max}(t)$')
-    ax.xaxis.set_major_formatter(TIMEFORMAT)
-    ax.xaxis.set_tick_params(rotation=0)
-    plt.show()
-
-
-def calc_normalized_tau(dr, sigma_normalized):
-    # normalized tau
-    tau_normalized = dr * sigma_normalized.sum(dim='Height')
-    tau_normalized.name = r'$\tau_N$'
-    if PLOT_RESULTS:
-        fig, ax = plt.subplots(nrows=1, ncols=1, figsize=(7, 5))
-        plt.title('Normalized AOD')
-        tau_normalized.plot(ax=ax)
-        ax.xaxis.set_major_formatter(TIMEFORMAT)
-        ax.xaxis.set_tick_params(rotation=0)
-        plt.show()
-
-    return tau_normalized
-
-
-def convert_sigma(tau, wavelength, tau_normalized, sigma_normalized):
-    """convert $\sigma_{X}$"""
-    # X = 1064 or 355
-    # $\sigma_{X}^{max}(t) = \frac{\tau_{X}(t)}{\tau_N(t)}, \;\forall\, t \in Time_{day} $
-    sigma_max = tau / tau_normalized
-    sigma_ir = sigma_normalized * sigma_max
-
-    if PLOT_RESULTS:
-        fig, ax = plt.subplots(nrows=1, ncols=1, figsize=(7, 5))
-        sigma_max.plot()
-        title = r'$\sigma^{max}_{' + str(wavelength) + '}(t) $'
-        ax.set_title(title)
-        ax.xaxis.set_major_formatter(TIMEFORMAT)
-        ax.xaxis.set_tick_params(rotation=0)
-        plt.show()
-
-        fig, ax = plt.subplots(nrows=1, ncols=1, figsize=(7, 5))
-        sigma_ir.plot(cmap='turbo', ax=ax)
-        ax.xaxis.set_major_formatter(TIMEFORMAT)
-        ax.xaxis.set_tick_params(rotation=0)
-        plt.show()
-
-    return sigma_ir
-
-
-def get_daily_gen_param_ds(station, day_date):
-    gen_source_path = gen_utils.get_month_density_gen_fname(station, day_date)
-    ds_month_params = prep.load_dataset(gen_source_path)
-    ds_day_params = ds_month_params.sel(Time=slice(day_date, day_date + timedelta(days=1)))
-
-    return ds_day_params
-
-
-def plot_extinction_profiles_sigme_diff_times(sigma_uv, sigma_ir, sigma_g):
-    # Extinction profiles of $\sigma_{aer}$ at different times
-    times = [sigma_uv.Time[ind].values for ind in t_index]
-
-    fig, axes = plt.subplots(nrows=1, ncols=3, figsize=(10, 6), sharey=True)
-    for t, ax in zip(times, axes.ravel()):
-        sigma_uv.sel(Time=t).plot.line(ax=ax, y='Height', label=sigma_uv.Wavelength.item())
-        sigma_ir.sel(Time=t).plot.line(ax=ax, y='Height', label=sigma_ir.Wavelength.item())
-        sigma_g.sel(Time=t).plot.line(ax=ax, y='Height', label=r'$532$')
-
-        ax.set_title(t)
-    plt.legend()
-    plt.tight_layout()
-    plt.show()
-
-
-def calc_beta(sigma_uv, sigma_ir, sigma_g, LR):
-    # Calculate $\beta_{aer}$ assuming the lidar ratio $LR=60[sr]$
-    beta_uv = sigma_uv / LR
-    beta_uv.attrs = {'long_name': r'$\beta$', 'units': r'$1/km \cdot sr$'}
-    beta_ir = sigma_ir / LR
-    beta_ir.attrs = {'long_name': r'$\beta$', 'units': r'$1/km \cdot sr$'}
-    beta_g = sigma_g / LR
-    beta_g.attrs = {'long_name': r'$\beta$', 'units': r'$1/km \cdot sr$'}
-
-    if PLOT_RESULTS:
-        fig, axes = plt.subplots(nrows=1, ncols=3, figsize=(18, 8))
-        ax = axes.ravel()
-        beta_uv.plot(ax=ax[0], cmap='turbo')
-        beta_ir.plot(ax=ax[2], cmap='turbo')
-        beta_g.plot(ax=ax[1], cmap='turbo')
-        plt.tight_layout()
-        plt.show()
-
-    return beta_uv, beta_ir, beta_g
-
-
-def generate_density_components(total_time_bins,total_height_bins, time_index, heights, ref_height_bin):
-    x = np.arange(total_time_bins)
-    y = np.arange(total_height_bins)
-    X, Y = np.meshgrid(x, y, indexing='xy')
-    grid = np.dstack((X, Y))
-
-    # Set component 0
-    component_0 = set_gaussian_component(nx=5, ny=1, cov_size=1E+6, choose_ratio=.95, std_ratio=.25,
-                                         cov_r_lbounds=[.8, .1], grid=grid, x=x, y=y, start_bin=0,
-                                         top_bin=int(0.5 * ref_height_bin))
-
-    # Set component 1
-    component_1 = set_gaussian_component(nx=6, ny=2, cov_size=5 * 1E+4, choose_ratio=.9, std_ratio=.15,
-                                         cov_r_lbounds=[.8, .1], grid=grid, x=x, y=y,
-                                         start_bin=int(0.1 * ref_height_bin), top_bin=int(0.8 * ref_height_bin))
-
-    # Set component 2
-    component_2 = set_features_component(grid=grid, x=x, y=y, grid_cov_size=1E+4, ref_height_bin=ref_height_bin)
-
-    # Randomly subsampled components
-    subsamp_component_0 = random_subsampled_density(density=component_0, k=np.random.uniform(0.5, 2.5),
-                                                    time_index=time_index, level_id='0')
-
-    subsamp_component_1 = random_subsampled_density(density=component_1, k=np.random.uniform(0, 3),
-                                                    time_index=time_index, level_id='1')
-
-    subsamp_component_2 = random_subsampled_density(density=component_2, k=np.random.uniform(0, 3),
-                                                    time_index=time_index, level_id='2')
-
-    ds_density = generate_daily_density(sampled_level0_interp=subsamp_component_0,
-                                        sampled_level1_interp=subsamp_component_1,
-                                        sampled_level2_interp=subsamp_component_2, heights=heights,
-                                        time_index=time_index)
-
-    return ds_density
-
-
-def generate_density(station, day_date, ds_day_params):
-    # TODO: add log.debug "start generating density for day_date..."
-
-    # Set generation parameters of density
-    ref_height = np.float(ds_day_params.rm.sel(Time=day_date).values)
-    time_index = station.calc_daily_time_index(day_date)
-    heights = station.get_height_bins_values()
-    dr = heights[1] - heights[0]
-    total_bins = heights.size
-    ref_height_bin = np.int(ref_height / dr)
-
-    # Create density components
-    ds_density = generate_density_components(total_time_bins=station.total_time_bins, total_height_bins=station.n_bins,
-                                             time_index=time_index, heights=heights, ref_height_bin=ref_height_bin)
-
-    # set ratio - this is mainly for overlap function and/ or applying differnet endings on the daily profile.
-    # currently the ratio is "1" for all bins.
-    ratio = create_ratio(start_height=heights[0], ref_height=ref_height, ref_height_bin=ref_height_bin,
-                         total_bins=total_bins)
-    ds_density = ds_density.assign({'ratio': ('Height', ratio)})
-
-    # Merge density components
-    ds_density = merge_density_components(ds_density)
-
-    # TODO: add log.debug "finished generating density for day_date..."
-    return ds_density
-
-
 def generate_aerosol(station, day_date, ds_day_params, ds_density):
     # TODO: add log.debug "start generating aerosol optical density for day_date..."
 
@@ -770,9 +866,9 @@ def generate_aerosol(station, day_date, ds_day_params, ds_density):
                      'long_name': r'$\beta$', 'units': r'$1/km \cdot sr$'}
 
     # Wrap Daily Lidar Aerosols' dataset
-    ds_aer = wrap_dataset(station=station, day_date=day_date, ds_day_params=ds_day_params,
-                          sigma_ds=sigma_ds, beta_ds=beta_ds, sigma_532_max=sigma_532_max,
-                          ang_532_10264=ang_532_10264, ang_355_532=ang_355_532, LR=LR)
+    ds_aer = wrap_aerosol_dataset(station=station, day_date=day_date, ds_day_params=ds_day_params, sigma_ds=sigma_ds,
+                                  beta_ds=beta_ds, sigma_532_max=sigma_532_max, ang_532_10264=ang_532_10264,
+                                  ang_355_532=ang_355_532, LR=LR)
 
     if PLOT_RESULTS:
         fig, axes = plt.subplots(nrows=1, ncols=3, figsize=(18, 8))
@@ -791,8 +887,8 @@ def generate_aerosol(station, day_date, ds_day_params, ds_density):
     return ds_aer
 
 
-def wrap_dataset(station, day_date, ds_day_params, sigma_ds, beta_ds, sigma_532_max,
-                 ang_532_10264, ang_355_532, LR):
+def wrap_aerosol_dataset(station, day_date, ds_day_params, sigma_ds, beta_ds, sigma_532_max,
+                         ang_532_10264, ang_355_532, LR):
     """
     Wrapping the Daily Lidar Aerosols' dataset with the followings:
     - beta
@@ -840,6 +936,24 @@ def wrap_dataset(station, day_date, ds_day_params, sigma_ds, beta_ds, sigma_532_
     return ds_aer
 
 
+def plot_extinction_profiles_sigme_diff_times(sigma_uv, sigma_ir, sigma_g):
+    # Extinction profiles of $\sigma_{aer}$ at different times
+    times = [sigma_uv.Time[ind].values for ind in t_index]
+
+    fig, axes = plt.subplots(nrows=1, ncols=3, figsize=(10, 6), sharey=True)
+    for t, ax in zip(times, axes.ravel()):
+        sigma_uv.sel(Time=t).plot.line(ax=ax, y='Height', label=sigma_uv.Wavelength.item())
+        sigma_ir.sel(Time=t).plot.line(ax=ax, y='Height', label=sigma_ir.Wavelength.item())
+        sigma_g.sel(Time=t).plot.line(ax=ax, y='Height', label=r'$532$')
+
+        ax.set_title(t)
+    plt.legend()
+    plt.tight_layout()
+    plt.show()
+
+
+# %% General Helper functions
+
 def explore_gen_day(station, day_date, ds_aer, ds_density):
     # Show relative ratios between aerosols and molecular backscatter
 
@@ -868,3 +982,17 @@ def explore_gen_day(station, day_date, ds_aer, ds_density):
     ax.xaxis.set_major_formatter(TIMEFORMAT)
     ax.xaxis.set_tick_params(rotation=0)
     plt.show()
+
+
+def get_daily_gen_param_ds(station, day_date):
+    """
+    Returns the daily parameters of density creation as a dataset.
+    :param station: gs.station() object of the lidar station
+    :param day_date: datetime.date object of the required date
+    :return: ds_day_params: xarray.Dataset(). Daily dataset of generation parameters.
+    """
+    gen_source_path = gen_utils.get_month_density_gen_fname(station, day_date)
+    ds_month_params = prep.load_dataset(gen_source_path)
+    ds_day_params = ds_month_params.sel(Time=slice(day_date, day_date + timedelta(days=1)))
+
+    return ds_day_params
