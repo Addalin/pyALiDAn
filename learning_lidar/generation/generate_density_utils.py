@@ -26,16 +26,18 @@ LR_tropos = 55
 
 
 # TODO print --> logger.debug
+# TODO: Save the logs to a dedicated logdir
 
 # %% Functions of Daily Aerosols' Density Generation
 
 def dt2binscale(dt_time, res_sec=30):
     """
-        Returns the bin index corresponds to dt_time
-        binscale - is the time scale [0,2880], of a daily lidar bin index from 00:00:00 to 23:59:30.
-        The lidar has a bin measure every 30 sec, in total 2880 bins per day.
-        :param dt_time: datetime.datetime object
-        :return: binscale - float in [0,2880]
+    TODO move this function to Station
+    Returns the bin index corresponds to dt_time
+    binscale - is the time scale [0,2880], of a daily lidar bin index from 00:00:00 to 23:59:30.
+    The lidar has a bin measure every 30 sec, in total 2880 bins per day.
+    :param dt_time: datetime.datetime object
+    :return: binscale - float in [0,2880]
     """
     res_minute = 60 / res_sec
     res_hour = 60 * res_minute
@@ -97,18 +99,18 @@ def get_random_cov_mat(lbound_x=.5, lbound_y=.1):
 
 def make_interpolated_image(n_samples, im):
     """
-
+    Randomly sampe and interpolate an image.
     :param n_samples: int object. Number of samples to make.
     :param im: np.array. Input 2D image
-    :return: Create an interpolated image from a random selection of pixels from the original image im.
+    :return: interp_im : np.array. A 2D image interpolated from a random selection of pixels, of the original image im.
     """
     nx, ny = im.shape[1], im.shape[0]
     X, Y = np.meshgrid(np.arange(0, nx, 1), np.arange(0, ny, 1))
     ix = np.random.randint(im.shape[1], size=n_samples)
     iy = np.random.randint(im.shape[0], size=n_samples)
     samples = im[iy, ix]
-    int_im = griddata((iy, ix), samples, (Y, X), method='nearest', fill_value=0)
-    return int_im
+    interp_im = griddata((iy, ix), samples, (Y, X), method='nearest', fill_value=0)
+    return interp_im
 
 
 def create_multi_gaussian_density(grid, nx, ny, grid_x, grid_y, std_ratio=.125, choose_ratio=1.0,
@@ -147,18 +149,6 @@ def create_multi_gaussian_density(grid, nx, ny, grid_x, grid_y, std_ratio=.125, 
     return density
 
 
-def angstrom(tau_1, tau_2, lambda_1, lambda_2):
-    """
-    calculates angstrom exponent
-    :param tau_1: AOD Aerosol optical depth at wavelength lambda_1
-    :param tau_2: AOD Aerosol optical depth at wavelength lambda_2
-    :param lambda_1: wavelength lambda_1 , lambda_1<lambda_2 (e.g. 355 nm)
-    :param lambda_2: wavelength lambda_2 , lambda_1<lambda_2 (e.g. 532 nm)
-    :return: angstrom exponent A_1,2
-    """
-    return -np.log(tau_1 / tau_2) / np.log(lambda_1 / lambda_2)
-
-
 def get_sub_sample_level(density, source_indexes, target_indexes):
     """
     # TODO
@@ -177,7 +167,7 @@ def get_sub_sample_level(density, source_indexes, target_indexes):
 
 def normalize(x, max_value=1):
     """
-
+    TODO : move to util of lidar (as miscLidar)
     :param x: np.array. Input signal to normalize. can be 1D, 2D ,3D ...
     :param max_value: np.float. The max number to normalize the signal
     :return: Normalized signal
@@ -657,6 +647,19 @@ def calc_beta(sigma_uv, sigma_ir, sigma_g, LR):
     return beta_uv, beta_ir, beta_g
 
 
+def angstrom(tau_1, tau_2, lambda_1, lambda_2):
+    """
+    TODO : move to util of lidar (as miscLidar)
+    calculates angstrom exponent
+    :param tau_1: AOD Aerosol optical depth at wavelength lambda_1
+    :param tau_2: AOD Aerosol optical depth at wavelength lambda_2
+    :param lambda_1: wavelength lambda_1 , lambda_1<lambda_2 (e.g. 355 nm)
+    :param lambda_2: wavelength lambda_2 , lambda_1<lambda_2 (e.g. 532 nm)
+    :return: angstrom exponent A_1,2
+    """
+    return -np.log(tau_1 / tau_2) / np.log(lambda_1 / lambda_2)
+
+
 def convert_sigma(tau, wavelength, tau_normalized, sigma_normalized):
     """convert $\sigma_{X}$"""
     # X = 1064 or 355
@@ -709,11 +712,16 @@ def create_sigma(ds_density, sigma_532_max):
     return sigma_g
 
 
-def calc_aod(sigma):
+def calc_aod_ds(sigma_ds):
+    """
+    TODO
+    :param sigma_ds:
+    :return:
+    """
     # Calculate Aerosol Optical Depth (AOD)
     # $\tau_{aer,\lambda} = \int \sigma_{aer,\lambda} (r) dr\;\; \forall \, r \leq r_{ref} $
-    dr_vec = xr.apply_ufunc(lambda x: np.insert(x[1:] - x[0:-1], 0, x[0]), sigma.Height, keep_attrs=True)
-    tau = dr_vec * sigma
+    dr_vec = xr.apply_ufunc(lambda x: np.insert(x[1:] - x[0:-1], 0, x[0]), sigma_ds.Height, keep_attrs=True)
+    tau = dr_vec * sigma_ds
     aod = tau.sum(dim='Height')
     aod.attrs = {'name': 'aod', 'long_name': r'$\tau$', 'info': 'Aerosol Optical Depth'}
     if PLOT_RESULTS:
@@ -834,7 +842,7 @@ def generate_aerosol(station, day_date, ds_day_params, ds_density):
 
     sigma_g = create_sigma(ds_density=ds_density, sigma_532_max=sigma_532_max)
 
-    tau_g = calc_aod(sigma=sigma_g)
+    tau_g = calc_aod_ds(sigma_ds=sigma_g)
 
     time_index = station.calc_daily_time_index(day_date)
     LR, ang_355_532, ang_532_10264 = calculate_LR_and_ang(ds_day_params=ds_day_params, time_index=time_index)
@@ -846,7 +854,7 @@ def generate_aerosol(station, day_date, ds_day_params, ds_density):
     if PLOT_RESULTS:
         plot_max_density_per_time(ds_density.rho)
 
-    tau_normalized = calc_aod(sigma=rho_normalized)
+    tau_normalized = calc_aod_ds(sigma_ds=rho_normalized)
 
     sigma_ir = convert_sigma(tau=tau_ir, wavelength=1064, tau_normalized=tau_normalized,
                              sigma_normalized=rho_normalized)

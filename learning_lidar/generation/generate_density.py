@@ -19,6 +19,13 @@ customPalette = sns.set_palette(sns.color_palette(colors))
 
 
 def generate_aerosol_density(station, day_date, SAVE_DS=True):
+    """
+    TODO
+    :param station:
+    :param day_date:
+    :param SAVE_DS:
+    :return:
+    """
     ds_day_params = get_daily_gen_param_ds(station=station, day_date=day_date)
 
     # Generate Daily Aerosols' Density
