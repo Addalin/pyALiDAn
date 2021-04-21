@@ -1,6 +1,7 @@
 import learning_lidar.preprocessing.preprocessing as prep
-from datetime import datetime,date
+from datetime import datetime, date
 import os
+
 
 def get_gen_dataset_file_name(station, day_date, wavelength='*', data_source='lidar', file_type='range_corr'):
     """
@@ -8,11 +9,13 @@ def get_gen_dataset_file_name(station, day_date, wavelength='*', data_source='li
       station, date, wavelength.
     :param station: gs.station() object of the lidar station
     :param day_date: datetime.datetime object of the generated date
-    :param wavelength: wavelength [nm] e.g., for the green channel 532 [nm] or all (meaning the dataset contains all elastic wavelengths)
+    :param wavelength: wavelength [nm] e.g., for the green channel 532 [nm] or all
+    (meaning the dataset contains all elastic wavelengths)
     :param data_source: string object: 'aerosol' or 'lidar'
-    :param file_type: string object: e.g., 'range_corr'/'lidar_power' for separated files per wavelength (355,532, or 1064) or 'lidar'/'aerosol' for all wavelengths
+    :param file_type: string object: e.g., 'range_corr'/'lidar_power' for separated files per wavelength
+    (355,532, or 1064) or 'lidar'/'aerosol' for all wavelengths
 
-    :return: dataset file name (netcdf) file of the data_type required per given day and wavelength, data_source and file_type
+    :return: dataset file name (netcdf) file of the data_type required per given day, wavelength, data_source and file_type
     """
     if wavelength == '*':
         file_name = f"{day_date.strftime('%Y_%m_%d')}_{station.location}_generated_{data_source}.nc"
@@ -72,6 +75,7 @@ def save_generated_dataset(station, dataset, data_source='lidar', save_mode='bot
             ncpaths.append(ncpath)
     return ncpaths
 
+
 def get_month_density_gen_fname(station, day_date):
     year = day_date.year
     month = day_date.month
@@ -79,7 +83,7 @@ def get_month_density_gen_fname(station, day_date):
     monthdays = (date(year, month + 1, 1) - date(year, month, 1)).days
     month_end_day = datetime(year, month, monthdays, 0, 0)
 
-    nc_name = f"generated_density_params_{station.name}_{month_start_day.strftime('%Y-%m-%d')}_{month_end_day.strftime('%Y-%m-%d')}.nc"
+    nc_name = f"generated_density_params_{station.name}_{month_start_day.strftime('%Y-%m-%d')}_" \
+              f"{month_end_day.strftime('%Y-%m-%d')}.nc"
     gen_source_path = os.path.join(station.generation_folder, nc_name)
     return gen_source_path
-
