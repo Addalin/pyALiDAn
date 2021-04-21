@@ -11,19 +11,19 @@ from scipy.interpolate import griddata, CubicSpline
 from scipy.ndimage import gaussian_filter1d, gaussian_filter
 from scipy.stats import multivariate_normal
 from sklearn.model_selection import train_test_split
-
 from learning_lidar.preprocessing import preprocessing as prep
 import learning_lidar.generation.generation_utils as gen_utils
 
+# TODO: move plot settings to a general utils, this is being used throughout the module
 TIMEFORMAT = mdates.DateFormatter('%H:%M')
-PLOT_RESULTS = True  # TODO param for generate_density somehow
 plt.rcParams['figure.dpi'] = 300
 plt.rcParams['savefig.dpi'] = 300
-LR_tropos = 55
-total_time_bins = 2880
+
 # Profiles at different times
 t_index = [500, 1500, 2500]  # TODO param for generate_density somehow
 
+PLOT_RESULTS = False  # TODO param for generate_density somehow
+LR_tropos = 55
 
 # TODO print --> logger.debug
 
@@ -666,9 +666,9 @@ def calc_beta(sigma_uv, sigma_ir, sigma_g, LR):
     return beta_uv, beta_ir, beta_g
 
 
-def generate_density_components(total_time_bins, ref_height_bin, time_index, heights, total_bins):
+def generate_density_components(total_time_bins,total_height_bins, time_index, heights, ref_height_bin):
     x = np.arange(total_time_bins)
-    y = np.arange(total_bins)
+    y = np.arange(total_height_bins)
     X, Y = np.meshgrid(x, y, indexing='xy')
     grid = np.dstack((X, Y))
 
@@ -714,8 +714,9 @@ def generate_density(station, day_date, ds_day_params):
     total_bins = heights.size
     ref_height_bin = np.int(ref_height / dr)
 
-    ds_density = generate_density_components(total_time_bins=total_time_bins, ref_height_bin=ref_height_bin,
-                                             time_index=time_index, heights=heights, total_bins=total_bins)
+    # Create density components
+    ds_density = generate_density_components(total_time_bins=station.total_time_bins, total_height_bins=station.n_bins,
+                                             time_index=time_index, heights=heights, ref_height_bin=ref_height_bin)
 
     # set ratio - this is mainly for overlap function and/ or applying differnet endings on the daily profile.
     # currently the ratio is "1" for all bins.
@@ -723,6 +724,7 @@ def generate_density(station, day_date, ds_day_params):
                          total_bins=total_bins)
     ds_density = ds_density.assign({'ratio': ('Height', ratio)})
 
+    # Merge density components
     ds_density = merge_density_components(ds_density)
 
     # TODO: add log.debug "finished generating density for day_date..."

@@ -1,6 +1,5 @@
 import logging
 from datetime import datetime
-
 import matplotlib.pyplot as plt
 import numpy as np
 import seaborn as sns
@@ -11,9 +10,9 @@ from learning_lidar.generation.generate_density_utils import explore_gen_day, PL
 from learning_lidar.generation.generation_utils import save_generated_dataset
 from learning_lidar.utils.utils import create_and_configer_logger
 
+# TODO: move plot settings to a general utils, this is being used throughout the module
 plt.rcParams['figure.dpi'] = 300
 plt.rcParams['savefig.dpi'] = 300
-
 colors = ["darkblue", "darkgreen", "darkred"]
 sns.set_palette(sns.color_palette(colors))
 customPalette = sns.set_palette(sns.color_palette(colors))
