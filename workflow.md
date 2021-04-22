@@ -109,6 +109,7 @@ Each sample contains the followings:
        - Outputs:  `D:\data_haifa\AERONET\20170901_20170930_haifa_ang.nc`, `D:\data_haifa\AERONET\20170901_20170930_haifa_aod.nc`
        - TODOS:
          - Adapt to run more month (at least October). Requires the download from AERONET site ( Look in `cameraNetwork` to see how this is done)
+         - Create a python module - ***OPEN***
 
     3. **Initial parameters for density generation**
        - Notebook: `KDE_estimation_sample.ipynb`
@@ -124,6 +125,7 @@ Each sample contains the followings:
        - TODOS: 
             - Need some cleanup and organising
             - Generate on more months (at least for Oct 2017), currently available only for september.
+            - Create a python module - ***OPEN***
    4. **Lidar Constant for a period**
       - Notebook: `generate_LC_pattern.ipynb`   
       - Creates varying Lidar Power for a period. Currently, done for sep-oct 2017. Values are manually initialized based on values found in `ds_extended` (created in `dataseting.py`).
@@ -138,8 +140,10 @@ Each sample contains the followings:
       - Inputs: ds_month_params `generated_density_params_haifa_2017-09-01_2017-09-30.nc` (created in `KDE_estimation_sample.ipynb`)
       - Output: ds_aer per day as: `D:\data_haifa\GENERATION\aerosol_dataset\09\2017_09_02_Haifa_aerosol_check.nc`
       - **TODOS**: 
-        - Adapt the code to run automatically for a required period. (at least sep-oct 2017)
+        - Create a python module - ***DONE***
+        - Adapt the code to run automatically for a required period. (at least sep-oct 2017)***OPEN***
         - Signals' variability enrichment (TBD - These are writen in my real notebook:) - not urgent as the above. This is a topic to handle after first run of the CNN with new signals.
+        - Open TODOS in `generation_utils.py`, `generate_density_utils.py`,`generate_density.py` - ***OPEN*** 
 2. **Lidar Signal generation**:
 - Notebook: `daily_signals_generation.ipynb`
 - Generating lidar signals
@@ -156,10 +160,11 @@ Each sample contains the followings:
 - Output:  TBD
   
 - **TODOS**:
-  1. Massive cleanup of the file & check up that it works with the most recent version of the generated  density files
-  2. Create mean_pbg as 2D mean background power (This is going to be one of inputs X)
+  1. Massive cleanup of the file & check up that it works with the most recent version of the generated  density files - ***DONE***
+  2. Create mean_pbg as 2D mean background power (This is going to be one of inputs X) ***OPEN***
   3. Save NC of including the range corrected signal X (pr^2, mean_pbg), Y (LC) and p. 
   4. Adapt for running automatically on each day in a given period (at least sep-oct 2017)
+  5. Create a python module - ***ON GOING***
     
 - Open issues: 
 - Why the signal has appearance of stairs? Check also TROPOS measurements

@@ -15,6 +15,7 @@ import matplotlib.dates as mdates
 
 import learning_lidar.global_settings as gs
 from learning_lidar.generation.daily_signals_generations_utils import explore_orig_day
+from learning_lidar.generation.generation_utils import save_generated_dataset
 from learning_lidar.preprocessing import preprocessing as prep
 from learning_lidar.utils.miscLidar import calc_tau, generate_poisson_signal_STEP
 
@@ -409,9 +410,10 @@ if __name__ == '__main__':
     lidar_gen_ds['date'] = cur_day
     lidar_gen_ds.attrs = {'location': station.location,
                           'info': 'Daily generated lidar signals',
-                          'source_file': 'daily_signals_generation.ipynb'}  # for python module: os.path.basename(__file__)
+                          'source_file': os.path.basename(__file__)}
     # %% 2. Saving dataset of range_corr_p per wavelength, and lidar_gen_ds
-    save_gen_lidar_dataset(station, lidar_gen_ds, save_mode='both')
+    #save_gen_lidar_dataset(station, lidar_gen_ds, save_mode='both')
+    save_generated_dataset(station, lidar_gen_ds, data_source='lidar', save_mode='both')
 
     """
     ### 6. Exploring 1D generated profiles of:
