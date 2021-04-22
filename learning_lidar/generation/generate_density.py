@@ -29,17 +29,18 @@ def generate_aerosol_density(station, day_date, SAVE_DS=True):
     ds_day_params = get_daily_gen_param_ds(station=station, day_date=day_date)
 
     # Generate Daily Aerosols' Density
-    ds_density = generate_density(station=station, day_date=day_date, ds_day_params=ds_day_params)
+    density_ds = generate_density(station=station, day_date=day_date, day_params_ds=ds_day_params)
 
     # Generate Daily Aerosols' Optical Density
-    ds_aer = generate_aerosol(station=station, day_date=day_date, ds_day_params=ds_day_params, ds_density=ds_density)
+    aer_ds = generate_aerosol(station=station, day_date=day_date, day_params_ds=ds_day_params,
+                              density_ds=density_ds)
 
     # Save the aerosols dataset
     if SAVE_DS:
-        save_generated_dataset(station, ds_aer, data_source='aerosol', save_mode='single')
-        #  TODO SAVE ds_density (reorganise the dataset before saving)
+        save_generated_dataset(station, aer_ds, data_source='aerosol', save_mode='single')
+        save_generated_dataset(station, density_ds, data_source='density', save_mode='single')
 
-    return ds_aer, ds_density
+    return aer_ds, density_ds
 
 
 if __name__ == '__main__':
@@ -51,8 +52,8 @@ if __name__ == '__main__':
     days_list = [datetime(2017, 9, 3, 0, 0)]
     for cur_day in days_list:
         # TODO: Parallel days creation + tqdm (if possible - to asses the progress)
-        ds_aer, ds_density = generate_aerosol_density(station, day_date=cur_day)
+        aer_ds, density_ds = generate_aerosol_density(station, day_date=cur_day)
 
         EXPLORE_GEN_DAY = False
         if EXPLORE_GEN_DAY:
-            explore_gen_day(station, cur_day, ds_aer, ds_density)
+            explore_gen_day(station, cur_day, aer_ds, density_ds)

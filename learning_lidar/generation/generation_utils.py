@@ -45,6 +45,8 @@ def save_generated_dataset(station, dataset, data_source='lidar', save_mode='bot
         base_folder = station.gen_lidar_dataset
     elif data_source == 'aerosol':
         base_folder = station.gen_aerosol_dataset
+    elif data_source == 'density':
+        base_folder = station.gen_density_dataset
     else:
         base_folder = station.generation_folder
     month_folder = prep.get_month_folder_name(base_folder, date_datetime)

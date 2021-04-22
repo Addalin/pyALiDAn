@@ -80,6 +80,7 @@ class Station:
         self.gen_lidar_dataset = station_df['gen_lidar_dataset']
         self.gen_aerosol_dataset = station_df['gen_aerosol_dataset']
         self.gen_bg_dataset = station_df['gen_bg_dataset']
+        self.gen_density_dataset = station_df['gen_density_dataset']
 
 
     def __str__(self):
