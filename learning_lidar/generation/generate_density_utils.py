@@ -48,7 +48,7 @@ def dt2binscale(dt_time, res_sec=30):
 
 def get_random_sample_grid(nx, ny, orig_x, orig_y, std_ratio=.125):
     """
-    # TODO
+    TODO: add usage
     :param nx:
     :param ny:
     :param orig_x:
@@ -78,7 +78,7 @@ def get_random_sample_grid(nx, ny, orig_x, orig_y, std_ratio=.125):
 
 def get_random_cov_mat(lbound_x=.5, lbound_y=.1):
     """
-    # TODO
+    TODO: add usage
     :param lbound_x:
     :param lbound_y:
     :return:
@@ -116,7 +116,7 @@ def make_interpolated_image(n_samples, im):
 def create_multi_gaussian_density(grid, nx, ny, grid_x, grid_y, std_ratio=.125, choose_ratio=1.0,
                                   cov_size=1E-5, cov_r_lbounds=[.8, .1]):
     """
-    # TODO
+    TODO: add usage
     :param grid:
     :param nx:
     :param ny:
@@ -151,7 +151,7 @@ def create_multi_gaussian_density(grid, nx, ny, grid_x, grid_y, std_ratio=.125, 
 
 def get_sub_sample_level(density, source_indexes, target_indexes):
     """
-    # TODO
+    TODO: add usage
     :param density:
     :param source_indexes:
     :param target_indexes:
@@ -177,7 +177,7 @@ def normalize(x, max_value=1):
 
 def create_ratio(start_height, ref_height, ref_height_bin, total_bins):
     """
-    # TODO
+    TODO: add usage
     :param start_height:
     :param ref_height:
     :param ref_height_bin:
@@ -217,7 +217,7 @@ def create_ratio(start_height, ref_height, ref_height_bin, total_bins):
 def set_gaussian_component(nx, ny, cov_size, choose_ratio, std_ratio, cov_r_lbounds, grid,
                            x, y, start_bin, top_bin):
     """
-    TODO
+    TODO: add usage
     :param nx:
     :param ny:
     :param cov_size:
@@ -248,7 +248,7 @@ def set_gaussian_component(nx, ny, cov_size, choose_ratio, std_ratio, cov_r_lbou
 
 def set_gaussian_grid_features(nx, ny, x, y, start_bin, top_bin):
     """
-    TODO
+    TODO: add usage
     :param nx:
     :param ny:
     :param x:
@@ -267,7 +267,7 @@ def set_gaussian_grid_features(nx, ny, x, y, start_bin, top_bin):
 
 def set_features_component(grid, x, y, grid_cov_size, ref_height_bin):
     """
-    TODO
+    TODO: add usage
     :param grid:
     :param x:
     :param y:
@@ -283,7 +283,7 @@ def set_features_component(grid, x, y, grid_cov_size, ref_height_bin):
 
 def create_Z_level2(grid, x, y, grid_cov_size, ref_height_bin):
     """
-    TODO , and rename
+    TODO: add usage and rename
     :param grid:
     :param x:
     :param y:
@@ -335,7 +335,7 @@ def create_Z_level2(grid, x, y, grid_cov_size, ref_height_bin):
 
 def create_blur_features(density, n_samples):
     """
-    TODO
+    TODO: add usage
     :param density:
     :param n_samples:
     :return:
@@ -394,7 +394,7 @@ def create_blur_features(density, n_samples):
 
 def random_subsampled_density(density, k, time_index, level_id):
     """
-    TODO
+    TODO: add usage
     :param density:
     :param k:
     :param time_index:
@@ -425,7 +425,7 @@ def random_subsampled_density(density, k, time_index, level_id):
 
 def generate_daily_density(sampled_level0_interp, sampled_level1_interp, sampled_level2_interp, heights, time_index):
     """
-    TODO
+    TODO: add usage
     :param sampled_level0_interp:
     :param sampled_level1_interp:
     :param sampled_level2_interp:
@@ -466,7 +466,7 @@ def generate_daily_density(sampled_level0_interp, sampled_level1_interp, sampled
 
 def merge_density_components(ds_density):
     """
-    TODO
+    TODO: add usage
     :param ds_density:
     :return:
     """
@@ -544,7 +544,7 @@ def plot_max_density_per_time(rho):
 
 def generate_density_components(total_time_bins, total_height_bins, time_index, heights, ref_height_bin):
     """
-    TODO
+    TODO: add usage
     :param total_time_bins:
     :param total_height_bins:
     :param time_index:
@@ -590,7 +590,7 @@ def generate_density_components(total_time_bins, total_height_bins, time_index, 
 
 def generate_density(station, day_date, ds_day_params):
     """
-    TODO
+    TODO: add usage
     :param station:
     :param day_date:
     :param ds_day_params:
@@ -714,7 +714,7 @@ def create_sigma(ds_density, sigma_532_max):
 
 def calc_aod_ds(sigma_ds):
     """
-    TODO
+    TODO: add usage
     :param sigma_ds:
     :return:
     """

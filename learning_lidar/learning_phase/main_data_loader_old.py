@@ -24,7 +24,9 @@ import json
 
 
 class lidarDataSet(torch.utils.data.Dataset):
-    """TODO"""
+    """
+    TODO: add usage
+    """
 
     def __init__ ( self , csv_path , transform = None,
                    top_height = 15.0 , Y_features = [ 'LC' , 'r0' , 'r1' ], wavelengths = [355,532,1064]) :
