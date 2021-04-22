@@ -649,7 +649,7 @@ def calc_beta(sigma_uv, sigma_ir, sigma_g, LR):
 
 def angstrom(tau_1, tau_2, lambda_1, lambda_2):
     """
-    TODO : move to util of lidar (as miscLidar)
+    TODO : move to miscLidar
     calculates angstrom exponent
     :param tau_1: AOD Aerosol optical depth at wavelength lambda_1
     :param tau_2: AOD Aerosol optical depth at wavelength lambda_2

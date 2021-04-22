@@ -449,6 +449,7 @@ def generate_poisson_signal(mu, n):
         x[ii] = k - 1
     return x
 
+
 def generate_poisson_signal_STEP(mu, n=1):
     """
     Generates a random value from the (discrete) Poisson distribution with parameter mu.Adjusted for high values of mu.
@@ -489,6 +490,7 @@ def generate_poisson_signal_STEP(mu, n=1):
         x[ii] = k - 1
     x = x.reshape(orig_shape).astype(int)
     return x
+
 
 # %%
 def create_times_list(datatime_start, datatime_end, delta_time, type_time='seconds'):
