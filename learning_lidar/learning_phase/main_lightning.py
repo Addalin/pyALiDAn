@@ -16,13 +16,16 @@ seed_everything(8318)  # Note, for full deterministic result add deterministic=T
 def main(config, consts):
     # Define Model
     model = DefaultCNN(in_channels=consts['in_channels'], output_size=len(config['Y_features']),
-                       hidden_sizes=consts['hidden_sizes'], loss_type=config['loss_type'], learning_rate=config['lr'])
+                       hidden_sizes=consts['hidden_sizes'], loss_type=config['loss_type'],
+                       learning_rate=config['lr'])
 
     # Define Data
-    lidar_dm = LidarDataModule(csv_path=consts["csv_path"],
+    lidar_dm = LidarDataModule(train_csv_path=consts["train_csv_path"],
+                               test_csv_path = consts["test_csv_path"],
                                powers=consts['powers'] if config['use_power'] else None,
                                Y_features=config['Y_features'],
-                               batch_size=config['bsize'], num_workers=consts['num_workers'])
+                               batch_size=config['bsize'],
+                               num_workers=consts['num_workers'])
 
     # Define minimization parameter
     metrics = {"loss": f"{config['loss_type']}_val"}
@@ -31,12 +34,17 @@ def main(config, consts):
     # Setup the pytorchlighting trainer and run the model
     trainer = Trainer(max_epochs=consts['max_epochs'], callbacks=callbacks)
     # trainer = Trainer(max_steps=consts['max_steps'])
-    trainer.fit(model, datamodule=lidar_dm)
+    lidar_dm.setup('fit')
+    trainer.fit(model=model,datamodule=lidar_dm)
+
+    # test
+    lidar_dm.setup('test')
+    trainer.test(model=model, datamodule=lidar_dm)
 
 
 if __name__ == '__main__':
     # Debug flag to enable debugging
-    DEBUG = False
+    DEBUG = True
     if DEBUG:
         ray.init(local_mode=True)
 
@@ -47,9 +55,11 @@ if __name__ == '__main__':
         'end_date': datetime(2017, 10, 31),
     }
 
-    csv_path = os.path.join(data_params['base_path'], f"dataset_{data_params['station_name']}_"
-                                                     f"{data_params['start_date'].strftime('%Y-%m-%d')}_"
-                                                     f"{data_params['end_date'].strftime('%Y-%m-%d')}_on_D.csv")
+    csv_base_name = f"dataset_{data_params['station_name']}_" \
+                    f"{data_params['start_date'].strftime('%Y-%m-%d')}_" \
+                    f"{data_params['end_date'].strftime('%Y-%m-%d')}"
+    csv_path_train = os.path.join(data_params['base_path'],f'{csv_base_name}_train.csv')
+    csv_path_test = os.path.join(data_params['base_path'],f'{csv_base_name}_test.csv')
 
     # Constants - should correspond to data, dataloader and model
     consts = {
@@ -57,7 +67,8 @@ if __name__ == '__main__':
         'in_channels': 2,
         'max_epochs': 3,
         'num_workers': 7,
-        'csv_path':csv_path,
+        'csv_path_train':csv_path_train,
+        'csv_path_test': csv_path_test,
         'powers': {'range_corr': 0.5, 'attbsc': 0.5, 'LC': 0.5, 'LC_std': 0.5, 'r0': 1, 'r1': 1, 'dr': 1}
     }
 

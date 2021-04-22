@@ -39,7 +39,7 @@ Separate/merge and organize the following modules:
 4. Create and save database samples - ***DONE*** 
 5. Generate dataset of lidar and molecular to certain period - see `dataseting.py` ***DONE***
 6. update create_dataset() to work for a list of days and check it on the generated dataset (above) ***DONE***
-7. Split the dataset to have "test" and "train/valid" examples.  such test examples will be used only when needed. - ***OPEN***
+7. Split the dataset to have "test" and "train/valid" examples.  such test examples will be used only when needed. - ***DONE***
 8. Generate a similar train/test dataset - from the generation procedure - ***OPEN***
 9. Extended calibration dataset:
    - Incorporate beta max info per signal retrieval per a wavelength, from: `KDE_estimation_sample.ipynb` to: `dataseting.py` - in `extend_calibration_info()` - ***OPEN***
@@ -171,7 +171,7 @@ Each sample contains the followings:
 
 # 4. Learning system - workflow
 ##  Dataloader Tasks:
-1. Adjust the train/valid and test loaders according to the split dataset version - ***OPEN***
+1. Adjust the train/valid and test loaders according to the split dataset version - ***DONE***
 2. For Y loader - Convert height bins into heatmap - ***OPEN***
 3. For X loader - convert xarray.dataset to pytorch and split into time slices - ***DONE***
 ## CNN Task:
@@ -200,11 +200,17 @@ Each sample contains the followings:
 2. Logging folder:
    - create folder per phase of the system
 3. Utils folder: 
-    - `bezier.py`
-    - `img_interp.py`
-    - `miscLidar.py`
-    - `smooth.py`
-    - `utils.py`
+    * Currently contains:
+      1. `bezier.py`
+      2. `img_interp.py`
+      3. `miscLidar.py`
+      4. `smooth.py`
+      5. `utils.py`
+    * TODOS: Split utils folder to : 
+      1. `misc_lidar.py` - lidar formulas (prev: miscLidar)
+      2. `proc_utils.py` - processing and math utils (bezier, smooth, normalize & make_interpolated_image - from generate_density_utils)
+      3. `utils.py`- General system and run utils (what is currently utils.py)  
+      4. `global_settings.py`
 4. Dataset Folder:
    - data_station
         - AERONET (Requires rearangment)

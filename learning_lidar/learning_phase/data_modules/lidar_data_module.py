@@ -46,6 +46,12 @@ class LidarDataSet(torch.utils.data.Dataset):
         sample['wavelength'] = wavelength
         return sample
 
+    def get_splits(self, n_val=0.2):
+        val_size = round(n_val * len(self))
+        train_size = len(self) - val_size
+        train_set, val_set = random_split(self, [train_size, val_size])
+        return train_set, val_set
+
     def get_splits(self, n_test=0.2, n_val=0.2):
         test_size = round(n_test * len(self))
         val_size = round(n_val * len(self))
@@ -103,9 +109,12 @@ class LidarDataSet(torch.utils.data.Dataset):
 
 class LidarDataModule(LightningDataModule):
 
-    def __init__(self, csv_path, powers, Y_features, batch_size, num_workers, val_length=0.2, test_length=0.2):
+    def __init__(self, train_csv_path, test_csv_path,
+                 powers, Y_features, batch_size, num_workers,
+                 val_length=0.2, test_length=0.2):
         super().__init__()
-        self.csv_path = csv_path
+        self.train_csv_path = train_csv_path
+        self.test_csv_path = test_csv_path
         self.powers = powers
         self.Y_features = Y_features
         self.batch_size = batch_size
@@ -125,9 +134,15 @@ class LidarDataModule(LightningDataModule):
         transformations_list = [PowTransform(self.powers), LidarToTensor()] if self.powers else [LidarToTensor()]
         lidar_transforms = torchvision.transforms.Compose(transformations_list)
 
-        dataset = LidarDataSet(self.csv_path, transform=lidar_transforms, top_height=15.3, Y_features=self.Y_features)
+        if stage == 'fit' or stage is None:
+            trainable_dataset = LidarDataSet(csv_file=self.train_csv_path, transform=lidar_transforms,
+                                             top_height=15.3, Y_features=self.Y_features)
 
-        self.train, self.val, self.test = dataset.get_splits(n_test=self.test_length, n_val=self.val_length)
+            self.train, self.val = trainable_dataset.get_splits(n_val=self.val_length)
+
+        if stage == 'test' or stage is None:
+            self.test = LidarDataSet(csv_file=self.test_csv_path, transform=lidar_transforms,
+                                     top_height=15.3, Y_features=self.Y_features)
 
     def train_dataloader(self):
         return DataLoader(self.train, batch_size=self.batch_size, shuffle=True, num_workers=self.num_workers)
