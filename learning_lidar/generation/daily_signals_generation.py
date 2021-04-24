@@ -15,9 +15,9 @@ import matplotlib.dates as mdates
 
 import learning_lidar.global_settings as gs
 from learning_lidar.generation.daily_signals_generations_utils import explore_orig_day
-import learning_lidar.generation.generation_utils as gen_utils # save_generated_dataset
+import learning_lidar.generation.generation_utils as gen_utils
 from learning_lidar.preprocessing import preprocessing as prep
-from learning_lidar.generation.daily_signals_generations_utils import calc_total_optical_density,\
+from learning_lidar.generation.daily_signals_generations_utils import calc_total_optical_density, \
     calc_lidar_signal, calc_daily_measurement
 
 eps = np.finfo(np.float).eps
@@ -33,13 +33,13 @@ PLOT_RESULTS = False
 def generate_daily_lidar_measurment(station, day_date, SAVE_DS=True):
     total_ds = calc_total_optical_density(station=station, day_date=day_date)
     signal_ds = calc_lidar_signal(station=station, day_date=day_date, total_ds=total_ds)
-    mesure_ds = calc_daily_measurement(station=station, day_date=day_date, signal_ds=signal_ds)
+    measure_ds = calc_daily_measurement(station=station, day_date=day_date, signal_ds=signal_ds)
     # TODO: merge signal_ds and measure_ds to lidar_ds
-    lidar_gen_ds = xr.Dataset().assign_attrs(signal = signal_ds, mesure= mesure_ds)
+    lidar_gen_ds = xr.Dataset().assign_attrs(signal=signal_ds, mesure=measure_ds)
     if SAVE_DS:
-        gen_utils.save_generated_dataset(station, mesure_ds, data_source='lidar', save_mode='sep') # TODO: add profile name for seperates as 'range_corr'
+        gen_utils.save_generated_dataset(station, measure_ds, data_source='lidar',
+                                         save_mode='sep')  # TODO: add profile name for seperates as 'range_corr'
         gen_utils.save_generated_dataset(station, lidar_gen_ds, data_source='lidar', save_mode='single')
-
 
     return
 
@@ -247,7 +247,6 @@ if __name__ == '__main__':
         plt.tight_layout()
         plt.show()
 
-
     """
     # 2. Explore measurements and parameters for the chosen day
         1. Load extended calibration database for signal exploration
@@ -260,4 +259,4 @@ if __name__ == '__main__':
         time_indx = station.calc_daily_time_index(cur_day)
         explore_orig_day(main_folder=main_folder, station_name=station_name,
                          start_date=start_date, end_date=end_date,
-                         cur_day=cur_day, timedelta=timedelta, wavelengths=wavelengths,time_indx=time_indx)
+                         cur_day=cur_day, timedelta=timedelta, wavelengths=wavelengths, time_indx=time_indx)

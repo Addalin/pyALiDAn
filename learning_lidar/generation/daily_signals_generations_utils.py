@@ -16,12 +16,12 @@ import matplotlib.dates as mdates
 import learning_lidar.global_settings as gs
 import learning_lidar.generation.generation_utils as gen_utils  # save_generated_dataset
 from learning_lidar.preprocessing import preprocessing as prep
-import learning_lidar.utils.miscLidar as misc_lidar  # calc_tau, generate_poisson_signal_STEP
+from learning_lidar.utils.miscLidar import calc_tau, generate_poisson_signal_STEP
 
 # %%
 eps = np.finfo(np.float).eps
 plt.rcParams['figure.dpi'] = 300
-plt.rcParams['savefig.dpi'] = 300
+plt.rcParams["savefig.dpi"] = 300
 TIMEFORMAT = mdates.DateFormatter('%H:%M')
 colors = ["darkblue", "darkgreen", "darkred"]
 sns.set_palette(sns.color_palette(colors))
@@ -115,7 +115,7 @@ def calc_attbsc_ds(station, day_date, total_ds):
         exp_tau_t = []
         for t in tqdm(total_ds.Time, desc=f"att_bsc for {wavelength}"):
             sigma_t = total_ds.sigma.sel(Time=t)
-            e_tau = xr.apply_ufunc(lambda x: np.exp(-2 * misc_lidar.calc_tau(x, heights)),
+            e_tau = xr.apply_ufunc(lambda x: np.exp(-2 * calc_tau(x, heights)),
                                    sigma_t.sel(Wavelength=wavelength), keep_attrs=True)
             e_tau.name = r'$\exp(-2 \tau)$'
             exp_tau_t.append(e_tau)
@@ -309,7 +309,7 @@ def calc_poiss_measurement(station, day_date, p_mean):
     pn_h = xr.apply_ufunc(
         lambda mu: (mu + (np.sqrt(mu)) * np.random.normal(loc=0, scale=1.0, size=mu.shape)).astype(int),
         p_mean.where(p_mean >= 50).fillna(0), keep_attrs=True)
-    pn_l = xr.apply_ufunc(lambda mu: misc_lidar.generate_poisson_signal_STEP(mu),
+    pn_l = xr.apply_ufunc(lambda mu: generate_poisson_signal_STEP(mu),
                           p_mean.where(p_mean < 50).fillna(0), keep_attrs=True, dask='parallelized')
     tic0.toc()
     pn_ds = pn_h + pn_l
