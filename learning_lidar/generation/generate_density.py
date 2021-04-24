@@ -28,10 +28,10 @@ def generate_aerosol_density(station, day_date, SAVE_DS=True):
     ds_day_params = gen_utils.get_daily_gen_param_ds(station=station, day_date=day_date)
 
     # Generate Daily Aerosols' Density
-    density_ds = gen_utils.generate_density(station=station, day_date=day_date, day_params_ds=ds_day_params)
+    density_ds = generate_density(station=station, day_date=day_date, day_params_ds=ds_day_params)
 
     # Generate Daily Aerosols' Optical Density
-    aer_ds = gen_utils.generate_aerosol(station=station, day_date=day_date, day_params_ds=ds_day_params,
+    aer_ds = generate_aerosol(station=station, day_date=day_date, day_params_ds=ds_day_params,
                               density_ds=density_ds)
 
     # Save the aerosols dataset
