@@ -3,11 +3,9 @@ from datetime import datetime
 import matplotlib.pyplot as plt
 import numpy as np
 import seaborn as sns
-
 import learning_lidar.global_settings as gs
-from learning_lidar.generation.generate_density_utils import explore_gen_day, PLOT_RESULTS, \
-    generate_aerosol, get_daily_gen_param_ds, generate_density
-from learning_lidar.generation.generation_utils import save_generated_dataset
+import learning_lidar.generation.generation_utils as gen_utils
+
 from learning_lidar.utils.utils import create_and_configer_logger
 
 # TODO: move plot settings to a general utils, this is being used throughout the module
@@ -26,19 +24,19 @@ def generate_aerosol_density(station, day_date, SAVE_DS=True):
     :param SAVE_DS:
     :return:
     """
-    ds_day_params = get_daily_gen_param_ds(station=station, day_date=day_date)
+    ds_day_params = gen_utils.get_daily_gen_param_ds(station=station, day_date=day_date)
 
     # Generate Daily Aerosols' Density
-    density_ds = generate_density(station=station, day_date=day_date, day_params_ds=ds_day_params)
+    density_ds = gen_utils.generate_density(station=station, day_date=day_date, day_params_ds=ds_day_params)
 
     # Generate Daily Aerosols' Optical Density
-    aer_ds = generate_aerosol(station=station, day_date=day_date, day_params_ds=ds_day_params,
+    aer_ds = gen_utils.generate_aerosol(station=station, day_date=day_date, day_params_ds=ds_day_params,
                               density_ds=density_ds)
 
     # Save the aerosols dataset
     if SAVE_DS:
-        save_generated_dataset(station, aer_ds, data_source='aerosol', save_mode='single')
-        save_generated_dataset(station, density_ds, data_source='density', save_mode='single')
+        gen_utils.save_generated_dataset(station, aer_ds, data_source='aerosol', save_mode='single')
+        gen_utils.save_generated_dataset(station, density_ds, data_source='density', save_mode='single')
 
     return aer_ds, density_ds
 
@@ -56,4 +54,4 @@ if __name__ == '__main__':
 
         EXPLORE_GEN_DAY = False
         if EXPLORE_GEN_DAY:
-            explore_gen_day(station, cur_day, aer_ds, density_ds)
+            gen_utils.explore_gen_day(station, cur_day, aer_ds, density_ds)

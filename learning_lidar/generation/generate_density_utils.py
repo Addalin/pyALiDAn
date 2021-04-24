@@ -961,7 +961,7 @@ def wrap_aerosol_dataset(station, day_date, day_params_ds, sigma_ds, beta_ds, an
                                              attrs={'long_name': r'$r_{max}$', 'units': r'$km$',
                                                     'info': r'A generation parameter. The top height of aerosol layer.'}),
                            params_source=xr.Variable(dims=(),
-                                                     data=gen_utils.get_month_density_gen_fname(station, day_date),
+                                                     data=gen_utils.get_month_gen_params_path(station, day_date),
                                                      attrs={
                                                          'info': 'netcdf file name, containing generated density parameters.'}))
 
@@ -1007,15 +1007,4 @@ def explore_gen_day(station, day_date, aer_ds, density_ds):
     plt.show()
 
 
-def get_daily_gen_param_ds(station, day_date):
-    """
-    Returns the daily parameters of density creation as a dataset.
-    :param station: gs.station() object of the lidar station
-    :param day_date: datetime.date object of the required date
-    :return: day_params_ds: xarray.Dataset(). Daily dataset of generation parameters.
-    """
-    gen_source_path = gen_utils.get_month_density_gen_fname(station, day_date)
-    month_params_ds = prep.load_dataset(gen_source_path)
-    day_params_ds = month_params_ds.sel(Time=slice(day_date, day_date + timedelta(days=1)))
 
-    return day_params_ds

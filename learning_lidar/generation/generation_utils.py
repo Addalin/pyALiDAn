@@ -1,5 +1,5 @@
 import learning_lidar.preprocessing.preprocessing as prep
-from datetime import datetime, date
+from datetime import datetime, date, timedelta
 import os
 
 
@@ -78,7 +78,7 @@ def save_generated_dataset(station, dataset, data_source='lidar', save_mode='bot
     return ncpaths
 
 
-def get_month_density_gen_fname(station, day_date):
+def get_month_gen_params_path(station, day_date):
     """
     TODO: add usage
     :param station:
@@ -95,3 +95,29 @@ def get_month_density_gen_fname(station, day_date):
               f"{month_end_day.strftime('%Y-%m-%d')}.nc"
     gen_source_path = os.path.join(station.generation_folder, nc_name)
     return gen_source_path
+
+
+def get_month_gen_params_ds(station, day_date):
+    """
+    Returns the monthly parameters of density creation as a dataset.
+    :param station: gs.station() object of the lidar station
+    :param day_date: datetime.date object of the required date
+    :return: day_params_ds: xarray.Dataset(). Daily dataset of generation parameters.
+    """
+
+    gen_source_path = get_month_gen_params_path(station, day_date)
+    month_params_ds = prep.load_dataset(gen_source_path)
+    return month_params_ds
+
+
+def get_daily_gen_param_ds(station, day_date):
+    """
+    Returns the daily parameters of density creation as a dataset.
+    :param station: gs.station() object of the lidar station
+    :param day_date: datetime.date object of the required date
+    :return: day_params_ds: xarray.Dataset(). Daily dataset of generation parameters.
+    """
+    month_params_ds = get_month_gen_params_ds(station, day_date)
+    day_params_ds = month_params_ds.sel(Time=slice(day_date, day_date + timedelta(days=1)))
+
+    return day_params_ds
