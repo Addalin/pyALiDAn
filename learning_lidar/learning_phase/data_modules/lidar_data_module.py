@@ -21,7 +21,8 @@ class LidarDataSet(torch.utils.data.Dataset):
             :param transform:
         """
         self.data = pd.read_csv(csv_file)
-        self.key = ['idx', 'date', 'wavelength', 'cali_method', 'telescope', 'cali_start_time', 'cali_stop_time',
+        self.key = ['idx', 'date', 'wavelength', 'cali_method', 'telescope',
+                    'cali_start_time', 'cali_stop_time',
                     'start_time_period', 'end_time_period']
         self.Y_features = Y_features
         self.X_features = ['lidar_path', 'molecular_path']

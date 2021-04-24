@@ -78,12 +78,15 @@ def save_generated_dataset(station, dataset, data_source='lidar', save_mode='bot
     return ncpaths
 
 
-def get_month_gen_params_path(station, day_date):
+def get_month_gen_params_path(station, day_date, type = 'density_params'):
     """
-    TODO: add usage
-    :param station:
-    :param day_date:
-    :return:
+    :param type: type of generated parameter:
+        'density_params' - for density sampler generator,
+        'bg'- for generated background signal,
+        'LC' - for generated Lidar Constant signal
+    :param station: gs.station() object of the lidar station
+    :param day_date: datetime.date object of the required date
+    :return: str. Path to monthly dataset of generation parameters.
     """
     year = day_date.year
     month = day_date.month
@@ -91,33 +94,46 @@ def get_month_gen_params_path(station, day_date):
     monthdays = (date(year, month + 1, 1) - date(year, month, 1)).days
     month_end_day = datetime(year, month, monthdays, 0, 0)
 
-    nc_name = f"generated_density_params_{station.name}_{month_start_day.strftime('%Y-%m-%d')}_" \
+    nc_name = f"generated_{type}_{station.location}_{month_start_day.strftime('%Y-%m-%d')}_" \
               f"{month_end_day.strftime('%Y-%m-%d')}.nc"
-    gen_source_path = os.path.join(station.generation_folder, nc_name)
+    if type == 'bg':
+        folder_name = station.gen_bg_dataset
+    else:
+        folder_name = station.generation_folder
+
+    gen_source_path = os.path.join(folder_name, nc_name)
     return gen_source_path
 
 
-def get_month_gen_params_ds(station, day_date):
+def get_month_gen_params_ds(station, day_date,type = 'density_params'):
     """
     Returns the monthly parameters of density creation as a dataset.
+    :param type: type of generated parameter:
+        'density_params' - for density sampler generator,
+        'bg'- for generated background signal,
+        'LC' - for generated Lidar Constant signal
     :param station: gs.station() object of the lidar station
     :param day_date: datetime.date object of the required date
-    :return: day_params_ds: xarray.Dataset(). Daily dataset of generation parameters.
+    :return: day_params_ds: xarray.Dataset(). Monthly dataset of generation parameters.
     """
 
-    gen_source_path = get_month_gen_params_path(station, day_date)
+    gen_source_path = get_month_gen_params_path(station, day_date, type)
     month_params_ds = prep.load_dataset(gen_source_path)
     return month_params_ds
 
 
-def get_daily_gen_param_ds(station, day_date):
+def get_daily_gen_param_ds(station, day_date, type = 'density_params'):
     """
     Returns the daily parameters of density creation as a dataset.
+    :param type: type of generated parameter:
+        'density_params' - for density sampler generator,
+        'bg'- for generated background signal,
+        'LC' - for generated Lidar Constant signal
     :param station: gs.station() object of the lidar station
     :param day_date: datetime.date object of the required date
     :return: day_params_ds: xarray.Dataset(). Daily dataset of generation parameters.
     """
-    month_params_ds = get_month_gen_params_ds(station, day_date)
+    month_params_ds = get_month_gen_params_ds(station, day_date,type)
     day_params_ds = month_params_ds.sel(Time=slice(day_date, day_date + timedelta(days=1)))
 
     return day_params_ds

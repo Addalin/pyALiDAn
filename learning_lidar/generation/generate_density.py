@@ -17,7 +17,7 @@ sns.set_palette(sns.color_palette(colors))
 customPalette = sns.set_palette(sns.color_palette(colors))
 
 
-def generate_aerosol_density(station, day_date, SAVE_DS=True):
+def generate_daily_aerosol_density(station, day_date, SAVE_DS=True):
     """
     TODO: add usage
     :param station:
@@ -51,7 +51,7 @@ if __name__ == '__main__':
     days_list = [datetime(2017, 9, 3, 0, 0)]
     for cur_day in days_list:
         # TODO: Parallel days creation + tqdm (if possible - to asses the progress)
-        aer_ds, density_ds = generate_aerosol_density(station, day_date=cur_day)
+        aer_ds, density_ds = generate_daily_aerosol_density(station, day_date=cur_day)
 
         EXPLORE_GEN_DAY = False
         if EXPLORE_GEN_DAY:

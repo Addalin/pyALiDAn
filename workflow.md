@@ -131,8 +131,8 @@ Each sample contains the followings:
       - Creates varying Lidar Power for a period. Currently, done for sep-oct 2017. Values are manually initialized based on values found in `ds_extended` (created in `dataseting.py`).
       - Output:  `D:\data_haifa\GENERATION\generated_LC_haifa_2017-09-01_2017-10-31.nc`
       - TODOs: 
-        - Generate data for a full year, use similar power pattern, but with some varying parameters as days (sample uniform day : 70-90 days), and power ( ssmple from a segment of values per wavelength)
-        - Separate output files , per month
+        - Generate data for a full year, use similar power pattern, but with some varying parameters as days (sample uniform day : 70-90 days), and power ( ssmple from a segment of values per wavelength) ***OPEN***
+        - Split output nc files , per month  ***OPEN***
        
    5. **Density Generation:**
       - Notebook: `generate_density.ipynb`  
