@@ -774,7 +774,9 @@ def get_prep_dataset_file_name(station, day_date, data_source='molecular', lambd
 
     :return: dataset file name (netcdf) file of the data_type required per given day and wavelength, data_source and file_type
     """
-    if file_type == '*' or lambda_nm == '*':
+    if lambda_nm == 'all':
+        file_type = ''
+    if file_type == '*' or lambda_nm == '*': # * for lambd_nm - means any wavelength and profile
         # retrieves any file of this date
         file_name = f"{day_date.strftime('%Y_%m_%d')}_{station.location}_{file_type}_{lambda_nm}*{data_source}.nc"
     else:

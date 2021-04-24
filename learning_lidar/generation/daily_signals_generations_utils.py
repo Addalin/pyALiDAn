@@ -2,8 +2,11 @@ import os
 import pandas as pd
 import learning_lidar.preprocessing.preprocessing as prep
 import xarray as xr
+import matplotlib.pyplot as plt
+from scipy.ndimage import gaussian_filter1d, gaussian_filter
 
-def explore_orig_day(main_folder, station_name, start_date, end_date, min_t, cur_day, timedelta, wavelengths, time_indx):
+def explore_orig_day(main_folder, station_name, start_date, end_date, cur_day, timedelta, wavelengths, time_indx):
+    day_str = cur_day.strftime('%Y-%m-%d')
     ds_path_extended = os.path.join(main_folder, 'data',
                                     f"dataset_{station_name}_{start_date.strftime('%Y-%m-%d')}_{end_date.strftime('%Y-%m-%d')}_extended.nc")
     csv_path_extended = os.path.join(main_folder, 'data',
@@ -12,7 +15,7 @@ def explore_orig_day(main_folder, station_name, start_date, end_date, min_t, cur
     ds_extended = prep.load_dataset(ds_path_extended)
 
     # %%
-    day_slice = slice(min_t, cur_day.date() + timedelta(days=1))
+    day_slice = slice(cur_day, cur_day.date() + timedelta(days=1))
     arr_day = []
     for wavelength in wavelengths:
         ds_i = ds_extended.sel(Wavelength=wavelength, Time=day_slice)
