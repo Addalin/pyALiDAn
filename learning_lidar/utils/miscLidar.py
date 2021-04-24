@@ -42,62 +42,8 @@ eps = np.finfo(np.float).eps
 
 
 # %%
-def smooth(x, window_len=11, window='hanning'):
-    """smooth the data using a window with requested size.
-
-    This method is based on the convolution of a scaled window with the signal.
-    The signal is prepared by introducing reflected copies of the signal 
-    (with the window size) in both ends so that transient parts are minimized
-    in the begining and end part of the output signal.
-
-    input:
-        x: the input signal 
-        window_len: the dimension of the smoothing window; should be an odd integer
-        window: the type of window from 'flat', 'hanning', 'hamming', 'bartlett', 'blackman'
-            flat window will produce a moving average smoothing.
-
-    output:
-        the smoothed signal
-
-    example:
-
-    t=linspace(-2,2,0.1)
-    x=sin(t)+randn(len(t))*0.1
-    y=smooth(x)
-
-    see also: 
-
-    numpy.hanning, numpy.hamming, numpy.bartlett, numpy.blackman, numpy.convolve
-    scipy.signal.lfilter
-
-    TODO: the window parameter could be the window itself if an array instead of a string
-    NOTE: length(output) != length(input), to correct this: return y[(window_len/2-1):-(window_len/2)] instead of just y.
-    """
-
-    if x.ndim != 1:
-        raise ValueError("smooth only accepts 1 dimension arrays.")
-
-    if x.size < window_len:
-        raise ValueError("Input vector needs to be bigger than window size.")
-
-    if window_len < 3:
-        return x
-
-    if not window in ['flat', 'hanning', 'hamming', 'bartlett', 'blackman']:
-        raise ValueError("Window is on of 'flat', 'hanning', 'hamming', 'bartlett', 'blackman'")
-
-    s = np.r_[x[window_len - 1:0:-1], x, x[-2:-window_len - 1:-1]]
-    # print(len(s))
-    if window == 'flat':  # moving average
-        w = np.ones(window_len, 'd')
-    else:
-        w = eval('np.' + window + '(window_len)')
-
-    y = np.convolve(w / w.sum(), s, mode='valid')
-    return y
 
 
-# %%
 class RadiosondeProfile(object):
     """Temperature Profile Handling
 
@@ -188,7 +134,7 @@ class RadiosondeProfile(object):
         """
 
         return pd.DataFrame(data={'TEMPS': self.temp_kelvin(), 'PRES': self._pressures,
-                                  'RELHS': self._RelativeHumidity}, index = self._heights).astype('float64').fillna(0)
+                                  'RELHS': self._RelativeHumidity}, index=self._heights).astype('float64').fillna(0)
 
     def get_df_sonde(self, heights):
         """
@@ -196,10 +142,11 @@ class RadiosondeProfile(object):
         :return: DataFrame of ['TEMPS','PRES','RELHS'] of radiosonde (or gdas) measurements interpolated according the input height
         Temperature profiles is converted to Kelvin
         """
-        return pd.DataFrame( data=
-                             {'TEMPS': self.interpolateKmKelvin(heights),
-                              'PRES': self.interpolateKMPres(heights),
-                              'RELHS': self.interpolateKMRLH(heights)}, index = heights ).astype('float64').fillna(0)
+        return pd.DataFrame(data=
+                            {'TEMPS': self.interpolateKmKelvin(heights),
+                             'PRES': self.interpolateKMPres(heights),
+                             'RELHS': self.interpolateKMRLH(heights)}, index=heights).astype('float64').fillna(0)
+
 
 class LidarProfile(object):
     """Temperature Profile Handling
@@ -255,8 +202,62 @@ class LidarProfile(object):
         return self.__getitem__[key]
 
 
-# %%
-def calc_tau(sigma,heights):
+def smooth(x, window_len=11, window='hanning'):
+    """smooth the data using a window with requested size.
+
+    This method is based on the convolution of a scaled window with the signal.
+    The signal is prepared by introducing reflected copies of the signal
+    (with the window size) in both ends so that transient parts are minimized
+    in the begining and end part of the output signal.
+
+    input:
+        x: the input signal
+        window_len: the dimension of the smoothing window; should be an odd integer
+        window: the type of window from 'flat', 'hanning', 'hamming', 'bartlett', 'blackman'
+            flat window will produce a moving average smoothing.
+
+    output:
+        the smoothed signal
+
+    example:
+
+    t=linspace(-2,2,0.1)
+    x=sin(t)+randn(len(t))*0.1
+    y=smooth(x)
+
+    see also:
+
+    numpy.hanning, numpy.hamming, numpy.bartlett, numpy.blackman, numpy.convolve
+    scipy.signal.lfilter
+
+    TODO: the window parameter could be the window itself if an array instead of a string
+    NOTE: length(output) != length(input), to correct this: return y[(window_len/2-1):-(window_len/2)] instead of just y.
+    """
+
+    if x.ndim != 1:
+        raise ValueError("smooth only accepts 1 dimension arrays.")
+
+    if x.size < window_len:
+        raise ValueError("Input vector needs to be bigger than window size.")
+
+    if window_len < 3:
+        return x
+
+    if not window in ['flat', 'hanning', 'hamming', 'bartlett', 'blackman']:
+        raise ValueError("Window is on of 'flat', 'hanning', 'hamming', 'bartlett', 'blackman'")
+
+    s = np.r_[x[window_len - 1:0:-1], x, x[-2:-window_len - 1:-1]]
+    # print(len(s))
+    if window == 'flat':  # moving average
+        w = np.ones(window_len, 'd')
+    else:
+        w = eval('np.' + window + '(window_len)')
+
+    y = np.convolve(w / w.sum(), s, mode='valid')
+    return y
+
+
+def calc_tau(sigma, heights):
     """
     Calculate the the attenuated optical depth (tau is the optical depth), through a collumn of heights.
     :param sigma: ndarray (1-d or 2-d) of attenuation coefficents related to heights vector. units : [1/m]
@@ -268,8 +269,8 @@ def calc_tau(sigma,heights):
         dr = heights[1:] - heights[0:-1]  # dr for integration
         dr = np.insert(dr.flatten(), 0, heights[0])
     else:
-        dr = heights[1:,0] - heights[0:-1,0]  # dr for integration
-        dr = np.insert(dr.flatten(), 0, heights[0,0])
+        dr = heights[1:, 0] - heights[0:-1, 0]  # dr for integration
+        dr = np.insert(dr.flatten(), 0, heights[0, 0])
         dr = np.tile(dr.reshape(dr.shape[0], 1), sigma.shape[1])
 
     tau = np.cumsum(sigma * dr, axis=0)
@@ -282,7 +283,7 @@ def generate_P(P0, c, A, dt, heights, sigma, beta, lidar_const=1, add_photon_noi
     coefficient(sigma) """
     if sigma.ndim > 1:
         heights = np.tile(heights.reshape(heights.shape[0], 1), sigma.shape[1])
-    tau = calc_tau(sigma,heights)
+    tau = calc_tau(sigma, heights)
 
     if lidar_const is None:
         lidar_const = 0.5 * P0 * c * dt * A
@@ -293,19 +294,18 @@ def generate_P(P0, c, A, dt, heights, sigma, beta, lidar_const=1, add_photon_noi
 
     P[P < np.finfo(np.float).eps] = np.finfo(np.float).eps
 
-    if lidar_const>1: # lidar_const = 1 for cases of calculating P_mol without constant
+    if lidar_const > 1:  # lidar_const = 1 for cases of calculating P_mol without constant
         if add_photon_noise:
             std_P = np.sqrt(P)
             rand_P = std_P * np.random.normal(loc=0, scale=1.0, size=P.shape)
             P = P + rand_P
-        P = P.round() # converting P to photons counts
+        P = P.round()  # converting P to photons counts
 
     P[P < np.finfo(np.float).eps] = np.finfo(np.float).eps
 
     return P
 
 
-# %%
 def calc_S(heights, P):
     """Calculate the Logaritmic range adjusted power S(r) = ln(r^2*P(r))"""
     # TODO: return value after lan operation. chek where in the code this function were used to update as well!
@@ -314,7 +314,6 @@ def calc_S(heights, P):
     return S
 
 
-# %%
 def calc_extiction_klett(S, heights, sigma_0, ind_m, k=1):
     """
     Calculate the inversion of the extinction coefficient using Klett metho
@@ -330,12 +329,48 @@ def calc_extiction_klett(S, heights, sigma_0, ind_m, k=1):
 
     dr = heights[1] - heights[0]
     exp_S = np.exp((S - S_m) / k)
-    denominator = (1 / (sigma_m) + (2 / k) * np.flip(np.cumsum(np.flip(exp_S, 0) * dr), 0)) #backward integration
+    denominator = (1 / (sigma_m) + (2 / k) * np.flip(np.cumsum(np.flip(exp_S, 0) * dr), 0))  # backward integration
     sigma = exp_S / (denominator + eps)
     return sigma
 
 
-# %%
+def angstrom(tau_0, tau_1, wavelength_0, wavelength_1):
+    """
+    calculates angstrom exponent
+    :param tau_0: AOD Aerosol optical depth at wavelength_0
+    :param tau_1: AOD Aerosol optical depth at wavelength_1
+    :param wavelength_0: wavelength lambda_1 , wavelength_0<wavelength_1 (e.g. 355 nm)
+    :param wavelength_1: wavelength lambda_2 , wavelength_0<wavelength_1 (e.g. 532 nm)
+    :return: angstrom exponent A_0,1
+    """
+    assert wavelength_0 < wavelength_1, f'wavelength_0={wavelength_0} ' \
+                                        f'should be smaller then wavelength_1={wavelength_1}'
+    assert wavelength_0 > 0, 'The input wavelength should be grater then 0'
+    assert wavelength_1 > 0, 'The input wavelength should be grater then 0'
+
+    return -np.log(tau_0 / tau_1) / np.log(wavelength_0 / wavelength_1)
+
+
+def tau_ang2tau(tau_0, ang, wavelength_0, wavelength_1):
+    """
+    calculates AOD for the desired wavelength_1, using the AOD represented in wavelength_0,
+     and the related angstrom exponent.
+    :param tau_0: AOD Aerosol optical depth at wavelength_0
+    :param ang: angstrom exponent A_0,1 or angstrom exponent A_1,0
+    :param wavelength_0: The wavelength of the input AOD
+    :param wavelength_1: Then wavelength of the desired AOD
+    :return:AOD Aerosol optical depth at wavelength_1
+    """
+    assert wavelength_0 > 0, 'The input wavelength should be grater then 0'
+    assert wavelength_1 > 0, 'The input wavelength should be grater then 0'
+    if wavelength_1 < wavelength_0:
+        tau_1 = tau_0 * ((wavelength_1 / wavelength_0) ** (-ang))
+    else:
+        tau_1 = tau_0 / ((wavelength_0 / wavelength_1) ** (-ang))
+
+    return tau_1
+
+
 def visCurve(lData, rData, stitle=""):
     '''Visualize 2 curves '''
 
@@ -368,7 +403,6 @@ def visCurve(lData, rData, stitle=""):
     return [fig, axes]
 
 
-# %%
 def laplacian_operator(nx, ny, nz):
     if nx > 1 and ny == 1 and nz == 1:
         K = 1
@@ -402,7 +436,6 @@ def laplacian_operator(nx, ny, nz):
     return A
 
 
-# %%
 def calc_gauss_curve(t, A, H, t0, W):
     """
     return gaussian approximation according the following parameters:
@@ -416,7 +449,6 @@ def calc_gauss_curve(t, A, H, t0, W):
     return A + H * np.exp(-(t - t0) ** 2 / (2 * (W ** 2)))
 
 
-# %%
 def generate_poisson_signal(mu, n):
     """
     Generates a random value from the (discrete) Poisson
@@ -427,16 +459,16 @@ def generate_poisson_signal(mu, n):
     :return x: the poisson signal
     :ref: https://people.smp.uq.edu.au/DirkKroese/mccourse.pdf, algorithm 3.4, p. 48
     """
-    if np.size(mu)>1:
-        if n == 1 :
+    if np.size(mu) > 1:
+        if n == 1:
             n = mu.shape[0]
             lambdav = mu
-        elif n==mu.shape[0]:
+        elif n == mu.shape[0]:
             lambdav = mu
-        elif n!=mu.shape[0]:
+        elif n != mu.shape[0]:
             return None
     else:
-        lambdav = mu*np.ones(n)
+        lambdav = mu * np.ones(n)
 
     x = np.zeros(n)
     for ii in range(n):
@@ -463,8 +495,8 @@ def generate_poisson_signal_STEP(mu, n=1):
     """
     from tqdm import trange
     lambda_STEP = 500
-    if mu.size==1 and n>1:
-        lambdav= mu*np.ones(n)
+    if mu.size == 1 and n > 1:
+        lambdav = mu * np.ones(n)
     else:
         lambdav = mu
     n = lambdav.size
@@ -477,22 +509,21 @@ def generate_poisson_signal_STEP(mu, n=1):
         lambda_LEFT = lambdav[ii]
         UPDATE_K = True
         while UPDATE_K:
-            k +=1
-            p *= np.random.rand ( )
-            while (p<1 and lambda_LEFT>0):
-                if lambda_LEFT>lambda_STEP:
-                    p *=np.exp(lambda_STEP)
+            k += 1
+            p *= np.random.rand()
+            while (p < 1 and lambda_LEFT > 0):
+                if lambda_LEFT > lambda_STEP:
+                    p *= np.exp(lambda_STEP)
                     lambda_LEFT -= lambda_STEP
                 else:
-                    p *= np.exp ( lambda_LEFT )
+                    p *= np.exp(lambda_LEFT)
                     lambda_LEFT = 0
-            UPDATE_K = (p > 1 )
+            UPDATE_K = (p > 1)
         x[ii] = k - 1
     x = x.reshape(orig_shape).astype(int)
     return x
 
 
-# %%
 def create_times_list(datatime_start, datatime_end, delta_time, type_time='seconds'):
     """'
     Create time steps list for given start time end end time.
@@ -530,10 +561,10 @@ if __name__ == '__main__':
     W = 383.33
     print('gauss curve:', calc_gauss_curve(t, A, H, t0, W))
     print('This is miscellaneous functions file to Lidar')
-    mu = np.array([2,4,5])
+    mu = np.array([2, 4, 5])
     print(np.shape(mu))
-    n=1
-    x = generate_poisson_signal_STEP (mu,n)
+    n = 1
+    x = generate_poisson_signal_STEP(mu, n)
     print(f'Generate Poiss with lambda={mu} is {x}, mean{np.mean(x)}')
     x2 = generate_poisson_signal(mu, n)
-    print ( f'Generate Poiss with lambda={mu} is {x2}, mean{np.mean(x2)}' )
+    print(f'Generate Poiss with lambda={mu} is {x2}, mean{np.mean(x2)}')
