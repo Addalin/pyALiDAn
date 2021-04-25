@@ -55,7 +55,6 @@ if __name__ == '__main__':
     days_list = pd.date_range(start="2017-09-07", end="2017-09-30").to_pydatetime().tolist()
     num_days = len(days_list)
     num_processes = min((cpu_count() - 1, num_days))
-    # todo make sure Parallel days works correctly
     with Pool(num_processes) as p:
         p.starmap(generate_daily_aerosol_density, zip(repeat(station), days_list))
 
