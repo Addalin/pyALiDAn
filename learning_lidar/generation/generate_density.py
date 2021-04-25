@@ -21,6 +21,7 @@ def generate_daily_aerosol_density(station, day_date, SAVE_DS=True):
     :param SAVE_DS:
     :return:
     """
+    logger = logging.getLogger()
     logger.debug(f"Start generate_daily_aerosol_density for {station.name} on {day_date}")
     ds_day_params = gen_utils.get_daily_gen_param_ds(station=station, day_date=day_date,type='density_params')
 
@@ -31,6 +32,9 @@ def generate_daily_aerosol_density(station, day_date, SAVE_DS=True):
     aer_ds = generate_aerosol(station=station, day_date=day_date, day_params_ds=ds_day_params,
                               density_ds=density_ds)
 
+    # TODO: add שמ option of 'size_optim' to optimize size from float64 to float32.
+    #  example:  rho32= density_ds.rho.astype('float32',casting='same_kind')
+
     # Save the aerosols dataset
     if SAVE_DS:
         gen_utils.save_generated_dataset(station, aer_ds, data_source='aerosol', save_mode='single')
@@ -40,7 +44,7 @@ def generate_daily_aerosol_density(station, day_date, SAVE_DS=True):
 
 
 if __name__ == '__main__':
-    gen_den_utils.PLOT_RESULTS = True
+    gen_den_utils.PLOT_RESULTS = False
     gen_utils.set_visualization_settings()
     logging.getLogger('PIL').setLevel(logging.ERROR)  # Fix annoying PIL logs
     logging.getLogger('matplotlib').setLevel(logging.ERROR)  # Fix annoying matplotlib logs
@@ -48,10 +52,9 @@ if __name__ == '__main__':
     station = gs.Station(station_name='haifa')
 
     # days_list = [datetime(2017, 9, 3, 0, 0)]
-    days_list = pd.date_range(start="2017-09-01", end="2017-10-31").to_pydatetime().tolist()
+    days_list = pd.date_range(start="2017-09-07", end="2017-09-30").to_pydatetime().tolist()
     num_days = len(days_list)
     num_processes = min((cpu_count() - 1, num_days))
-    # todo make sure Parallel days works correctly
     with Pool(num_processes) as p:
         p.starmap(generate_daily_aerosol_density, zip(repeat(station), days_list))
 
