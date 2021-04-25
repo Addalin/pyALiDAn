@@ -1,5 +1,5 @@
 import os
-from datetime import datetime, timedelta
+from datetime import timedelta
 import matplotlib.pyplot as plt
 from pytictoc import TicToc
 
@@ -7,16 +7,15 @@ import numpy as np
 from tqdm import tqdm
 import pandas as pd
 import xarray as xr
-from scipy.ndimage import gaussian_filter1d, gaussian_filter
+from scipy.ndimage import gaussian_filter1d
 import seaborn as sns
 
-import calendar
 import matplotlib.dates as mdates
 
-import learning_lidar.global_settings as gs
+import learning_lidar.utils.global_settings as gs
 import learning_lidar.generation.generation_utils as gen_utils  # save_generated_dataset
 from learning_lidar.preprocessing import preprocessing as prep
-from learning_lidar.utils.miscLidar import calc_tau, generate_poisson_signal_STEP
+from learning_lidar.utils.misc_lidar import calc_tau, generate_poisson_signal_STEP
 
 # %%
 eps = np.finfo(np.float).eps

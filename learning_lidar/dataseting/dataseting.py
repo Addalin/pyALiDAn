@@ -1,31 +1,26 @@
 # %% #General Imports
-import warnings
-
-warnings.filterwarnings("ignore")
-import os, sys
-from time import time
-from datetime import datetime, timedelta  # time,
+import os
+from datetime import datetime  # time,
 import multiprocess as mp
 from IPython.display import display
 import logging
 from tqdm import tqdm
 
 # %% Scientific and data imports
-import matplotlib.pyplot as plt
 import sqlite3
 import numpy as np
 import pandas as pd
 import xarray as xr
-from scipy.ndimage import gaussian_filter1d, gaussian_filter
+from scipy.ndimage import gaussian_filter1d
 from scipy.interpolate import griddata
 from functools import partial
 
-eps = np.finfo(np.float).eps
-
 # %% Local modules imports
-import learning_lidar.global_settings as gs
+import learning_lidar.utils.global_settings as gs
 import learning_lidar.preprocessing.preprocessing as prep
 from learning_lidar.utils.utils import create_and_configer_logger
+
+eps = np.finfo(np.float).eps
 
 
 # %% Dataset creating helper functions

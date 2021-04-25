@@ -5,7 +5,7 @@ import numpy as np
 from scipy.interpolate import griddata
 import matplotlib.pyplot as plt
 from PIL import Image
-
+# TODO delete? not in use. similar to proc_utils.make_interpolated_image
 def make_interpolated_image(nsamples):
     """Make an interpolated image from a random selection of pixels.
 

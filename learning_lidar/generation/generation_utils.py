@@ -1,3 +1,5 @@
+from matplotlib import pyplot as plt, dates as mdates
+import seaborn as sns
 import learning_lidar.preprocessing.preprocessing as prep
 from datetime import datetime, date, timedelta
 import os
@@ -137,3 +139,14 @@ def get_daily_gen_param_ds(station, day_date, type='density_params'):
     day_params_ds = month_params_ds.sel(Time=slice(day_date, day_date + timedelta(days=1)))
 
     return day_params_ds
+
+def set_visualization_settings():
+    # TODO make sure this actualyl propages to other functions
+    plt.rcParams['figure.dpi'] = 300
+    plt.rcParams['savefig.dpi'] = 300
+    colors = ["darkblue", "darkgreen", "darkred"]
+    sns.set_palette(sns.color_palette(colors))
+
+
+TIMEFORMAT = mdates.DateFormatter('%H:%M')
+

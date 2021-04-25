@@ -1,36 +1,31 @@
+import logging
 import os
-from datetime import datetime, date, timedelta
-import matplotlib.dates as mdates
+from datetime import datetime
 import numpy as np
 import pandas as pd
 import xarray as xr
 from matplotlib import pyplot as plt
 from scipy import signal
-from scipy.interpolate import griddata, CubicSpline
+from scipy.interpolate import CubicSpline
 from scipy.ndimage import gaussian_filter1d, gaussian_filter
 from scipy.stats import multivariate_normal
 from sklearn.model_selection import train_test_split
+
+from learning_lidar.generation.generation_utils import TIMEFORMAT
 from learning_lidar.preprocessing import preprocessing as prep
 import learning_lidar.generation.generation_utils as gen_utils
-import learning_lidar.utils.miscLidar as misc_lidar
+import learning_lidar.utils.misc_lidar as misc_lidar
 
-# TODO: move plot settings to a general utils, this is being used throughout the module
-TIMEFORMAT = mdates.DateFormatter('%H:%M')
-plt.rcParams['figure.dpi'] = 300
-plt.rcParams['savefig.dpi'] = 300
+from learning_lidar.utils.proc_utils import make_interpolated_image, normalize
 
 # Profiles at different times
-t_index = [500, 1500, 2500]  # TODO param for generate_density somehow
+t_index = [500, 1500, 2500]
 
-PLOT_RESULTS = False  # TODO param for generate_density somehow
+PLOT_RESULTS = False
 LR_tropos = 55
 
 
-# TODO print --> logger.debug
-# TODO: Save the logs to a dedicated logdir
-
-# %% Functions of Daily Aerosols' Density Generation
-
+# Functions of Daily Aerosols' Density Generation
 def dt2binscale(dt_time, res_sec=30):
     """
     TODO move this function to Station
@@ -98,22 +93,6 @@ def get_random_cov_mat(lbound_x=.5, lbound_y=.1):
     return cov
 
 
-def make_interpolated_image(n_samples, im):
-    """
-    Randomly sampe and interpolate an image.
-    :param n_samples: int object. Number of samples to make.
-    :param im: np.array. Input 2D image
-    :return: interp_im : np.array. A 2D image interpolated from a random selection of pixels, of the original image im.
-    """
-    nx, ny = im.shape[1], im.shape[0]
-    X, Y = np.meshgrid(np.arange(0, nx, 1), np.arange(0, ny, 1))
-    ix = np.random.randint(im.shape[1], size=n_samples)
-    iy = np.random.randint(im.shape[0], size=n_samples)
-    samples = im[iy, ix]
-    interp_im = griddata((iy, ix), samples, (Y, X), method='nearest', fill_value=0)
-    return interp_im
-
-
 def create_multi_gaussian_density(grid, nx, ny, grid_x, grid_y, std_ratio=.125, choose_ratio=1.0,
                                   cov_size=1E-5, cov_r_lbounds=[.8, .1]):
     """
@@ -164,16 +143,6 @@ def get_sub_sample_level(density, source_indexes, target_indexes):
     sampled_interp = interp_sigma_df.values
     sampled_interp = normalize(sampled_interp)
     return sampled_interp
-
-
-def normalize(x, max_value=1):
-    """
-    TODO : move to util of lidar (as miscLidar)
-    :param x: np.array. Input signal to normalize. can be 1D, 2D ,3D ...
-    :param max_value: np.float. The max number to normalize the signal
-    :return: Normalized signal
-    """
-    return max_value * (x - x.min()) / (x.max() - x.min())
 
 
 def create_ratio(start_height, ref_height, ref_height_bin, total_bins):
@@ -402,6 +371,7 @@ def random_subsampled_density(density, k, time_index, level_id) -> object:
     :param level_id:
     :return:
     """
+    logger = logging.getLogger()
     # Subsample & interpolation of 1/4 part of the component (stretching to one day of measurments)
     # TODO: create 4 X 4 X 4 combinations per evaluation , save for each
 
@@ -418,7 +388,7 @@ def random_subsampled_density(density, k, time_index, level_id) -> object:
     2880/30+1 , len(target_indexes),96*30, source_indexes
     """
     shift_bins = int(720 * k)
-    print(f'component {level_id} shift bins {shift_bins}')
+    logger.debug(f'......component {level_id} shift bins {shift_bins}')
     source_indexes = indexes + shift_bins
     sampled_level_interp = get_sub_sample_level(density, source_indexes, tt_index)
     return sampled_level_interp
@@ -430,6 +400,7 @@ def merge_density_components(density_ds):
     :param density_ds:
     :return:
     """
+    logger = logging.getLogger()
     # Random Merge of  density components
     # Built as a linear combination of density components
     weight_0 = 0.6 + 0.25 * np.random.randn()
@@ -441,7 +412,7 @@ def merge_density_components(density_ds):
     weight_2 = 0.4 + 0.25 * np.random.randn()
     if weight_2 < 0:
         weight_2 = 0.4 + abs(weight_2)
-    print("weights:", [weight_0, weight_1, weight_2])
+    logger.debug(f"weights: {[weight_0, weight_1, weight_2]}")
     density_ds = density_ds.assign({'weights': ('Component', [weight_0, weight_1, weight_2])})
     merged = xr.zeros_like(density_ds.density[0])
 
@@ -593,8 +564,8 @@ def generate_density(station, day_date, day_params_ds):
     :param day_params_ds:
     :return:
     """
-    # TODO: add log.debug "start generating density for day_date..."
-
+    logger = logging.getLogger()
+    logger.debug(f"...start generating  density")
     # Set generation parameters of density
     ref_height = np.float(day_params_ds.rm.sel(Time=day_date).values)
     time_index = station.calc_daily_time_index(day_date)
@@ -623,7 +594,7 @@ def generate_density(station, day_date, day_params_ds):
     density_ds.attrs['station'] = station.location
     density_ds['date'] = day_date
 
-    # TODO: add log.debug "finished generating density for day_date..."
+    logger.debug(f"...finish generating density")
     return density_ds
 
 
@@ -803,7 +774,7 @@ def calc_tau_ds(ang_ds, sigma_0):
             # Estimate AOD of $\lambda=1064nm$ and  $\lambda=355nm$
             key = f"ang_{wavelength}_{wavelength_0}" if wavelength < wavelength_0 else f"ang_{wavelength_0}_{wavelength}"
             tau = xr.apply_ufunc(lambda tau0, ang: misc_lidar.tau_ang2tau(tau0, ang, wavelength_0, wavelength), tau_0,
-                                 ang_ds[key],keep_attrs=True).assign_coords({'Wavelength': wavelength})
+                                 ang_ds[key], keep_attrs=True).assign_coords({'Wavelength': wavelength})
             tau_chans.append(tau)
 
     tau_ds = xr.concat(tau_chans, dim='Wavelength').sortby('Wavelength')
@@ -905,14 +876,16 @@ def generate_beta_ds(station, day_date, day_params_ds, sigma_ds):
 
 
 def generate_aerosol(station, day_date, day_params_ds, density_ds):
-    # TODO: add log.debug "start generating aerosol optical density for day_date..."
+    logger = logging.getLogger()
+    logger.debug(f"...start generating aerosol optical density")
+
     sigma_ds, tau_ds, ang_ds = generate_sigma_ds(station, day_date, day_params_ds, density_ds)
     beta_ds, LR_ds = generate_beta_ds(station, day_date, day_params_ds, sigma_ds)
 
     # Wrap Daily Lidar Aerosols' dataset
     aer_ds = wrap_aerosol_dataset(station, day_date, day_params_ds, sigma_ds, beta_ds, ang_ds, LR_ds)
 
-    # TODO: add log.debug "finished generating aerosol optical density for day_date..."
+    logger.debug(f"...Finish generating aerosol optical density")
     return aer_ds
 
 

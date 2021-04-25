@@ -1,20 +1,16 @@
 import logging
 from datetime import datetime
+from itertools import repeat
+
 import matplotlib.pyplot as plt
-import numpy as np
+import pandas as pd
 import seaborn as sns
-import learning_lidar.global_settings as gs
+import learning_lidar.utils.global_settings as gs
 import learning_lidar.generation.generation_utils as gen_utils
-from learning_lidar.generation.generate_density_utils import generate_density, generate_aerosol,explore_gen_day
-
+from learning_lidar.generation.generate_density_utils import generate_density, generate_aerosol, explore_gen_day
+from multiprocessing import Pool, cpu_count
+import learning_lidar.generation.generate_density_utils as gen_den_utils
 from learning_lidar.utils.utils import create_and_configer_logger
-
-# TODO: move plot settings to a general utils, this is being used throughout the module
-plt.rcParams['figure.dpi'] = 300
-plt.rcParams['savefig.dpi'] = 300
-colors = ["darkblue", "darkgreen", "darkred"]
-sns.set_palette(sns.color_palette(colors))
-customPalette = sns.set_palette(sns.color_palette(colors))
 
 
 def generate_daily_aerosol_density(station, day_date, SAVE_DS=True):
@@ -25,6 +21,7 @@ def generate_daily_aerosol_density(station, day_date, SAVE_DS=True):
     :param SAVE_DS:
     :return:
     """
+    logger.debug(f"Start generate_daily_aerosol_density for {station.name} on {day_date}")
     ds_day_params = gen_utils.get_daily_gen_param_ds(station=station, day_date=day_date)
 
     # Generate Daily Aerosols' Density
@@ -43,14 +40,22 @@ def generate_daily_aerosol_density(station, day_date, SAVE_DS=True):
 
 
 if __name__ == '__main__':
+    gen_den_utils.PLOT_RESULTS = True
+    gen_utils.set_visualization_settings()
     logging.getLogger('PIL').setLevel(logging.ERROR)  # Fix annoying PIL logs
     logging.getLogger('matplotlib').setLevel(logging.ERROR)  # Fix annoying matplotlib logs
     logger = create_and_configer_logger('generate_density.log', level=logging.DEBUG)
     station = gs.Station(station_name='haifa')
 
-    days_list = [datetime(2017, 9, 3, 0, 0)]
+    # days_list = [datetime(2017, 9, 3, 0, 0)]
+    days_list = pd.date_range(start="2017-09-01", end="2017-10-31").to_pydatetime().tolist()
+    num_days = len(days_list)
+    num_processes = min((cpu_count() - 1, num_days))
+    # todo make sure Parallel days works correctly
+    with Pool(num_processes) as p:
+        p.starmap(generate_daily_aerosol_density, zip(repeat(station), days_list))
+
     for cur_day in days_list:
-        # TODO: Parallel days creation + tqdm (if possible - to asses the progress)
         aer_ds, density_ds = generate_daily_aerosol_density(station, day_date=cur_day)
 
         EXPLORE_GEN_DAY = False
