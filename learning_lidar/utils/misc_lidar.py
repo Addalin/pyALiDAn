@@ -436,6 +436,7 @@ def generate_poisson_signal_STEP(mu, n=1):
     :return x: the poisson signal
     :ref: (https://en.wikipedia.org/wiki/Poisson_distribution#Generating_Poisson-distributed_random_variables)
     """
+
     from tqdm import trange
     lambda_STEP = 500
     if mu.size == 1 and n > 1:
