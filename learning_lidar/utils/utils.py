@@ -1,5 +1,11 @@
 import csv
 import logging
+# %% testing multiproccesing from: https://gist.github.com/morkrispil/3944242494e08de4643fd42a76cb37ee
+# import multiprocessing as mp
+import multiprocess as mp
+from functools import partial
+import pandas as pd
+import numpy as np
 
 
 def create_and_configer_logger(log_name='log_file.log', level=logging.DEBUG):
@@ -41,14 +47,6 @@ def create_and_configer_logger(log_name='log_file.log', level=logging.DEBUG):
 
     logger = logging.getLogger(__name__)
     return logger
-
-
-# %% testing multiproccesing from: https://gist.github.com/morkrispil/3944242494e08de4643fd42a76cb37ee
-# import multiprocessing as mp
-import multiprocess as mp
-from functools import partial
-import pandas as pd
-import numpy as np
 
 
 def _df_split(tup_arg, **kwargs):
@@ -94,7 +92,7 @@ def write_row_to_csv(csv_path, msg):
 
 def get_time_slice_dataset(dataset, start_time, end_time):
     sub_ds = dataset.sel(Time=slice(start_time, end_time))
-    return (sub_ds)
+    return sub_ds
 
 
 def humanbytes(B):

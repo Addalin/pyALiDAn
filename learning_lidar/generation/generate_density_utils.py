@@ -1,12 +1,12 @@
 import os
-from datetime import datetime, date, timedelta
+from datetime import datetime
 import matplotlib.dates as mdates
 import numpy as np
 import pandas as pd
 import xarray as xr
 from matplotlib import pyplot as plt
 from scipy import signal
-from scipy.interpolate import griddata, CubicSpline
+from scipy.interpolate import CubicSpline
 from scipy.ndimage import gaussian_filter1d, gaussian_filter
 from scipy.stats import multivariate_normal
 from sklearn.model_selection import train_test_split
@@ -15,6 +15,8 @@ import learning_lidar.generation.generation_utils as gen_utils
 import learning_lidar.utils.misc_lidar as misc_lidar
 
 # TODO: move plot settings to a general utils, this is being used throughout the module
+from learning_lidar.utils.proc_utils import make_interpolated_image, normalize
+
 TIMEFORMAT = mdates.DateFormatter('%H:%M')
 plt.rcParams['figure.dpi'] = 300
 plt.rcParams['savefig.dpi'] = 300
@@ -98,22 +100,6 @@ def get_random_cov_mat(lbound_x=.5, lbound_y=.1):
     return cov
 
 
-def make_interpolated_image(n_samples, im):
-    """
-    Randomly sampe and interpolate an image.
-    :param n_samples: int object. Number of samples to make.
-    :param im: np.array. Input 2D image
-    :return: interp_im : np.array. A 2D image interpolated from a random selection of pixels, of the original image im.
-    """
-    nx, ny = im.shape[1], im.shape[0]
-    X, Y = np.meshgrid(np.arange(0, nx, 1), np.arange(0, ny, 1))
-    ix = np.random.randint(im.shape[1], size=n_samples)
-    iy = np.random.randint(im.shape[0], size=n_samples)
-    samples = im[iy, ix]
-    interp_im = griddata((iy, ix), samples, (Y, X), method='nearest', fill_value=0)
-    return interp_im
-
-
 def create_multi_gaussian_density(grid, nx, ny, grid_x, grid_y, std_ratio=.125, choose_ratio=1.0,
                                   cov_size=1E-5, cov_r_lbounds=[.8, .1]):
     """
@@ -164,16 +150,6 @@ def get_sub_sample_level(density, source_indexes, target_indexes):
     sampled_interp = interp_sigma_df.values
     sampled_interp = normalize(sampled_interp)
     return sampled_interp
-
-
-def normalize(x, max_value=1):
-    """
-    TODO : move to util of lidar (as miscLidar)
-    :param x: np.array. Input signal to normalize. can be 1D, 2D ,3D ...
-    :param max_value: np.float. The max number to normalize the signal
-    :return: Normalized signal
-    """
-    return max_value * (x - x.min()) / (x.max() - x.min())
 
 
 def create_ratio(start_height, ref_height, ref_height_bin, total_bins):
