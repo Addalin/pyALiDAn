@@ -12,7 +12,7 @@ from scipy.stats import multivariate_normal
 from sklearn.model_selection import train_test_split
 from learning_lidar.preprocessing import preprocessing as prep
 import learning_lidar.generation.generation_utils as gen_utils
-import learning_lidar.utils.miscLidar as misc_lidar
+import learning_lidar.utils.misc_lidar as misc_lidar
 
 # TODO: move plot settings to a general utils, this is being used throughout the module
 TIMEFORMAT = mdates.DateFormatter('%H:%M')

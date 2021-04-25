@@ -1,22 +1,17 @@
 import os
 from datetime import datetime, timedelta
 import matplotlib.pyplot as plt
-from pytictoc import TicToc
 
 import numpy as np
-from tqdm import tqdm
-import pandas as pd
 import xarray as xr
-from scipy.ndimage import gaussian_filter1d, gaussian_filter
 import seaborn as sns
 
 import calendar
 import matplotlib.dates as mdates
 
-import learning_lidar.global_settings as gs
+import learning_lidar.utils.global_settings as gs
 from learning_lidar.generation.daily_signals_generations_utils import explore_orig_day
 import learning_lidar.generation.generation_utils as gen_utils
-from learning_lidar.preprocessing import preprocessing as prep
 from learning_lidar.generation.daily_signals_generations_utils import calc_total_optical_density, \
     calc_lidar_signal, calc_daily_measurement
 

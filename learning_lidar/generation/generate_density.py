@@ -1,9 +1,8 @@
 import logging
 from datetime import datetime
 import matplotlib.pyplot as plt
-import numpy as np
 import seaborn as sns
-import learning_lidar.global_settings as gs
+import learning_lidar.utils.global_settings as gs
 import learning_lidar.generation.generation_utils as gen_utils
 from learning_lidar.generation.generate_density_utils import generate_density, generate_aerosol,explore_gen_day
 
