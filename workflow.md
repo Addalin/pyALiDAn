@@ -194,8 +194,8 @@ Each sample contains the followings:
 ## Other repo and coding issues:
 
 1. Data folder containing: 
-    - particals distribution (LR- A) : `C:\Users\addalin\Dropbox\Lidar\code\Angstrom_LidarRatio\plot_data\plot_data\data_points_with_error_bars.csv`. usage:`KDE_estimation_sample.ipynb`
-    - iradiance-angle  graph :  `C:\Users\addalin\Dropbox\Lidar\code\background_signal\irradiance_solarElevation.csv` , usage: `generate_bg_signals.ipynb`
+    - TODO ADD TO GIT? - particals distribution (LR- A) : `C:\Users\addalin\Dropbox\Lidar\code\Angstrom_LidarRatio\plot_data\plot_data\data_points_with_error_bars.csv`. usage:`KDE_estimation_sample.ipynb`
+    - TODO ADD TO GIT? - iradiance-angle  graph :  `C:\Users\addalin\Dropbox\Lidar\code\background_signal\irradiance_solarElevation.csv` , usage: `generate_bg_signals.ipynb`
     - bg mean curve : `C:\Users\addalin\Dropbox\Lidar\code\background_signal\curve_params.yml` usage: `generate_bg_signals.ipynb`
     - stations csv: `C:\Users\addalin\Dropbox\Lidar\code\stations.csv`
     - failed_gdas_files_path : `gdas2radiosonde_failed_files.csv`, usage `datasetting.py` & `fix_gdas_errors.py`
