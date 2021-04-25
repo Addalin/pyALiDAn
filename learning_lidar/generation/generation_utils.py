@@ -27,9 +27,11 @@ def get_gen_dataset_file_name(station, day_date, wavelength='*', data_source='li
     return file_name
 
 
-def save_generated_dataset(station, dataset, data_source='lidar', save_mode='both'):
+def save_generated_dataset(station, dataset, data_source='lidar', save_mode='both', profiles=None):
     """
     Save the input dataset to netcdf file
+    :param profiles: The name of profile desired to be saved separately.
+    If this name is not provided, then the first profile is automatically selected
     :param station: station: gs.station() object of the lidar station
     :param dataset: array.Dataset() a daily generated lidar signal, holding 5 data variables:
              4 daily dataset, with dimensions of : Height, Time, Wavelength.
@@ -45,12 +47,14 @@ def save_generated_dataset(station, dataset, data_source='lidar', save_mode='bot
     date_datetime = prep.get_daily_ds_date(dataset)
     if data_source == 'lidar':
         base_folder = station.gen_lidar_dataset
+    elif data_source == 'signal':
+        base_folder = station.gen_signal_dataset
     elif data_source == 'aerosol':
         base_folder = station.gen_aerosol_dataset
     elif data_source == 'density':
         base_folder = station.gen_density_dataset
-    else:
-        base_folder = station.generation_folder
+    elif data_source == 'bg':
+        base_folder = station.gen_bg_dataset
     month_folder = prep.get_month_folder_name(base_folder, date_datetime)
 
     prep.get_daily_ds_date(dataset)
@@ -59,16 +63,19 @@ def save_generated_dataset(station, dataset, data_source='lidar', save_mode='bot
 
     # NOTE: Currently saving to separated profiles is only for `range_corr` - used in the learning phase.cur_day
     # if one needs other separated profile, add it as an an input term.
-    profile = list(dataset.data_vars)[1]
+
     if save_mode in ['both', 'sep']:
-        for wavelength in dataset.Wavelength.values:
-            ds_profile = dataset.sel(Wavelength=wavelength)[profile]
-            ds_profile['date'] = date_datetime
-            file_name = get_gen_dataset_file_name(station, date_datetime, data_source=data_source,
-                                                  wavelength=wavelength, file_type=profile)
-            ncpath = prep.save_dataset(ds_profile, month_folder, file_name)
-            if ncpath:
-                ncpaths.append(ncpath)
+        if not profiles:
+            profiles = [list(dataset.data_vars)[0]]
+        for profile in profiles:
+            for wavelength in dataset.Wavelength.values:
+                ds_profile = dataset.sel(Wavelength=wavelength)[profile]
+                ds_profile['date'] = date_datetime
+                file_name = get_gen_dataset_file_name(station, date_datetime, data_source=data_source,
+                                                      wavelength=wavelength, file_type=profile)
+                ncpath = prep.save_dataset(ds_profile, month_folder, file_name)
+                if ncpath:
+                    ncpaths.append(ncpath)
 
     '''save the dataset to a single netcdf'''
     if save_mode in ['both', 'single']:
@@ -138,6 +145,7 @@ def get_daily_gen_param_ds(station, day_date, type='density_params'):
 
     return day_params_ds
 
+
 def set_visualization_settings():
     # TODO make sure this actualyl propages to other functions
     plt.rcParams['figure.dpi'] = 300
@@ -147,4 +155,3 @@ def set_visualization_settings():
 
 
 TIMEFORMAT = mdates.DateFormatter('%H:%M')
-
