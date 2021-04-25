@@ -45,8 +45,9 @@ n_chan = 13
 @dataclass()
 class Station:
     def __init__(self, station_name='haifa',
-                 stations_csv_path=os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'data',
-                                                '../../../data/stations.csv')):
+                 stations_csv_path=os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))),
+                                                'data',
+                                                'stations.csv')):
         """
         A station class that stores all the below information
 

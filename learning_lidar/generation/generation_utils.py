@@ -98,10 +98,8 @@ def get_month_gen_params_path(station, day_date, type='density_params'):
 
     nc_name = f"generated_{type}_{station.location}_{month_start_day.strftime('%Y-%m-%d')}_" \
               f"{month_end_day.strftime('%Y-%m-%d')}.nc"
-    if type == 'bg':
-        folder_name = station.gen_bg_dataset
-    else:
-        folder_name = station.generation_folder
+
+    folder_name = prep.get_month_folder_name(station.generation_folder, day_date)
 
     gen_source_path = os.path.join(folder_name, nc_name)
     return gen_source_path
