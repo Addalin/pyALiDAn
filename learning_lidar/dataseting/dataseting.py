@@ -1,6 +1,6 @@
 # %% #General Imports
 import os
-from datetime import datetime  # time,
+from datetime import datetime, timedelta  # time,
 import multiprocess as mp
 from IPython.display import display
 import logging
@@ -234,8 +234,7 @@ def get_time_slots_expanded(df, sample_size):
     if sample_size:
         expanded_df = pd.DataFrame()
         for indx, row in df.iterrows():
-            time_slots = pd.date_range(row.loc['cali_start_time'], row.loc['cali_stop_time'],
-                                       freq=sample_size)
+            time_slots = pd.date_range(row.loc['cali_start_time'], row.loc['cali_stop_time'], freq=sample_size)
             time_slots.freq = None
             if len(time_slots) < 2:
                 continue
@@ -395,22 +394,6 @@ def get_sample_ds(row):
     return sliced_ds, full_ds
 
 
-def make_interpolated_image(nsamples, im):
-    """Make an interpolated image from a random selection of pixels.
-
-    Take nsamples random pixels from im and reconstruct the image using
-    scipy.interpolate.griddata.
-
-    """
-    nx, ny = im.shape[1], im.shape[0]
-    X, Y = np.meshgrid(np.arange(0, nx, 1), np.arange(0, ny, 1))
-    ix = np.random.randint(im.shape[1], size=nsamples)
-    iy = np.random.randint(im.shape[0], size=nsamples)
-    samples = im[iy, ix]
-    int_im = griddata((iy, ix), samples, (Y, X), method='nearest', fill_value=0)
-    return int_im
-
-
 def get_aerBsc_profile_ds(path, profile_df):
     cur_profile = prep.load_dataset(path)
     height_units = 'km'
@@ -494,11 +477,13 @@ def main(station_name, start_date, end_date):
     DO_DATASET = False
     EXTEND_DATASET = False
     DO_CALIB_DATASET = False
-    USE_KM_UNITS = True
-    SPLIT_DATASET = True
+    USE_KM_UNITS = False
+    SPLIT_DATASET = False
+    DO_GENERATED_DATASET = True
+
 
     # Load data of station
-    station = gs.Station(station_name=station_name)
+    station = gs.Station(stations_csv_path='../../data/stations.csv', station_name=station_name)
     logger.info(f"Loading {station.location} station")
 
     # Set new paths
@@ -528,8 +513,7 @@ def main(station_name, start_date, end_date):
     if SPLIT_DATASET:
         logger.info(
             f"Splitting to train-test the dataset for period: [{start_date.strftime('%Y-%m-%d')},{end_date.strftime('%Y-%m-%d')}]")
-        split_save_train_test_ds(csv_path = csv_path)
-
+        split_save_train_test_ds(csv_path=csv_path)
 
     # Create extended dataset and save to csv - recalculation of Lidar Constant (currently this is a naive calculation)
     if EXTEND_DATASET:
@@ -542,7 +526,8 @@ def main(station_name, start_date, end_date):
         df.to_csv(csv_path_extended, index=False)
         logger.info(f"\n The extended dataset saved to :{os.path.join(os.path.curdir, csv_path_extended)}")
 
-    # Create calibration dataset from the extended df (or csv) = by spliting df to A dataset according to wavelengths and time coordinates.
+    # Create calibration dataset from the extended df (or csv) = by spliting df to A dataset according to wavelengths
+    # and time coordinates.
     if DO_CALIB_DATASET:
         logger.info(
             f"Start creating calibration dataset for period: [{start_date.strftime('%Y-%m-%d')},{end_date.strftime('%Y-%m-%d')}]")
@@ -553,6 +538,72 @@ def main(station_name, start_date, end_date):
         # Save the calibration dataset
         prep.save_dataset(ds_calibration, os.path.curdir, ds_path_extended)
         logger.info(f"The calibration dataset saved to :{os.path.join(os.path.curdir, ds_path_extended)}")
+
+
+    if DO_GENERATED_DATASET:
+        create_generated_dataset(station, start_date, end_date)
+
+def create_generated_dataset(station, start_date, end_date, sample_size='30min'):
+    """
+    Creates a dataframe consisting of:
+        date | wavelength | start_time | end_time | lidar_path | bg_path | molecular_path | LC
+    :param station:
+    :param start_date:
+    :param end_date:
+    :param sample_size:
+    :return:
+    """
+    # station.gen_bg_dataset - bg signals
+    # station.gen_lidar_dataset - lidar
+    # station.molecular_dataset - moecular
+    dates = pd.date_range(start=start_date, end=end_date, freq=sample_size)
+    wavelengths = gs.LAMBDA_nm().get_elastic()
+    # TODO
+    """ 
+    for each wavelength, and for each day:
+        row for each start time in day
+    
+    """
+
+    full_df = pd.DataFrame()
+    for wavelength in tqdm(wavelengths):
+        df = pd.DataFrame()
+        df['date'] = dates.strftime('%Y-%m-%d')
+        df['wavelength'] = wavelength
+        df['start_time'] = dates
+        df['end_time'] = dates + timedelta(minutes=29, seconds=59)
+
+        # for day_date in dates:
+        #     try:
+        #         query = get_query(wavelength, cali_method, day_date)
+        #         df = query_database(query=query, database_path=db_path)
+        #         if df.empty:
+        #             raise Exception(
+        #                 f"\n Not existing data for {station.location} station, during {day_date.strftime('%Y-%m-%d')} in '{db_path}'")
+        #         df['date'] = day_date.strftime('%Y-%m-%d')
+        #
+        #         df = add_profiles_values(df, station, day_date, file_type='profiles')
+        #
+        #         df = add_X_path(df, station, day_date, lambda_nm=wavelength, data_source='lidar',
+        #                         file_type='range_corr')
+        #         df = add_X_path(df, station, day_date, lambda_nm=wavelength, data_source='molecular',
+        #                         file_type='attbsc')
+        #
+        #         df = df.rename(
+        #             {'liconst': 'LC', 'uncertainty_liconst': 'LC_std', 'matched_nc_profile': 'profile_path'},
+        #             axis='columns')
+        #         expanded_df = get_time_slots_expanded(df, sample_size)
+        #
+        #         # reorder the columns
+        #         key = ['date', 'wavelength', 'cali_method', 'telescope', 'cali_start_time', 'cali_stop_time',
+        #                'start_time_period', 'end_time_period', 'profile_path']
+        #         Y_features = ['LC', 'LC_std', 'r0', 'r1', 'dr', 'bin_r0', 'bin_r1']
+        #         X_features = ['lidar_path', 'molecular_path']
+        #         expanded_df = expanded_df[key + X_features + Y_features]
+        #         full_df = full_df.append(expanded_df)
+        #     except Exception as e:
+        #         logger.exception(f"{e}, skipping to next day.")
+        #         continue
 
 
 if __name__ == '__main__':
