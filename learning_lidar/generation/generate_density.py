@@ -3,10 +3,11 @@ from datetime import datetime
 from itertools import repeat
 
 import matplotlib.pyplot as plt
+import pandas as pd
 import seaborn as sns
 import learning_lidar.utils.global_settings as gs
 import learning_lidar.generation.generation_utils as gen_utils
-from learning_lidar.generation.generate_density_utils import generate_density, generate_aerosol,explore_gen_day
+from learning_lidar.generation.generate_density_utils import generate_density, generate_aerosol, explore_gen_day
 from multiprocessing import Pool, cpu_count
 
 from learning_lidar.utils.utils import create_and_configer_logger
@@ -45,7 +46,8 @@ if __name__ == '__main__':
     logger = create_and_configer_logger('generate_density.log', level=logging.DEBUG)
     station = gs.Station(station_name='haifa')
 
-    days_list = [datetime(2017, 9, 3, 0, 0)]
+    # days_list = [datetime(2017, 9, 3, 0, 0)]
+    days_list = pd.date_range(start="2017-09-01", end="2017-09-31")
     num_days = len(days_list)
     num_processes = min((cpu_count() - 1, num_days))
     # todo make this works correctly
