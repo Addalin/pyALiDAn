@@ -47,15 +47,14 @@ if __name__ == '__main__':
     station = gs.Station(station_name='haifa')
 
     # days_list = [datetime(2017, 9, 3, 0, 0)]
-    days_list = pd.date_range(start="2017-09-01", end="2017-09-31")
+    days_list = pd.date_range(start="2017-09-01", end="2017-10-31").to_pydatetime().tolist()
     num_days = len(days_list)
     num_processes = min((cpu_count() - 1, num_days))
-    # todo make this works correctly
+    # todo make sure Parallel days works correctly
     with Pool(num_processes) as p:
         p.starmap(generate_daily_aerosol_density, zip(repeat(station), days_list))
 
     for cur_day in days_list:
-        # TODO: Parallel days creation + tqdm (if possible - to asses the progress)
         aer_ds, density_ds = generate_daily_aerosol_density(station, day_date=cur_day)
 
         EXPLORE_GEN_DAY = False
