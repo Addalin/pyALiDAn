@@ -55,7 +55,7 @@ def save_generated_dataset(station, dataset, data_source='lidar', save_mode='bot
     '''save the dataset to separated netcdf files: per profile per wavelength'''
     ncpaths = []
 
-    # NOTE: Currently saving to separated profiles is only for `range_corr_p` - used in the learning phase.cur_day
+    # NOTE: Currently saving to separated profiles is only for `range_corr` - used in the learning phase.cur_day
     # if one needs other separated profile, add it as an an input term.
     profile = list(dataset.data_vars)[1]
     if save_mode in ['both', 'sep']:
@@ -78,7 +78,7 @@ def save_generated_dataset(station, dataset, data_source='lidar', save_mode='bot
     return ncpaths
 
 
-def get_month_gen_params_path(station, day_date, type = 'density_params'):
+def get_month_gen_params_path(station, day_date, type='density_params'):
     """
     :param type: type of generated parameter:
         'density_params' - for density sampler generator,
@@ -105,7 +105,7 @@ def get_month_gen_params_path(station, day_date, type = 'density_params'):
     return gen_source_path
 
 
-def get_month_gen_params_ds(station, day_date,type = 'density_params'):
+def get_month_gen_params_ds(station, day_date, type='density_params'):
     """
     Returns the monthly parameters of density creation as a dataset.
     :param type: type of generated parameter:
@@ -122,7 +122,7 @@ def get_month_gen_params_ds(station, day_date,type = 'density_params'):
     return month_params_ds
 
 
-def get_daily_gen_param_ds(station, day_date, type = 'density_params'):
+def get_daily_gen_param_ds(station, day_date, type='density_params'):
     """
     Returns the daily parameters of density creation as a dataset.
     :param type: type of generated parameter:
@@ -133,7 +133,7 @@ def get_daily_gen_param_ds(station, day_date, type = 'density_params'):
     :param day_date: datetime.date object of the required date
     :return: day_params_ds: xarray.Dataset(). Daily dataset of generation parameters.
     """
-    month_params_ds = get_month_gen_params_ds(station, day_date,type)
+    month_params_ds = get_month_gen_params_ds(station, day_date, type)
     day_params_ds = month_params_ds.sel(Time=slice(day_date, day_date + timedelta(days=1)))
 
     return day_params_ds

@@ -25,7 +25,7 @@ class LidarDataSet(torch.utils.data.Dataset):
                     'cali_start_time', 'cali_stop_time',
                     'start_time_period', 'end_time_period']
         self.Y_features = Y_features
-        self.X_features = ['lidar_path', 'molecular_path']
+        self.X_features = ['lidar_path', 'molecular_path' ]
         self.wavelengths = wavelengths  # TODO: make option to load data by desired wavelength/s
         self.profiles = ['range_corr', 'attbsc']
         self.top_height = top_height
