@@ -14,6 +14,8 @@ from learning_lidar.generation.daily_signals_generations_utils import explore_or
 import learning_lidar.generation.generation_utils as gen_utils
 from learning_lidar.generation.daily_signals_generations_utils import calc_total_optical_density, \
     calc_lidar_signal, calc_daily_measurement
+import logging
+from learning_lidar.utils.utils import create_and_configer_logger
 
 eps = np.finfo(np.float).eps
 plt.rcParams['figure.dpi'] = 300
@@ -25,78 +27,34 @@ customPalette = sns.set_palette(sns.color_palette(colors))
 PLOT_RESULTS = False
 
 
-def generate_daily_lidar_measurment(station, day_date, SAVE_DS=True):
-    total_ds = calc_total_optical_density(station=station, day_date=day_date)
-    signal_ds = calc_lidar_signal(station=station, day_date=day_date, total_ds=total_ds)
-    measure_ds = calc_daily_measurement(station=station, day_date=day_date, signal_ds=signal_ds)
-    # TODO: merge signal_ds and measure_ds to lidar_ds
-    lidar_gen_ds = xr.Dataset().assign_attrs(signal=signal_ds, mesure=measure_ds)
+def generate_daily_lidar_measurement(station, day_date, SAVE_DS=True):
+    ds_total = calc_total_optical_density(station=station, day_date=day_date)
+    signal_ds = calc_lidar_signal(station, day_date, ds_total)
+    measure_ds = calc_daily_measurement(station, day_date, signal_ds)
+    # TODO: Continue from here - saving state
+
+    lidar_gen_ds = xr.Dataset().assign_attrs(signal=signal_ds, mesure=measure_ds) # TODO: merge signal_ds and measure_ds to lidar_ds ? or return separated
     if SAVE_DS:
         gen_utils.save_generated_dataset(station, measure_ds, data_source='lidar',
                                          save_mode='sep')  # TODO: add profile name for seperates as 'range_corr'
         gen_utils.save_generated_dataset(station, lidar_gen_ds, data_source='lidar', save_mode='single')
 
-    return
+    return measure_ds, signal_ds,
 
 
 if __name__ == '__main__':
-    """
-     1. Set parameters
-        1. Station & general params
-        2. Set Height index
-        3. Choose a day & Set Time index
-"""
-    # %% 1. Station & general params
-    main_folder = r'C:\Users\addalin\Dropbox\Lidar\lidar_learning'
-    station_name = 'haifa'
-    station = gs.Station(station_name=station_name)
-    wavelengths = gs.LAMBDA_nm().get_elastic()  # [355,532,1064]
-
-    # %% 2. Set Height index
-    heights = station.get_height_bins_values()
-
-    # %% 3. Choose a day & Set Time index
-
-    month = 9
-    year = 2017
-    last = (calendar.monthrange(year, month)[1])
-    month_start_day = datetime(year, month, 1)
-    month_end_day = datetime(year, month, last)
-
-    day_number = 2
-    cur_day = month_start_day + timedelta(days=day_number)
-    day_str = cur_day.strftime('%Y-%m-%d')
-
-    # %%
-    DISP_FIG = False
-
+    main_folder = r'C:\Users\addalin\Dropbox\Lidar\lidar_learning'  # TODO: is this still needed?
+    logging.getLogger('PIL').setLevel(logging.ERROR)  # Fix annoying PIL logs
+    logging.getLogger('matplotlib').setLevel(logging.ERROR)  # Fix annoying matplotlib logs
+    logger = create_and_configer_logger('generate_density.log', level=logging.DEBUG)
+    station = gs.Station(station_name='haifa')
     start_date = datetime(2017, 9, 1)
     end_date = datetime(2017, 10, 31)
-    ds_total = calc_total_optical_density(station=station, day_date=cur_day)
-    signal_ds = calc_lidar_signal(station, cur_day, ds_total)
-    measure_ds = calc_daily_measurement(station, cur_day, signal_ds)
-    # TODO: Continue from here...
-    """
-    # %% 6. Save lidar and range corrected signal , and measurements
-        1. Creating Daily Lidar Signals dataset
-        2. Saving dataset of range_corr_p per wavelength, and lidar_gen_ds
-    """
+    days_list = [datetime(2017, 9, 3, 0, 0)]
+    for cur_day in days_list:
+        generate_daily_lidar_measurement(station, cur_day)
 
-    # %%1. Creating Daily Lidar Signals dataset
-
-    lidar_gen_ds = xr.Dataset()
-    lidar_gen_ds = lidar_gen_ds.assign(range_corr=pr2_ds,
-                                       range_corr_p=pr2n_ds,
-                                       lidar_sig=p_ds,
-                                       lidar_sig_p=pn_ds)
-    lidar_gen_ds['date'] = cur_day
-    lidar_gen_ds.attrs = {'location': station.location,
-                          'info': 'Daily generated lidar signals',
-                          'source_file': os.path.basename(__file__)}
-    # %% 2. Saving dataset of range_corr_p per wavelength, and lidar_gen_ds
-    # save_gen_lidar_dataset(station, lidar_gen_ds, save_mode='both')
-    gen_utils.save_generated_dataset(station, lidar_gen_ds, data_source='lidar', save_mode='both')
-
+    # TODO: clear blow: EXPLORE_GEN_DAY -> to a seperated python or notebook
     """
     ### 6. Exploring 1D generated profiles of:
         - $p$
@@ -108,6 +66,7 @@ if __name__ == '__main__':
     """
 
     EXPLORE_GEN_DAY = False
+    DISP_FIG = False
     if EXPLORE_GEN_DAY:
         # 1D generated signals exploration
         DISP_FIG = True
