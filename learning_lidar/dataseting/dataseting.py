@@ -227,11 +227,13 @@ def create_generated_dataset(station, start_date, end_date, sample_size='30min')
                                                  wavelength=wavelength, file_type='range_corr'),
                 axis=1, result_type='expand')
 
-            # TODO molecular path?
-
             # get the mean LC from signal_paths, one day at a time
             for cur_day in pd.date_range(start=start_date, end=end_date, freq='D', closed='left'):
                 df = get_mean_lc(df=df, station=station, cur_day=cur_day)
+
+            # TODO make sure works - molecular path
+            for cur_day in pd.date_range(start=start_date, end=end_date, freq='D', closed='left'):
+                df = add_X_path(df, station, cur_day, lambda_nm=wavelength, data_source='molecular', file_type='attbsc')
 
             full_df = full_df.append(df)
         except FileNotFoundError as e:
