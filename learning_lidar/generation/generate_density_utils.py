@@ -19,13 +19,11 @@ import learning_lidar.utils.misc_lidar as misc_lidar
 from learning_lidar.utils.proc_utils import make_interpolated_image, normalize
 
 # Profiles at different times
-t_index = [500, 1500, 2500]  # TODO param for generate_density somehow
+t_index = [500, 1500, 2500]
 
-PLOT_RESULTS = False  # TODO param for generate_density somehow
+PLOT_RESULTS = False
 LR_tropos = 55
 
-
-# TODO: Save the logs to a dedicated logdir
 
 # Functions of Daily Aerosols' Density Generation
 def dt2binscale(dt_time, res_sec=30):

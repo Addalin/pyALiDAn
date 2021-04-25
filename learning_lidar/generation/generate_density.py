@@ -9,7 +9,7 @@ import learning_lidar.utils.global_settings as gs
 import learning_lidar.generation.generation_utils as gen_utils
 from learning_lidar.generation.generate_density_utils import generate_density, generate_aerosol, explore_gen_day
 from multiprocessing import Pool, cpu_count
-
+import learning_lidar.generation.generate_density_utils as gen_den_utils
 from learning_lidar.utils.utils import create_and_configer_logger
 
 
@@ -40,6 +40,7 @@ def generate_daily_aerosol_density(station, day_date, SAVE_DS=True):
 
 
 if __name__ == '__main__':
+    gen_den_utils.PLOT_RESULTS = True
     gen_utils.set_visualization_settings()
     logging.getLogger('PIL').setLevel(logging.ERROR)  # Fix annoying PIL logs
     logging.getLogger('matplotlib').setLevel(logging.ERROR)  # Fix annoying matplotlib logs
