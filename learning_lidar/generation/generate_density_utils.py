@@ -675,8 +675,8 @@ def get_LR_ds(day_params_ds, time_index):
         tbins[2] -= 1
         times = LR_ds.Time[tbins].values
         fig, ax = plt.subplots(nrows=1, ncols=1, figsize=(7, 5))
-        LR_ds.plot(ax=ax)
-        ax.scatter(times, LRs, label=LR_ds.long_name)
+        LR_ds.LR.plot(ax=ax)
+        ax.scatter(times, LRs, label=LR_ds.LR.long_name)
         ax.xaxis.set_major_formatter(TIMEFORMAT)
         ax.xaxis.set_tick_params(rotation=0)
         plt.tight_layout()
@@ -921,7 +921,8 @@ def wrap_aerosol_dataset(station, day_date, day_params_ds, sigma_ds, beta_ds, an
                            params_source=xr.Variable(dims=(),
                                                      data=gen_utils.get_month_gen_params_path(station, day_date),
                                                      attrs={
-                                                         'info': 'netcdf file name, containing generated density parameters.'}))
+                                                         'info': 'netcdf file name, containing generated density '
+                                                                 'parameters.'}))
 
     aer_ds.attrs = {'info': 'Daily generated aerosol profiles',
                     'source_file': os.path.basename(__file__),
