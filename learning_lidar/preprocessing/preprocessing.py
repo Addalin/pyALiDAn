@@ -1,8 +1,5 @@
 # %% Imports
 
-import warnings  # Ignore warnings
-
-warnings.filterwarnings("ignore")
 import pandas as pd
 from pandas.api.types import is_numeric_dtype
 import os
@@ -10,13 +7,13 @@ from datetime import datetime, timedelta, time, date
 import glob
 from molecular import rayleigh_scattering
 import numpy as np
-from learning_lidar.utils.miscLidar import RadiosondeProfile
+from learning_lidar.utils.misc_lidar import RadiosondeProfile
 import re
 from netCDF4 import Dataset
 import fnmatch
 import matplotlib.pyplot as plt
-import learning_lidar.global_settings as gs
-import learning_lidar.utils.miscLidar as mscLid
+import learning_lidar.utils.global_settings as gs
+import learning_lidar.utils.misc_lidar as mscLid
 from learning_lidar.utils.utils import create_and_configer_logger, write_row_to_csv
 import logging
 import torch, torchvision
@@ -774,7 +771,9 @@ def get_prep_dataset_file_name(station, day_date, data_source='molecular', lambd
 
     :return: dataset file name (netcdf) file of the data_type required per given day and wavelength, data_source and file_type
     """
-    if file_type == '*' or lambda_nm == '*':
+    if lambda_nm == 'all':
+        file_type = ''
+    if file_type == '*' or lambda_nm == '*': # * for lambd_nm - means any wavelength and profile
         # retrieves any file of this date
         file_name = f"{day_date.strftime('%Y_%m_%d')}_{station.location}_{file_type}_{lambda_nm}*{data_source}.nc"
     else:

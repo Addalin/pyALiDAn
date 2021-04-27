@@ -1,5 +1,7 @@
+from matplotlib import pyplot as plt, dates as mdates
+import seaborn as sns
 import learning_lidar.preprocessing.preprocessing as prep
-from datetime import datetime, date
+from datetime import datetime, date, timedelta
 import os
 
 
@@ -25,9 +27,11 @@ def get_gen_dataset_file_name(station, day_date, wavelength='*', data_source='li
     return file_name
 
 
-def save_generated_dataset(station, dataset, data_source='lidar', save_mode='both'):
+def save_generated_dataset(station, dataset, data_source='lidar', save_mode='both', profiles=None):
     """
     Save the input dataset to netcdf file
+    :param profiles: The name of profile desired to be saved separately.
+    If this name is not provided, then the first profile is automatically selected
     :param station: station: gs.station() object of the lidar station
     :param dataset: array.Dataset() a daily generated lidar signal, holding 5 data variables:
              4 daily dataset, with dimensions of : Height, Time, Wavelength.
@@ -43,30 +47,35 @@ def save_generated_dataset(station, dataset, data_source='lidar', save_mode='bot
     date_datetime = prep.get_daily_ds_date(dataset)
     if data_source == 'lidar':
         base_folder = station.gen_lidar_dataset
+    elif data_source == 'signal':
+        base_folder = station.gen_signal_dataset
     elif data_source == 'aerosol':
         base_folder = station.gen_aerosol_dataset
     elif data_source == 'density':
         base_folder = station.gen_density_dataset
-    else:
-        base_folder = station.generation_folder
+    elif data_source == 'bg':
+        base_folder = station.gen_bg_dataset
     month_folder = prep.get_month_folder_name(base_folder, date_datetime)
 
     prep.get_daily_ds_date(dataset)
     '''save the dataset to separated netcdf files: per profile per wavelength'''
     ncpaths = []
 
-    # NOTE: Currently saving to separated profiles is only for `range_corr_p` - used in the learning phase.cur_day
+    # NOTE: Currently saving to separated profiles is only for `range_corr` - used in the learning phase.cur_day
     # if one needs other separated profile, add it as an an input term.
-    profile = list(dataset.data_vars)[1]
+
     if save_mode in ['both', 'sep']:
-        for wavelength in dataset.Wavelength.values:
-            ds_profile = dataset.sel(Wavelength=wavelength)[profile]
-            ds_profile['date'] = date_datetime
-            file_name = get_gen_dataset_file_name(station, date_datetime, data_source=data_source,
-                                                  wavelength=wavelength, file_type=profile)
-            ncpath = prep.save_dataset(ds_profile, month_folder, file_name)
-            if ncpath:
-                ncpaths.append(ncpath)
+        if not profiles:
+            profiles = [list(dataset.data_vars)[0]]
+        for profile in profiles:
+            for wavelength in dataset.Wavelength.values:
+                ds_profile = dataset.sel(Wavelength=wavelength)[profile]
+                ds_profile['date'] = date_datetime
+                file_name = get_gen_dataset_file_name(station, date_datetime, data_source=data_source,
+                                                      wavelength=wavelength, file_type=profile)
+                ncpath = prep.save_dataset(ds_profile, month_folder, file_name)
+                if ncpath:
+                    ncpaths.append(ncpath)
 
     '''save the dataset to a single netcdf'''
     if save_mode in ['both', 'single']:
@@ -78,12 +87,15 @@ def save_generated_dataset(station, dataset, data_source='lidar', save_mode='bot
     return ncpaths
 
 
-def get_month_density_gen_fname(station, day_date):
+def get_month_gen_params_path(station, day_date, type='density_params'):
     """
-    TODO: add usage
-    :param station:
-    :param day_date:
-    :return:
+    :param type: type of generated parameter:
+        'density_params' - for density sampler generator,
+        'bg'- for generated background signal,
+        'LC' - for generated Lidar Constant signal
+    :param station: gs.station() object of the lidar station
+    :param day_date: datetime.date object of the required date
+    :return: str. Path to monthly dataset of generation parameters.
     """
     year = day_date.year
     month = day_date.month
@@ -91,7 +103,55 @@ def get_month_density_gen_fname(station, day_date):
     monthdays = (date(year, month + 1, 1) - date(year, month, 1)).days
     month_end_day = datetime(year, month, monthdays, 0, 0)
 
-    nc_name = f"generated_density_params_{station.name}_{month_start_day.strftime('%Y-%m-%d')}_" \
+    nc_name = f"generated_{type}_{station.location}_{month_start_day.strftime('%Y-%m-%d')}_" \
               f"{month_end_day.strftime('%Y-%m-%d')}.nc"
-    gen_source_path = os.path.join(station.generation_folder, nc_name)
+
+    folder_name = prep.get_month_folder_name(station.generation_folder, day_date)
+
+    gen_source_path = os.path.join(folder_name, nc_name)
     return gen_source_path
+
+
+def get_month_gen_params_ds(station, day_date, type='density_params'):
+    """
+    Returns the monthly parameters of density creation as a dataset.
+    :param type: type of generated parameter:
+        'density_params' - for density sampler generator,
+        'bg'- for generated background signal,
+        'LC' - for generated Lidar Constant signal
+    :param station: gs.station() object of the lidar station
+    :param day_date: datetime.date object of the required date
+    :return: day_params_ds: xarray.Dataset(). Monthly dataset of generation parameters.
+    """
+
+    gen_source_path = get_month_gen_params_path(station, day_date, type)
+    month_params_ds = prep.load_dataset(gen_source_path)
+    return month_params_ds
+
+
+def get_daily_gen_param_ds(station, day_date, type='density_params'):
+    """
+    Returns the daily parameters of density creation as a dataset.
+    :param type: type of generated parameter:
+        'density_params' - for density sampler generator,
+        'bg'- for generated background signal,
+        'LC' - for generated Lidar Constant signal
+    :param station: gs.station() object of the lidar station
+    :param day_date: datetime.date object of the required date
+    :return: day_params_ds: xarray.Dataset(). Daily dataset of generation parameters.
+    """
+    month_params_ds = get_month_gen_params_ds(station, day_date, type)
+    day_params_ds = month_params_ds.sel(Time=slice(day_date, day_date + timedelta(days=1)))
+
+    return day_params_ds
+
+
+def set_visualization_settings():
+    # TODO make sure this actualyl propages to other functions
+    plt.rcParams['figure.dpi'] = 300
+    plt.rcParams['savefig.dpi'] = 300
+    colors = ["darkblue", "darkgreen", "darkred"]
+    sns.set_palette(sns.color_palette(colors))
+
+
+TIMEFORMAT = mdates.DateFormatter('%H:%M')

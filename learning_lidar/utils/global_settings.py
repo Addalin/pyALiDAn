@@ -26,7 +26,8 @@ import pandas as pd
 import numpy as np
 from dataclasses import dataclass
 import os
-from datetime import datetime,timedelta
+from datetime import datetime, timedelta
+
 # %% Basic physics constants
 
 eps = np.finfo(np.float).eps
@@ -43,7 +44,10 @@ n_chan = 13
 
 @dataclass()
 class Station:
-    def __init__(self, station_name='haifa', stations_csv_path= os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))),'data','stations.csv')):
+    def __init__(self, station_name='haifa',
+                 stations_csv_path=os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))),
+                                                'data',
+                                                'stations.csv')):
         """
         A station class that stores all the below information
 
@@ -51,7 +55,7 @@ class Station:
         :param stations_csv_path: str, path to stations csv file
         """
 
-        stations_df = pd.read_csv(stations_csv_path, index_col='station_name', sep=',',skipinitialspace=True)
+        stations_df = pd.read_csv(stations_csv_path, index_col='station_name', sep=',', skipinitialspace=True)
         try:
             station_df = stations_df.loc[station_name.lower()]
         except KeyError as e:
@@ -61,13 +65,17 @@ class Station:
         self.location = station_df['location']
         self.lon = np.float(station_df['longitude'])
         self.lat = np.float(station_df['latitude'])
-        self.altitude = np.float(station_df['altitude'])                  # [m] The Lidar's altitude   ( above sea level, see 'altitude' in ' *_att_bsc.nc)
-        self.start_bin_height = np.float(station_df['start_bin_height'])  # [m] The first bin's height ( above ground level - a.k.a above the lidar, see height[0]  in *_att_bsc.nc)
-        self.end_bin_height = np.float(station_df['end_bin_height'])      # [m] The last bin's height  ( see height[-1] in *_att_bsc.nc)
-        self.n_bins = np.int(station_df['n_bins'])                        # [#] Number of height bins         ( see height.shape  in  *_att_bsc.nc)
-        self.dt = np.float(eval(station_df['dt']))                        # [sec] temporal pulse width of the lidar note: dr = C*dt/2
-        self.freq = 30                                                    # [sec] Frequency of measurments, currently every 30 sec, if this value changes, add it to the stations.csv
-        self.total_time_bins = 2880                                       # Total measurment per day, currently 2880 time bins, if this value changes, add it to the stations.csv
+        self.altitude = np.float(
+            station_df['altitude'])  # [m] The Lidar's altitude   ( above sea level, see 'altitude' in ' *_att_bsc.nc)
+        self.start_bin_height = np.float(station_df[
+                                             'start_bin_height'])  # [m] The first bin's height ( above ground level - a.k.a above the lidar, see height[0]  in *_att_bsc.nc)
+        self.end_bin_height = np.float(
+            station_df['end_bin_height'])  # [m] The last bin's height  ( see height[-1] in *_att_bsc.nc)
+        self.n_bins = np.int(
+            station_df['n_bins'])  # [#] Number of height bins         ( see height.shape  in  *_att_bsc.nc)
+        self.dt = np.float(eval(station_df['dt']))  # [sec] temporal pulse width of the lidar note: dr = C*dt/2
+        self.freq = 30  # [sec] Frequency of measurments, currently every 30 sec, if this value changes, add it to the stations.csv
+        self.total_time_bins = 2880  # Total measurment per day, currently 2880 time bins, if this value changes, add it to the stations.csv
         self.gdas1_folder = station_df['gdas1_folder']
         self.gdastxt_folder = station_df['gdastxt_folder']
         self.lidar_src_folder = station_df['lidar_src_folder']
@@ -78,13 +86,13 @@ class Station:
         self.aeronet_name = station_df['aeronet_name']
         self.generation_folder = station_df['generation_folder']
         self.gen_lidar_dataset = station_df['gen_lidar_dataset']
+        self.gen_signal_dataset = station_df['gen_signal_dataset']
         self.gen_aerosol_dataset = station_df['gen_aerosol_dataset']
         self.gen_bg_dataset = station_df['gen_bg_dataset']
         self.gen_density_dataset = station_df['gen_density_dataset']
 
-
     def __str__(self):
-        return  ("\n " + str(self.__class__) + ": " + str(self.__dict__)).replace(" {","\n  {").replace(",",",\n  ")
+        return ("\n " + str(self.__class__) + ": " + str(self.__dict__)).replace(" {", "\n  {").replace(",", ",\n  ")
 
     def get_height_bins_values(self, USE_KM_UNITS=True):
         '''Setting height vector above sea level (for interpolation of radiosonde / gdas files).'''
@@ -95,7 +103,7 @@ class Station:
         min_height = self.altitude + self.start_bin_height
         top_height = self.altitude + self.end_bin_height
         heights = np.linspace(min_height * scale, top_height * scale, self.n_bins)
-        return  heights
+        return heights
 
     def calc_daily_time_index(self, cur_day):
         end_t = cur_day + timedelta(hours=24) - timedelta(seconds=self.freq)
@@ -103,9 +111,9 @@ class Station:
         assert self.total_time_bins == len(time_index)
         return time_index
 
+
 class CHANNELS():
     def __init__(self):
-
         ''' Class of pollyXT lidar channel numbers '''
         self.UV = 0  # UV channel - 355[nm]
         self.UVs = 1  # UV polarized channel - 355 [nm]
@@ -120,14 +128,14 @@ class CHANNELS():
         self.UVNF = 10  # Near Field UV channel - 355[nm]
         self.V1NF = 11  # Near field Raman channel - 387[nm]
 
-    def get_elastic ( self ) :
-        return [ self.UV , self.G , self.IR ]
+    def get_elastic(self):
+        return [self.UV, self.G, self.IR]
 
     def __str__(self):
-        return ("\n " + str(self.__class__) + ": " + str(self.__dict__)).replace(" {","\n  {").replace(",",",\n  ")
+        return ("\n " + str(self.__class__) + ": " + str(self.__dict__)).replace(" {", "\n  {").replace(",", ",\n  ")
 
 
-class LAMBDA_nm( object ):
+class LAMBDA_nm(object):
     def __init__(self, scale=1):
         # pass
         """ Class of pollyXT lidar wavelengths, values are in micro meters
@@ -144,17 +152,18 @@ class LAMBDA_nm( object ):
         return [self.UV, self.G, self.IR]
 
     def __str__(self):
-        return ("\n " + str(self.__class__) + ": " + str(self.__dict__)).replace(" {","\n  {").replace(",",",\n  ")
+        return ("\n " + str(self.__class__) + ": " + str(self.__dict__)).replace(" {", "\n  {").replace(",", ",\n  ")
 
-class LAMBDA_m( LAMBDA_nm ):
+
+class LAMBDA_m(LAMBDA_nm):
     def __init__(self):
-        LAMBDA_nm.__init__( self , 1E-9 )
+        LAMBDA_nm.__init__(self, 1E-9)
 
 
 # %%DEBUG -----------------------------
 if __name__ == '__main__':
     print('This files contains some useful constants')
-    wavelengths = LAMBDA_nm( )
+    wavelengths = LAMBDA_nm()
     print(wavelengths)
     wavelengths_m = LAMBDA_m()
     print(wavelengths_m.get_elastic())

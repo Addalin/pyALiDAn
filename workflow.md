@@ -131,8 +131,8 @@ Each sample contains the followings:
       - Creates varying Lidar Power for a period. Currently, done for sep-oct 2017. Values are manually initialized based on values found in `ds_extended` (created in `dataseting.py`).
       - Output:  `D:\data_haifa\GENERATION\generated_LC_haifa_2017-09-01_2017-10-31.nc`
       - TODOs: 
-        - Generate data for a full year, use similar power pattern, but with some varying parameters as days (sample uniform day : 70-90 days), and power ( ssmple from a segment of values per wavelength)
-        - Separate output files , per month
+        - Generate data for a full year, use similar power pattern, but with some varying parameters as days (sample uniform day : 70-90 days), and power ( ssmple from a segment of values per wavelength) ***OPEN***
+        - Split output nc files , per month  ***OPEN***
        
    5. **Density Generation:**
       - Notebook: `generate_density.ipynb`  
@@ -194,8 +194,8 @@ Each sample contains the followings:
 ## Other repo and coding issues:
 
 1. Data folder containing: 
-    - particals distribution (LR- A) : `C:\Users\addalin\Dropbox\Lidar\code\Angstrom_LidarRatio\plot_data\plot_data\data_points_with_error_bars.csv`. usage:`KDE_estimation_sample.ipynb`
-    - iradiance-angle  graph :  `C:\Users\addalin\Dropbox\Lidar\code\background_signal\irradiance_solarElevation.csv` , usage: `generate_bg_signals.ipynb`
+    - TODO ADD TO GIT? - particals distribution (LR- A) : `C:\Users\addalin\Dropbox\Lidar\code\Angstrom_LidarRatio\plot_data\plot_data\data_points_with_error_bars.csv`. usage:`KDE_estimation_sample.ipynb`
+    - TODO ADD TO GIT? - iradiance-angle  graph :  `C:\Users\addalin\Dropbox\Lidar\code\background_signal\irradiance_solarElevation.csv` , usage: `generate_bg_signals.ipynb`
     - bg mean curve : `C:\Users\addalin\Dropbox\Lidar\code\background_signal\curve_params.yml` usage: `generate_bg_signals.ipynb`
     - stations csv: `C:\Users\addalin\Dropbox\Lidar\code\stations.csv`
     - failed_gdas_files_path : `gdas2radiosonde_failed_files.csv`, usage `datasetting.py` & `fix_gdas_errors.py`

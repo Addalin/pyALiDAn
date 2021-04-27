@@ -21,8 +21,9 @@ def main(config, consts):
 
     # Define Data
     lidar_dm = LidarDataModule(train_csv_path=consts["train_csv_path"],
-                               test_csv_path = consts["test_csv_path"],
+                               test_csv_path=consts["test_csv_path"],
                                powers=consts['powers'] if config['use_power'] else None,
+                               X_features_profiles=consts['X_features_profiles'],
                                Y_features=config['Y_features'],
                                batch_size=config['bsize'],
                                num_workers=consts['num_workers'])
@@ -35,7 +36,7 @@ def main(config, consts):
     trainer = Trainer(max_epochs=consts['max_epochs'], callbacks=callbacks)
     # trainer = Trainer(max_steps=consts['max_steps'])
     lidar_dm.setup('fit')
-    trainer.fit(model=model,datamodule=lidar_dm)
+    trainer.fit(model=model, datamodule=lidar_dm)
 
     # test
     lidar_dm.setup('test')
@@ -58,8 +59,8 @@ if __name__ == '__main__':
     csv_base_name = f"dataset_{data_params['station_name']}_" \
                     f"{data_params['start_date'].strftime('%Y-%m-%d')}_" \
                     f"{data_params['end_date'].strftime('%Y-%m-%d')}"
-    csv_path_train = os.path.join(data_params['base_path'],f'{csv_base_name}_train.csv')
-    csv_path_test = os.path.join(data_params['base_path'],f'{csv_base_name}_test.csv')
+    train_csv_path = os.path.join(data_params['base_path'], f'{csv_base_name}_train.csv')
+    test_csv_path = os.path.join(data_params['base_path'], f'{csv_base_name}_test.csv')
 
     # Constants - should correspond to data, dataloader and model
     consts = {
@@ -67,23 +68,24 @@ if __name__ == '__main__':
         'in_channels': 2,
         'max_epochs': 3,
         'num_workers': 7,
-        'csv_path_train':csv_path_train,
-        'csv_path_test': csv_path_test,
-        'powers': {'range_corr': 0.5, 'attbsc': 0.5, 'LC': 0.5, 'LC_std': 0.5, 'r0': 1, 'r1': 1, 'dr': 1}
+        'train_csv_path': train_csv_path,
+        'test_csv_path': test_csv_path,
+        'powers': {'range_corr': 0.5, 'attbsc': 0.5, 'LC': 0.5, 'LC_std': 0.5, 'r0': 1, 'r1': 1, 'dr': 1},
+        'X_features_profiles': (('lidar_path', 'range_corr'), ('molecular_path', 'attbsc'),)
     }
 
     # Defining a search space
     # Note, replace choice with grid_search if want all possible combinations
-    use_ray=True
+    use_ray = True
     if use_ray:
-        hyper_params =  {
+        hyper_params = {
             "lr": tune.grid_search([1e-3, 0.5 * 1e-3, 1e-4]),
             "bsize": tune.choice([8]),
-            #"wavelengths": tune.grid_search([355, 532, 1064]),  # TODO change to const - all wavelenghts
+            # "wavelengths": tune.grid_search([355, 532, 1064]),  # TODO change to const - all wavelenghts
             "loss_type": tune.choice(['MSELoss', 'MAELoss']),  # ['MARELoss']
-            "Y_features": tune.choice([['LC']] ),
-            #tune.choice(
-                #[['LC'], ['r0', 'r1', 'LC'], ['r0', 'r1'], ['r0', 'r1', 'dr'], ['r0', 'r1', 'dr', 'LC']]),
+            "Y_features": tune.choice([['LC']]),
+            # tune.choice(
+            # [['LC'], ['r0', 'r1', 'LC'], ['r0', 'r1'], ['r0', 'r1', 'dr'], ['r0', 'r1', 'dr', 'LC']]),
             "use_power": tune.grid_search([False, True])
         }
 
@@ -103,6 +105,6 @@ if __name__ == '__main__':
         print(f"best_checkpoint {analysis.best_checkpoint}")
         print(f"best_result {analysis.best_result}")
     else:
-        hyper_params = {"Y_features" : [ "r0" , "r1" , "LC" ] , "bsize" : 8 , "loss_type" : "MSELoss" ,
-                        "lr" : 0.001 , "powers" : None}
-        main ( hyper_params , consts )
+        hyper_params = {"Y_features": ["r0", "r1", "LC"], "bsize": 8, "loss_type": "MSELoss",
+                        "lr": 0.001, "powers": None}
+        main(hyper_params, consts)
