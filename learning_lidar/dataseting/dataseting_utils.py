@@ -58,10 +58,10 @@ def query_database(query="SELECT * FROM lidar_calibration_constant;",
         # Query to df
         # optionally parse 'id' as index column and 'cali_start_time', 'cali_stop_time' as dates
         df = pd.read_sql(sql=query, con=c, parse_dates=['cali_start_time', 'cali_stop_time'])
-    # except sqlite3.OperationalError as e:
-    #    logger.exception ( f"{e}: Unable to load dataset." )
-    #    sys.exit(1)
-    # TODO: raise load exception if file does not exsits. the above commented solution is not really catching this and continues to run
+    # except sqlite3.OperationalError as e: logger.exception ( f"{e}: Unable to load dataset." ) sys.exit(1)
+    # TODO:
+    #  raise load exception if file does not exsits. the above commented solution is not really catching this and
+    #  continues to run
 
     return df
 
@@ -284,15 +284,15 @@ def split_save_train_test_ds(csv_path='', train_size=0.8, df=None):
     return train_set, test_set
 
 
-def get_generated_X_path(station, parent_folder, cur_day, data_source, wavelength, file_type=None):
-    data_month = prep.get_month_folder_name(parent_folder=parent_folder, day_date=cur_day)
-    nc_name = get_gen_dataset_file_name(station, cur_day, data_source=data_source, wavelength=wavelength,
+def get_generated_X_path(station, parent_folder, day_date, data_source, wavelength, file_type=None):
+    data_month = prep.get_month_folder_name(parent_folder=parent_folder, day_date=day_date)
+    nc_name = get_gen_dataset_file_name(station, day_date, data_source=data_source, wavelength=wavelength,
                                         file_type=file_type)
     data_path = os.path.join(data_month, nc_name)
     return data_path
 
 
-def get_mean_lc(df, station, cur_day):
+def get_mean_lc(df, station, day_date):
     """
 
     :param df:
@@ -300,11 +300,11 @@ def get_mean_lc(df, station, cur_day):
     :param wavelength:
     :return:
     """
-    day_indices = df['date'] == cur_day.strftime('%Y-%m-%d')  # indices of current day in df
+    day_indices = df['date'] == day_date.strftime('%Y-%m-%d')  # indices of current day in df
 
     # path to signal_dataset of current day
-    nc_path = get_generated_X_path(station=station, parent_folder=station.gen_signal_dataset,
-                                   cur_day=cur_day, data_source='signal', wavelength='*')
+    nc_path = get_generated_X_path(station=station, parent_folder=station.gen_signal_dataset, day_date=day_date,
+                                   data_source='signal', wavelength='*')
 
     # Load the LC of current day
     LC_day = prep.load_dataset(nc_path).LC

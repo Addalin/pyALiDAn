@@ -51,16 +51,19 @@ if __name__ == '__main__':
     logger = create_and_configer_logger('generate_density.log', level=logging.DEBUG)
     station = gs.Station(station_name='haifa')
 
-    # days_list = [datetime(2017, 9, 3, 0, 0)]
-    days_list = pd.date_range(start="2017-09-07", end="2017-09-30").to_pydatetime().tolist()
+    start_date = datetime(2017,10,1)
+    end_date = datetime(2017,10,31)
+    days_list = pd.date_range(start=start_date, end=end_date).to_pydatetime().tolist()
     num_days = len(days_list)
     num_processes = min((cpu_count() - 1, num_days))
     with Pool(num_processes) as p:
         p.starmap(generate_daily_aerosol_density, zip(repeat(station), days_list))
 
-    for cur_day in days_list: # TODO: isn't it reaping the above?
-        aer_ds, density_ds = generate_daily_aerosol_density(station, day_date=cur_day)
+    RUN_NEXT = False
+    if RUN_NEXT:
+        for cur_day in days_list: # TODO: isn't it reaping the above?
+            aer_ds, density_ds = generate_daily_aerosol_density(station, day_date=cur_day)
 
-        EXPLORE_GEN_DAY = False
-        if EXPLORE_GEN_DAY:
-            explore_gen_day(station, cur_day, aer_ds, density_ds)
+            EXPLORE_GEN_DAY = False
+            if EXPLORE_GEN_DAY:
+                explore_gen_day(station, cur_day, aer_ds, density_ds)

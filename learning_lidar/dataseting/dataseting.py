@@ -72,7 +72,7 @@ def create_dataset(station_name='haifa', start_date=datetime(2017, 9, 1),
 
     full_df = pd.DataFrame()
     for wavelength in tqdm(wavelengths):
-        for day_date in dates:  # tqdm(dates) #TODO: find a way to run inner loop of tqdm, in a convenient way
+        for day_date in dates:  # tqdm(dates)
 
             # Query the db for a specific day, wavelength and calibration method
             try:
@@ -217,19 +217,19 @@ def create_generated_dataset(station, start_date, end_date, sample_size='30min')
             # add bg and lidar paths
             df['bg_path'] = df.apply(
                 lambda row: get_generated_X_path(station=station, parent_folder=station.gen_bg_dataset,
-                                                 cur_day=row['start_time'], data_source='bg',
-                                                 wavelength=wavelength, file_type='p_bg'),
+                                                 day_date=row['start_time'], data_source='bg', wavelength=wavelength,
+                                                 file_type='p_bg'),
                 axis=1, result_type='expand')
 
             df['lidar_path'] = df.apply(
                 lambda row: get_generated_X_path(station=station, parent_folder=station.gen_lidar_dataset,
-                                                 cur_day=row['start_time'], data_source='lidar',
-                                                 wavelength=wavelength, file_type='range_corr'),
+                                                 day_date=row['start_time'], data_source='lidar', wavelength=wavelength,
+                                                 file_type='range_corr'),
                 axis=1, result_type='expand')
 
             # get the mean LC from signal_paths, one day at a time
             for cur_day in pd.date_range(start=start_date, end=end_date, freq='D', closed='left'):
-                df = get_mean_lc(df=df, station=station, cur_day=cur_day)
+                df = get_mean_lc(df=df, station=station, day_date=cur_day)
 
             # TODO make sure works - molecular path
             for cur_day in pd.date_range(start=start_date, end=end_date, freq='D', closed='left'):
@@ -255,7 +255,7 @@ def main(station_name, start_date, end_date):
     DO_GENERATED_DATASET = True
 
     # Load data of station
-    station = gs.Station(stations_csv_path='../../data/stations.csv', station_name=station_name)
+    station = gs.Station(station_name=station_name)
     logger.info(f"Loading {station.location} station")
 
     # Set new paths
