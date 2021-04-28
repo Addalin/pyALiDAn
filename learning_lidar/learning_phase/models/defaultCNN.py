@@ -2,7 +2,7 @@ from pytorch_lightning.core.lightning import LightningModule
 from torch import nn
 from torch.optim import Adam
 
-from utils_.custom_losses import MARELoss
+from learning_lidar.learning_phase.utils_.custom_losses import MARELoss
 
 
 class DefaultCNN(LightningModule):
@@ -52,6 +52,10 @@ class DefaultCNN(LightningModule):
         elif loss_type == 'MARELoss':
             self.criterion = MARELoss()
 
+        # Step 4. Instantiate Relative Loss - for accuracy
+        self.rel_loss_type = 'MARELoss'
+        self.rel_loss = MARELoss()
+
     def forward(self, x):
         batch_size, channels, width, height = x.size()
         # conv layers
@@ -71,6 +75,8 @@ class DefaultCNN(LightningModule):
         y_pred = self(x)
         loss = self.criterion(y, y_pred)
         self.log(f"{self.loss_type}_train", loss)
+        rel_loss = self.rel_loss(y, y_pred)
+        self.log(f"{self.rel_loss_type}_train", rel_loss)
         return loss
 
     def validation_step(self, batch, batch_idx):
@@ -78,10 +84,11 @@ class DefaultCNN(LightningModule):
         y = batch['y']
         y_pred = self(x)
         loss = self.criterion(y, y_pred)
-        # for feature_num, feature in enumerate(features):
-        #     loss_mare = MARELoss(y, y_pred)
-        #     self.log(f"{"MARE_{feature_num}_val", loss_mare)
         self.log(f"{self.loss_type}_val", loss)
+        # for feature_num, feature in enumerate(features):
+        #     self.log(f"{"MARE_{feature_num}_val", loss_mare)
+        rel_loss = self.rel_loss(y, y_pred)
+        self.log(f"{self.rel_loss_type}_val", rel_loss)
         return loss
 
     def configure_optimizers(self):
