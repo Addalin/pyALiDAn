@@ -67,14 +67,20 @@ if __name__ == '__main__':
     consts = {
         "hidden_sizes": [16, 32, 8],  # TODO: add options of [ 8, 16, 32], [16, 32, 8], [ 64, 32, 16]
         'in_channels': 3,
-        'max_epochs': 3,
+        'max_epochs': 20,
         'num_workers': 7,
         'train_csv_path': train_csv_path,
         'test_csv_path': test_csv_path,
-        'powers': {'range_corr': 0.5, 'attbsc': 0.5,'p_bg':0.5,
+        'powers': {'range_corr': 0.5, 'attbsc': 0.5, 'p_bg': 0.5,
                    'LC': 0.5, 'LC_std': 0.5, 'r0': 1, 'r1': 1, 'dr': 1},
-        'X_features_profiles': (('lidar_path', 'range_corr'), ('molecular_path', 'attbsc'),('bg_path','p_bg'))
+        'X_features_profiles': (('lidar_path', 'range_corr'), ('molecular_path', 'attbsc'), ('bg_path', 'p_bg'))
     }
+    # TODO: set in_channels according to length of X_features_profiles
+    # TODO: X_features_profiles - in hyper_params:
+    #  (('lidar_path', 'range_corr'), ('molecular_path', 'attbsc') or
+    #  ('lidar_path', 'range_corr'), ('molecular_path', 'attbsc'), ('bg_path', 'p_bg'))
+    # TODO: instead of p_bg - range_corr of bg # TODO: create separated range_corr of background
+
 
     # Defining a search space
     # Note, replace choice with grid_search if want all possible combinations
@@ -85,8 +91,9 @@ if __name__ == '__main__':
             "bsize": tune.choice([8]),
             # "wavelengths": tune.grid_search([355, 532, 1064]),  # TODO change to const - all wavelengths
             "loss_type": tune.choice(['MSELoss', 'MAELoss']),  # ['MARELoss']
-            "Y_features": tune.choice([['LC']]),  # [['LC'], ['r0', 'r1', 'LC'], ['r0', 'r1'], ['r0', 'r1', 'dr'], ['r0', 'r1', 'dr', 'LC']]
-            "use_power": tune.grid_search([False,True])
+            "Y_features": tune.choice([['LC']]),
+            # [['LC'], ['r0', 'r1', 'LC'], ['r0', 'r1'], ['r0', 'r1', 'dr'], ['r0', 'r1', 'dr', 'LC']]
+            "use_power": tune.grid_search([False, True])
         }
 
         analysis = tune.run(
