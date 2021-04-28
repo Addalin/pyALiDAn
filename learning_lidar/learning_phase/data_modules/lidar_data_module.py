@@ -14,17 +14,16 @@ class LidarDataSet(torch.utils.data.Dataset):
     TODO: add usage
     """
 
-    def __init__(self, csv_file, transform, top_height, X_features_profiles, Y_features, wavelengths=None):
+    def __init__(self, csv_file, transform, top_height, X_features, profiles, Y_features, wavelengths=None):
         """
         Args:
             csv_file (string): Path to the csv file of the database.
             :param transform:
         """
         self.data = pd.read_csv(csv_file)
-        self.key = ['idx', 'date', 'wavelength', 'cali_method', 'telescope',
-                    'cali_start_time', 'cali_stop_time',
-                    'start_time_period', 'end_time_period']
-        self.X_features, self.profiles = map(list, zip(*X_features_profiles))  # unpack list of tuples into two lists
+        self.key = list(self.data.keys())
+        self.X_features = X_features
+        self.profiles = profiles
         self.Y_features = Y_features
         self.wavelengths = wavelengths  # TODO: make option to load data by desired wavelength/s
         self.top_height = top_height
@@ -103,7 +102,7 @@ class LidarDataSet(torch.utils.data.Dataset):
         :return: The values of the required key for the sample
         """
         row = self.data.loc[idx, :]
-        key_val = row[self.key.index(key)]
+        key_val = row[key]
         return key_val
 
 
@@ -116,7 +115,7 @@ class LidarDataModule(LightningDataModule):
         self.train_csv_path = train_csv_path
         self.test_csv_path = test_csv_path
         self.powers = powers
-        self.X_features_profiles = X_features_profiles
+        self.X_features, self.profiles = map(list, zip(*X_features_profiles))  # unpack list of tuples into two lists
         self.Y_features = Y_features
         self.batch_size = batch_size
         self.num_workers = num_workers
@@ -132,18 +131,21 @@ class LidarDataModule(LightningDataModule):
 
         # Step 1. Load Dataset
         # TODO: add option - y = {bin(r0),bin(r1)}
-        transformations_list = [PowTransform(self.powers), LidarToTensor()] if self.powers else [LidarToTensor()]
+        transformations_list = [PowTransform(self.Y_features, self.profiles, self.powers), LidarToTensor()]\
+                                if self.powers else [LidarToTensor()]
         lidar_transforms = torchvision.transforms.Compose(transformations_list)
 
         if stage == 'fit' or stage is None:
             trainable_dataset = LidarDataSet(csv_file=self.train_csv_path, transform=lidar_transforms, top_height=15.3,
-                                             X_features_profiles=self.X_features_profiles, Y_features=self.Y_features)
+                                             X_features=self.X_features,profiles =self.profiles,
+                                             Y_features=self.Y_features)
 
             self.train, self.val = trainable_dataset.get_splits(n_val=self.val_length, n_test=0)
 
         if stage == 'test' or stage is None:
             self.test = LidarDataSet(csv_file=self.test_csv_path, transform=lidar_transforms, top_height=15.3,
-                                     X_features_profiles=self.X_features_profiles, Y_features=self.Y_features)
+                                     X_features=self.X_features,profiles =self.profiles,
+                                     Y_features=self.Y_features)
 
     def train_dataloader(self):
         return DataLoader(self.train, batch_size=self.batch_size, shuffle=True, num_workers=self.num_workers)

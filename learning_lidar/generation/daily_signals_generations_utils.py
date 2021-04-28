@@ -16,16 +16,9 @@ import learning_lidar.utils.global_settings as gs
 import learning_lidar.generation.generation_utils as gen_utils  # save_generated_dataset
 from learning_lidar.preprocessing import preprocessing as prep
 from learning_lidar.utils.misc_lidar import calc_tau, generate_poisson_signal_STEP
-
+from learning_lidar.utils.global_settings import eps
 # %%
-eps = np.finfo(np.float).eps
-plt.rcParams['figure.dpi'] = 300
-plt.rcParams["savefig.dpi"] = 300
-TIMEFORMAT = mdates.DateFormatter('%H:%M')
-colors = ["darkblue", "darkgreen", "darkred"]
-sns.set_palette(sns.color_palette(colors))
-customPalette = sns.set_palette(sns.color_palette(colors))
-
+gs.set_visualization_settings()
 wavelengths = gs.LAMBDA_nm().get_elastic()
 PLOT_RESULTS = False
 

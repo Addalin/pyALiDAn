@@ -29,6 +29,8 @@ import os
 from datetime import datetime, timedelta
 
 # %% Basic physics constants
+import seaborn as sns
+from matplotlib import pyplot as plt, dates as mdates
 
 eps = np.finfo(np.float).eps
 C_km_s = 299792.458  # Speed of light [Km/sec]
@@ -169,3 +171,17 @@ if __name__ == '__main__':
     print(wavelengths_m.get_elastic())
     haifa_station = Station()
     print(haifa_station)
+
+# %% VISUALIZATIONS
+def set_visualization_settings():
+    # TODO make sure this actualyl propages to other functions
+    plt.rcParams['figure.dpi'] = 300
+    plt.rcParams['savefig.dpi'] = 300
+
+    # Create an array with the colors to use
+    colors = ["darkblue", "darkgreen", "darkred"]
+    # Set a custom color palette
+    sns.set_palette(sns.color_palette(colors))
+
+
+TIMEFORMAT = mdates.DateFormatter('%H:%M')

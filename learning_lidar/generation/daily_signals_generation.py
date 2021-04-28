@@ -11,6 +11,7 @@ from itertools import repeat
 
 # Local modules
 import learning_lidar.utils.global_settings as gs
+from learning_lidar.utils.global_settings import TIMEFORMAT
 from learning_lidar.generation.daily_signals_generations_utils import explore_orig_day
 import learning_lidar.generation.generation_utils as gen_utils
 from learning_lidar.generation.daily_signals_generations_utils import calc_total_optical_density, \
@@ -18,14 +19,7 @@ from learning_lidar.generation.daily_signals_generations_utils import calc_total
 import learning_lidar.generation.daily_signals_generations_utils as gen_sig_utils
 from learning_lidar.utils.utils import create_and_configer_logger
 import pandas as pd
-eps = np.finfo(np.float).eps
-plt.rcParams['figure.dpi'] = 300
-plt.rcParams['savefig.dpi'] = 300
-TIMEFORMAT = mdates.DateFormatter('%H:%M')
-colors = ["darkblue", "darkgreen", "darkred"]
-sns.set_palette(sns.color_palette(colors))
-customPalette = sns.set_palette(sns.color_palette(colors))
-#PLOT_RESULTS = False
+from learning_lidar.utils.global_settings import eps
 
 
 def generate_daily_lidar_measurement(station, day_date, SAVE_DS=True):
@@ -43,6 +37,7 @@ def generate_daily_lidar_measurement(station, day_date, SAVE_DS=True):
 
 
 if __name__ == '__main__':
+    gs.set_visualization_settings()
     gen_sig_utils.PLOT_RESULTS = False
     logging.getLogger('PIL').setLevel(logging.ERROR)                # Fix annoying PIL logs
     logging.getLogger('matplotlib').setLevel(logging.ERROR)         # Fix annoying matplotlib logs

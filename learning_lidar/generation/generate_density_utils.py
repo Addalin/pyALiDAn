@@ -11,7 +11,7 @@ from scipy.ndimage import gaussian_filter1d, gaussian_filter
 from scipy.stats import multivariate_normal
 from sklearn.model_selection import train_test_split
 
-from learning_lidar.generation.generation_utils import TIMEFORMAT
+from learning_lidar.utils.global_settings import TIMEFORMAT
 from learning_lidar.preprocessing import preprocessing as prep
 import learning_lidar.generation.generation_utils as gen_utils
 import learning_lidar.utils.misc_lidar as misc_lidar

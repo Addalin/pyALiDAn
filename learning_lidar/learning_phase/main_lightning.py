@@ -33,7 +33,7 @@ def main(config, consts):
     callbacks = [TuneReportCallback(metrics, on="validation_end")]
 
     # Setup the pytorchlighting trainer and run the model
-    trainer = Trainer(max_epochs=consts['max_epochs'], callbacks=callbacks)
+    trainer = Trainer(max_epochs=consts['max_epochs'], callbacks=callbacks, gpus=[1])
     # trainer = Trainer(max_steps=consts['max_steps'])
     lidar_dm.setup('fit')
     trainer.fit(model=model, datamodule=lidar_dm)
@@ -45,12 +45,13 @@ def main(config, consts):
 
 if __name__ == '__main__':
     # Debug flag to enable debugging
-    DEBUG = True
-    if DEBUG:
-        ray.init(local_mode=True)
 
+    DEBUG_RAY = False
+    if DEBUG_RAY:
+        ray.init(local_mode=True)
+    base_path = os.path.dirname(os.path.dirname(os.path.dirname(__file__)))
     data_params = {
-        'base_path': r'C:\Users\addalin\Dropbox\Lidar\code',
+        'base_path': os.path.join(base_path, 'data'),
         'station_name': 'haifa',
         'start_date': datetime(2017, 9, 1),
         'end_date': datetime(2017, 10, 31),
@@ -81,23 +82,21 @@ if __name__ == '__main__':
         hyper_params = {
             "lr": tune.grid_search([1e-3, 0.5 * 1e-3, 1e-4]),
             "bsize": tune.choice([8]),
-            # "wavelengths": tune.grid_search([355, 532, 1064]),  # TODO change to const - all wavelenghts
+            # "wavelengths": tune.grid_search([355, 532, 1064]),  # TODO change to const - all wavelengths
             "loss_type": tune.choice(['MSELoss', 'MAELoss']),  # ['MARELoss']
-            "Y_features": tune.choice([['LC']]),
-            # tune.choice(
-            # [['LC'], ['r0', 'r1', 'LC'], ['r0', 'r1'], ['r0', 'r1', 'dr'], ['r0', 'r1', 'dr', 'LC']]),
-            "use_power": tune.grid_search([False, True])
+            "Y_features": tune.choice([['LC']]),  # [['LC'], ['r0', 'r1', 'LC'], ['r0', 'r1'], ['r0', 'r1', 'dr'], ['r0', 'r1', 'dr', 'LC']]
+            "use_power": tune.grid_search([True, False])
         }
 
         analysis = tune.run(
             tune.with_parameters(main, consts=consts),
             config=hyper_params,
             # name="cnn",
-            local_dir="../../results",  # where to save the results
+            local_dir=os.path.join(base_path, 'results'),  # where to save the results
             fail_fast=True,  # if one run fails - stop all runs
             metric="loss",
             mode="min",
-            resources_per_trial={"cpu": 7, "gpu": 0})
+            resources_per_trial={"cpu": 7, "gpu": 2})
 
         print(f"best_trial {analysis.best_trial}")
         print(f"best_config {analysis.best_config}")
@@ -105,6 +104,12 @@ if __name__ == '__main__':
         print(f"best_checkpoint {analysis.best_checkpoint}")
         print(f"best_result {analysis.best_result}")
     else:
-        hyper_params = {"Y_features": ["r0", "r1", "LC"], "bsize": 8, "loss_type": "MSELoss",
-                        "lr": 0.001, "powers": None}
+        hyper_params = {
+            "lr": 1 * 1e-3,
+            "bsize": 8,
+            "loss_type": 'MSELoss',
+            "Y_features": ['LC'],
+            "use_power": True
+        }
+
         main(hyper_params, consts)

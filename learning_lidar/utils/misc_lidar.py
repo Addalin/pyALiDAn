@@ -22,22 +22,11 @@
 """
 Miscellaneous operations for lidar analysis and calculations.
 """
-
 import numpy as np
 import pandas as pd
-import matplotlib.pyplot as plt
-from matplotlib import rc
 import scipy.sparse as sprs
 from datetime import timedelta
-
-rc('font', **{'family': 'sans-serif', 'sans-serif': ['Helvetica']})
-## for Palatino and other serif fonts use:
-# rc('font',**{'family':'serif','serif':['Palatino']})
-rc('text', usetex=True)
-rc('font', family='serif')
-plt.rcParams['text.latex.preamble'] = [r"\usepackage{amsmath}"]
-eps = np.finfo(np.float).eps
-
+from learning_lidar.utils.global_settings import eps
 
 # %%
 
@@ -312,38 +301,6 @@ def tau_ang2tau(tau_0, ang, wavelength_0, wavelength_1):
         tau_1 = tau_0 / ((wavelength_0 / wavelength_1) ** (-ang))
 
     return tau_1
-
-
-def visCurve(lData, rData, stitle=""):
-    '''Visualize 2 curves '''
-
-    fnt_size = 18
-    fig, axes = plt.subplots(nrows=1, ncols=2, figsize=(17, 6))
-    ax = axes.ravel()
-
-    for (x_j, y_j) in zip(lData['x'], lData['y']):
-        ax[0].plot(x_j, y_j)
-    if lData.__contains__('legend'):
-        ax[0].legend(lData['legend'], fontsize=fnt_size - 6)
-    ax[0].set_xlabel(lData['lableX'], fontsize=fnt_size, fontweight='bold')
-    ax[0].set_ylabel(lData['lableY'], fontsize=fnt_size, fontweight='bold')
-    ax[0].ticklabel_format(axis='y', style='sci', scilimits=(0, 0))
-    ax[0].set_title(lData['stitle'], fontsize=fnt_size, fontweight='bold')
-
-    for (x_j, y_j) in zip(rData['x'], rData['y']):
-        ax[1].plot(x_j, y_j)
-    if rData.__contains__('legend'):
-        ax[1].legend(rData['legend'], fontsize=fnt_size - 6)
-    ax[1].set_xlabel(rData['lableX'], fontsize=fnt_size, fontweight='bold')
-    ax[1].set_ylabel(rData['lableY'], fontsize=fnt_size, fontweight='bold')
-    ax[1].ticklabel_format(axis='y', style='sci', scilimits=(0, 0))
-    ax[1].set_title(rData['stitle'], fontsize=fnt_size, fontweight='bold')
-
-    fig.suptitle(stitle, fontsize=fnt_size + 4, va='top', fontweight='bold')
-    fig.set_constrained_layout = True
-    # fig.show()
-
-    return [fig, axes]
 
 
 def laplacian_operator(nx, ny, nz):

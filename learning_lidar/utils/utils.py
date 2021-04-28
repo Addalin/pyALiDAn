@@ -6,7 +6,12 @@ import multiprocess as mp
 from functools import partial
 import pandas as pd
 import numpy as np
-
+from matplotlib import pyplot as plt
+from matplotlib import rc
+rc('font', **{'family': 'sans-serif', 'sans-serif': ['Helvetica']})
+rc('text', usetex=True)
+rc('font', family='serif')
+plt.rcParams['text.latex.preamble'] = r"\usepackage{amsmath}"
 
 def create_and_configer_logger(log_name='log_file.log', level=logging.DEBUG):
     """
@@ -113,3 +118,34 @@ def humanbytes(B):
         return '{0:.2f} GB'.format(B / GB)
     elif TB <= B:
         return '{0:.2f} TB'.format(B / TB)
+
+
+def visCurve(lData, rData, stitle=""):
+    '''Visualize 2 curves '''
+
+    fnt_size = 18
+    fig, axes = plt.subplots(nrows=1, ncols=2, figsize=(17, 6))
+    ax = axes.ravel()
+
+    for (x_j, y_j) in zip(lData['x'], lData['y']):
+        ax[0].plot(x_j, y_j)
+    if lData.__contains__('legend'):
+        ax[0].legend(lData['legend'], fontsize=fnt_size - 6)
+    ax[0].set_xlabel(lData['lableX'], fontsize=fnt_size, fontweight='bold')
+    ax[0].set_ylabel(lData['lableY'], fontsize=fnt_size, fontweight='bold')
+    ax[0].ticklabel_format(axis='y', style='sci', scilimits=(0, 0))
+    ax[0].set_title(lData['stitle'], fontsize=fnt_size, fontweight='bold')
+
+    for (x_j, y_j) in zip(rData['x'], rData['y']):
+        ax[1].plot(x_j, y_j)
+    if rData.__contains__('legend'):
+        ax[1].legend(rData['legend'], fontsize=fnt_size - 6)
+    ax[1].set_xlabel(rData['lableX'], fontsize=fnt_size, fontweight='bold')
+    ax[1].set_ylabel(rData['lableY'], fontsize=fnt_size, fontweight='bold')
+    ax[1].ticklabel_format(axis='y', style='sci', scilimits=(0, 0))
+    ax[1].set_title(rData['stitle'], fontsize=fnt_size, fontweight='bold')
+
+    fig.suptitle(stitle, fontsize=fnt_size + 4, va='top', fontweight='bold')
+    fig.set_constrained_layout = True
+
+    return [fig, axes]

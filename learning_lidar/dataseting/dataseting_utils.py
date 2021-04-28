@@ -12,7 +12,7 @@ from scipy.ndimage import gaussian_filter1d
 
 from learning_lidar.generation.generation_utils import get_gen_dataset_file_name
 from learning_lidar.preprocessing import preprocessing as prep
-
+from learning_lidar.utils.global_settings import eps
 
 def get_query(wavelength, cali_method, day_date):
     start_time = datetime.combine(date=day_date.date(), time=day_date.time().min)
@@ -317,4 +317,4 @@ def get_mean_lc(df, station, day_date):
     return df
 
 
-eps = np.finfo(np.float).eps
+
