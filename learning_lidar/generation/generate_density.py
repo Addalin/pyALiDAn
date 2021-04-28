@@ -23,7 +23,7 @@ def generate_daily_aerosol_density(station, day_date, SAVE_DS=True):
     """
     logger = logging.getLogger()
     logger.debug(f"Start generate_daily_aerosol_density for {station.name} on {day_date}")
-    ds_day_params = gen_utils.get_daily_gen_param_ds(station=station, day_date=day_date,type='density_params')
+    ds_day_params = gen_utils.get_daily_gen_param_ds(station=station, day_date=day_date, type='density_params')
 
     # Generate Daily Aerosols' Density
     density_ds = generate_density(station=station, day_date=day_date, day_params_ds=ds_day_params)
@@ -51,8 +51,8 @@ if __name__ == '__main__':
     logger = create_and_configer_logger('generate_density.log', level=logging.DEBUG)
     station = gs.Station(station_name='haifa')
 
-    start_date = datetime(2017,10,1)
-    end_date = datetime(2017,10,31)
+    start_date = datetime(2017, 10, 1)
+    end_date = datetime(2017, 10, 31)
     days_list = pd.date_range(start=start_date, end=end_date).to_pydatetime().tolist()
     num_days = len(days_list)
     num_processes = min((cpu_count() - 1, num_days))
@@ -61,7 +61,7 @@ if __name__ == '__main__':
 
     RUN_NEXT = False
     if RUN_NEXT:
-        for cur_day in days_list: # TODO: isn't it reaping the above?
+        for cur_day in days_list:  # TODO: isn't it reaping the above?
             aer_ds, density_ds = generate_daily_aerosol_density(station, day_date=cur_day)
 
             EXPLORE_GEN_DAY = False

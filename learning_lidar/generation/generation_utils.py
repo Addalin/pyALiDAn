@@ -153,5 +153,4 @@ def set_visualization_settings():
     colors = ["darkblue", "darkgreen", "darkred"]
     sns.set_palette(sns.color_palette(colors))
 
-
 TIMEFORMAT = mdates.DateFormatter('%H:%M')
