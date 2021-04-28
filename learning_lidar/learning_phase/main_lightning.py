@@ -66,13 +66,14 @@ if __name__ == '__main__':
     # Constants - should correspond to data, dataloader and model
     consts = {
         "hidden_sizes": [16, 32, 8],  # TODO: add options of [ 8, 16, 32], [16, 32, 8], [ 64, 32, 16]
-        'in_channels': 2,
+        'in_channels': 3,
         'max_epochs': 3,
         'num_workers': 7,
         'train_csv_path': train_csv_path,
         'test_csv_path': test_csv_path,
-        'powers': {'range_corr': 0.5, 'attbsc': 0.5, 'LC': 0.5, 'LC_std': 0.5, 'r0': 1, 'r1': 1, 'dr': 1},
-        'X_features_profiles': (('lidar_path', 'range_corr'), ('molecular_path', 'attbsc'),)
+        'powers': {'range_corr': 0.5, 'attbsc': 0.5,'p_bg':0.5,
+                   'LC': 0.5, 'LC_std': 0.5, 'r0': 1, 'r1': 1, 'dr': 1},
+        'X_features_profiles': (('lidar_path', 'range_corr'), ('molecular_path', 'attbsc'),('bg_path','p_bg'))
     }
 
     # Defining a search space

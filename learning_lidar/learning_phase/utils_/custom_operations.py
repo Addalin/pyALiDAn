@@ -57,8 +57,8 @@ class LidarToTensor(object):
         X, Y = sample['x'], sample['y']
 
         # convert X from xr.dataset to concatenated a np.ndarray, and then to torch.tensor
-        X = torch.dstack((torch.from_numpy(X[0].values),
-                          torch.from_numpy(X[1].values)))
+        X = torch.dstack([torch.from_numpy(X[i].values) for i in range(len(X))])
+
         # swap channel axis
         # numpy image: H x W x C
         # torch image: C X H X W
