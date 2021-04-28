@@ -216,36 +216,41 @@ def create_generated_dataset(station, start_date, end_date, sample_size='30min')
             df = pd.DataFrame()
             df['date'] = dates.date                     # new row for each time
             df['wavelength'] = wavelength               # broadcast single value to all rows
-            df['start_time'] = dates                    # start_time - start time of the sample, end_time 29.5 min later
-            df['end_time'] = dates + timedelta(minutes=sample_size) - timedelta(seconds=station.freq)
+            df['start_time_period'] = dates                    # start_time - start time of the sample, end_time 29.5 min later
+            df['end_time_period'] = dates + timedelta(minutes=sample_size) - timedelta(seconds=station.freq)
 
             # add bg path
             df['bg_path'] = df.apply(
                 lambda row: get_generated_X_path(station=station, parent_folder=station.gen_bg_dataset,
-                                                 day_date=row['start_time'], data_source='bg', wavelength=wavelength,
+                                                 day_date=row['start_time_period'], data_source='bg', wavelength=wavelength,
                                                  file_type='p_bg'),
                 axis=1, result_type='expand')
             # add lidar path
             df['lidar_path'] = df.apply(
                 lambda row: get_generated_X_path(station=station, parent_folder=station.gen_lidar_dataset,
-                                                 day_date=row['start_time'], data_source='lidar', wavelength=wavelength,
+                                                 day_date=row['start_time_period'], data_source='lidar', wavelength=wavelength,
                                                  file_type='range_corr'),
                 axis=1, result_type='expand')
+
+            # Add molecular path
+            days_groups = df.groupby('date').groups
+            days_list = days_groups.keys()
+            inds_subsets = [days_groups[key] for key in days_list]
+            df_subsets = [df.iloc[inds] for inds in inds_subsets]
+            subsets=[]
+            for cur_day,subset in zip(days_list,df_subsets):
+                subsets.append(add_X_path(subset, station, cur_day, lambda_nm=wavelength, data_source='molecular', file_type='attbsc'))
+            df = pd.concat([subset for subset in subsets]).sort_values('start_time_period')
+
 
             # get the mean LC from signal_paths, one day at a time
             # TODO: adapt this part and get_mean_lc() to retrieve mean LC for 3 wavelength at once
             #  (should be faster then reading the file 3 times per wavelength)
-            days_groups = df.groupby('date').groups
-            days_list = days_groups.keys()
-            num_processes = min((cpu_count() - 1, len(days_list)))
-            inds_subsets = [days_groups[key] for key in days_list]
             df_subsets = [df.iloc[inds] for inds in inds_subsets]
+            num_processes = min((cpu_count() - 1, len(days_list)))
             with Pool(num_processes) as p:
                 results = p.starmap(get_mean_lc, zip(df_subsets, repeat(station), days_list))
-            df = pd.concat([subset for subset in results]).sort_values('start_time')
-            # Add molecular path
-            for cur_day in days_list:
-                df = add_X_path(df, station, cur_day, lambda_nm=wavelength, data_source='molecular', file_type='attbsc')
+            df = pd.concat([subset for subset in results]).sort_values('start_time_period')
 
             gen_df = gen_df.append(df)
         except FileNotFoundError as e:

@@ -310,8 +310,8 @@ def get_mean_lc(df, station, day_date):
     LC_day = prep.load_dataset(nc_path).LC
 
     # Add mean LC values for each time slice
-    df.loc[day_indices, ['mean_lc']] = df.loc[day_indices]. \
-        apply(lambda row: LC_day.sel(Time=slice(row['start_time'], row['end_time']))
+    df.loc[day_indices, ['LC']] = df.loc[day_indices]. \
+        apply(lambda row: LC_day.sel(Time=slice(row['start_time_period'], row['end_time_period']))
               .mean(dim='Time').sel(Wavelength=row['wavelength']).values,
               axis=1, result_type='expand')
     return df
