@@ -263,8 +263,8 @@ def main(station_name, start_date, end_date):
     EXTEND_DATASET = False
     DO_CALIB_DATASET = False
     USE_KM_UNITS = False
-    SPLIT_DATASET = False
-    DO_GENERATED_DATASET = True
+    SPLIT_DATASET = True
+    DO_GENERATED_DATASET = False
 
     # Load data of station
     station = gs.Station(station_name=station_name)
@@ -280,7 +280,7 @@ def main(station_name, start_date, end_date):
                                                  f"{start_date.strftime('%Y-%m-%d')}_{end_date.strftime('%Y-%m-%d')}_extended.nc")
 
     csv_gen_path = os.path.join(data_folder, f"dataset_gen_{station_name}_"
-                                             f"{start_date.strftime('%Y-%m-%d')}_{end_date.strftime('%Y-%m-%d')}.nc")
+                                             f"{start_date.strftime('%Y-%m-%d')}_{end_date.strftime('%Y-%m-%d')}.csv")
 
     if DO_DATASET:
         logger.info(
@@ -299,8 +299,9 @@ def main(station_name, start_date, end_date):
 
     if SPLIT_DATASET:
         logger.info(
-            f"Splitting to train-test the dataset for period: [{start_date.strftime('%Y-%m-%d')},{end_date.strftime('%Y-%m-%d')}]")
-        split_save_train_test_ds(csv_path=csv_path)
+            f"Splitting to train-test the dataset for period: [{start_date.strftime('%Y-%m-%d')},"
+            f"{end_date.strftime('%Y-%m-%d')}]")
+        split_save_train_test_ds(csv_path=csv_gen_path)
 
     # Create extended dataset and save to csv - recalculation of Lidar Constant (currently this is a naive calculation)
     if EXTEND_DATASET:
