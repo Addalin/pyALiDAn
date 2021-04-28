@@ -60,7 +60,7 @@ def query_database(query="SELECT * FROM lidar_calibration_constant;",
         df = pd.read_sql(sql=query, con=c, parse_dates=['cali_start_time', 'cali_stop_time'])
     # except sqlite3.OperationalError as e: logger.exception ( f"{e}: Unable to load dataset." ) sys.exit(1)
     # TODO:
-    #  raise load exception if file does not exsits. the above commented solution is not really catching this and
+    #  raise load exception if file does not exits. the above commented solution is not really catching this and
     #  continues to run
 
     return df
@@ -300,7 +300,7 @@ def get_mean_lc(df, station, day_date):
     :param wavelength:
     :return:
     """
-    day_indices = df['date'] == day_date.strftime('%Y-%m-%d')  # indices of current day in df
+    day_indices = df['date'] == day_date  # indices of current day in df
 
     # path to signal_dataset of current day
     nc_path = get_generated_X_path(station=station, parent_folder=station.gen_signal_dataset, day_date=day_date,

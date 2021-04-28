@@ -4,6 +4,10 @@ from datetime import datetime, timedelta  # time,
 from IPython.display import display
 import logging
 from tqdm import tqdm
+from pytictoc import TicToc
+
+from itertools import repeat
+from multiprocessing import Pool, cpu_count
 
 # %% Scientific and data imports
 import numpy as np
@@ -201,26 +205,27 @@ def create_generated_dataset(station, start_date, end_date, sample_size='30min')
     :param sample_size:
     :return:
     """
-    dates = pd.date_range(start=start_date, end=end_date, freq=sample_size,
-                          closed='left')  # excludes the last date/record
+    dates = pd.date_range(start=start_date,
+                          end=end_date + timedelta(days=1),  # include all times in the last day
+                          freq=sample_size)[0:-1]            # excludes last - the next day after end_date
+    sample_size = int(sample_size.split('min')[0])
     wavelengths = gs.LAMBDA_nm().get_elastic()
-    full_df = pd.DataFrame()
+    gen_df = pd.DataFrame()
     for wavelength in tqdm(wavelengths):
         try:
             df = pd.DataFrame()
-            df['date'] = dates.strftime('%Y-%m-%d')  # new row for each time
-            df['wavelength'] = wavelength  # broadcast single value to all rows
-            # start_time is simply the time and end_time is the start_time + 29 minutes and 59 seconds
-            df['start_time'] = dates
-            df['end_time'] = dates + timedelta(minutes=29, seconds=59)
+            df['date'] = dates.date                     # new row for each time
+            df['wavelength'] = wavelength               # broadcast single value to all rows
+            df['start_time'] = dates                    # start_time - start time of the sample, end_time 29.5 min later
+            df['end_time'] = dates + timedelta(minutes=sample_size) - timedelta(seconds=station.freq)
 
-            # add bg and lidar paths
+            # add bg path
             df['bg_path'] = df.apply(
                 lambda row: get_generated_X_path(station=station, parent_folder=station.gen_bg_dataset,
                                                  day_date=row['start_time'], data_source='bg', wavelength=wavelength,
                                                  file_type='p_bg'),
                 axis=1, result_type='expand')
-
+            # add lidar path
             df['lidar_path'] = df.apply(
                 lambda row: get_generated_X_path(station=station, parent_folder=station.gen_lidar_dataset,
                                                  day_date=row['start_time'], data_source='lidar', wavelength=wavelength,
@@ -228,17 +233,24 @@ def create_generated_dataset(station, start_date, end_date, sample_size='30min')
                 axis=1, result_type='expand')
 
             # get the mean LC from signal_paths, one day at a time
-            for cur_day in pd.date_range(start=start_date, end=end_date, freq='D', closed='left'):
-                df = get_mean_lc(df=df, station=station, day_date=cur_day)
-
-            # TODO make sure works - molecular path
-            for cur_day in pd.date_range(start=start_date, end=end_date, freq='D', closed='left'):
+            # TODO: adapt this part and get_mean_lc() to retrieve mean LC for 3 wavelength at once
+            #  (should be faster then reading the file 3 times per wavelength)
+            days_groups = df.groupby('date').groups
+            days_list = days_groups.keys()
+            num_processes = min((cpu_count() - 1, len(days_list)))
+            inds_subsets = [days_groups[key] for key in days_list]
+            df_subsets = [df.iloc[inds] for inds in inds_subsets]
+            with Pool(num_processes) as p:
+                results = p.starmap(get_mean_lc, zip(df_subsets, repeat(station), days_list))
+            df = pd.concat([subset for subset in results]).sort_values('start_time')
+            # Add molecular path
+            for cur_day in days_list:
                 df = add_X_path(df, station, cur_day, lambda_nm=wavelength, data_source='molecular', file_type='attbsc')
 
-            full_df = full_df.append(df)
+            gen_df = gen_df.append(df)
         except FileNotFoundError as e:
             print(e)
-    return full_df
+    return gen_df
 
 
 def main(station_name, start_date, end_date):
@@ -260,12 +272,15 @@ def main(station_name, start_date, end_date):
 
     # Set new paths
     data_folder = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))), 'data')
-    csv_path = os.path.join(data_folder,
-                            f"dataset_{station_name}_{start_date.strftime('%Y-%m-%d')}_{end_date.strftime('%Y-%m-%d')}.csv")
-    csv_path_extended = os.path.join(data_folder,
-                                     f"dataset_{station_name}_{start_date.strftime('%Y-%m-%d')}_{end_date.strftime('%Y-%m-%d')}_extended.csv")
-    ds_path_extended = os.path.join(data_folder,
-                                    f"dataset_{station_name}_{start_date.strftime('%Y-%m-%d')}_{end_date.strftime('%Y-%m-%d')}_extended.nc")
+    csv_path = os.path.join(data_folder, f"dataset_{station_name}_"
+                                        f"{start_date.strftime('%Y-%m-%d')}_{end_date.strftime('%Y-%m-%d')}.csv")
+    csv_path_extended = os.path.join(data_folder, f"dataset_{station_name}_"
+                                                  f"{start_date.strftime('%Y-%m-%d')}_{end_date.strftime('%Y-%m-%d')}_extended.csv")
+    ds_path_extended = os.path.join(data_folder, f"dataset_{station_name}_"
+                                                 f"{start_date.strftime('%Y-%m-%d')}_{end_date.strftime('%Y-%m-%d')}_extended.nc")
+
+    csv_gen_path = os.path.join(data_folder, f"dataset_gen_{station_name}_"
+                                             f"{start_date.strftime('%Y-%m-%d')}_{end_date.strftime('%Y-%m-%d')}.nc")
 
     if DO_DATASET:
         logger.info(
@@ -280,7 +295,7 @@ def main(station_name, start_date, end_date):
             df = convert_Y_features_units(df)
 
         df.to_csv(csv_path, index=False)
-        logger.info(f"Done database creation, saving to: {os.path.join(os.path.curdir, csv_path)}")
+        logger.info(f"Done database creation, saving to: {csv_path}")
 
     if SPLIT_DATASET:
         logger.info(
@@ -296,23 +311,26 @@ def main(station_name, start_date, end_date):
         df = extend_calibration_info(df)
         display(df)
         df.to_csv(csv_path_extended, index=False)
-        logger.info(f"\n The extended dataset saved to :{os.path.join(os.path.curdir, csv_path_extended)}")
+        logger.info(f"\n The extended dataset saved to :{csv_path_extended}")
 
-    # Create calibration dataset from the extended df (or csv) = by spliting df to A dataset according to wavelengths
+    # Create calibration dataset from the extended df (or csv) = by splitting df to A dataset according to wavelengths
     # and time coordinates.
     if DO_CALIB_DATASET:
         logger.info(
-            f"Start creating calibration dataset for period: [{start_date.strftime('%Y-%m-%d')},{end_date.strftime('%Y-%m-%d')}]")
+            f"Start creating calibration dataset for period: [{start_date.strftime('%Y-%m-%d')},"
+            f"{end_date.strftime('%Y-%m-%d')}]")
 
         if 'df' not in globals():
             df = pd.read_csv(csv_path_extended)
         ds_calibration = create_calibration_ds(df, station, source_file=csv_path_extended)
         # Save the calibration dataset
         prep.save_dataset(ds_calibration, os.path.curdir, ds_path_extended)
-        logger.info(f"The calibration dataset saved to :{os.path.join(os.path.curdir, ds_path_extended)}")
+        logger.info(f"The calibration dataset saved to :{ds_path_extended}")
 
     if DO_GENERATED_DATASET:
         generated_df = create_generated_dataset(station, start_date, end_date)
+        generated_df.to_csv(csv_gen_path, index=False)
+        logger.info(f"\n The generation dataset saved to :{csv_gen_path}")
 
 
 
