@@ -57,7 +57,7 @@ if __name__ == '__main__':
         'end_date': datetime(2017, 10, 31),
     }
 
-    csv_base_name = f"dataset_{data_params['station_name']}_" \
+    csv_base_name = f"dataset_gen_{data_params['station_name']}_" \
                     f"{data_params['start_date'].strftime('%Y-%m-%d')}_" \
                     f"{data_params['end_date'].strftime('%Y-%m-%d')}"
     train_csv_path = os.path.join(data_params['base_path'], f'{csv_base_name}_train.csv')
@@ -86,7 +86,7 @@ if __name__ == '__main__':
             # "wavelengths": tune.grid_search([355, 532, 1064]),  # TODO change to const - all wavelengths
             "loss_type": tune.choice(['MSELoss', 'MAELoss']),  # ['MARELoss']
             "Y_features": tune.choice([['LC']]),  # [['LC'], ['r0', 'r1', 'LC'], ['r0', 'r1'], ['r0', 'r1', 'dr'], ['r0', 'r1', 'dr', 'LC']]
-            "use_power": tune.grid_search([True, False])
+            "use_power": tune.grid_search([False,True])
         }
 
         analysis = tune.run(

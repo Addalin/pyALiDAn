@@ -107,7 +107,6 @@ class LidarDataSet(torch.utils.data.Dataset):
 
 
 class LidarDataModule(LightningDataModule):
-# TODO - This is failing :(
     def __init__(self, train_csv_path, test_csv_path,
                  powers, X_features_profiles, Y_features, batch_size, num_workers,
                  val_length=0.2, test_length=0.2):
