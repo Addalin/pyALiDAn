@@ -46,7 +46,7 @@ def main(config, consts):
 if __name__ == '__main__':
     # Debug flag to enable debugging
 
-    DEBUG_RAY = False
+    DEBUG_RAY = True  # Reminder: For debugging - change: 'num_workers': 0
     if DEBUG_RAY:
         ray.init(local_mode=True)
     base_path = os.path.dirname(os.path.dirname(os.path.dirname(__file__)))
@@ -67,8 +67,8 @@ if __name__ == '__main__':
     consts = {
         "hidden_sizes": [16, 32, 8],  # TODO: add options of [ 8, 16, 32], [16, 32, 8], [ 64, 32, 16]
         'in_channels': 3,
-        'max_epochs': 20,
-        'num_workers': 7,
+        'max_epochs': 2,
+        'num_workers': 0,
         'train_csv_path': train_csv_path,
         'test_csv_path': test_csv_path,
         'powers': {'range_corr': 0.5, 'attbsc': 0.5, 'p_bg': 0.5,
@@ -81,14 +81,13 @@ if __name__ == '__main__':
     #  ('lidar_path', 'range_corr'), ('molecular_path', 'attbsc'), ('bg_path', 'p_bg'))
     # TODO: instead of p_bg - range_corr of bg # TODO: create separated range_corr of background
 
-
     # Defining a search space
     # Note, replace choice with grid_search if want all possible combinations
     use_ray = True
     if use_ray:
         hyper_params = {
             "lr": tune.grid_search([1e-3, 0.5 * 1e-3, 1e-4]),
-            "bsize": tune.choice([8]),
+            "bsize": tune.choice([16, 8]),
             # "wavelengths": tune.grid_search([355, 532, 1064]),  # TODO change to const - all wavelengths
             "loss_type": tune.choice(['MSELoss', 'MAELoss']),  # ['MARELoss']
             "Y_features": tune.choice([['LC']]),
