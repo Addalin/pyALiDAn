@@ -854,8 +854,7 @@ def visualize_ds_profile_chan(dataset, lambda_nm=532, profile_type='range_corr',
         g = sub_ds.plot(x='Time', figsize=(10, 6))[0]
 
     # Set time on x-axis
-    xfmt = mdates.DateFormatter('%H:%M')
-    g.axes.xaxis.set_major_formatter(xfmt)
+    g.axes.xaxis.set_major_formatter(gs.TIMEFORMAT)
     g.axes.xaxis_date()
     g.axes.get_xaxis().set_major_locator(mdates.HourLocator(interval=4))
     plt.setp(g.axes.get_xticklabels(), rotation=0, horizontalalignment='center')

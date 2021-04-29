@@ -17,6 +17,7 @@ import learning_lidar.generation.generation_utils as gen_utils  # save_generated
 from learning_lidar.preprocessing import preprocessing as prep
 from learning_lidar.utils.misc_lidar import calc_tau, generate_poisson_signal_STEP
 from learning_lidar.utils.global_settings import eps
+from learning_lidar.utils.global_settings import TIMEFORMAT
 # %%
 gs.set_visualization_settings()
 wavelengths = gs.LAMBDA_nm().get_elastic()
