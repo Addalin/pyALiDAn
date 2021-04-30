@@ -106,7 +106,7 @@ def calc_attbsc_ds(station, day_date, total_ds):
     :return: attbsc_ds: xr.Dataset(). The daily attenuated backscatter profile.
     Having 3 dimensions : 'Wavelength', 'Height', 'Time'
     """
-    heights = station.get_height_bins_values()
+    height_bins = station.get_height_bins_values()
     exp_tau_c = []
     # TODO: logg.debug here : 'Calculating Attenuated Backscatter' - and then in the decp of tqdm: "for wavelength {
     #  wavelength}""
@@ -114,7 +114,7 @@ def calc_attbsc_ds(station, day_date, total_ds):
         exp_tau_t = []
         for t in tqdm(total_ds.Time, desc=f"att_bsc for {wavelength}"):
             sigma_t = total_ds.sigma.sel(Time=t)
-            e_tau = xr.apply_ufunc(lambda x: np.exp(-2 * calc_tau(x, heights)),
+            e_tau = xr.apply_ufunc(lambda x: np.exp(-2 * calc_tau(x, height_bins)),
                                    sigma_t.sel(Wavelength=wavelength), keep_attrs=True)
             e_tau.name = r'$\exp(-2 \tau)$'
             exp_tau_t.append(e_tau)
@@ -250,17 +250,29 @@ def calc_lidar_signal_ds(station, day_date, r2_ds, pr2_ds):
     return p_ds
 
 
-def calc_r2_ds(station, day_date, total_ds):
-    """ TODO updase usage r2 = r^2"""
-    # calc r^2 (as 2D image):
-    # TODO : create from scratch having 3 coordinate: Wavelength, Height, Time (not base on exiting one as total_ds)
-    heights = station.get_height_bins_values()  # TODO: -> Height coords
-    # times = station.calc_daily_time_index(day_date) # TODO: -> Time coords
-    rr_im = np.tile(heights.reshape(station.n_bins, 1), (len(wavelengths), 1, station.total_time_bins)) ** 2
-    total_ds = total_ds.assign(r2=xr.Variable(dims=('Wavelength', 'Height', 'Time'), data=rr_im))
-    total_ds.r2.attrs = {'info': 'The heights bins squared', 'name': 'r2', 'long_name': r'$r^2$', 'units': r'$km^2$'}
-    r2_ds = total_ds.r2
-    return r2_ds
+def calc_r2_ds(station, day_date):
+    """
+    calc r^2 (as 2D image)
+    :param station: gs.station() object of the lidar station
+    :param day_date: datetime.date object of the required date
+    :return: xr.Dataset(). A a daily r^2 dataset
+    """
+    height_bins = station.get_height_bins_values()
+    wavelengths = gs.LAMBDA_nm().get_elastic()
+    r_im = np.tile(height_bins.reshape(height_bins.size, 1), (len(wavelengths), 1, station.total_time_bins))
+    rr_im = r_im ** 2
+    r2_ds = xr.Dataset(data_vars={'r': (['Wavelength', 'Height', 'Time'], r_im,
+                                        {'info': 'The heights bins',
+                                         'name': 'r', 'long_name': r'$r$',
+                                         'units': r'$km$'}),
+                                  'r2': (['Wavelength', 'Height', 'Time'], rr_im,
+                                         {'info': 'The heights bins squared',
+                                          'name': 'r2', 'long_name': r'$r^2$',
+                                          'units': r'$km^2$'})},
+                       coords={'Wavelength': wavelengths,
+                               'Height': station.calc_height_index(),
+                               'Time': station.calc_daily_time_index(day_date)})
+    return r2_ds.r2
 
 
 def calc_lidar_signal(station, day_date, total_ds):
@@ -274,7 +286,7 @@ def calc_lidar_signal(station, day_date, total_ds):
     attbsc_ds = calc_attbsc_ds(station, day_date, total_ds)  # attbsc = beta*exp(-2*tau)
     lc_ds = get_daily_LC(station, day_date)  # LC
     pr2_ds = calc_range_corr_signal_ds(station, day_date, total_ds, attbsc_ds, lc_ds)  # pr2 = LC * attbsc
-    r2_ds = calc_r2_ds(station, day_date, total_ds)  # r^2
+    r2_ds = calc_r2_ds(station, day_date)  # r^2
     p_ds = calc_lidar_signal_ds(station, day_date, r2_ds, pr2_ds)  # p = pr2 / r^2
     signal_ds = xr.Dataset().assign(attbsc=attbsc_ds, LC=lc_ds, range_corr=pr2_ds, p=p_ds, r2=r2_ds)
     signal_ds['date'] = day_date

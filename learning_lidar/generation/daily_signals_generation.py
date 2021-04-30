@@ -135,7 +135,7 @@ if __name__ == '__main__':
 
         if EXPLORE_GEN_DAY:
             wavelengths = gs.LAMBDA_nm().get_elastic()
-            heights = station.get_height_bins_values()
+            heights = station.calc_height_index()
             # up-sampled signal exploration
             start_h = heights[0]
             end_h = heights[-1]

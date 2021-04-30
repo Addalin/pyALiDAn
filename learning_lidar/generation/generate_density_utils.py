@@ -569,7 +569,7 @@ def generate_density(station, day_date, day_params_ds):
     # Set generation parameters of density
     ref_height = np.float(day_params_ds.rm.sel(Time=day_date).values)
     time_index = station.calc_daily_time_index(day_date)
-    heights = station.get_height_bins_values()
+    heights = station.calc_height_index()
     dr = heights[1] - heights[0]
     total_bins = heights.size
     ref_height_bin = np.int(ref_height / dr)

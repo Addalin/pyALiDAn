@@ -47,9 +47,10 @@ n_chan = 13
 @dataclass()
 class Station:
     def __init__(self, station_name='haifa',
-                 stations_csv_path=os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))),
-                                                'data',
-                                                'stations.csv')):
+                 stations_csv_path=
+                 os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))),
+                 'data',
+                 'stations.csv')):
         """
         A station class that stores all the below information
 
@@ -97,14 +98,39 @@ class Station:
         return ("\n " + str(self.__class__) + ": " + str(self.__dict__)).replace(" {", "\n  {").replace(",", ",\n  ")
 
     def get_height_bins_values(self, USE_KM_UNITS=True):
-        '''Setting height vector above sea level (for interpolation of radiosonde / gdas files).'''
+        """
+        Setting height vector above ground level
+        (for lidar functions that uses height bins).
+        :param USE_KM_UNITS: Boolean. True - get values in [km], False - get values in [m]
+        :return: height_bins. np.array of height bins above ground level (distances of measurements relative to the sensor)
+        """
         if USE_KM_UNITS:
             scale = 1E-3
         else:
             scale = 1
-        min_height = self.altitude + self.start_bin_height
-        top_height = self.altitude + self.end_bin_height
-        heights = np.linspace(min_height * scale, top_height * scale, self.n_bins)
+        min_height = self.start_bin_height
+        top_height = self.end_bin_height
+        height_bins = np.linspace(min_height, top_height, self.n_bins) * scale
+        # Note: another option:
+        # dr = scale*gs.C_m_s*sel.dt/2.
+        # height_bins = np.arange(min_height, top_height, step = dr)* scale
+        # But this retrieves different values than TROPOS' netcdf-s height indexes.
+        return height_bins
+
+    def calc_height_index(self, USE_KM_UNITS=True):
+        """
+        Setting height vector above see level
+        For interpolation of radiosonde / gdas files.
+        And for Height indexes of xr.Dataset and pd.Dataframe objects
+        :param USE_KM_UNITS: USE_KM_UNITS: Boolean. True - get values in [km], False - get values in [m]
+        :return: heights. np.array of height bins above see level
+        """
+        if USE_KM_UNITS:
+            scale = 1E-3
+        else:
+            scale = 1
+        height_bins = self.get_height_bins_values(USE_KM_UNITS)
+        heights = self.altitude * scale + height_bins
         return heights
 
     def calc_daily_time_index(self, cur_day):
@@ -184,6 +210,7 @@ SUPTITLE_FONT_SIZE = 24
 
 TIMEFORMAT = mdates.DateFormatter('%H:%M')
 
+
 def set_visualization_settings():
     # TODO make sure this actualyl propages to other functions
     plt.rcParams['figure.dpi'] = FIGURE_DPI
@@ -195,12 +222,9 @@ def set_visualization_settings():
     sns.set_palette(sns.color_palette(colors))
 
     plt.rc('font', size=SMALL_FONT_SIZE)  # controls default text sizes
-    plt.rc('axes', titlesize=TITLE_FONT_SIZE)              # fontsize of the axes title
-    plt.rc('axes', labelsize=BIG_FONT_SIZE)           # fontsize of the x and y labels
-    plt.rc('xtick', labelsize=SMALL_FONT_SIZE)           # fontsize of the tick labels
-    plt.rc('ytick', labelsize=SMALL_FONT_SIZE)           # fontsize of the tick labels
-    plt.rc('legend', fontsize=MEDIUM_FONT_SIZE)           # legend fontsize
-    plt.rc('figure', titlesize=TITLE_FONT_SIZE)          # fontsize of the figure title
-    plt.rc('figure', suptitlesize=SUPTITLE_FONT_SIZE)    # fontsize of the figure title
-
-
+    plt.rc('axes', titlesize=TITLE_FONT_SIZE)  # fontsize of the axes title
+    plt.rc('axes', labelsize=BIG_FONT_SIZE)  # fontsize of the x and y labels
+    plt.rc('xtick', labelsize=SMALL_FONT_SIZE)  # fontsize of the tick labels
+    plt.rc('ytick', labelsize=SMALL_FONT_SIZE)  # fontsize of the tick labels
+    plt.rc('legend', fontsize=MEDIUM_FONT_SIZE)  # legend fontsize
+    plt.rc('figure', titlesize=SUPTITLE_FONT_SIZE)  # fontsize of the figure title

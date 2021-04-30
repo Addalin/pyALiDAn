@@ -132,7 +132,7 @@ def get_daily_molecular_profiles(station, day_date, lambda_nm=532, height_units=
     gdas_txt_paths.append(gdas_nxtday_paths[0])
     timestamps = [get_gdas_timestamp(station, path) for path in gdas_txt_paths]
 
-    heights = station.get_height_bins_values()
+    heights = station.calc_height_index(USE_KM_UNITS=(height_units == 'km'))
 
     df_sigma = pd.DataFrame(index=heights).rename_axis(f'Height[{height_units}]')
     df_beta = pd.DataFrame(index=heights).rename_axis(f'Height[{height_units}]')
@@ -360,17 +360,16 @@ def calc_sigma_profile_df(row, lambda_nm=532.0, indx_n='sigma'):
         index=[indx_n])
 
 
-def cal_e_tau_df(col, altitude):
+def cal_e_tau_df(col, height_bins):
     """
     Calculate the the attenuated optical depth (tau is the optical depth).
     Calculation is per column of the backscatter (sigma) dataframe.
     :param col: column of sigma_df , the values of sigma should be in [1/m]
-    :param altitude: the altitude of the the lidar station above sea level, in [m]
+    :param height_bins: np.array of height bins above ground level (distances of measurements relative to the sensor), in [m]
     :return: Series of exp(-2*tau)  , tau = integral( sigma(r) * dr)
     """
 
-    heights = col.index.to_numpy() - altitude
-    tau = mscLid.calc_tau(col, heights)
+    tau = mscLid.calc_tau(col, height_bins)
     return pd.Series(np.exp(-2 * tau))
 
 
@@ -421,20 +420,8 @@ def generate_daily_molecular_chan(station, day_date, lambda_nm, time_res='30S',
     interp_beta_df.columns.freq = None
 
     '''Calculate the molecular attenuated backscatter as :  beta_mol * exp(-2*tau_mol)'''
-    if height_units == 'km':
-        # converting height index to meters before tau calculations
-        km_index = interp_sigma_df.index
-        idx_name = km_index.name
-        meter_index = 1e+3 * km_index.rename(idx_name.replace('km', 'm'))
-        interp_sigma_df.reset_index(inplace=True, drop=True)
-        interp_sigma_df.index = meter_index
-    e_tau_df = interp_sigma_df.apply(cal_e_tau_df, 0, args=(station.altitude,), result_type='expand')
-    if height_units == 'km':
-        # converting back height index to km before dataset creation
-        interp_sigma_df.reset_index(inplace=True, drop=True)
-        interp_sigma_df.index = km_index
-        e_tau_df.reset_index(inplace=True, drop=True)
-        e_tau_df.index = km_index
+    height_bins = station.get_height_bins_values(USE_KM_UNITS=False)
+    e_tau_df = interp_sigma_df.apply(cal_e_tau_df, 0, args=(height_bins,), result_type='expand')
 
     att_bsc_mol_df = interp_beta_df.multiply(e_tau_df)
 
@@ -598,7 +585,7 @@ def get_daily_range_corr(station, day_date, height_units='km',
 			 1 shared variable: date
 	"""
 
-    '''get netcdf paths of the attenuation backscatter for given day_date'''
+    """ get netcdf paths of the attenuation backscatter for given day_date"""
     date_datetime = datetime.combine(date=day_date, time=time.min) \
         if isinstance(day_date, date) else day_date
 
@@ -699,7 +686,8 @@ def get_range_corr_ds_chan(darray, altitude, lambda_nm, height_units='km', optim
     )
     range_corr_ds_chan.range_corr.attrs = {'long_name': r'$LC \beta \cdot \exp(-2\tau)$',
                                            'units': r'$photons$' + r'$\cdot$' + r'$m^2$',
-                                           'info': 'Range corrected lidar signal from attenuated backscatter multiplied by LC'}
+                                           'info': 'Range corrected lidar signal from attenuated backscatter '
+                                                   'multiplied by LC'}
     # set attributes of coordinates
     range_corr_ds_chan.Height.attrs = {'units': fr'${height_units}$',
                                        'info': 'Measurements heights above sea level'}
@@ -773,7 +761,7 @@ def get_prep_dataset_file_name(station, day_date, data_source='molecular', lambd
     """
     if lambda_nm == 'all':
         file_type = ''
-    if file_type == '*' or lambda_nm == '*': # * for lambd_nm - means any wavelength and profile
+    if file_type == '*' or lambda_nm == '*':  # * for lambd_nm - means any wavelength and profile
         # retrieves any file of this date
         file_name = f"{day_date.strftime('%Y_%m_%d')}_{station.location}_{file_type}_{lambda_nm}*{data_source}.nc"
     else:
@@ -902,7 +890,7 @@ def gen_daily_ds(day_date):
     USE_KM_UNITS = True
 
     logger.debug(f"Start generation of molecular dataset for {day_date.strftime('%Y-%m-%d')}")
-    station = gs.Station(stations_csv_path='../../stations.csv', station_name='haifa')
+    station = gs.Station(station_name='haifa')
     # generate molecular dataset
     mol_ds = generate_daily_molecular(station, day_date,
                                       optim_size=optim_size, USE_KM_UNITS=USE_KM_UNITS)
@@ -944,7 +932,7 @@ def main(station_name='haifa', start_date=datetime(2017, 9, 1), end_date=datetim
     USE_KM_UNITS = False
 
     """set day,location"""
-    station = gs.Station(stations_csv_path='../../stations.csv', station_name=station_name)
+    station = gs.Station(station_name=station_name)
     logger.info(f"Loading {station.location} station")
     logger.debug(f"Station info: {station}")
     logger.info(
@@ -1027,5 +1015,5 @@ def main(station_name='haifa', start_date=datetime(2017, 9, 1), end_date=datetim
 if __name__ == '__main__':
     station_name = 'haifa'
     start_date = datetime(2017, 10, 1)
-    end_date = datetime(2017, 10, 2)
+    end_date = datetime(2017, 10, 1)
     main(station_name, start_date, end_date)
