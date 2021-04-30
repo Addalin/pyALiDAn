@@ -28,14 +28,11 @@ PLOT_RESULTS = False
 def custom_plot_xr(data, height_slice=None, figsize=(16, 6)):
     # TODO: add low/high thresholds (single or per channel) see prep.visualize_ds_profile_chan()
     if height_slice is None:
-        height_slice = slice(data.Height[0].values, data.Height[0].values)
-    if 'date' in list(data.variables):
-        str_date = data.date.dt.strftime("%Y-%m-%d").values.tolist()
-    else:
-        str_date = data.Time[0].dt.strftime("%Y-%m-%d").values.tolist()
-    fig, axes = plt.subplots(nrows=1, ncols=3, figsize=figsize)
+        height_slice = slice(data.Height[0].values, data.Height[-1].values)
+    str_date = data.Time[0].dt.strftime("%Y-%m-%d").values.tolist()
+    fig, axes = plt.subplots(nrows=1, ncols=3, figsize=figsize,sharey=True)
     for wavelength, ax in zip(wavelengths, axes.ravel()):
-        data.sel(Height=height_slice, Wavelength=wavelength).drop('date').plot(cmap='turbo', ax=ax)
+        data.sel(Height=height_slice, Wavelength=wavelength).plot(cmap='turbo', ax=ax)
         ax.xaxis.set_major_formatter(TIMEFORMAT)
         ax.xaxis.set_tick_params(rotation=0)
     plt.suptitle(f"{data.info} - {str_date}")
