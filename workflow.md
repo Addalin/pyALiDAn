@@ -40,8 +40,9 @@ Separate/merge and organize the following modules:
 5. Generate dataset of lidar and molecular to certain period - see `dataseting.py` ***DONE***
 6. update create_dataset() to work for a list of days and check it on the generated dataset (above) ***DONE***
 7. Split the dataset to have "test" and "train/valid" examples.  such test examples will be used only when needed. - ***DONE***
-8. Generate a similar train/test dataset - from the generation procedure - ***OPEN***
-9. Extended calibration dataset:
+8. Generate a similar train/test dataset - from the generation procedure - ***DONE***
+9. Calculate stats of the dataset - move the last part from exploring_generated_dataset.ipynb to dataseting.py after the creation of the dataset. (both for TROPOS and Generated datasets). ***OPEN***
+10. Extended calibration dataset:
    - Incorporate beta max info per signal retrieval per a wavelength, from: `KDE_estimation_sample.ipynb` to: `dataseting.py` - in `extend_calibration_info()` - ***OPEN***
    - Update the `data_vars` in `create_calibration_ds()` similar to other parameters - ***OPEN***
 
