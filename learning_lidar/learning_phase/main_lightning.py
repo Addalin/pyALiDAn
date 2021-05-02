@@ -14,8 +14,14 @@ seed_everything(8318)  # Note, for full deterministic result add deterministic=T
 
 
 def main(config, consts):
+    # Define X_features
+    source_features = (f"{config['source']}_path", "range_corr")
+    mol_features = ("molecular_path", "attbsc")
+    bg_features = ("bg_path", "p_bg")
+    X_features = (source_features, mol_features, bg_features) if config["use_bg"] else (source_features, mol_features)
+
     # Define Model
-    model = DefaultCNN(in_channels=consts['in_channels'], output_size=len(config['Y_features']),
+    model = DefaultCNN(in_channels=len(X_features), output_size=len(config['Y_features']),
                        hidden_sizes=consts['hidden_sizes'], loss_type=config['loss_type'],
                        learning_rate=config['lr'])
 
@@ -23,7 +29,7 @@ def main(config, consts):
     lidar_dm = LidarDataModule(train_csv_path=consts["train_csv_path"],
                                test_csv_path=consts["test_csv_path"],
                                powers=consts['powers'] if config['use_power'] else None,
-                               X_features_profiles=consts['X_features_profiles'],
+                               X_features_profiles=X_features,
                                Y_features=config['Y_features'],
                                batch_size=config['bsize'],
                                num_workers=consts['num_workers'])
@@ -45,8 +51,8 @@ def main(config, consts):
 
 if __name__ == '__main__':
     # Debug flag to enable debugging
-
-    DEBUG_RAY = True  # Reminder: For debugging - change: 'num_workers': 0
+    max_workers = 6
+    DEBUG_RAY = False
     if DEBUG_RAY:
         ray.init(local_mode=True)
     base_path = os.path.dirname(os.path.dirname(os.path.dirname(__file__)))
@@ -66,20 +72,13 @@ if __name__ == '__main__':
     # Constants - should correspond to data, dataloader and model
     consts = {
         "hidden_sizes": [16, 32, 8],  # TODO: add options of [ 8, 16, 32], [16, 32, 8], [ 64, 32, 16]
-        'in_channels': 3,
         'max_epochs': 2,
-        'num_workers': 0,
+        'num_workers': 0 if DEBUG_RAY else max_workers,
         'train_csv_path': train_csv_path,
         'test_csv_path': test_csv_path,
         'powers': {'range_corr': 0.5, 'attbsc': 0.5, 'p_bg': 0.5,
                    'LC': 0.5, 'LC_std': 0.5, 'r0': 1, 'r1': 1, 'dr': 1},
-        'X_features_profiles': (('lidar_path', 'range_corr'), ('molecular_path', 'attbsc'), ('bg_path', 'p_bg'))
     }
-    # TODO: set in_channels according to length of X_features_profiles
-    # TODO: X_features_profiles - in hyper_params:
-    #  (('lidar_path', 'range_corr'), ('molecular_path', 'attbsc') or
-    #  ('lidar_path', 'range_corr'), ('molecular_path', 'attbsc'), ('bg_path', 'p_bg'))
-    # TODO: instead of p_bg - range_corr of bg # TODO: create separated range_corr of background
 
     # Defining a search space
     # Note, replace choice with grid_search if want all possible combinations
@@ -92,7 +91,9 @@ if __name__ == '__main__':
             "loss_type": tune.choice(['MSELoss', 'MAELoss']),  # ['MARELoss']
             "Y_features": tune.choice([['LC']]),
             # [['LC'], ['r0', 'r1', 'LC'], ['r0', 'r1'], ['r0', 'r1', 'dr'], ['r0', 'r1', 'dr', 'LC']]
-            "use_power": tune.grid_search([False, True])
+            "use_power": tune.grid_search([True, False]),
+            "use_bg": tune.grid_search([False, True]),
+            "source": tune.grid_search(['signal', 'lidar'])
         }
 
         analysis = tune.run(
@@ -116,7 +117,10 @@ if __name__ == '__main__':
             "bsize": 8,
             "loss_type": 'MSELoss',
             "Y_features": ['LC'],
-            "use_power": True
+            "use_power": True,
+            "use_bg": False,
+            "source": 'signal'
+
         }
 
         main(hyper_params, consts)
