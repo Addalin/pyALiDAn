@@ -26,7 +26,7 @@ def main(config, consts):
                                X_features_profiles=consts['X_features_profiles'],
                                Y_features=config['Y_features'],
                                batch_size=config['bsize'],
-                               num_workers=consts['num_workers'])
+                               num_workers=consts['num_workers'], data_filter=config['data_filter'])
 
     # Define minimization parameter
     metrics = {"loss": f"{config['loss_type']}_val"}
@@ -92,7 +92,8 @@ if __name__ == '__main__':
             "loss_type": tune.choice(['MSELoss', 'MAELoss']),  # ['MARELoss']
             "Y_features": tune.choice([['LC']]),
             # [['LC'], ['r0', 'r1', 'LC'], ['r0', 'r1'], ['r0', 'r1', 'dr'], ['r0', 'r1', 'dr', 'LC']]
-            "use_power": tune.grid_search([False, True])
+            "use_power": tune.grid_search([False, True]),
+            'data_filter': tune.grid_search([{'wavelength': [355]}])
         }
 
         analysis = tune.run(

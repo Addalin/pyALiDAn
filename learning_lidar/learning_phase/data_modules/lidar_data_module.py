@@ -14,18 +14,32 @@ class LidarDataSet(torch.utils.data.Dataset):
     TODO: add usage
     """
 
-    def __init__(self, csv_file, transform, top_height, X_features, profiles, Y_features, wavelengths=None):
+    def __init__(self, csv_file, transform, top_height, X_features, profiles, Y_features, filter_by, filter_values):
         """
-        Args:
-            csv_file (string): Path to the csv file of the database.
-            :param transform:
+
+        :param csv_file: string, Path to the csv file of the database
+        :param transform:
+        :param top_height:
+        :param X_features:
+        :param profiles:
+        :param Y_features:
+        :param filter_by: string, should be one of the features names in the data. E.g. 'wavelength' / 'date' / ...
+        :param filter_values: list, values to keep.
+                                E.g. [355, 1064] for wavelengths,
+                                ['9/1/2017', '9/2/2017', '9/5/2017',...] for  dates
         """
+
         self.data = pd.read_csv(csv_file)
-        self.key = list(self.data.keys()) # TODO: add option to load filtered dataset by feature (e.g. 'wavelength' , later maybe according time of the day...)
+        self.key = list(self.data.keys())
+        if filter_by:
+            if filter_by not in self.key:
+                raise KeyError(f'{filter_by} is not a valid feature name in the data. Should be one of {self.key}')
+            self.data = self.data.loc[self.data[filter_by].isin(filter_values)]
+            if self.data.empty:
+                raise Exception('Dataframe is empty! Make sure filter_by and filter_values are correct.')
         self.X_features = X_features
         self.profiles = profiles
         self.Y_features = Y_features
-        self.wavelengths = wavelengths
         self.top_height = top_height
         self.transform = transform
 
@@ -109,7 +123,7 @@ class LidarDataSet(torch.utils.data.Dataset):
 class LidarDataModule(LightningDataModule):
     def __init__(self, train_csv_path, test_csv_path,
                  powers, X_features_profiles, Y_features, batch_size, num_workers,
-                 val_length=0.2, test_length=0.2):
+                 val_length=0.2, test_length=0.2, data_filter=None):
         super().__init__()
         self.train_csv_path = train_csv_path
         self.test_csv_path = test_csv_path
@@ -120,6 +134,9 @@ class LidarDataModule(LightningDataModule):
         self.num_workers = num_workers
         self.val_length = val_length
         self.test_length = test_length
+
+        self.filter_by = list(data_filter.keys())[0]
+        self.filter_values = list(data_filter.values())[0]
 
     def prepare_data(self):
         # called only on 1 GPU
@@ -137,14 +154,16 @@ class LidarDataModule(LightningDataModule):
         if stage == 'fit' or stage is None:
             trainable_dataset = LidarDataSet(csv_file=self.train_csv_path, transform=lidar_transforms, top_height=15.3,
                                              X_features=self.X_features,profiles =self.profiles,
-                                             Y_features=self.Y_features)
+                                             Y_features=self.Y_features, filter_by=self.filter_by,
+                                             filter_values=self.filter_values)
 
             self.train, self.val = trainable_dataset.get_splits(n_val=self.val_length, n_test=0)
 
         if stage == 'test' or stage is None:
             self.test = LidarDataSet(csv_file=self.test_csv_path, transform=lidar_transforms, top_height=15.3,
                                      X_features=self.X_features,profiles =self.profiles,
-                                     Y_features=self.Y_features)
+                                     Y_features=self.Y_features, filter_by=self.filter_by,
+                                     filter_values=self.filter_values)
 
     def train_dataloader(self):
         return DataLoader(self.train, batch_size=self.batch_size, shuffle=True, num_workers=self.num_workers)
