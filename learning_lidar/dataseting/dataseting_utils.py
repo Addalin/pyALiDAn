@@ -275,6 +275,10 @@ def split_save_train_test_ds(csv_path='', train_size=0.8, df=None):
     test_path = f'{source_path}_test.csv'
     df_copy = df.copy(deep=True)
     train_set, test_set = train_test_split(df_copy, train_size=train_size, random_state=2021, shuffle=True, stratify=df_copy['wavelength'])
+    train_set = train_set.copy(deep=True)
+    test_set = test_set.copy(deep=True)
+    train_set.sort_index(inplace=True)
+    test_set.sort_index(inplace=True)
     train_set['idx'] = train_set.index.values
     test_set['idx'] = test_set.index.values
 

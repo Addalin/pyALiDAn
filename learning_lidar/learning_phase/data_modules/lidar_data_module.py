@@ -135,8 +135,13 @@ class LidarDataModule(LightningDataModule):
         self.val_length = val_length
         self.test_length = test_length
         if data_filter:
-            self.filter_by = list(data_filter.keys())[0]
-            self.filter_values = list(data_filter.values())[0]
+            self.filter_by = data_filter[0]
+            self.filter_values = data_filter[1]
+        else:
+            self.filter_by = None
+            self.filter_values = None
+
+
 
     def prepare_data(self):
         # called only on 1 GPU
