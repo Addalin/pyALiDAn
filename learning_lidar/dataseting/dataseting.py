@@ -358,6 +358,8 @@ def main(station_name, start_date, end_date):
         generated_df = create_generated_dataset(station, start_date, end_date)
         generated_df.to_csv(csv_gen_path, index=False)
         logger.info(f"\n The generation dataset saved to :{csv_gen_path}")
+    # TODO: add creation of dataset statistics following creation of its creation.
+    #  see lower part of exploring_generated_dataset.ipynb
 
     if SPLIT_GENERATED_DATASET:
         logger.info(

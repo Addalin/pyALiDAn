@@ -14,6 +14,7 @@ from learning_lidar.generation.generation_utils import get_gen_dataset_file_name
 from learning_lidar.preprocessing import preprocessing as prep
 from learning_lidar.utils.global_settings import eps
 
+
 def get_query(wavelength, cali_method, day_date):
     start_time = datetime.combine(date=day_date.date(), time=day_date.time().min)
     end_time = datetime.combine(date=day_date.date(), time=day_date.time().max)
@@ -274,6 +275,8 @@ def split_save_train_test_ds(csv_path='', train_size=0.8, df=None):
 
     df_copy = df.copy(deep=True)
     train_set = (df_copy.sample(frac=train_size, random_state=2021)).sort_index()
+    # TODO: adapt the split such that the population sizes ratio (such as 'wavelength' )
+    #  in the train/test datasets will remain the same
     test_set = df_copy.drop(train_set.index)
     train_set['idx'] = train_set.index.values
     test_set['idx'] = test_set.index.values
@@ -315,6 +318,3 @@ def get_mean_lc(df, station, day_date):
               .mean(dim='Time').sel(Wavelength=row['wavelength']).values,
               axis=1, result_type='expand')
     return df
-
-
-

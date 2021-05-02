@@ -21,11 +21,11 @@ class LidarDataSet(torch.utils.data.Dataset):
             :param transform:
         """
         self.data = pd.read_csv(csv_file)
-        self.key = list(self.data.keys())
+        self.key = list(self.data.keys()) # TODO: add option to load filtered dataset by feature (e.g. 'wavelength' , later maybe according time of the day...)
         self.X_features = X_features
         self.profiles = profiles
         self.Y_features = Y_features
-        self.wavelengths = wavelengths  # TODO: make option to load data by desired wavelength/s
+        self.wavelengths = wavelengths
         self.top_height = top_height
         self.transform = transform
 
