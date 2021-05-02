@@ -20,8 +20,9 @@ import learning_lidar.preprocessing.preprocessing as prep
 from learning_lidar.dataseting.dataseting_utils import get_query, query_database, add_profiles_values, add_X_path, \
     get_time_slots_expanded, convert_Y_features_units, recalc_LC, split_save_train_test_ds, get_generated_X_path, \
     get_mean_lc
+from learning_lidar.generation.daily_signals_generations_utils import get_daily_bg
 from learning_lidar.utils.utils import create_and_configer_logger
-
+import learning_lidar.generation.generation_utils as gen_utils
 
 # %% Dataset creating helper functions
 def create_dataset(station_name='haifa', start_date=datetime(2017, 9, 1),
@@ -277,6 +278,101 @@ def create_generated_dataset(station, start_date, end_date, sample_size='30min')
     return gen_df
 
 
+def calc_data_statistics(station, start_date, end_date):
+    data_folder = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(os.curdir))), 'data')
+    csv_gen_fname = f"dataset_gen_{station_name}_{start_date.strftime('%Y-%m-%d')}_{end_date.strftime('%Y-%m-%d')}.csv"
+    csv_gen_path = os.path.join(data_folder, csv_gen_fname)
+    df = pd.read_csv(csv_gen_path, parse_dates=['date', 'start_time_period', 'end_time_period'])
+    days_groups = df.groupby('date').groups
+    days_list = list(days_groups.keys())
+    # inds_subsets = [days_groups[key] for key in days_list]
+    # df_subsets = [df.iloc[inds] for inds in inds_subsets]
+    wavelengths = gs.LAMBDA_nm().get_elastic()
+
+    molsource = 'molecular'
+    sigsource = 'signal'
+    lidsource = 'lidar'
+    columns = [f'p_{sigsource}_mean', f'p_{sigsource}_std',  # clean signal - p
+               f'range_corr_{sigsource}_mean', f'range_corr_{sigsource}_std',  # clean signal - range_corr (pr2)
+               f'p_{lidsource}_mean', f'p_{lidsource}_std',  # Pois measurement signal - p_n
+               f'range_corr_{lidsource}_mean', f'range_corr_{lidsource}_std',
+               # Pois measurement signal - range_corr (p_nr2)
+               f'attbsc_{molsource}_mean', f'attbsc_{molsource}_std',  # molecular signal - attbsc
+               'p_bg_mean', 'p_bg_std',  # background signal - p_bg
+               'LC_mean', 'LC_std']  # Lidar calibration value - LC
+    df_stats = pd.DataFrame(0, index=pd.Index(wavelengths, name='wavelength [nm]'), columns=columns)
+
+
+    num_processes = min((cpu_count() - 1, len(days_list)))
+    with Pool(num_processes) as p:
+        results = p.starmap(calc_day_statistics, zip(repeat(station), days_list))
+    for result in results:
+        df_stats += result
+
+    norm_scale = 1 / len(days_list)
+    df_stats /= norm_scale  # normalize by number of days
+
+    # Save stats
+    stats_fname = f"stats_gen_{station_name}_{start_date.strftime('%Y-%m-%d')}_{end_date.strftime('%Y-%m-%d')}.csv"
+    csv_stats_path = os.path.join(data_folder, stats_fname)
+    df_stats.to_csv(csv_stats_path)
+
+
+
+def calc_day_statistics(station, cur_day):
+    """
+    Calculates mean & std for params in datasets_with_names_time_height and datasets_with_names_time
+
+    :param station: the given station
+    :param cur_day: the day to get the statistics for
+    :return: dataframe, each row corresponds to a wavelength
+    """
+    wavelengths = gs.LAMBDA_nm().get_elastic()
+    molsource = 'molecular'
+    sigsource = 'signal'
+    lidsource = 'lidar'
+
+    df_stats = pd.DataFrame(index=pd.Index(wavelengths, name='wavelength [nm]'))
+    cur_date = datetime.combine(cur_day.date(), cur_day.time())
+    print(f'Calculating stats for {cur_date}')
+    # folder names
+    mol_folder = prep.get_month_folder_name(station.molecular_dataset, cur_date)
+    signal_folder = prep.get_month_folder_name(station.gen_signal_dataset, cur_date)
+    lidar_folder = prep.get_month_folder_name(station.gen_lidar_dataset, cur_date)
+
+    # File names
+    signal_nc_name = os.path.join(signal_folder,
+                                  gen_utils.get_gen_dataset_file_name(station, cur_date, data_source=sigsource))
+    lidar_nc_name = os.path.join(lidar_folder,
+                                 gen_utils.get_gen_dataset_file_name(station, cur_date, data_source=lidsource))
+    mol_nc_name = os.path.join(mol_folder, prep.get_prep_dataset_file_name(station, cur_date, data_source=molsource,
+                                                                           lambda_nm='all'))
+
+    # Load datasets
+    mol_ds = prep.load_dataset(mol_nc_name)
+    signal_ds = prep.load_dataset(signal_nc_name)
+    lidar_ds = prep.load_dataset(lidar_nc_name)
+    p_bg = get_daily_bg(station, cur_date)  # daily background: p_bg
+
+    # update daily profiles stats
+    datasets_with_names_time_height = [(signal_ds.p, f'p_{sigsource}'),
+                                       (signal_ds.range_corr, f'range_corr_{sigsource}'),
+                                       (lidar_ds.p, f'p_{lidsource}'),
+                                       (lidar_ds.range_corr, f'range_corr_{lidsource}'),
+                                       (mol_ds.attbsc, f'attbsc_{molsource}')]
+
+    for ds, ds_name in datasets_with_names_time_height:
+        df_stats[f'{ds_name}_mean'] = ds.mean(dim={'Height', 'Time'}).values
+        df_stats[f'{ds_name}_std'] = ds.std(dim={'Height', 'Time'}).values
+
+    datasets_with_names_time = [(p_bg, f'p_bg'), (signal_ds.LC, f'LC')]
+    for ds, ds_name in datasets_with_names_time:
+        df_stats[f'{ds_name}_mean'] = ds.mean(dim={'Time'}).values
+        df_stats[f'{ds_name}_std'] = ds.std(dim={'Time'}).values
+
+    return df_stats
+
+
 def main(station_name, start_date, end_date):
     logging.getLogger('matplotlib').setLevel(logging.ERROR)  # Fix annoying matplotlib logs
     logging.getLogger('PIL').setLevel(logging.ERROR)  # Fix annoying PIL logs
@@ -287,9 +383,9 @@ def main(station_name, start_date, end_date):
     EXTEND_DATASET = False
     DO_CALIB_DATASET = False
     USE_KM_UNITS = False
-    DO_GENERATED_DATASET = False
+    DO_GENERATED_DATASET = True
     SPLIT_DATASET = False
-    SPLIT_GENERATED_DATASET = True
+    SPLIT_GENERATED_DATASET = False
 
     # Load data of station
     station = gs.Station(station_name=station_name)
@@ -321,6 +417,8 @@ def main(station_name, start_date, end_date):
 
         df.to_csv(csv_path, index=False)
         logger.info(f"Done database creation, saving to: {csv_path}")
+        # TODO: add creation of dataset statistics following its creation.
+        #         adapt calc_data_statistics(station, start_date, end_date)
 
     if SPLIT_DATASET:
         logger.info(
@@ -358,8 +456,10 @@ def main(station_name, start_date, end_date):
         generated_df = create_generated_dataset(station, start_date, end_date)
         generated_df.to_csv(csv_gen_path, index=False)
         logger.info(f"\n The generation dataset saved to :{csv_gen_path}")
-    # TODO: add creation of dataset statistics following creation of its creation.
-    #  see lower part of exploring_generated_dataset.ipynb
+
+        logger.info(f"\n Start calculating dataset statistics")
+        calc_data_statistics(station, start_date, end_date)
+        logger.info(f"\n Finish calculating dataset statistics")
 
     if SPLIT_GENERATED_DATASET:
         logger.info(
