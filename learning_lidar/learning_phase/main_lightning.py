@@ -94,7 +94,7 @@ if __name__ == '__main__':
             "use_power": tune.grid_search([True, False]),
             "use_bg": tune.grid_search([False, True]),
             "source": tune.grid_search(['signal', 'lidar']),
-            'data_filter': tune.grid_search([{'wavelength': [355]}])
+            'data_filter': tune.grid_search([None, {'wavelength': [355]}])
         }
 
         analysis = tune.run(
