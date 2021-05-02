@@ -242,7 +242,7 @@ def create_generated_dataset(station, start_date, end_date, sample_size='30min')
             # add signal path
             df['signal_path'] = df.apply(
                 lambda row: get_generated_X_path(station=station,
-                                                 parent_folder=station.gen_lidar_dataset,
+                                                 parent_folder=station.gen_signal_dataset,
                                                  day_date=row['start_time_period'],
                                                  data_source='signal',
                                                  wavelength=wavelength,
