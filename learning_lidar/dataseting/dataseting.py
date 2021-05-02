@@ -334,7 +334,7 @@ def calc_day_statistics(station, cur_day):
 
     df_stats = pd.DataFrame(index=pd.Index(wavelengths, name='wavelength [nm]'))
     cur_date = datetime.combine(cur_day.date(), cur_day.time())
-    print(cur_date)
+    print(f'Calculating stats for {cur_date}')
     # folder names
     mol_folder = prep.get_month_folder_name(station.molecular_dataset, cur_date)
     signal_folder = prep.get_month_folder_name(station.gen_signal_dataset, cur_date)
@@ -383,10 +383,9 @@ def main(station_name, start_date, end_date):
     EXTEND_DATASET = False
     DO_CALIB_DATASET = False
     USE_KM_UNITS = False
-    DO_GENERATED_DATASET = False
+    DO_GENERATED_DATASET = True
     SPLIT_DATASET = False
     SPLIT_GENERATED_DATASET = False
-    CALC_STATS = True
 
     # Load data of station
     station = gs.Station(station_name=station_name)
@@ -418,6 +417,8 @@ def main(station_name, start_date, end_date):
 
         df.to_csv(csv_path, index=False)
         logger.info(f"Done database creation, saving to: {csv_path}")
+        # TODO: add creation of dataset statistics following its creation.
+        #         adapt calc_data_statistics(station, start_date, end_date)
 
     if SPLIT_DATASET:
         logger.info(
@@ -455,8 +456,10 @@ def main(station_name, start_date, end_date):
         generated_df = create_generated_dataset(station, start_date, end_date)
         generated_df.to_csv(csv_gen_path, index=False)
         logger.info(f"\n The generation dataset saved to :{csv_gen_path}")
-    # TODO: add creation of dataset statistics following creation of its creation.
-    #  see lower part of exploring_generated_dataset.ipynb
+
+        logger.info(f"\n Start calculating dataset statistics")
+        calc_data_statistics(station, start_date, end_date)
+        logger.info(f"\n Finish calculating dataset statistics")
 
     if SPLIT_GENERATED_DATASET:
         logger.info(
@@ -464,9 +467,6 @@ def main(station_name, start_date, end_date):
             f"{end_date.strftime('%Y-%m-%d')}]")
         split_save_train_test_ds(csv_path=csv_gen_path)
         logger.info(f"Done splitting train-test dataset for {csv_gen_path}")
-
-    if CALC_STATS:
-        calc_data_statistics(station, start_date, end_date)
 
 
 if __name__ == '__main__':
