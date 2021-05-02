@@ -28,10 +28,20 @@ def generate_daily_lidar_measurement(station, day_date, SAVE_DS=True):
     measure_ds = calc_daily_measurement(station, day_date, signal_ds)
 
     if SAVE_DS:
-        gen_utils.save_generated_dataset(station, measure_ds, data_source='lidar', save_mode='both',
+        gen_utils.save_generated_dataset(station, measure_ds,
+                                         data_source='lidar',
+                                         save_mode='both',
                                          profiles=['range_corr'])
-        gen_utils.save_generated_dataset(station, measure_ds, data_source='bg', save_mode='sep', profiles=['p_bg'])
-        gen_utils.save_generated_dataset(station, signal_ds, data_source='signal', save_mode='single')
+
+        gen_utils.save_generated_dataset(station, measure_ds,
+                                         data_source='bg',
+                                         save_mode='sep',
+                                         profiles=['p_bg'])
+
+        gen_utils.save_generated_dataset(station, signal_ds,
+                                         data_source='signal',
+                                         save_mode='both',
+                                         profiles=['range_corr'])
 
     return measure_ds, signal_ds
 
@@ -45,6 +55,7 @@ if __name__ == '__main__':
     station = gs.Station(station_name='haifa')
     start_date = datetime(2017, 10, 1)
     end_date = datetime(2017, 10, 31)
+
     days_list = pd.date_range(start=start_date, end=end_date).to_pydatetime().tolist()
     num_days = len(days_list)
     num_processes = min((cpu_count() - 1, num_days))

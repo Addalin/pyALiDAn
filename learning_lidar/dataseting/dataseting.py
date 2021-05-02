@@ -214,21 +214,38 @@ def create_generated_dataset(station, start_date, end_date, sample_size='30min')
     for wavelength in tqdm(wavelengths):
         try:
             df = pd.DataFrame()
-            df['date'] = dates.date                     # new row for each time
-            df['wavelength'] = wavelength               # broadcast single value to all rows
-            df['start_time_period'] = dates                    # start_time - start time of the sample, end_time 29.5 min later
+            df['date'] = dates.date          # new row for each time
+            df['wavelength'] = wavelength    # broadcast single value to all rows
+            df['start_time_period'] = dates  # start_time - start time of the sample, end_time 29.5 min later
             df['end_time_period'] = dates + timedelta(minutes=sample_size) - timedelta(seconds=station.freq)
 
             # add bg path
             df['bg_path'] = df.apply(
-                lambda row: get_generated_X_path(station=station, parent_folder=station.gen_bg_dataset,
-                                                 day_date=row['start_time_period'], data_source='bg', wavelength=wavelength,
+                lambda row: get_generated_X_path(station=station,
+                                                 parent_folder=station.gen_bg_dataset,
+                                                 day_date=row['start_time_period'],
+                                                 data_source='bg',
+                                                 wavelength=wavelength,
                                                  file_type='p_bg'),
                 axis=1, result_type='expand')
+
             # add lidar path
             df['lidar_path'] = df.apply(
-                lambda row: get_generated_X_path(station=station, parent_folder=station.gen_lidar_dataset,
-                                                 day_date=row['start_time_period'], data_source='lidar', wavelength=wavelength,
+                lambda row: get_generated_X_path(station=station,
+                                                 parent_folder=station.gen_lidar_dataset,
+                                                 day_date=row['start_time_period'],
+                                                 data_source='lidar',
+                                                 wavelength=wavelength,
+                                                 file_type='range_corr'),
+                axis=1, result_type='expand')
+
+            # add signal path
+            df['signal_path'] = df.apply(
+                lambda row: get_generated_X_path(station=station,
+                                                 parent_folder=station.gen_lidar_dataset,
+                                                 day_date=row['start_time_period'],
+                                                 data_source='signal',
+                                                 wavelength=wavelength,
                                                  file_type='range_corr'),
                 axis=1, result_type='expand')
 
@@ -237,20 +254,22 @@ def create_generated_dataset(station, start_date, end_date, sample_size='30min')
             days_list = days_groups.keys()
             inds_subsets = [days_groups[key] for key in days_list]
             df_subsets = [df.iloc[inds] for inds in inds_subsets]
-            subsets=[]
-            for cur_day,subset in zip(days_list,df_subsets):
-                subsets.append(add_X_path(subset, station, cur_day, lambda_nm=wavelength, data_source='molecular', file_type='attbsc'))
+            subsets = []
+            for cur_day, subset in zip(days_list, df_subsets):
+                subsets.append(add_X_path(subset, station, cur_day, lambda_nm=wavelength, data_source='molecular',
+                                          file_type='attbsc'))
             df = pd.concat([subset for subset in subsets]).sort_values('start_time_period')
 
-
-            # get the mean LC from signal_paths, one day at a time
-            # TODO: adapt this part and get_mean_lc() to retrieve mean LC for 3 wavelength at once
-            #  (should be faster then reading the file 3 times per wavelength)
-            df_subsets = [df.iloc[inds] for inds in inds_subsets]
-            num_processes = min((cpu_count() - 1, len(days_list)))
-            with Pool(num_processes) as p:
-                results = p.starmap(get_mean_lc, zip(df_subsets, repeat(station), days_list))
-            df = pd.concat([subset for subset in results]).sort_values('start_time_period')
+            CALC_MEAN_LC = True
+            if CALC_MEAN_LC:
+                # get the mean LC from signal_paths, one day at a time
+                # TODO: adapt this part and get_mean_lc() to retrieve mean LC for 3 wavelength at once
+                #  (should be faster then reading the file 3 times per wavelength)
+                df_subsets = [df.iloc[inds] for inds in inds_subsets]
+                num_processes = min((cpu_count() - 1, len(days_list)))
+                with Pool(num_processes) as p:
+                    results = p.starmap(get_mean_lc, zip(df_subsets, repeat(station), days_list))
+                df = pd.concat([subset for subset in results]).sort_values('start_time_period')
 
             gen_df = gen_df.append(df)
         except FileNotFoundError as e:
@@ -268,8 +287,9 @@ def main(station_name, start_date, end_date):
     EXTEND_DATASET = False
     DO_CALIB_DATASET = False
     USE_KM_UNITS = False
-    SPLIT_DATASET = True
     DO_GENERATED_DATASET = False
+    SPLIT_DATASET = False
+    SPLIT_GENERATED_DATASET = True
 
     # Load data of station
     station = gs.Station(station_name=station_name)
@@ -278,7 +298,7 @@ def main(station_name, start_date, end_date):
     # Set new paths
     data_folder = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))), 'data')
     csv_path = os.path.join(data_folder, f"dataset_{station_name}_"
-                                        f"{start_date.strftime('%Y-%m-%d')}_{end_date.strftime('%Y-%m-%d')}.csv")
+                                         f"{start_date.strftime('%Y-%m-%d')}_{end_date.strftime('%Y-%m-%d')}.csv")
     csv_path_extended = os.path.join(data_folder, f"dataset_{station_name}_"
                                                   f"{start_date.strftime('%Y-%m-%d')}_{end_date.strftime('%Y-%m-%d')}_extended.csv")
     ds_path_extended = os.path.join(data_folder, f"dataset_{station_name}_"
@@ -306,7 +326,8 @@ def main(station_name, start_date, end_date):
         logger.info(
             f"Splitting to train-test the dataset for period: [{start_date.strftime('%Y-%m-%d')},"
             f"{end_date.strftime('%Y-%m-%d')}]")
-        split_save_train_test_ds(csv_path=csv_gen_path)
+        split_save_train_test_ds(csv_path=csv_path)
+        logger.info(f"Done splitting train-test dataset for {csv_path}")
 
     # Create extended dataset and save to csv - recalculation of Lidar Constant (currently this is a naive calculation)
     if EXTEND_DATASET:
@@ -338,6 +359,12 @@ def main(station_name, start_date, end_date):
         generated_df.to_csv(csv_gen_path, index=False)
         logger.info(f"\n The generation dataset saved to :{csv_gen_path}")
 
+    if SPLIT_GENERATED_DATASET:
+        logger.info(
+            f"Splitting to train-test the dataset for period: [{start_date.strftime('%Y-%m-%d')},"
+            f"{end_date.strftime('%Y-%m-%d')}]")
+        split_save_train_test_ds(csv_path=csv_gen_path)
+        logger.info(f"Done splitting train-test dataset for {csv_gen_path}")
 
 
 if __name__ == '__main__':
