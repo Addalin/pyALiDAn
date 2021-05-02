@@ -302,73 +302,75 @@ def calc_data_statistics(station, start_date, end_date):
                'LC_mean', 'LC_std']  # Lidar calibration value - LC
     df_stats = pd.DataFrame(0, index=pd.Index(wavelengths, name='wavelength [nm]'), columns=columns)
 
+
+    num_processes = min((cpu_count() - 1, len(days_list)))
+    with Pool(num_processes) as p:
+        results = p.starmap(calc_day_statistics, zip(repeat(station), days_list))
+    for result in results:
+        df_stats += result
+
     norm_scale = 1 / len(days_list)
+    df_stats /= norm_scale  # normalize by number of days
 
-    for day in tqdm(days_list):
-        cur_date = datetime.combine(day.date(), day.time())
-        # print(cur_date)
-
-        # Load datasets
-        mol_folder = prep.get_month_folder_name(station.molecular_dataset, cur_date)
-        mol_nc_name = os.path.join(mol_folder, prep.get_prep_dataset_file_name(station, cur_date, data_source=molsource,
-                                                                               lambda_nm='all'))
-        mol_ds = prep.load_dataset(mol_nc_name)
-
-        p_bg = get_daily_bg(station, cur_date)  # daily background: p_bg
-
-        signal_folder = prep.get_month_folder_name(station.gen_signal_dataset, cur_date)
-        signal_nc_name = os.path.join(signal_folder,
-                                      gen_utils.get_gen_dataset_file_name(station, cur_date, data_source=sigsource))
-        signal_ds = prep.load_dataset(signal_nc_name)
-
-        lidar_folder = prep.get_month_folder_name(station.gen_lidar_dataset, cur_date)
-        lidar_nc_name = os.path.join(lidar_folder,
-                                     gen_utils.get_gen_dataset_file_name(station, cur_date, data_source=lidsource))
-        lidar_ds = prep.load_dataset(lidar_nc_name)
-
-        datasets_with_names_time_height = [(signal_ds.p, f'p_{sigsource}'),
-                                           (signal_ds.range_corr, f'range_corr_{sigsource}'),
-                                           (lidar_ds.p, f'p_{lidsource}'),
-                                           (lidar_ds.range_corr, f'range_corr_{lidsource}'),
-                                           (mol_ds.attbsc, f'attbsc_{molsource}')]
-
-        for ds, ds_name in datasets_with_names_time_height:
-            df_stats[f'{ds_name}_mean'] += ds.mean(dim={'Height', 'Time'}).values
-            df_stats[f'{ds_name}_std'] += ds.std(dim={'Height', 'Time'}).values
-
-        datasets_with_names_time = [(p_bg, f'p_bg'), (signal_ds.LC, f'LC')]
-        for ds, ds_name in datasets_with_names_time:
-            df_stats[f'{ds_name}_mean'] += ds.mean(dim={'Time'}).values
-            df_stats[f'{ds_name}_std'] += ds.std(dim={'Time'}).values
-
-
-
-        # %% update daily profiles stats
-        # df_stats[f'p_{sigsource}_mean'] += norm_scale * signal_ds.p.mean(dim={'Height', 'Time'}).values
-        # df_stats[f'p_{sigsource}_std'] += norm_scale * signal_ds.p.std(dim={'Height', 'Time'}).values
-        #
-        # df_stats[f'range_corr_{sigsource}_mean'] += norm_scale * signal_ds.range_corr.mean(dim={'Height', 'Time'}).values
-        # df_stats[f'range_corr_{sigsource}_std'] += norm_scale * signal_ds.range_corr.std(dim={'Height', 'Time'}).values
-        #
-        # df_stats[f'p_{lidsource}_mean'] += norm_scale * lidar_ds.p.mean(dim={'Height', 'Time'}).values
-        # df_stats[f'p_{lidsource}_std'] += norm_scale * lidar_ds.p.std(dim={'Height', 'Time'}).values
-        #
-        # df_stats[f'range_corr_{lidsource}_mean'] += norm_scale * lidar_ds.range_corr.mean(dim={'Height', 'Time'}).values
-        # df_stats[f'range_corr_{lidsource}_std'] += norm_scale * lidar_ds.range_corr.std(dim={'Height', 'Time'}).values
-        #
-        # df_stats[f'attbsc_{molsource}_mean'] += norm_scale * mol_ds.attbsc.mean(dim={'Height', 'Time'}).values
-        # df_stats[f'attbsc_{molsource}_std'] += norm_scale * mol_ds.attbsc.std(dim={'Height', 'Time'}).values
-
-        # df_stats['p_bg_mean'] += norm_scale * p_bg.mean(dim={'Time'}).values
-        # df_stats['p_bg_std'] += norm_scale * p_bg.std(dim={'Time'}).values
-        #
-        # df_stats['LC_mean'] += norm_scale * signal_ds.LC.mean(dim={'Time'}).values
-        # df_stats['LC_std'] += norm_scale * signal_ds.LC.std(dim={'Time'}).values
-
-    # %% Save stats
+    # Save stats
     stats_fname = f"stats_gen_{station_name}_{start_date.strftime('%Y-%m-%d')}_{end_date.strftime('%Y-%m-%d')}.csv"
     csv_stats_path = os.path.join(data_folder, stats_fname)
     df_stats.to_csv(csv_stats_path)
+
+
+
+def calc_day_statistics(station, cur_day):
+    """
+    Calculates mean & std for params in datasets_with_names_time_height and datasets_with_names_time
+
+    :param station: the given station
+    :param cur_day: the day to get the statistics for
+    :return: dataframe, each row corresponds to a wavelength
+    """
+    wavelengths = gs.LAMBDA_nm().get_elastic()
+    molsource = 'molecular'
+    sigsource = 'signal'
+    lidsource = 'lidar'
+
+    df_stats = pd.DataFrame(index=pd.Index(wavelengths, name='wavelength [nm]'))
+    cur_date = datetime.combine(cur_day.date(), cur_day.time())
+    print(cur_date)
+    # folder names
+    mol_folder = prep.get_month_folder_name(station.molecular_dataset, cur_date)
+    signal_folder = prep.get_month_folder_name(station.gen_signal_dataset, cur_date)
+    lidar_folder = prep.get_month_folder_name(station.gen_lidar_dataset, cur_date)
+
+    # File names
+    signal_nc_name = os.path.join(signal_folder,
+                                  gen_utils.get_gen_dataset_file_name(station, cur_date, data_source=sigsource))
+    lidar_nc_name = os.path.join(lidar_folder,
+                                 gen_utils.get_gen_dataset_file_name(station, cur_date, data_source=lidsource))
+    mol_nc_name = os.path.join(mol_folder, prep.get_prep_dataset_file_name(station, cur_date, data_source=molsource,
+                                                                           lambda_nm='all'))
+
+    # Load datasets
+    mol_ds = prep.load_dataset(mol_nc_name)
+    signal_ds = prep.load_dataset(signal_nc_name)
+    lidar_ds = prep.load_dataset(lidar_nc_name)
+    p_bg = get_daily_bg(station, cur_date)  # daily background: p_bg
+
+    # update daily profiles stats
+    datasets_with_names_time_height = [(signal_ds.p, f'p_{sigsource}'),
+                                       (signal_ds.range_corr, f'range_corr_{sigsource}'),
+                                       (lidar_ds.p, f'p_{lidsource}'),
+                                       (lidar_ds.range_corr, f'range_corr_{lidsource}'),
+                                       (mol_ds.attbsc, f'attbsc_{molsource}')]
+
+    for ds, ds_name in datasets_with_names_time_height:
+        df_stats[f'{ds_name}_mean'] = ds.mean(dim={'Height', 'Time'}).values
+        df_stats[f'{ds_name}_std'] = ds.std(dim={'Height', 'Time'}).values
+
+    datasets_with_names_time = [(p_bg, f'p_bg'), (signal_ds.LC, f'LC')]
+    for ds, ds_name in datasets_with_names_time:
+        df_stats[f'{ds_name}_mean'] = ds.mean(dim={'Time'}).values
+        df_stats[f'{ds_name}_std'] = ds.std(dim={'Time'}).values
+
+    return df_stats
 
 
 def main(station_name, start_date, end_date):
@@ -466,8 +468,9 @@ def main(station_name, start_date, end_date):
     if CALC_STATS:
         calc_data_statistics(station, start_date, end_date)
 
+
 if __name__ == '__main__':
-    station_name = 'haifa_shubi'
+    station_name = 'haifa'
     start_date = datetime(2017, 9, 1)
     end_date = datetime(2017, 10, 31)
     main(station_name, start_date, end_date)
