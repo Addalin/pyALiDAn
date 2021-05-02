@@ -35,7 +35,8 @@ def main(config, consts):
                                num_workers=consts['num_workers'], data_filter=config['data_filter'])
 
     # Define minimization parameter
-    metrics = {"loss": f"{config['loss_type']}_val"}
+    metrics = {"loss": f"{config['loss_type']}_val",
+               "MARELoss": "MARELoss_val"}
     callbacks = [TuneReportCallback(metrics, on="validation_end")]
 
     # Setup the pytorchlighting trainer and run the model
