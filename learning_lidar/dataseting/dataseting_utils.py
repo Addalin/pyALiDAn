@@ -9,6 +9,7 @@ import numpy as np
 import pandas as pd
 import xarray as xr
 from scipy.ndimage import gaussian_filter1d
+from sklearn.model_selection import train_test_split
 
 from learning_lidar.generation.generation_utils import get_gen_dataset_file_name
 from learning_lidar.preprocessing import preprocessing as prep
@@ -272,12 +273,8 @@ def split_save_train_test_ds(csv_path='', train_size=0.8, df=None):
     source_path = csv_path.split('.csv')[0]
     train_path = f'{source_path}_train.csv'
     test_path = f'{source_path}_test.csv'
-
     df_copy = df.copy(deep=True)
-    train_set = (df_copy.sample(frac=train_size, random_state=2021)).sort_index()
-    # TODO: adapt the split such that the population sizes ratio (such as 'wavelength' )
-    #  in the train/test datasets will remain the same
-    test_set = df_copy.drop(train_set.index)
+    train_set, test_set = train_test_split(df_copy, train_size=train_size, random_state=2021, shuffle=True, stratify=df_copy['wavelength'])
     train_set['idx'] = train_set.index.values
     test_set['idx'] = test_set.index.values
 

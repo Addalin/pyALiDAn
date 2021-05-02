@@ -32,7 +32,7 @@ def main(config, consts):
                                X_features_profiles=X_features,
                                Y_features=config['Y_features'],
                                batch_size=config['bsize'],
-                               num_workers=consts['num_workers'])
+                               num_workers=consts['num_workers'], data_filter=config['data_filter'])
 
     # Define minimization parameter
     metrics = {"loss": f"{config['loss_type']}_val"}
@@ -93,7 +93,8 @@ if __name__ == '__main__':
             # [['LC'], ['r0', 'r1', 'LC'], ['r0', 'r1'], ['r0', 'r1', 'dr'], ['r0', 'r1', 'dr', 'LC']]
             "use_power": tune.grid_search([True, False]),
             "use_bg": tune.grid_search([False, True]),
-            "source": tune.grid_search(['signal', 'lidar'])
+            "source": tune.grid_search(['signal', 'lidar']),
+            'data_filter': tune.grid_search([None, {'wavelength': [355]}])
         }
 
         analysis = tune.run(
