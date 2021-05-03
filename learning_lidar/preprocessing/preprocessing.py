@@ -517,53 +517,6 @@ def generate_daily_molecular(station, day_date, time_res='30S', height_units='km
     return mol_ds
 
 
-def save_molecular_dataset(station, dataset, save_mode='sep'):
-    """
-	Save the input dataset to netcdf file
-	:param station: station: gs.station() object of the lidar station
-	:param dataset: array.Dataset() holding 5 data variables:
-					3 daily dataframes: beta,sigma,att_bsc with shared dimensions(Height, Time, Wavelength)
-					and 2 shared variables: lambda_nm with dimension (Wavelength), and date
-	:param save_mode: save mode options:
-					'sep' - for separated profiles (each is file is per profile per wavelength)
-					'single' - save the dataset a single file per day
-					'both' -saving both options
-	:return: ncpaths - the paths of the saved dataset/s . None - for failure.
-	"""
-    date_datetime = get_daily_ds_date(dataset)
-    month_folder = get_month_folder_name(station.molecular_dataset, date_datetime)
-
-    '''save the dataset to separated netcdf files: per profile per wavelength'''
-    ncpaths = []
-    if save_mode in ['both', 'sep']:
-        data_vars = list(dataset.data_vars)
-        profiles = data_vars[0:3]
-        shared_vars = data_vars[3:]
-        # print('The data variables for profiles:' ,profiles) #For debug.should be : 'beta','sigma','attbsc'
-        # print('The shared variables: ',shared_vars) #For debug.should be : 'lambda_nm' (wavelength),'date'
-        for profile in profiles:
-            profile_vars = [profile]
-            for lambda_nm in dataset.Wavelength.values:
-                profile_vars.extend(shared_vars)
-                ds_profile = dataset.get(profile_vars).sel(Wavelength=lambda_nm)
-                file_name = get_prep_dataset_file_name(station, date_datetime, data_source='molecular',
-                                                       lambda_nm=lambda_nm,
-                                                       file_type=profile)
-                ncpath = save_dataset(ds_profile, month_folder, file_name)
-                if ncpath:
-                    ncpaths.append(ncpath)
-
-    '''save the dataset to a single netcdf'''
-    if save_mode in ['both', 'single']:
-        file_name = get_prep_dataset_file_name(station, date_datetime, data_source='molecular',
-                                               lambda_nm='all',
-                                               file_type='all')
-        ncpath = save_dataset(dataset, month_folder, file_name)
-        if ncpath:
-            ncpaths.append(ncpath)
-    return ncpaths
-
-
 # %% lidar preprocessing and dataset functions
 
 
@@ -694,46 +647,6 @@ def get_range_corr_ds_chan(darray, altitude, lambda_nm, height_units='km', optim
     range_corr_ds_chan.Wavelength.attrs = {'long_name': r'$\lambda$', 'units': r'$nm$'}
 
     return range_corr_ds_chan, LC
-
-
-def save_range_corr_dataset(station, dataset, save_mode='sep'):
-    """
-	Save the input dataset to netcdf file
-	:param station: station: gs.station() object of the lidar station
-	:param dataset: array.Dataset() a daily range corrected lidar signal, holding 5 data variables:
-			 1 daily dataset of range_corrected signal in 3 channels, with dimensions of : Height, Time, Wavelength
-			 3 variables : lambda_nm, plot_min_range, plot_max_range, with dimension of : Wavelength
-			 1 shared variable: date
-	:param save_mode: save mode options:
-					'sep' - for separated profiles (each is file is per profile per wavelength)
-					'single' - save the dataset a single file per day
-					'both' -saving both options
-	:return: ncpaths - the paths of the saved dataset/s . None - for failure.
-	"""
-
-    date_datetime = get_daily_ds_date(dataset)
-    month_folder = get_month_folder_name(station.lidar_dataset, date_datetime)
-
-    '''save the dataset to separated netcdf files: per profile per wavelength'''
-    ncpaths = []
-    profile = list(dataset.data_vars)[0]
-    if save_mode in ['both', 'sep']:
-        for lambda_nm in dataset.Wavelength.values:
-            ds_profile = dataset.sel(Wavelength=lambda_nm)
-            file_name = get_prep_dataset_file_name(station, date_datetime, data_source='lidar',
-                                                   lambda_nm=lambda_nm, file_type=profile)
-            ncpath = save_dataset(ds_profile, month_folder, file_name)
-            if ncpath:
-                ncpaths.append(ncpath)
-
-    '''save the dataset to a single netcdf'''
-    if save_mode in ['both', 'single']:
-        file_name = get_prep_dataset_file_name(station, date_datetime, data_source='lidar',
-                                               lambda_nm='all', file_type='all')
-        ncpath = save_dataset(dataset, month_folder, file_name)
-        if ncpath:
-            ncpaths.append(ncpath)
-    return ncpaths
 
 
 # %% General functions to handle preprocessing (prep) datasets (figures ,(netcdf) files)
@@ -885,6 +798,7 @@ def gen_daily_ds(day_date):
 
     # TODO: Find a way to pass: optim_size, save_mode, USE_KM_UNITS
     #  as variables when running with multiprocessing.
+    logger = logging.getLogger()
     optim_size = False
     save_mode = 'both'
     USE_KM_UNITS = True
@@ -896,7 +810,7 @@ def gen_daily_ds(day_date):
                                       optim_size=optim_size, USE_KM_UNITS=USE_KM_UNITS)
 
     # save molecular dataset
-    ncpaths = save_molecular_dataset(station, mol_ds, save_mode=save_mode)
+    ncpaths = save_prep_dataset(station, mol_ds, data_source='molecular', save_mode=save_mode, profiles=['attbsc'])
     logger.debug(f"Done saving molecular datasets for {day_date.strftime('%Y-%m-%d')}, to: {ncpaths}")
 
 
@@ -919,6 +833,55 @@ def convert_profiles_units(dataset, units=[r'$1/m$', r'$1/km$'], scale=1e+3):
         conv_profiles.attrs["units"] = conv_profiles.units.replace(units[0], units[1])
         dataset[profile] = conv_profiles
     return dataset
+
+
+def save_prep_dataset(station, dataset, data_source='lidar', save_mode='both', profiles=None):
+    """
+    Save the input dataset to netcdf file
+    :param profiles: The name of profile desired to be saved separately.
+    If this name is not provided, then the first profile is automatically selected
+    :param station: station: gs.station() object of the lidar station
+    :param dataset: array.Dataset() a daily preprocessed lidar or molecular signals.
+    Having dimensions of : Wavelength, Height, Time.
+    :param data_source: source type of the file, i.e., 'lidar' - for lidar dataset, and 'molecular' - molecular dataset.
+    :param save_mode: save mode options:
+                    'sep' - for separated profiles (each is file is per profile per wavelength)
+                    'single' - save the dataset a single file per day
+                    'both' - saving both options
+    :return: ncpaths - the paths of the saved dataset/s . None - for failure.
+    """
+    date_datetime = get_daily_ds_date(dataset)
+    if data_source == 'lidar':
+        base_folder = station.lidar_dataset
+    elif data_source == 'molecular':
+        base_folder = station.molecular_dataset
+    month_folder = get_month_folder_name(base_folder, date_datetime)
+
+    get_daily_ds_date(dataset)
+    '''save the dataset to separated netcdf files: per profile per wavelength'''
+    ncpaths = []
+
+    if save_mode in ['both', 'sep']:
+        if not profiles:
+            profiles = [list(dataset.data_vars)[0]]
+        for profile in profiles:
+            for wavelength in dataset.Wavelength.values:
+                ds_profile = dataset.sel(Wavelength=wavelength)[profile]
+                ds_profile['date'] = date_datetime
+                file_name = get_prep_dataset_file_name(station, date_datetime, data_source=data_source,
+                                                       lambda_nm=wavelength, file_type=profile)
+                ncpath = save_dataset(ds_profile, month_folder, file_name)
+                if ncpath:
+                    ncpaths.append(ncpath)
+
+    '''save the dataset to a single netcdf'''
+    if save_mode in ['both', 'single']:
+        file_name = get_prep_dataset_file_name(station, date_datetime, data_source=data_source,
+                                               lambda_nm='all', file_type='all')
+        ncpath = save_dataset(dataset, month_folder, file_name)
+        if ncpath:
+            ncpaths.append(ncpath)
+    return ncpaths
 
 
 # %% MAIN
@@ -1000,11 +963,17 @@ def main(station_name='haifa', start_date=datetime(2017, 9, 1), end_date=datetim
 
         for day_date in tqdm(valid_gdas_days):
             # Generate daily range corrected
-            range_corr_ds = get_daily_range_corr(station, day_date, height_units='km',
-                                                 optim_size=False, verbose=False, USE_KM_UNITS=USE_KM_UNITS)
+            lidar_ds = get_daily_range_corr(station, day_date,
+                                            height_units='km',
+                                            optim_size=False,
+                                            verbose=False,
+                                            USE_KM_UNITS=USE_KM_UNITS)
 
             # Save lidar dataset
-            lidar_paths = save_range_corr_dataset(station, range_corr_ds, save_mode='both')
+            lidar_paths = save_prep_dataset(station, lidar_ds,
+                                            data_source='lidar',
+                                            save_mode='both',
+                                            profiles=['range_corr'])
             lidarpaths.extend(lidar_paths)
         logger.info(
             f"Done creation of lidar datasets for period [{start_date.strftime('%Y-%m-%d')},{end_date.strftime('%Y-%m-%d')}]")
