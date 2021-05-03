@@ -234,7 +234,7 @@ def gdas2radiosonde(src_file, dst_file, col_names=None):
     :param src_file: source file name
     :param dst_file: destination file name
     :param col_names: column names of the final table
-    :return:
+    :return: dst_file: string. The file name of the new radiosonde (converted from gdas).
     """
     logger = logging.getLogger()
     if col_names is None:
@@ -307,7 +307,7 @@ def convert_daily_gdas(station, day_date):
     Converting gdas files from TROPOS of type .gdas1 to .txt for a given day.
     :param station: gs.station() object of the lidar station
     :param day_date: datetime.date object of the date to be converted
-    :return:
+    :return: converted_paths: list of strings. The file names of the converted gdas per day.
     """
     # get source container folder and file paths (.gdas1)
     src_folder, gdas1_paths = get_daily_gdas_paths(station, day_date, 'gdas1')
@@ -366,11 +366,12 @@ def cal_e_tau_df(col, height_bins):
     Calculation is per column of the backscatter (sigma) dataframe.
     :param col: column of sigma_df , the values of sigma should be in [1/m]
     :param height_bins: np.array of height bins above ground level (distances of measurements relative to the sensor), in [m]
-    :return: Series of exp(-2*tau)  , tau = integral( sigma(r) * dr)
+    :return: e_tau: pd.Series() of exp(-2*tau), where: the optical depth is tau = integral( sigma(r) * dr)
     """
 
     tau = mscLid.calc_tau(col, height_bins)
-    return pd.Series(np.exp(-2 * tau))
+    e_tau = pd.Series(np.exp(-2 * tau))
+    return e_tau
 
 
 def calc_beta_profile_df(row, lambda_nm=532.0, ind_n='beta'):
@@ -382,7 +383,7 @@ def calc_beta_profile_df(row, lambda_nm=532.0, ind_n='beta'):
     :param ind_n: index name, the column name of the result. The default is 'beta'
     but could be useful to get profiles for several hours each have a different index name
     (e.g., datetime.datetime object of measuring time of the radiosonde as datetime.datetime(2017, 9, 2, 0, 0))
-    :return: pd series of backscatter profile [1/sr*m]
+    :return: pd.Series() of backscatter profile [1/sr*m]
     """
     return pd.Series([rayleigh_scattering.beta_pi_rayleigh(wavelength=lambda_nm,
                                                            pressure=row['PRES'],
@@ -793,9 +794,15 @@ def get_prep_ds_timestamp(station, path, data_source='molecular'):
     return date_time
 
 
-def gen_daily_ds(day_date):
-    logger = logging.getLogger()
-
+def gen_daily_molecular_ds(day_date):
+    """
+    Generating and saving a daily molecular profile.
+    The profile is of type xr.Datatset().
+    Having 3 variables: sigma (extinction) ,beta(backscatter) and attbsc(beta*exp(-2tau).
+    Each profile have dimensions of: Wavelength, Height, Time.
+    :param day_date: datetime.date object of the required day
+    :return:
+    """
     # TODO: Find a way to pass: optim_size, save_mode, USE_KM_UNITS
     #  as variables when running with multiprocessing.
     logger = logging.getLogger()
@@ -890,8 +897,8 @@ def main(station_name='haifa', start_date=datetime(2017, 9, 1), end_date=datetim
     logging.getLogger('PIL').setLevel(logging.ERROR)  # Fix annoying PIL logs
     logger = create_and_configer_logger('preprocessing_log.log', level=logging.INFO)
     CONV_GDAS = False
-    GEN_MOL_DS = True
-    GEN_LIDAR_DS = False
+    GEN_MOL_DS = False
+    GEN_LIDAR_DS = True
     USE_KM_UNITS = False
 
     """set day,location"""
@@ -947,10 +954,10 @@ def main(station_name='haifa', start_date=datetime(2017, 9, 1), end_date=datetim
 
         len_mol_days = len(valid_gdas_days)
         num_processes = np.min((cpu_count() - 1, len_mol_days))
-        chunksize = np.ceil(np.float(len_mol_days) / num_processes).astype(int)
+        chunksize = np.ceil(float(len_mol_days) / num_processes).astype(int)
         # TODO: add here tqdm
         with Pool(num_processes) as p:
-            p.map(gen_daily_ds, valid_gdas_days, chunksize=chunksize)
+            p.map(gen_daily_molecular_ds, valid_gdas_days, chunksize=chunksize)
 
         logger.info(
             f"Finished generating and saving of molecular datasets for period [{start_date.strftime('%Y-%m-%d')},{end_date.strftime('%Y-%m-%d')}]")
@@ -959,7 +966,8 @@ def main(station_name='haifa', start_date=datetime(2017, 9, 1), end_date=datetim
     if GEN_LIDAR_DS:
         lidarpaths = []
         logger.info(
-            f"Start generating lidar datasets for period [{start_date.strftime('%Y-%m-%d')},{end_date.strftime('%Y-%m-%d')}]")
+            f"Start generating lidar datasets for period [{start_date.strftime('%Y-%m-%d')},"
+            f"{end_date.strftime('%Y-%m-%d')}]")
 
         for day_date in tqdm(valid_gdas_days):
             # Generate daily range corrected
@@ -983,6 +991,6 @@ def main(station_name='haifa', start_date=datetime(2017, 9, 1), end_date=datetim
 
 if __name__ == '__main__':
     station_name = 'haifa'
-    start_date = datetime(2017, 10, 1)
-    end_date = datetime(2017, 10, 1)
+    start_date = datetime(2017, 9, 1)
+    end_date = datetime(2017, 9, 1)
     main(station_name, start_date, end_date)
