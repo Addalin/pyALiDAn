@@ -46,6 +46,7 @@ def generate_daily_lidar_measurement(station, day_date, SAVE_DS=True):
 def main(station_name='haifa', start_date=datetime(2017, 9, 1), end_date=datetime(2017, 9, 2)):
     gs.set_visualization_settings()
     gen_sig_utils.PLOT_RESULTS = False  # Toggle True for debug. False for run.
+    # TODO: Toggle PLOT_RESULTS to True - doesn't seem to work
     logging.getLogger('PIL').setLevel(logging.ERROR)  # Fix annoying PIL logs
     logging.getLogger('matplotlib').setLevel(logging.ERROR)  # Fix annoying matplotlib logs
     logger = create_and_configer_logger(f"{os.path.basename(__file__)}.log", level=logging.INFO)

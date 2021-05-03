@@ -59,11 +59,7 @@ if __name__ == '__main__':
     with Pool(num_processes) as p:
         p.starmap(generate_daily_aerosol_density, zip(repeat(station), days_list))
 
-    RUN_NEXT = False
-    if RUN_NEXT:
-        for cur_day in days_list:  # TODO: isn't it reaping the above?
-            aer_ds, density_ds = generate_daily_aerosol_density(station, day_date=cur_day)
-
-            EXPLORE_GEN_DAY = False
-            if EXPLORE_GEN_DAY:
-                explore_gen_day(station, cur_day, aer_ds, density_ds)
+    # TODO: move the folowing part to a notebook in Analysis
+    #EXPLORE_GEN_DAY = False
+    #if EXPLORE_GEN_DAY:
+    #    explore_gen_day(station, cur_day, aer_ds, density_ds)

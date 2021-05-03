@@ -41,7 +41,9 @@ Separate/merge and organize the following modules:
 6. update create_dataset() to work for a list of days and check it on the generated dataset (above) ***DONE***
 7. Split the dataset to have "test" and "train/valid" examples.  such test examples will be used only when needed. - ***DONE***
 8. Generate a similar train/test dataset - from the generation procedure - ***DONE***
-9. Calculate stats of the dataset - move the last part from exploring_generated_dataset.ipynb to dataseting.py after the creation of the dataset. (both for TROPOS and Generated datasets). ***OPEN***
+9. Calculate stats of the dataset :
+    - Generating statistics for generated datasets ***DONE***
+    - Generating statistics for TROPOS datasets ***OPEN***
 10. Extended calibration dataset:
    - Incorporate beta max info per signal retrieval per a wavelength, from: `KDE_estimation_sample.ipynb` to: `dataseting.py` - in `extend_calibration_info()` - ***OPEN***
    - Update the `data_vars` in `create_calibration_ds()` similar to other parameters - ***OPEN***
@@ -142,9 +144,11 @@ Each sample contains the followings:
       - Output: ds_aer per day as: `D:\data_haifa\GENERATION\aerosol_dataset\09\2017_09_02_Haifa_aerosol_check.nc`
       - **TODOS**: 
         - Create a python module - ***DONE***
-        - Adapt the code to run automatically for a required period. (at least sep-oct 2017)***OPEN***
-        - Signals' variability enrichment (TBD - These are writen in my real notebook:) - not urgent as the above. This is a topic to handle after first run of the CNN with new signals.
-        - Open TODOS in `generation_utils.py`, `generate_density_utils.py`,`generate_density.py` - ***OPEN*** 
+        - Adapt the code to run automatically for a required period:
+          * For sep-oct 2017 ***DONE*** 
+          * For other times ***OPEN** - This is dependent on finishing the above stages.  
+        - Signals' variability enrichment (TBD - These are writen in my real notebook:) - not urgent as the above. This is a topic to handle after first run of the CNN with new signals. ***OPEN***
+        - Open TODOS in: `generate_density_utils.py`,`generate_density.py` - ***OPEN*** 
 2. **Lidar Signal generation**:
 - Notebook: `daily_signals_generation.ipynb`
 - Generating lidar signals
@@ -162,10 +166,12 @@ Each sample contains the followings:
   
 - **TODOS**:
   1. Massive cleanup of the file & check up that it works with the most recent version of the generated  density files - ***DONE***
-  2. Create mean_pbg as 2D mean background power (This is going to be one of inputs X) ***OPEN***
-  3. Save NC of including the range corrected signal X (pr^2, mean_pbg), Y (LC) and p. 
-  4. Adapt for running automatically on each day in a given period (at least sep-oct 2017)
-  5. Create a python module - ***ON GOING***
+  2. Create mean_pbg as 2D mean background power (This is going to be one of inputs X) ***DONE***
+  3. Save NC of including the range corrected signal X (pr^2, mean_pbg), Y (LC) and p.  ***DONE***
+  4. Adapt for running automatically on each day in a given period:
+    * For sep-oct 2017 ***DONE*** 
+    * For other times ***OPEN** - This is dependent on finishing the above stages of density creation. 
+  5. Create a python module - ***DONE***
     
 - Open issues: 
 - Why the signal has appearance of stairs? Check also TROPOS measurements
@@ -182,9 +188,15 @@ Each sample contains the followings:
 3. For X loader - convert xarray.dataset to pytorch and split into time slices - ***DONE***
 ## CNN Task:
 1. Dataloder - ***DONE***
-2. Create dataloader for generated data - ***OPEN***
-3. Add "accuracy" of the result (AKA MARE loss) - ***OPEN***
-4. Updates parameters for tensorboars (TBD)
+2. Create dataloader for generated data - ***DONE***
+3. Add "accuracy" /relative loss of the result (AKA MARE loss) - ***DONE***
+4. Updates parameters for tensorboars (TBD) 
+    - split errors by the wavelength ***OPEN***
+5. Filter the dataset - to train on a specific populations - ***DONE*** 
+    - currently, works for features written in the dataset file
+6. Use the calculated statistics of the database (mean , std) for Normalization - ***OPEN***
+7. Simplify the Net - ***OPEN***
+
 
 
 
@@ -240,3 +252,5 @@ Each sample contains the followings:
 ## Possible issues that may require solutions: 
 1. Save space for the saved data: split each dataset of range corrected to 2 : one contains the exponent of 10 , and the other the base. ***IGNORE***
 2. Figure out the plot_range values of TROPOS dataset and how they were decided. ***IGNORE***
+
+## Writing a description of the procedure for creating the signals - ***OPEN***
