@@ -110,7 +110,7 @@ class Station:
             scale = 1
         min_height = self.start_bin_height
         top_height = self.end_bin_height
-        height_bins = np.linspace(min_height, top_height, self.n_bins) * scale
+        height_bins = np.linspace(min_height * scale, top_height * scale, self.n_bins)
         # Note: another option:
         # dr = scale*gs.C_m_s*sel.dt/2.
         # height_bins = np.arange(min_height, top_height, step = dr)* scale
@@ -129,8 +129,9 @@ class Station:
             scale = 1E-3
         else:
             scale = 1
-        height_bins = self.get_height_bins_values(USE_KM_UNITS)
-        heights = self.altitude * scale + height_bins
+        min_height = self.altitude + self.start_bin_height
+        top_height = self.altitude + self.end_bin_height
+        heights = np.linspace(min_height * scale, top_height * scale, self.n_bins)
         return heights
 
     def calc_daily_time_index(self, cur_day):
