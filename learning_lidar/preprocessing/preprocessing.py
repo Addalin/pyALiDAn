@@ -895,9 +895,9 @@ def main(station_name='haifa', start_date=datetime(2017, 9, 1), end_date=datetim
     logging.getLogger('PIL').setLevel(logging.ERROR)  # Fix annoying PIL logs
     logger = create_and_configer_logger(f"{os.path.basename(__file__)}.log", level=logging.INFO)
     CONV_GDAS = False
-    GEN_MOL_DS = False
-    GEN_LIDAR_DS = True
-    USE_KM_UNITS = False
+    GEN_MOL_DS = True
+    GEN_LIDAR_DS = False
+    USE_KM_UNITS = True
 
     """set day,location"""
     station = gs.Station(station_name=station_name)
@@ -990,5 +990,6 @@ def main(station_name='haifa', start_date=datetime(2017, 9, 1), end_date=datetim
 if __name__ == '__main__':
     station_name = 'haifa'
     start_date = datetime(2017, 9, 1)
-    end_date = datetime(2017, 9, 1)
+    end_date = datetime(2017, 10, 31)
     main(station_name, start_date, end_date)
+    # TODO: Add flags as args.

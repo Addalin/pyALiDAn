@@ -321,7 +321,7 @@ def calc_data_statistics(station, start_date, end_date):
     stats_fname = f"stats_gen_{station_name}_{start_date.strftime('%Y-%m-%d')}_{end_date.strftime('%Y-%m-%d')}.csv"
     csv_stats_path = os.path.join(data_folder, stats_fname)
     df_stats.to_csv(csv_stats_path)
-    return df_stats
+    return df_stats, csv_stats_path
 
 
 def calc_day_statistics(station, day_date):
@@ -460,11 +460,11 @@ def main(station_name, start_date, end_date):
     if DO_GENERATED_DATASET:
         generated_df = create_generated_dataset(station, start_date, end_date)
         generated_df.to_csv(csv_gen_path, index=False)
-        logger.info(f"\n The generation dataset saved to :{csv_gen_path}")
+        logger.info(f"\nThe generation dataset saved to :{csv_gen_path}")
 
-        logger.info(f"\n Start calculating dataset statistics")
-        calc_data_statistics(station, start_date, end_date)
-        logger.info(f"\n Finish calculating dataset statistics")
+        logger.info(f"\nStart calculating dataset statistics")
+        _, csv_stats_path = calc_data_statistics(station, start_date, end_date)
+        logger.info(f"\nFinish calculating dataset statistics. saved to:{csv_stats_path}")
 
     if SPLIT_GENERATED_DATASET:
         logger.info(

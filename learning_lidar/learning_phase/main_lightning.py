@@ -52,7 +52,7 @@ def main(config, consts):
 if __name__ == '__main__':
     # Debug flag to enable debugging
     max_workers = 6
-    DEBUG_RAY = False
+    DEBUG_RAY = True
     if DEBUG_RAY:
         ray.init(local_mode=True)
     base_path = os.path.dirname(os.path.dirname(os.path.dirname(__file__)))

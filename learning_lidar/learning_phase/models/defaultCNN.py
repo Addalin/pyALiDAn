@@ -1,3 +1,4 @@
+import torch
 from pytorch_lightning.core.lightning import LightningModule
 from torch import nn
 from torch.optim import Adam
@@ -74,6 +75,8 @@ class DefaultCNN(LightningModule):
         y = batch['y']
         y_pred = self(x)
         loss = self.criterion(y, y_pred)
+        if torch.isnan(loss):
+            raise ValueError('Val loss is NaN!')
         self.log(f"{self.loss_type}_train", loss)
         rel_loss = self.rel_loss(y, y_pred)
         self.log(f"{self.rel_loss_type}_train", rel_loss)
