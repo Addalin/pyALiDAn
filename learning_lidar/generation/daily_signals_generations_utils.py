@@ -9,6 +9,8 @@ import pandas as pd
 import xarray as xr
 from scipy.ndimage import gaussian_filter1d
 import seaborn as sns
+import logging
+from learning_lidar.utils.utils import create_and_configer_logger
 
 import matplotlib.dates as mdates
 
@@ -19,6 +21,7 @@ from learning_lidar.utils.misc_lidar import calc_tau, generate_poisson_signal_ST
 from learning_lidar.utils.global_settings import eps
 from learning_lidar.utils.global_settings import TIMEFORMAT
 # %%
+logger = create_and_configer_logger(f"{os.path.basename(__file__)}.log", level=logging.DEBUG)
 gs.set_visualization_settings()
 wavelengths = gs.LAMBDA_nm().get_elastic()
 PLOT_RESULTS = False
@@ -103,13 +106,13 @@ def calc_attbsc_ds(station, day_date, total_ds):
     :return: attbsc_ds: xr.Dataset(). The daily attenuated backscatter profile.
     Having 3 dimensions : 'Wavelength', 'Height', 'Time'
     """
+    logger = logging.getLogger()
     height_bins = station.get_height_bins_values()
     exp_tau_c = []
-    # TODO: logg.debug here : 'Calculating Attenuated Backscatter' - and then in the decp of tqdm: "for wavelength {
-    #  wavelength}""
+    logger.debug(f"\nCalculating Attenuated Backscatter for {day_date.strftime('%Y-%m-%d')}")
     for wavelength in wavelengths:
         exp_tau_t = []
-        for t in tqdm(total_ds.Time, desc=f"att_bsc for {wavelength}"):
+        for t in tqdm(total_ds.Time, desc=f"Wavelength - {wavelength} [nm]"):
             sigma_t = total_ds.sigma.sel(Time=t)
             e_tau = xr.apply_ufunc(lambda x: np.exp(-2 * calc_tau(x, height_bins)),
                                    sigma_t.sel(Wavelength=wavelength), keep_attrs=True)
@@ -193,8 +196,8 @@ def calc_range_corr_signal_ds(station, day_date, total_ds, attbsc_ds, p_day_gen)
     :return: pr2_ds: xr.Dataset(). The daily range corrected signal,
      with share 3 dimensions : 'Wavelength', 'Height', 'Time'
     """
-    # TODO: logg.debug here : 'Calculating Range corrected signal' - and then in the decp of tqdm: "for wavelength {
-    #  wavelength}""
+    logger = logging.getLogger()
+    logger.debug(f"\nCalculating Range corrected signal for {day_date.strftime('%Y-%m-%d')}")
     pr2_c = []
     for wavelength in wavelengths:
         pr2_t = []
@@ -327,7 +330,8 @@ def calc_poiss_measurement(station, day_date, p_mean):
     :param p_mean: xr.Dataset(). The daily mean measurement of the lidar signal
     :return: pn_ds: xr.Dataset(). The daily lidar signal measurement.
     """
-    # TODO: logg.debug here : 'Calculating Poisson signal'
+    logger = logging.getLogger()
+    logger.debug(f"\nCalculating Poisson signal for {day_date.strftime('%Y-%m-%d')}")
     tic0 = TicToc()
     tic0.tic()
     pn_h = xr.apply_ufunc(

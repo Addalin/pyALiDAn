@@ -16,8 +16,6 @@ import learning_lidar.utils.global_settings as gs
 import learning_lidar.utils.misc_lidar as mscLid
 from learning_lidar.utils.utils import create_and_configer_logger, write_row_to_csv
 import logging
-import torch, torchvision
-import torch.utils.data
 import xarray as xr
 import matplotlib.dates as mdates
 from pytictoc import TicToc
@@ -64,18 +62,18 @@ def save_dataset(dataset, folder_name, nc_name):
     if not os.path.exists(folder_name):
         try:
             os.makedirs(folder_name)
-            logger.debug(f"Creating folder: {folder_name}")
+            logger.debug(f"\nCreating folder: {folder_name}")
         except Exception:
-            logger.exception(f"Failed to create folder: {folder_name}")
+            logger.exception(f"\nFailed to create folder: {folder_name}")
             return None
 
     ncpath = os.path.join(folder_name, nc_name)
     try:
         dataset.to_netcdf(ncpath, mode='w', format='NETCDF4', engine='netcdf4')
         dataset.close()
-        logger.debug(f"Saving dataset file: {ncpath}")
+        logger.debug(f"\nSaving dataset file: {ncpath}")
     except Exception:
-        logger.exception(f"Failed to save dataset file: {ncpath}")
+        logger.exception(f"\nFailed to save dataset file: {ncpath}")
         ncpath = None
     return ncpath
 
@@ -90,9 +88,9 @@ def load_dataset(ncpath):
     try:
         dataset = xr.open_dataset(ncpath, engine='netcdf4').expand_dims()
         dataset.close()
-        logger.debug(f"Loading dataset file: {ncpath}")
+        logger.debug(f"\nLoading dataset file: {ncpath}")
     except Exception as e:
-        logger.exception(f"Failed to load dataset file: {ncpath}")
+        logger.exception(f"\nFailed to load dataset file: {ncpath}")
         raise e
     return dataset
 
@@ -213,9 +211,9 @@ def extract_att_bsc(bsc_paths, wavelengths):
             try:
                 vals = data.variables[f'OC_attenuated_backscatter_{wavelength}nm']
                 arr = vals * vals.Lidar_calibration_constant_used
-                logger.debug(f"Extracted OC_attenuated_backscatter_{wavelength}nm from {file_name}")
+                logger.debug(f"\nExtracted OC_attenuated_backscatter_{wavelength}nm from {file_name}")
             except KeyError as e:
-                logger.exception(f"Key {e} does not exist in {file_name}", exc_info=False)
+                logger.exception(f"\nKey {e} does not exist in {file_name}", exc_info=False)
 
 
 # %% GDAS files preprocessing functions
@@ -243,7 +241,7 @@ def gdas2radiosonde(src_file, dst_file, col_names=None):
         data_src = pd.read_fwf(src_file, skiprows=[0, 1, 2, 3, 4, 5, 6, 8], delimiter="\s+",
                                skipinitialspace=True).dropna()
     except Exception:
-        logger.exception(f'Failed reading {src_file}. Check the source file, '
+        logger.exception(f'\nFailed reading {src_file}. Check the source file, '
                          'or generate it again with ARLreader module')
         write_row_to_csv('../gdas2radiosonde_failed_files.csv', [src_file, 'Read Fail', 'Broken'])
         return None
@@ -257,7 +255,7 @@ def gdas2radiosonde(src_file, dst_file, col_names=None):
         data_src.columns = col_names
         data_src.to_csv(dst_file, index=False, sep='\t', na_rep='\t')
     except Exception:
-        logger.exception(f'Conversion of {src_file} to {dst_file} failed. Check the source file, '
+        logger.exception(f'\nConversion of {src_file} to {dst_file} failed. Check the source file, '
                          'or generate it again with ARLreader module')
         write_row_to_csv('../gdas2radiosonde_failed_files.csv', [src_file, 'Conversion Fail', 'Broken'])
         dst_file = None
@@ -285,7 +283,7 @@ def get_daily_gdas_paths(station, day_date, f_type='gdas1'):
         try:
             os.makedirs(month_folder)
         except:
-            logger.exception(f"Failed to create folder: {month_folder}")
+            logger.exception(f"\nFailed to create folder: {month_folder}")
 
     gdas_day_pattern = '{}_{}_*_{:.1f}_{:.1f}.{}'.format(station.location.lower(), day_date.strftime('%Y%m%d'),
                                                          station.lat, station.lon, f_type)
@@ -334,7 +332,7 @@ def convert_periodic_gdas(station, start_day, end_day):
     for day in day_dates:
         gdastxt_paths.extend(convert_daily_gdas(station, day))
     total_converted = len(gdastxt_paths)
-    logger.debug(f"Done conversion of {total_converted} gdas files for period [{start_day.strftime('%Y-%m-%d')},"
+    logger.debug(f"\nDone conversion of {total_converted} gdas files for period [{start_day.strftime('%Y-%m-%d')},"
                  f"{end_day.strftime('%Y-%m-%d')}], {(expected_file_no - total_converted)} failed.")
     return gdastxt_paths
 
@@ -429,7 +427,7 @@ def generate_daily_molecular_chan(station, day_date, lambda_nm, time_res='30S',
     ''' memory size - optimization '''
     if optim_size:
         if verbose:
-            logger.debug('Memory optimization - converting molecular values from double to float')
+            logger.debug('\nMemory optimization - converting molecular values from double to float')
             size_beta = interp_beta_df.memory_usage(deep=True).sum()
             size_sigma = interp_sigma_df.memory_usage(deep=True).sum()
             size_att_bsc = att_bsc_mol_df.memory_usage(deep=True).sum()
@@ -445,7 +443,7 @@ def generate_daily_molecular_chan(station, day_date, lambda_nm, time_res='30S',
             size_beta_opt = interp_beta_df.memory_usage(deep=True).sum()
             size_sigma_opt = interp_sigma_df.memory_usage(deep=True).sum()
             size_att_bsc_opt = att_bsc_mol_df.memory_usage(deep=True).sum()
-            logger.debug('Memory saved for wavelength {} beta: {:.2f}%, sigma: {:.2f}%, att_bsc:{:.2f}%'.
+            logger.debug('\nMemory saved for wavelength {} beta: {:.2f}%, sigma: {:.2f}%, att_bsc:{:.2f}%'.
                          format(lambda_nm, 100.0 * float(size_beta - size_beta_opt) / float(size_beta),
                                 100.0 * float(size_sigma - size_sigma_opt) / float(size_sigma),
                                 100.0 * float(size_att_bsc - size_att_bsc_opt) / float(size_att_bsc)))
@@ -616,7 +614,7 @@ def get_range_corr_ds_chan(darray, altitude, lambda_nm, height_units='km', optim
     ''' memory size - optimization '''
     if optim_size:
         if verbose:
-            logger.debug('Memory optimization - converting molecular values from double to float')
+            logger.debug('\nMemory optimization - converting molecular values from double to float')
             size_rangecorr = rangecorr_df.memory_usage(deep=True).sum()
 
         rangecorr_df = (rangecorr_df.select_dtypes(include=['float64'])). \
@@ -624,7 +622,7 @@ def get_range_corr_ds_chan(darray, altitude, lambda_nm, height_units='km', optim
 
         if verbose:
             size_rangecorr_opt = rangecorr_df.memory_usage(deep=True).sum()
-            logger.debug('Memory saved for wavelength {} range corrected: {:.2f}%'.
+            logger.debug('\nMemory saved for wavelength {} range corrected: {:.2f}%'.
                          format(lambda_nm,
                                 100.0 * float(size_rangecorr - size_rangecorr_opt) / float(size_rangecorr)))
 
@@ -656,7 +654,7 @@ def get_daily_ds_date(dataset):
     try:
         date_64 = dataset.date.values
     except ValueError:
-        logger.exception("The dataset does not contain a data variable named 'date'")
+        logger.exception("\nThe dataset does not contain a data variable named 'date'")
         return None
     date_datetime = datetime.utcfromtimestamp(date_64.tolist() / 1e9)
     return date_datetime
@@ -729,14 +727,14 @@ def visualize_ds_profile_chan(dataset, lambda_nm=532, profile_type='range_corr',
         try:
             maxv = dataset.sel(Wavelength=lambda_nm, drop=True).get('plot_min_range').values.tolist()
         except:
-            logger.debug("The dataset doesn't 'contain plot_min_range', setting maxv=0")
+            logger.debug("\nThe dataset doesn't 'contain plot_min_range', setting maxv=0")
             maxv = 0
         minv = np.nanmin(sub_ds.values)
     elif USE_RANGE == 'HIGH':
         try:
             minv = dataset.sel(Wavelength=lambda_nm, drop=True).get('plot_max_range').values.tolist()
         except:
-            logger.debug("The dataset doesn't 'contain plot_min_range', setting maxv=0")
+            logger.debug("\nThe dataset doesn't 'contain plot_min_range', setting maxv=0")
             minv = np.nanmin(sub_ds.values)
         maxv = np.nanmax(sub_ds.values)
     elif USE_RANGE is None:
@@ -744,7 +742,7 @@ def visualize_ds_profile_chan(dataset, lambda_nm=532, profile_type='range_corr',
 
     dims = sub_ds.dims
     if 'Time' not in dims:
-        logger.error(f"The dataset should have a 'Time' dimension.")
+        logger.error(f"\nThe dataset should have a 'Time' dimension.")
         return None
     if 'Height' in dims:  # plot x- time, y- height
         g = sub_ds.where(sub_ds < maxv).where(sub_ds > minv).plot(x='Time', y='Height', cmap='turbo',
@@ -777,9 +775,9 @@ def visualize_ds_profile_chan(dataset, lambda_nm=532, profile_type='range_corr',
         if not os.path.exists(dst_folder):
             try:
                 os.makedirs(dst_folder, exist_ok=True)
-                logger.debug(f"Creating folder: {dst_folder}")
+                logger.debug(f"\nCreating folder: {dst_folder}")
             except Exception:
-                raise OSError(f"Failed to create folder: {dst_folder}")
+                raise OSError(f"\nFailed to create folder: {dst_folder}")
 
         fpath = os.path.join(dst_folder, fname)
         g.figure.savefig(fpath, bbox_inches='tight', format=format_fig, dpi=dpi)
@@ -810,7 +808,7 @@ def gen_daily_molecular_ds(day_date):
     save_mode = 'both'
     USE_KM_UNITS = True
 
-    logger.debug(f"Start generation of molecular dataset for {day_date.strftime('%Y-%m-%d')}")
+    logger.debug(f"\nStart generation of molecular dataset for {day_date.strftime('%Y-%m-%d')}")
     station = gs.Station(station_name='haifa')
     # generate molecular dataset
     mol_ds = generate_daily_molecular(station, day_date,
@@ -818,7 +816,7 @@ def gen_daily_molecular_ds(day_date):
 
     # save molecular dataset
     ncpaths = save_prep_dataset(station, mol_ds, data_source='molecular', save_mode=save_mode, profiles=['attbsc'])
-    logger.debug(f"Done saving molecular datasets for {day_date.strftime('%Y-%m-%d')}, to: {ncpaths}")
+    logger.debug(f"\nDone saving molecular datasets for {day_date.strftime('%Y-%m-%d')}, to: {ncpaths}")
 
 
 def convert_profiles_units(dataset, units=[r'$1/m$', r'$1/km$'], scale=1e+3):
@@ -895,7 +893,7 @@ def save_prep_dataset(station, dataset, data_source='lidar', save_mode='both', p
 def main(station_name='haifa', start_date=datetime(2017, 9, 1), end_date=datetime(2017, 9, 2)):
     logging.getLogger('matplotlib').setLevel(logging.ERROR)  # Fix annoying matplotlib logs
     logging.getLogger('PIL').setLevel(logging.ERROR)  # Fix annoying PIL logs
-    logger = create_and_configer_logger('preprocessing_log.log', level=logging.INFO)
+    logger = create_and_configer_logger(f"{os.path.basename(__file__)}.log", level=logging.INFO)
     CONV_GDAS = False
     GEN_MOL_DS = False
     GEN_LIDAR_DS = True
@@ -906,7 +904,7 @@ def main(station_name='haifa', start_date=datetime(2017, 9, 1), end_date=datetim
     logger.info(f"Loading {station.location} station")
     logger.debug(f"Station info: {station}")
     logger.info(
-        f"Start preprocessing for period: [{start_date.strftime('%Y-%m-%d')},{end_date.strftime('%Y-%m-%d')}]")
+        f"\nStart preprocessing for period: [{start_date.strftime('%Y-%m-%d')},{end_date.strftime('%Y-%m-%d')}]")
 
     ''' Generate molecular datasets for required period'''
     gdas_paths = []
@@ -916,7 +914,7 @@ def main(station_name='haifa', start_date=datetime(2017, 9, 1), end_date=datetim
 
     # get all days having a converted (to txt) gdas files in the required period
     if (GEN_MOL_DS or GEN_LIDAR_DS) and not gdas_paths:
-        logger.info('Get all days in the required period that have a converted gdas file')
+        logger.debug('\nGet all days in the required period that have a converted gdas file')
         dates = pd.date_range(start=start_date, end=end_date, freq='D').to_pydatetime().tolist()
         for day in tqdm(dates):
             _, curpath = get_daily_gdas_paths(station, day, f_type='txt')
@@ -960,13 +958,13 @@ def main(station_name='haifa', start_date=datetime(2017, 9, 1), end_date=datetim
             p.map(gen_daily_molecular_ds, valid_gdas_days, chunksize=chunksize)
 
         logger.info(
-            f"Finished generating and saving of molecular datasets for period [{start_date.strftime('%Y-%m-%d')},{end_date.strftime('%Y-%m-%d')}]")
+            f"\nFinished generating and saving of molecular datasets for period [{start_date.strftime('%Y-%m-%d')},{end_date.strftime('%Y-%m-%d')}]")
 
     ''' Generate lidar datasets for required period'''
     if GEN_LIDAR_DS:
         lidarpaths = []
         logger.info(
-            f"Start generating lidar datasets for period [{start_date.strftime('%Y-%m-%d')},"
+            f"\nStart generating lidar datasets for period [{start_date.strftime('%Y-%m-%d')},"
             f"{end_date.strftime('%Y-%m-%d')}]")
 
         for day_date in tqdm(valid_gdas_days):
@@ -984,9 +982,9 @@ def main(station_name='haifa', start_date=datetime(2017, 9, 1), end_date=datetim
                                             profiles=['range_corr'])
             lidarpaths.extend(lidar_paths)
         logger.info(
-            f"Done creation of lidar datasets for period [{start_date.strftime('%Y-%m-%d')},{end_date.strftime('%Y-%m-%d')}]")
+            f"\nDone creation of lidar datasets for period [{start_date.strftime('%Y-%m-%d')},{end_date.strftime('%Y-%m-%d')}]")
 
-        logger.debug(f'Lidar paths: {lidar_paths}')
+        logger.debug(f'\nLidar paths: {lidar_paths}')
 
 
 if __name__ == '__main__':

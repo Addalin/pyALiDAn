@@ -51,17 +51,21 @@ if __name__ == '__main__':
     gen_sig_utils.PLOT_RESULTS = False
     logging.getLogger('PIL').setLevel(logging.ERROR)                # Fix annoying PIL logs
     logging.getLogger('matplotlib').setLevel(logging.ERROR)         # Fix annoying matplotlib logs
-    logger = create_and_configer_logger('generate_density.log', level=logging.DEBUG)
+    logger = create_and_configer_logger(f"{os.path.basename(__file__)}.log", level=logging.INFO)
     station = gs.Station(station_name='haifa')
     start_date = datetime(2017, 10, 1)
     end_date = datetime(2017, 10, 31)
 
+    logger.info(f"\nStation name:{station.location}\nStart generating lidar signals & measurements "
+                f"for period: [{start_date.strftime('%Y-%m-%d')},{end_date.strftime('%Y-%m-%d')}]")
     days_list = pd.date_range(start=start_date, end=end_date).to_pydatetime().tolist()
     num_days = len(days_list)
     num_processes = min((cpu_count() - 1, num_days))
     with Pool(num_processes) as p:
         p.starmap(generate_daily_lidar_measurement, zip(repeat(station), days_list))
 
+    logger.info(f"\nDone generating lidar signals & measurements "
+                f"for period: [{start_date.strftime('%Y-%m-%d')},{end_date.strftime('%Y-%m-%d')}]")
     RUN_NEXT = False
     if RUN_NEXT:
         for cur_day in days_list:
