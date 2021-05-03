@@ -28,7 +28,6 @@ def get_gen_dataset_file_name(station, day_date, wavelength='*', data_source='li
 def save_generated_dataset(station, dataset, data_source='lidar', save_mode='both', profiles=None):
     """
     Save the input dataset to netcdf file
-    :param profiles: The name of profile desired to be saved separately.
     If this name is not provided, then the first profile is automatically selected
     :param station: station: gs.station() object of the lidar station
     :param dataset: array.Dataset() a daily generated lidar signal, holding 5 data variables:
@@ -39,7 +38,8 @@ def save_generated_dataset(station, dataset, data_source='lidar', save_mode='bot
     :param save_mode: save mode options:
                     'sep' - for separated profiles (each is file is per profile per wavelength)
                     'single' - save the dataset a single file per day
-                    'both' -saving both options
+                    'both' - saving both options
+    :param profiles: The name of profile desired to be saved separately.
     :return: ncpaths - the paths of the saved dataset/s . None - for failure.
     """
     date_datetime = prep.get_daily_ds_date(dataset)
@@ -58,9 +58,6 @@ def save_generated_dataset(station, dataset, data_source='lidar', save_mode='bot
     prep.get_daily_ds_date(dataset)
     '''save the dataset to separated netcdf files: per profile per wavelength'''
     ncpaths = []
-
-    # NOTE: Currently saving to separated profiles is only for `range_corr` - used in the learning phase.cur_day
-    # if one needs other separated profile, add it as an an input term.
 
     if save_mode in ['both', 'sep']:
         if not profiles:

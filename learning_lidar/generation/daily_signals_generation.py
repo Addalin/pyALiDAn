@@ -15,7 +15,7 @@ from learning_lidar.utils.global_settings import TIMEFORMAT
 from learning_lidar.generation.daily_signals_generations_utils import explore_orig_day
 import learning_lidar.generation.generation_utils as gen_utils
 from learning_lidar.generation.daily_signals_generations_utils import calc_total_optical_density, \
-    calc_lidar_signal, calc_daily_measurement,custom_plot_xr
+    calc_lidar_signal, calc_daily_measurement, plot_daily_profile
 import learning_lidar.generation.daily_signals_generations_utils as gen_sig_utils
 from learning_lidar.utils.utils import create_and_configer_logger
 import pandas as pd
@@ -48,19 +48,19 @@ def generate_daily_lidar_measurement(station, day_date, SAVE_DS=True):
 
 if __name__ == '__main__':
     gs.set_visualization_settings()
-    gen_sig_utils.PLOT_RESULTS = False
+    gen_sig_utils.PLOT_RESULTS = False  #Toggle True for debug. False for run.
     logging.getLogger('PIL').setLevel(logging.ERROR)                # Fix annoying PIL logs
     logging.getLogger('matplotlib').setLevel(logging.ERROR)         # Fix annoying matplotlib logs
     logger = create_and_configer_logger(f"{os.path.basename(__file__)}.log", level=logging.INFO)
     station = gs.Station(station_name='haifa')
-    start_date = datetime(2017, 10, 1)
-    end_date = datetime(2017, 10, 31)
+    start_date = datetime(2017, 9, 1)
+    end_date = datetime(2017, 9, 1)
 
     logger.info(f"\nStation name:{station.location}\nStart generating lidar signals & measurements "
                 f"for period: [{start_date.strftime('%Y-%m-%d')},{end_date.strftime('%Y-%m-%d')}]")
     days_list = pd.date_range(start=start_date, end=end_date).to_pydatetime().tolist()
     num_days = len(days_list)
-    num_processes = min((cpu_count() - 1, num_days))
+    num_processes = 1 if gen_sig_utils.PLOT_RESULTS else min((cpu_count() - 1, num_days))
     with Pool(num_processes) as p:
         p.starmap(generate_daily_lidar_measurement, zip(repeat(station), days_list))
 

@@ -15,7 +15,7 @@ from learning_lidar.utils.utils import create_and_configer_logger
 import matplotlib.dates as mdates
 
 import learning_lidar.utils.global_settings as gs
-import learning_lidar.generation.generation_utils as gen_utils  # save_generated_dataset
+import learning_lidar.generation.generation_utils as gen_utils
 from learning_lidar.preprocessing import preprocessing as prep
 from learning_lidar.utils.misc_lidar import calc_tau, generate_poisson_signal_STEP
 from learning_lidar.utils.global_settings import eps
@@ -28,12 +28,12 @@ PLOT_RESULTS = False
 
 
 # %% Helper functions
-def custom_plot_xr(data, height_slice=None, figsize=(16, 6)):
+def plot_daily_profile(data, height_slice=None, figsize=(16, 6)):
     # TODO: add low/high thresholds (single or per channel) see prep.visualize_ds_profile_chan()
     if height_slice is None:
         height_slice = slice(data.Height[0].values, data.Height[-1].values)
     str_date = data.Time[0].dt.strftime("%Y-%m-%d").values.tolist()
-    fig, axes = plt.subplots(nrows=1, ncols=3, figsize=figsize,sharey=True)
+    fig, axes = plt.subplots(nrows=1, ncols=3, figsize=figsize, sharey=True)
     for wavelength, ax in zip(wavelengths, axes.ravel()):
         data.sel(Height=height_slice, Wavelength=wavelength).plot(cmap='turbo', ax=ax)
         ax.xaxis.set_major_formatter(TIMEFORMAT)
@@ -62,15 +62,15 @@ def calc_total_optical_density(station, day_date):
 
     if PLOT_RESULTS:
         height_slice = slice(0.0, 15)
-        custom_plot_xr(data=ds_aer.sigma, height_slice=height_slice)
-        custom_plot_xr(data=ds_aer.beta, height_slice=height_slice)
+        plot_daily_profile(data=ds_aer.sigma, height_slice=height_slice)
+        plot_daily_profile(data=ds_aer.beta, height_slice=height_slice)
 
     # %% 2. Load molecular profiles
     month_folder = prep.get_month_folder_name(station.molecular_dataset, day_date)
     nc_name = prep.get_prep_dataset_file_name(station, day_date, data_source='molecular', lambda_nm='all')
     ds_mol = prep.load_dataset(os.path.join(month_folder, nc_name))
 
-    # %% 3. Calculate total desnisties
+    # %% 3. Calculate total densities
     total_sigma = (ds_aer.sigma + ds_mol.sigma).assign_attrs({'info': "Daily total extinction coefficient",
                                                               'long_name': r'$\sigma$', 'units': r'$1/km$',
                                                               'name': 'sigma'})
@@ -79,9 +79,6 @@ def calc_total_optical_density(station, day_date):
                                                            'name': 'beta'})
 
     total_ds = xr.Dataset().assign(sigma=total_sigma, beta=total_beta)
-    total_ds.attrs = {'info': 'Daily generated profiles',
-                      'sources_file': 'generate_density.ipynb',
-                      'location': station.name}
     total_ds.attrs = {'info': 'Daily generated atmosphere profiles',
                       'source_file': os.path.basename(__file__),
                       'location': station.location, }
@@ -91,8 +88,8 @@ def calc_total_optical_density(station, day_date):
     total_ds['date'] = day_date
 
     if PLOT_RESULTS:
-        custom_plot_xr(data=total_ds.sigma)
-        custom_plot_xr(data=total_ds.beta)
+        plot_daily_profile(data=total_ds.sigma)
+        plot_daily_profile(data=total_ds.beta)
 
     return total_ds
 
@@ -134,7 +131,7 @@ def calc_attbsc_ds(station, day_date, total_ds):
     attbsc_ds['date'] = day_date
 
     if PLOT_RESULTS:
-        custom_plot_xr(data=attbsc_ds.attbsc, figsize=(16, 8))
+        plot_daily_profile(data=attbsc_ds.attbsc, figsize=(16, 8))
 
     return attbsc_ds
 
@@ -186,13 +183,13 @@ def get_daily_bg(station, day_date):
     return p_bg
 
 
-def calc_range_corr_signal_ds(station, day_date, total_ds, attbsc_ds, p_day_gen):
+def calc_range_corr_signal_ds(station, day_date, attbsc_ds, lc_ds):
     """
     Calculating daily range corrected signal: pr2 = LC * attbsc
     :param station: gs.station() object of the lidar station
     :param day_date: datetime.date object of the required date
-    :param total_ds: xr.Dataset(). The total backscatter and extinction daily profiles.
     :param attbsc_ds: xr.Dataset(). The daily attenuated backscatter profile.
+    :param lc_ds: xr.Dataset() of daily generated Lidar power factor
     :return: pr2_ds: xr.Dataset(). The daily range corrected signal,
      with share 3 dimensions : 'Wavelength', 'Height', 'Time'
     """
@@ -201,9 +198,9 @@ def calc_range_corr_signal_ds(station, day_date, total_ds, attbsc_ds, p_day_gen)
     pr2_c = []
     for wavelength in wavelengths:
         pr2_t = []
-        for t in tqdm(total_ds.Time, desc=f'Range corrected signal for {wavelength}'):
+        for t in tqdm(attbsc_ds.Time, desc=f"Wavelength - {wavelength} [nm]"):
             attbsc_t = attbsc_ds.sel(Time=t)
-            LC_t = p_day_gen.sel(Time=t)
+            LC_t = lc_ds.sel(Time=t)
             pr2 = xr.apply_ufunc(lambda x, y: (x * y),
                                  attbsc_t.sel(Wavelength=wavelength),
                                  LC_t.sel(Wavelength=wavelength), keep_attrs=True)
@@ -214,14 +211,14 @@ def calc_range_corr_signal_ds(station, day_date, total_ds, attbsc_ds, p_day_gen)
     pr2_ds = xr.concat(pr2_c, dim='Wavelength')
     pr2_ds = pr2_ds.transpose('Wavelength', 'Height', 'Time')
     pr2_ds.attrs = {'info': 'Generated Range Corrected Lidar Signal',
-                    'long_name': r'$LC \beta \cdot \exp(-2\tau)$',
+                    'long_name': r'$LC \beta \cdot \exp(-2\tau)$', 'name': 'range_corr',
                     'units': r'$\rm$' + r'$photons$' + r'$\cdot km^2$',
                     'location': station.location, }
     attbsc_ds.Height.attrs = {'units': r'$km$', 'info': 'Measurements heights above sea level'}
     attbsc_ds.Wavelength.attrs = {'units': r'$\lambda$', 'units': r'$nm$'}
     attbsc_ds['date'] = day_date
     if PLOT_RESULTS:
-        custom_plot_xr(data=pr2_ds, figsize=(16, 8))
+        plot_daily_profile(data=pr2_ds, figsize=(16, 8))
 
     return pr2_ds
 
@@ -235,7 +232,7 @@ def calc_lidar_signal_ds(station, day_date, r2_ds, pr2_ds):
     :param pr2_ds: xr.Dataset(). The daily range corrected signal
     :return: p_ds: xr.Dataset(). The daily lidar signal, having 3 dimensions : 'Wavelength', 'Height', 'Time'
     """
-
+    logger = logging.getLogger()
     p_ds = (pr2_ds / r2_ds)
     p_ds.attrs = {'info': 'Generated Lidar Signal',
                   'long_name': r'$p$', 'name': 'p',
@@ -244,9 +241,17 @@ def calc_lidar_signal_ds(station, day_date, r2_ds, pr2_ds):
     p_ds.Height.attrs = {'units': r'$km$', 'info': 'Measurements heights above sea level'}
     p_ds.Wavelength.attrs = {'units': r'$\lambda$', 'units': r'$nm$'}
     p_ds['date'] = day_date
+    # sanity check:
+    # TODO : Does this test require try/catch outside the function?
+    mask_valid = (~pd.isna(p_ds.values))
+    valid_size = mask_valid.astype(int).sum()
+    if p_ds.size != valid_size:
+        msg = f"The daily lidar signal contains NaN values - {day_date}"
+        logger.error(msg)
+        raise ValueError(msg)
 
     if PLOT_RESULTS:
-        custom_plot_xr(data=p_ds, height_slice=slice(0, 5), figsize=(16, 8))
+        plot_daily_profile(data=p_ds, height_slice=slice(0, 5), figsize=(16, 8))
     return p_ds
 
 
@@ -271,7 +276,8 @@ def calc_r2_ds(station, day_date):
                                           'units': r'$km^2$'})},
                        coords={'Wavelength': wavelengths,
                                'Height': station.calc_height_index(),
-                               'Time': station.calc_daily_time_index(day_date)})
+                               'Time': station.calc_daily_time_index(day_date).values})
+    r2_ds = r2_ds.transpose('Wavelength', 'Height', 'Time')
     return r2_ds.r2
 
 
@@ -285,7 +291,7 @@ def calc_lidar_signal(station, day_date, total_ds):
     """
     attbsc_ds = calc_attbsc_ds(station, day_date, total_ds)  # attbsc = beta*exp(-2*tau)
     lc_ds = get_daily_LC(station, day_date)  # LC
-    pr2_ds = calc_range_corr_signal_ds(station, day_date, total_ds, attbsc_ds, lc_ds)  # pr2 = LC * attbsc
+    pr2_ds = calc_range_corr_signal_ds(station, day_date, attbsc_ds, lc_ds)  # pr2 = LC * attbsc
     r2_ds = calc_r2_ds(station, day_date)  # r^2
     p_ds = calc_lidar_signal_ds(station, day_date, r2_ds, pr2_ds)  # p = pr2 / r^2
     signal_ds = xr.Dataset().assign(attbsc=attbsc_ds, LC=lc_ds, range_corr=pr2_ds, p=p_ds, r2=r2_ds)
@@ -314,7 +320,7 @@ def calc_mean_measurement(station, day_date, signal_ds, bg_ds):
     p_mean.Wavelength.attrs = {'units': r'$\lambda$', 'units': r'$nm$'}
     p_mean['date'] = day_date
     if PLOT_RESULTS:
-        custom_plot_xr(p_mean.where(p_mean < 20), height_slice=slice(0, 10))
+        plot_daily_profile(p_mean.where(p_mean < 20), height_slice=slice(0, 10))
     return p_mean
 
 
@@ -420,8 +426,8 @@ def calc_daily_measurement(station, day_date, signal_ds):
                         'info': 'Daily generated lidar signals measurement.',
                         'source_file': os.path.basename(__file__)}
     # TODO: Add plots of bg_ds, p_mean, pr2n_ds,pn_ds
-    # custom_plot_xr(measure_ds.p_bg)
-    # custom_plot_xr(measure_ds.range_corr.where(measure_ds.range_corr>=3))
+    # plot_daily_profile(measure_ds.p_bg)
+    # plot_daily_profile(measure_ds.range_corr.where(measure_ds.range_corr>=3))
     return measure_ds
 
 
