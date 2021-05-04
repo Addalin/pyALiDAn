@@ -16,18 +16,19 @@ from learning_lidar.utils.global_settings import TIMEFORMAT
 from learning_lidar.preprocessing import preprocessing as prep
 import learning_lidar.generation.generation_utils as gen_utils
 import learning_lidar.utils.misc_lidar as misc_lidar
+import learning_lidar.utils.global_settings as gs
 
 from learning_lidar.utils.proc_utils import make_interpolated_image, normalize
 
 # Profiles at different times
 t_index = [500, 1500, 2500]
-
+gs.set_visualization_settings()
+wavelengths = gs.LAMBDA_nm().get_elastic()
 PLOT_RESULTS = False
 LR_tropos = 55
 
 
 # Functions of Daily Aerosols' Density Generation
-
 
 def get_random_sample_grid(nx, ny, orig_x, orig_y, std_ratio=.125):
     """
@@ -423,17 +424,6 @@ def merge_density_components(density_ds):
 
     return density_ds
 
-
-def plot_max_density_per_time(rho):
-    # maximum density values per time
-    fig, ax = plt.subplots(nrows=1, ncols=1, figsize=(7, 5))
-    rho.max(dim='Height').plot(ax=ax)
-    ax.set_title(r'$\rho_{aer}^{max}(t)$')
-    ax.xaxis.set_major_formatter(TIMEFORMAT)
-    ax.xaxis.set_tick_params(rotation=0)
-    plt.show()
-
-
 def generate_density_components(total_time_bins, total_height_bins, time_index, heights, ref_height_bin):
     """
     TODO: add usage
@@ -483,7 +473,7 @@ def generate_density_components(total_time_bins, total_height_bins, time_index, 
                     'Component': [ind]})
         components_ds.append(component_ds)
     density_ds = xr.concat(components_ds, dim='Component')
-    density_ds.Height.attrs = {'units': 'km'}
+    density_ds.Height.attrs = {'units': r'$km$', 'info': 'Measurements heights above sea level'}
 
     if PLOT_RESULTS:
 
@@ -539,7 +529,12 @@ def normalize_density_ds(density_ds):
         plt.show()
 
     if PLOT_RESULTS:
-        plot_max_density_per_time(density_ds.rho)
+        fig, ax = plt.subplots(nrows=1, ncols=1, figsize=(7, 5))
+        rho.max(dim='Height').plot(ax=ax)
+        ax.set_title(r'$\rho^{max}(t)$')
+        ax.xaxis.set_major_formatter(TIMEFORMAT)
+        ax.xaxis.set_tick_params(rotation=0)
+        plt.show()
     return density_ds
 
 
@@ -552,7 +547,7 @@ def generate_density(station, day_date, day_params_ds):
     :return:
     """
     logger = logging.getLogger()
-    logger.debug(f"...start generating  density")
+    logger.info(f"\nStart generating Density - {day_date.strftime('%Y-%m-%d')}")
     # Set generation parameters of density
     ref_height = np.float(day_params_ds.rm.sel(Time=day_date).values)
     time_index = station.calc_daily_time_index(day_date)
@@ -576,12 +571,11 @@ def generate_density(station, day_date, day_params_ds):
 
     # Normalize density
     density_ds = normalize_density_ds(density_ds)
-
     density_ds.attrs['source_file'] = os.path.basename(__file__)
     density_ds.attrs['station'] = station.location
     density_ds['date'] = day_date
 
-    logger.debug(f"...finish generating density")
+    logger.info(f"\nDone generating Density - {day_date.strftime('%Y-%m-%d')}")
     return density_ds
 
 
@@ -620,13 +614,15 @@ def calc_normalized_tau(dr, sigma_normalized):
     return tau_normalized
 
 
-def get_LR_ds(day_params_ds, time_index):
+def get_LR_ds(station, day_date, day_params_ds):
     """
     TODO add usags
+    :param station:
+    :param day_date:
+    :param day_params_ds:
+    :return:
     """
-
     # Cubic spline interpolation of A_355,532, A_532,1064 and LR  during the time bins of the day
-
     # 1. Setting values to interpolate
     LRs = day_params_ds.LR.values
 
@@ -640,23 +636,24 @@ def get_LR_ds(day_params_ds, time_index):
     # This is a temporary solution.
     # TODO: Create the full day interpolation in:KDE_estimation_sample.ipynb.Then load the daily values from the parameters csv. Similar to the process done for the background signal.
     if tbins[-1] > 0:
-        tbins = np.append(tbins, 2880)
+        tbins = np.append(tbins, station.total_time_bins)
         LRs = np.append(LRs, LRs.mean())
     else:
-        tbins[2] = 2880
+        tbins[2] = station.total_time_bins
 
     # Fit of the splines
     cs_LR = CubicSpline(tbins, LRs)  # TODO replace to bazier interpolation
 
     # Calculate the spline for day bins: meaning: 2880 bins + 1 for 00:00 on the next day
-    LR = cs_LR(np.arange(time_index.size))
-
-    LR_ds = xr.Dataset()
-    LR_ds = LR_ds.assign(
-        LR=xr.Variable(dims='Time', data=LR,
-                       attrs={'long_name': r'$\rm LR$', 'units': r'$sr$',
-                              'info': r'A generation parameter. The lidar ratio, corresponds to Angstroms values'})). \
-        assign_coords({'Time': time_index})
+    LR = cs_LR(np.arange(station.total_time_bins))
+    LR_ds = xr.Dataset(data_vars={'LR': (['Time'], LR,
+                                         {'info': r'A generation parameter. The lidar ratio, corresponds to Angstroms '
+                                                  r'values',
+                                          'long_name': r'$\rm LR$',
+                                          'units': r'$sr$'}),
+                                  'date': ((), day_date)},
+                       coords={'Time': station.calc_daily_time_index(day_date).values},
+                       attrs={'info': "Daily Lidar Ratio", 'location': station.location})
 
     if PLOT_RESULTS:
         tbins[2] -= 1
@@ -666,13 +663,15 @@ def get_LR_ds(day_params_ds, time_index):
         ax.scatter(times, LRs, label=LR_ds.LR.long_name)
         ax.xaxis.set_major_formatter(TIMEFORMAT)
         ax.xaxis.set_tick_params(rotation=0)
+        str_date = LR_ds.Time[0].dt.strftime("%Y-%m-%d").values.tolist()
+        plt.suptitle(f"{LR_ds.attrs['info']} - {str_date}")
         plt.tight_layout()
         plt.show()
 
     return LR_ds
 
 
-def get_angstrom_ds(day_params_ds, time_index):
+def get_angstrom_ds(station, day_date, day_params_ds):
     """
     TODO add usage
         Angstrom Exponent
@@ -685,7 +684,7 @@ def get_angstrom_ds(day_params_ds, time_index):
         $\tau_{355} =\tau_{532} \cdot(355 / 532) ^ {-A_{355, 532}} $
     """
 
-    nbins = time_index.size
+    nbins = station.total_time_bins
     # Cubic spline interpolation of A_355,532, A_532,1064 and LR  during the time bins of the day
 
     # 1. Setting values to interpolate
@@ -696,11 +695,11 @@ def get_angstrom_ds(day_params_ds, time_index):
     tbins = np.round([int(dt2binscale(prep.dt64_2_datetime(dt))) for
                       dt in day_params_ds.ang355532.Time.values])
 
-    # The last bin is added or updated to 2880 artificially.
-    # If it was zero, it represents the time 00:00 of the next day.
-    # Thus forcing 2800 to have a sequence over an entire day or avoiding a circular curve.
-    # This is a temporary solution.
-    # TODO: Create the full day interpolation in:KDE_estimation_sample.ipynb.Then load the daily values from the parameters csv. Similar to the process done for the background signal.
+    # The last bin is added or updated to 2880 artificially. If it was zero, it represents the time 00:00 of the next
+    # day. Thus forcing 2800 to have a sequence over an entire day or avoiding a circular curve. This is a temporary
+    # solution.
+    # TODO: Create the full day interpolation in:KDE_estimation_sample.ipynb.Then load the daily values
+    #  from the parameters csv. Similar to the process done for the background signal.
     if tbins[-1] > 0:
         tbins = np.append(tbins, nbins)
         ang355532s = np.append(ang355532s, ang355532s.mean())
@@ -713,18 +712,20 @@ def get_angstrom_ds(day_params_ds, time_index):
     cs_5321064 = CubicSpline(tbins, ang5321064s)
 
     # Calculate the spline for day bins: meaning: 2880 bins + 1 for 00:00 on the next day
+    time_index = station.calc_daily_time_index(day_date)
     ang_355_532 = cs_355532(np.arange(nbins))
     ang_532_10264 = cs_5321064(np.arange(nbins))
-    ang_ds = xr.Dataset()
-    ang_ds = ang_ds.assign(
-        ang_532_1064=xr.Variable(dims=({'Time'}), data=ang_532_10264,
-                                 attrs={'long_name': r'$A_{532,1064}$',
-                                        'info': r'A generation parameter. Angstrom exponent of 532-1064.'}),
-        ang_355_532=xr.Variable(dims=({'Time'}), data=ang_355_532,
-                                attrs={'long_name': r'$A_{355,532}$',
-                                       'info': r'A generation parameter. Angstrom exponent of 355-532.'})) \
-        .assign_coords({'Time': time_index.values})
-
+    ang_ds = xr.Dataset(data_vars={'ang_532_1064': (['Time'], ang_532_10264,
+                                                    {'info': r'A generation parameter. Angstrom exponent of 532-1064.',
+                                                     'long_name': r'$A_{532,1064}$',
+                                                     'units': r'$\AA$'}),
+                                   'ang_355_532': (['Time'], ang_355_532,
+                                                   {'info': r'A generation parameter. Angstrom exponent of 355-532.',
+                                                    'long_name': r'$A_{355,532}$',
+                                                    'units': r'$\AA$'}),
+                                   'date': ((), day_date)},
+                        coords={'Time': time_index.values},
+                        attrs={'info': "Daily Angstrom Exponents", 'location': station.location})
     if PLOT_RESULTS:
         tbins[2] -= 1
         times = time_index[tbins].values
@@ -736,6 +737,8 @@ def get_angstrom_ds(day_params_ds, time_index):
         ax.xaxis.set_major_formatter(TIMEFORMAT)
         ax.xaxis.set_tick_params(rotation=0)
         ax.set_ylabel(r'$\AA$')
+        str_date = ang_ds.Time[0].dt.strftime("%Y-%m-%d").values.tolist()
+        plt.suptitle(f"{ang_ds.attrs['info']} - {str_date}")
         plt.legend()
         plt.tight_layout()
         plt.show()
@@ -750,11 +753,10 @@ def calc_tau_ds(ang_ds, sigma_0):
     :param sigma_0:
     :return:
     """
-
     tau_0 = sigma2aod_ds(sigma_ds=sigma_0)
     wavelength_0 = tau_0.Wavelength.item()
     tau_chans = []
-    for wavelength in [355, 532, 1064]:
+    for wavelength in wavelengths:
         if wavelength == wavelength_0:
             tau_chans.append(tau_0)
         else:
@@ -763,15 +765,15 @@ def calc_tau_ds(ang_ds, sigma_0):
             tau = xr.apply_ufunc(lambda tau0, ang: misc_lidar.tau_ang2tau(tau0, ang, wavelength_0, wavelength), tau_0,
                                  ang_ds[key], keep_attrs=True).assign_coords({'Wavelength': wavelength})
             tau_chans.append(tau)
-
     tau_ds = xr.concat(tau_chans, dim='Wavelength').sortby('Wavelength')
-
+    tau_ds = tau_ds.assign_attrs(ang_ds.attrs)
     if PLOT_RESULTS:
         fig, ax = plt.subplots(nrows=1, ncols=1, figsize=(7, 5))
         tau_ds.plot(hue='Wavelength', ax=ax)
-        ax.set_title(tau_ds.info)
         ax.xaxis.set_major_formatter(TIMEFORMAT)
         ax.xaxis.set_tick_params(rotation=0)
+        str_date = tau_ds.Time[0].dt.strftime("%Y-%m-%d").values.tolist()
+        plt.suptitle(f"{tau_ds.attrs['info']} - {str_date}")
         plt.tight_layout()
         plt.show()
 
@@ -790,7 +792,7 @@ def generate_sigma_ds(station, day_date, day_params_ds, density_ds):
     sigma_532_max = np.float(day_params_ds.sel(Time=day_date).beta532.values) * LR_tropos
     sigma_g = xr.apply_ufunc(lambda rho: normalize(rho, sigma_532_max),
                              density_ds.rho.copy(deep=True), keep_attrs=False).assign_coords({'Wavelength': 532})
-    ang_ds = get_angstrom_ds(day_params_ds, time_index=sigma_g.Time)
+    ang_ds = get_angstrom_ds(station, day_date, day_params_ds)
 
     tau_ds = calc_tau_ds(ang_ds=ang_ds, sigma_0=sigma_g)
 
@@ -798,6 +800,10 @@ def generate_sigma_ds(station, day_date, day_params_ds, density_ds):
 
     # convert sigma to 1064 or 355 from 532
     sigma_max = xr.apply_ufunc(lambda tau, tau_norm: tau / tau_norm, tau_ds, tau_normalized, keep_attrs=True)
+    sigma_max.attrs = {'info': r"Daily $\sigma_{\rm max}$",
+                       'long_name': r'$\sigma$', 'units': r'$1/km$', 'name': 'sigma',
+                       'source_file': os.path.basename(__file__),
+                       'location': station.location, }
     sigma_ir = density_ds.rho_tnorm * sigma_max.sel(Wavelength=1064)
     sigma_uv = density_ds.rho_tnorm * sigma_max.sel(Wavelength=355)
 
@@ -812,12 +818,13 @@ def generate_sigma_ds(station, day_date, day_params_ds, density_ds):
     if PLOT_RESULTS:
         gen_utils.plot_daily_profile(sigma_ds, height_slice=slice(0, 15))
 
-        times = [sigma_uv.Time[ind].values for ind in t_index]
+        times = [sigma_ds.Time[ind].values for ind in t_index]
         fig, axes = plt.subplots(nrows=1, ncols=3, figsize=(10, 6), sharey=True)
         for t, ax in zip(times, axes.ravel()):
             sigma_ds.sel(Time=t).plot.line(ax=ax, y='Height', hue='Wavelength')
             ax.set_title(pd.to_datetime(str(t)).strftime('%H:%M:%S'))
-        plt.suptitle(fr"$\sigma$ at different times - {pd.to_datetime(str(t)).strftime('%Y-%m-%d')}")
+        str_date = sigma_ds.Time[0].dt.strftime("%Y-%m-%d").values.tolist()
+        plt.suptitle(fr"{sigma_ds.long_name} at different times - {str_date}")
         plt.tight_layout()
         plt.show()
 
@@ -825,7 +832,8 @@ def generate_sigma_ds(station, day_date, day_params_ds, density_ds):
         sigma_max.plot(hue='Wavelength', ax=ax)
         ax.xaxis.set_major_formatter(TIMEFORMAT)
         ax.xaxis.set_tick_params(rotation=0)
-        ax.set_title(r'Daily $\sigma_{\rm max}$')
+        str_date = sigma_max.Time[0].dt.strftime("%Y-%m-%d").values.tolist()
+        plt.suptitle(f"{sigma_max.attrs['info']} - {str_date}")
         plt.tight_layout()
         plt.show()
 
@@ -834,10 +842,12 @@ def generate_sigma_ds(station, day_date, day_params_ds, density_ds):
 
 def generate_beta_ds(station, day_date, day_params_ds, sigma_ds):
     # Creating Daily Lidar Aerosols' beta dataset
-    LR_ds = get_LR_ds(day_params_ds, time_index=sigma_ds.Time)
+    LR_ds = get_LR_ds(station, day_date, day_params_ds)
     beta_ds = xr.apply_ufunc(lambda LR, sigma: sigma / LR, LR_ds.LR, sigma_ds)
     beta_ds.attrs = {'info': "Daily aerosols' generated backscatter coefficient",
-                     'long_name': r'$\beta$', 'units': r'$1/km \cdot sr$', 'name': 'beta',
+                     'long_name': r'$\beta$',
+                     'name': 'beta',
+                     'units': r'$1/km \cdot sr$',
                      'source_file': os.path.basename(__file__),
                      'location': station.location, }
     beta_ds = beta_ds.transpose('Wavelength', 'Height', 'Time')
@@ -851,7 +861,7 @@ def generate_beta_ds(station, day_date, day_params_ds, sigma_ds):
 
 def generate_aerosol(station, day_date, day_params_ds, density_ds):
     logger = logging.getLogger()
-    logger.debug(f"...start generating aerosol optical density")
+    logger.info(f"\nStart generating Aerosol Optical Density - {day_date.strftime('%Y-%m-%d')}")
 
     sigma_ds, tau_ds, ang_ds = generate_sigma_ds(station, day_date, day_params_ds, density_ds)
     beta_ds, LR_ds = generate_beta_ds(station, day_date, day_params_ds, sigma_ds)
@@ -859,7 +869,7 @@ def generate_aerosol(station, day_date, day_params_ds, density_ds):
     # Wrap Daily Lidar Aerosols' dataset
     aer_ds = wrap_aerosol_dataset(station, day_date, day_params_ds, sigma_ds, beta_ds, ang_ds, LR_ds)
 
-    logger.debug(f"...Finish generating aerosol optical density")
+    logger.info(f"\nDone generating Aerosol Optical Density - {day_date.strftime('%Y-%m-%d')}")
     return aer_ds
 
 

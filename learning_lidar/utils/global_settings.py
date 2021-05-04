@@ -133,9 +133,9 @@ class Station:
         heights = np.linspace(min_height * scale, top_height * scale, self.n_bins)
         return heights
 
-    def calc_daily_time_index(self, cur_day):
-        end_t = cur_day + timedelta(hours=24) - timedelta(seconds=self.freq)
-        time_index = pd.date_range(start=cur_day, end=end_t, freq=f'{self.freq}S')
+    def calc_daily_time_index(self, day_date):
+        end_t = day_date + timedelta(hours=24) - timedelta(seconds=self.freq)
+        time_index = pd.date_range(start=day_date, end=end_t, freq=f'{self.freq}S')
         assert self.total_time_bins == len(time_index)
         return time_index
 

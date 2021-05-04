@@ -8,7 +8,7 @@ from itertools import repeat
 import learning_lidar.utils.global_settings as gs
 import learning_lidar.generation.generation_utils as gen_utils
 from learning_lidar.generation.daily_signals_generations_utils import calc_total_optical_density, \
-    calc_lidar_signal, calc_daily_measurement, plot_daily_profile
+    calc_lidar_signal, calc_daily_measurement
 import learning_lidar.generation.daily_signals_generations_utils as gen_sig_utils
 from learning_lidar.utils.utils import create_and_configer_logger
 import pandas as pd
@@ -61,6 +61,6 @@ def main(station_name='haifa', start_date=datetime(2017, 9, 1), end_date=datetim
 
 if __name__ == '__main__':
     station_name = 'haifa'
-    start_date = datetime(2017, 9, 25)
-    end_date = datetime(2017, 10, 31)
+    start_date = datetime(2017, 10, 1)
+    end_date = datetime(2017, 10, 1)
     main(station_name, start_date, end_date)
