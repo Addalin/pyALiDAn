@@ -280,15 +280,15 @@ def create_generated_dataset(station, start_date, end_date, sample_size='30min')
 
 def calc_data_statistics(station, start_date, end_date):
     """
-
+    Calculated statistics for the period of the dataset of the given station during start_date, end_date
     :param station:  gs.station() object of the lidar station
     :param start_date: datetime.date object of the initial period date
     :param end_date:  datetime.date object of the end period date
     :return: df_stats: pd.Dataframe, containing statistics of mean and std values for generation signals during
      the desired period [start_date, end_date]. Note: one should previously save the generated dataset for this period.
     """
-    data_folder = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(os.curdir))), 'data')
-    csv_gen_fname = f"dataset_gen_{station_name}_{start_date.strftime('%Y-%m-%d')}_{end_date.strftime('%Y-%m-%d')}.csv"
+    data_folder = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))), 'data')
+    csv_gen_fname = f"dataset_gen_{station.name}_{start_date.strftime('%Y-%m-%d')}_{end_date.strftime('%Y-%m-%d')}.csv"
     csv_gen_path = os.path.join(data_folder, csv_gen_fname)
     df = pd.read_csv(csv_gen_path, parse_dates=['date', 'start_time_period', 'end_time_period'])
     days_groups = df.groupby('date').groups
