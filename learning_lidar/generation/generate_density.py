@@ -1,7 +1,7 @@
 import logging
 from datetime import datetime
 from itertools import repeat
-
+import os
 import matplotlib.pyplot as plt
 import pandas as pd
 import seaborn as sns
@@ -43,23 +43,31 @@ def generate_daily_aerosol_density(station, day_date, SAVE_DS=True):
     return aer_ds, density_ds
 
 
-if __name__ == '__main__':
-    gen_den_utils.PLOT_RESULTS = False
+def main(station_name='haifa', start_date=datetime(2017, 9, 1), end_date=datetime(2017, 9, 2)):
     gs.set_visualization_settings()
+    gen_den_utils.PLOT_RESULTS = False  # Toggle True for debug. False for run.
     logging.getLogger('PIL').setLevel(logging.ERROR)  # Fix annoying PIL logs
     logging.getLogger('matplotlib').setLevel(logging.ERROR)  # Fix annoying matplotlib logs
-    logger = create_and_configer_logger('generate_density.log', level=logging.DEBUG)
-    station = gs.Station(station_name='haifa')
-
-    start_date = datetime(2017, 10, 1)
-    end_date = datetime(2017, 10, 31)
+    logger = create_and_configer_logger(f"{os.path.basename(__file__)}.log", level=logging.INFO)
+    station = gs.Station(station_name=station_name)
     days_list = pd.date_range(start=start_date, end=end_date).to_pydatetime().tolist()
+    logger.info(f"\nStation name:{station.location}\nStart generating aerosols densities "
+                f"for period: [{start_date.strftime('%Y-%m-%d')},{end_date.strftime('%Y-%m-%d')}]")
     num_days = len(days_list)
-    num_processes = min((cpu_count() - 1, num_days))
+    num_processes = 1 if gen_den_utils.PLOT_RESULTS else min((cpu_count() - 1, num_days))
     with Pool(num_processes) as p:
         p.starmap(generate_daily_aerosol_density, zip(repeat(station), days_list))
 
+    logger.info(f"\nDone generating lidar signals & measurements "
+                f"for period: [{start_date.strftime('%Y-%m-%d')},{end_date.strftime('%Y-%m-%d')}]")
     # TODO: move the folowing part to a notebook in Analysis
-    #EXPLORE_GEN_DAY = False
-    #if EXPLORE_GEN_DAY:
+    # EXPLORE_GEN_DAY = False
+    # if EXPLORE_GEN_DAY:
     #    explore_gen_day(station, cur_day, aer_ds, density_ds)
+
+
+if __name__ == '__main__':
+    station_name = 'haifa'
+    start_date = datetime(2017, 10, 1)
+    end_date = datetime(2017, 10, 1)
+    main(station_name, start_date, end_date)
