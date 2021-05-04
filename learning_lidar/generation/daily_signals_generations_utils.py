@@ -8,17 +8,12 @@ from tqdm import tqdm
 import pandas as pd
 import xarray as xr
 from scipy.ndimage import gaussian_filter1d
-import seaborn as sns
 import logging
 from learning_lidar.utils.utils import create_and_configer_logger
-
-import matplotlib.dates as mdates
-
 import learning_lidar.utils.global_settings as gs
 import learning_lidar.generation.generation_utils as gen_utils
 from learning_lidar.preprocessing import preprocessing as prep
 from learning_lidar.utils.misc_lidar import calc_tau, generate_poisson_signal_STEP
-from learning_lidar.utils.global_settings import eps
 from learning_lidar.utils.global_settings import TIMEFORMAT
 # %%
 logger = create_and_configer_logger(f"{os.path.basename(__file__)}.log", level=logging.INFO)
@@ -28,20 +23,6 @@ PLOT_RESULTS = False
 
 
 # %% Helper functions
-def plot_daily_profile(data, height_slice=None, figsize=(16, 6)):
-    # TODO : move to vis_utils.py
-    # TODO: add low/high thresholds (single or per channel) see prep.visualize_ds_profile_chan()
-    if height_slice is None:
-        height_slice = slice(data.Height[0].values, data.Height[-1].values)
-    str_date = data.Time[0].dt.strftime("%Y-%m-%d").values.tolist()
-    fig, axes = plt.subplots(nrows=1, ncols=3, figsize=figsize, sharey=True)
-    for wavelength, ax in zip(wavelengths, axes.ravel()):
-        data.sel(Height=height_slice, Wavelength=wavelength).plot(cmap='turbo', ax=ax)
-        ax.xaxis.set_major_formatter(TIMEFORMAT)
-        ax.xaxis.set_tick_params(rotation=0)
-    plt.suptitle(f"{data.info} - {str_date}")
-    plt.tight_layout()
-    plt.show()
 
 
 # %%
@@ -63,8 +44,8 @@ def calc_total_optical_density(station, day_date):
 
     if PLOT_RESULTS:
         height_slice = slice(0.0, 15)
-        plot_daily_profile(data=ds_aer.sigma, height_slice=height_slice)
-        plot_daily_profile(data=ds_aer.beta, height_slice=height_slice)
+        gen_utils.plot_daily_profile(data=ds_aer.sigma, height_slice=height_slice)
+        gen_utils.plot_daily_profile(data=ds_aer.beta, height_slice=height_slice)
 
     # %% 2. Load molecular profiles
     month_folder = prep.get_month_folder_name(station.molecular_dataset, day_date)
@@ -89,8 +70,8 @@ def calc_total_optical_density(station, day_date):
     total_ds['date'] = day_date
 
     if PLOT_RESULTS:
-        plot_daily_profile(data=total_ds.sigma)
-        plot_daily_profile(data=total_ds.beta)
+        gen_utils.plot_daily_profile(data=total_ds.sigma)
+        gen_utils.plot_daily_profile(data=total_ds.beta)
 
     return total_ds
 
@@ -132,7 +113,7 @@ def calc_attbsc_ds(station, day_date, total_ds):
     attbsc_ds['date'] = day_date
 
     if PLOT_RESULTS:
-        plot_daily_profile(data=attbsc_ds.attbsc, figsize=(16, 8))
+        gen_utils.plot_daily_profile(data=attbsc_ds.attbsc, figsize=(16, 8))
 
     return attbsc_ds
 
@@ -219,7 +200,7 @@ def calc_range_corr_signal_ds(station, day_date, attbsc_ds, lc_ds):
     attbsc_ds.Wavelength.attrs = {'units': r'$\lambda$', 'units': r'$nm$'}
     attbsc_ds['date'] = day_date
     if PLOT_RESULTS:
-        plot_daily_profile(data=pr2_ds, figsize=(16, 8))
+        gen_utils.plot_daily_profile(data=pr2_ds, figsize=(16, 8))
 
     return pr2_ds
 
@@ -252,7 +233,7 @@ def calc_lidar_signal_ds(station, day_date, r2_ds, pr2_ds):
         raise ValueError(msg)
 
     if PLOT_RESULTS:
-        plot_daily_profile(data=p_ds, height_slice=slice(0, 5), figsize=(16, 8))
+        gen_utils.plot_daily_profile(data=p_ds, height_slice=slice(0, 5), figsize=(16, 8))
     return p_ds
 
 
@@ -321,7 +302,7 @@ def calc_mean_measurement(station, day_date, signal_ds, bg_ds):
     p_mean.Wavelength.attrs = {'units': r'$\lambda$', 'units': r'$nm$'}
     p_mean['date'] = day_date
     if PLOT_RESULTS:
-        plot_daily_profile(p_mean.where(p_mean < 20), height_slice=slice(0, 10))
+        gen_utils.plot_daily_profile(p_mean.where(p_mean < 20), height_slice=slice(0, 10))
     return p_mean
 
 
@@ -427,8 +408,8 @@ def calc_daily_measurement(station, day_date, signal_ds):
                         'info': 'Daily generated lidar signals measurement.',
                         'source_file': os.path.basename(__file__)}
     # TODO: Add plots of bg_ds, p_mean, pr2n_ds,pn_ds
-    # plot_daily_profile(measure_ds.p_bg)
-    # plot_daily_profile(measure_ds.range_corr.where(measure_ds.range_corr>=3))
+    # gen_utils.plot_daily_profile(measure_ds.p_bg)
+    # gen_utils.plot_daily_profile(measure_ds.range_corr.where(measure_ds.range_corr>=3))
     return measure_ds
 
 

@@ -810,14 +810,7 @@ def generate_sigma_ds(station, day_date, day_params_ds, density_ds):
     sigma_ds['date'] = day_date
 
     if PLOT_RESULTS:
-        fig, axes = plt.subplots(nrows=1, ncols=3, figsize=(18, 8))
-        for wavelength, ax in zip(sigma_ds.Wavelength.values, axes.ravel()):
-            sigma_ds.sel(Wavelength=wavelength).plot(ax=ax, cmap='turbo')
-        plt.suptitle(sigma_ds.info)
-        ax.xaxis.set_major_formatter(TIMEFORMAT)
-        ax.xaxis.set_tick_params(rotation=0)
-        plt.tight_layout()
-        plt.show()
+        gen_utils.plot_daily_profile(sigma_ds, height_slice=slice(0, 15))
 
         times = [sigma_uv.Time[ind].values for ind in t_index]
         fig, axes = plt.subplots(nrows=1, ncols=3, figsize=(10, 6), sharey=True)
@@ -851,14 +844,8 @@ def generate_beta_ds(station, day_date, day_params_ds, sigma_ds):
 
     sigma_ds['date'] = day_date
     if PLOT_RESULTS:
-        fig, axes = plt.subplots(nrows=1, ncols=3, figsize=(18, 8))
-        for wavelength, ax in zip(sigma_ds.Wavelength.values, axes.ravel()):
-            beta_ds.sel(Wavelength=wavelength).plot(ax=ax, cmap='turbo')
-        plt.suptitle(beta_ds.info)
-        ax.xaxis.set_major_formatter(TIMEFORMAT)
-        ax.xaxis.set_tick_params(rotation=0)
-        plt.tight_layout()
-        plt.show()
+        gen_utils.plot_daily_profile(beta_ds, height_slice=slice(0, 15))
+
     return beta_ds, LR_ds
 
 

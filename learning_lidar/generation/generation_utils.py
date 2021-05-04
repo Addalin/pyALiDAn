@@ -1,7 +1,11 @@
+from matplotlib import pyplot as plt
 import learning_lidar.preprocessing.preprocessing as prep
 from datetime import datetime, date, timedelta
 import os
 import calendar
+from learning_lidar.generation.daily_signals_generations_utils import wavelengths
+from learning_lidar.utils.global_settings import TIMEFORMAT
+
 
 def get_gen_dataset_file_name(station, day_date, wavelength='*', data_source='lidar', file_type='range_corr'):
     """
@@ -158,3 +162,19 @@ def dt2binscale(dt_time, res_sec=30):
            dt_time.second / res_sec + \
            dt_time.microsecond * res_musec
     return tind
+
+
+def plot_daily_profile(data, height_slice=None, figsize=(16, 6)):
+    # TODO : move to vis_utils.py
+    # TODO: add low/high thresholds (single or per channel) see prep.visualize_ds_profile_chan()
+    if height_slice is None:
+        height_slice = slice(data.Height[0].values, data.Height[-1].values)
+    str_date = data.Time[0].dt.strftime("%Y-%m-%d").values.tolist()
+    fig, axes = plt.subplots(nrows=1, ncols=3, figsize=figsize, sharey=True)
+    for wavelength, ax in zip(wavelengths, axes.ravel()):
+        data.sel(Height=height_slice, Wavelength=wavelength).plot(cmap='turbo', ax=ax)
+        ax.xaxis.set_major_formatter(TIMEFORMAT)
+        ax.xaxis.set_tick_params(rotation=0)
+    plt.suptitle(f"{data.info} - {str_date}")
+    plt.tight_layout()
+    plt.show()
