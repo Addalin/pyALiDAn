@@ -318,7 +318,7 @@ def calc_data_statistics(station, start_date, end_date):
     df_stats /= norm_scale  # normalize by number of days
 
     # Save stats
-    stats_fname = f"stats_gen_{station_name}_{start_date.strftime('%Y-%m-%d')}_{end_date.strftime('%Y-%m-%d')}.csv"
+    stats_fname = f"stats_gen_{station.name}_{start_date.strftime('%Y-%m-%d')}_{end_date.strftime('%Y-%m-%d')}.csv"
     csv_stats_path = os.path.join(data_folder, stats_fname)
     df_stats.to_csv(csv_stats_path)
     return df_stats, csv_stats_path
