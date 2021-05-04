@@ -50,15 +50,19 @@ def extract_date_time(path, format_filename, format_times):
     return time_stamps
 
 
-def save_dataset(dataset, folder_name, nc_name):
+def save_dataset(dataset, folder_name='', nc_name='', nc_path=None):
     """
     Save the input dataset to netcdf file
+    :param nc_path: full path to netcdf file if already known
     :param dataset: array.Dataset()
     :param folder_name: folder name
     :param nc_name: netcdf file name
-    :return: ncpath - full path to netcdf file created if succeeded, else none
+    :return: nc_path - full path to netcdf file created if succeeded, else none
     """
     logger = logging.getLogger()
+    if nc_path:
+        folder_name, nc_name = os.path.dirname(nc_path), os.path.basename(nc_path)
+
     if not os.path.exists(folder_name):
         try:
             os.makedirs(folder_name)
@@ -67,15 +71,15 @@ def save_dataset(dataset, folder_name, nc_name):
             logger.exception(f"\nFailed to create folder: {folder_name}")
             return None
 
-    ncpath = os.path.join(folder_name, nc_name)
+    nc_path = os.path.join(folder_name, nc_name)
     try:
-        dataset.to_netcdf(ncpath, mode='w', format='NETCDF4', engine='netcdf4')
+        dataset.to_netcdf(nc_path, mode='w', format='NETCDF4', engine='netcdf4')
         dataset.close()
-        logger.debug(f"\nSaving dataset file: {ncpath}")
+        logger.debug(f"\nSaving dataset file: {nc_path}")
     except Exception:
-        logger.exception(f"\nFailed to save dataset file: {ncpath}")
-        ncpath = None
-    return ncpath
+        logger.exception(f"\nFailed to save dataset file: {nc_path}")
+        nc_path = None
+    return nc_path
 
 
 def load_dataset(ncpath):
@@ -649,6 +653,10 @@ def get_range_corr_ds_chan(darray, altitude, lambda_nm, height_units='km', optim
 
 
 # %% General functions to handle preprocessing (prep) datasets (figures ,(netcdf) files)
+def dt64_2_datetime(dt_64):
+    date_datetime = datetime.utcfromtimestamp(dt_64.tolist() / 1e9)
+    return date_datetime
+
 def get_daily_ds_date(dataset):
     logger = logging.getLogger()
     try:
@@ -656,7 +664,7 @@ def get_daily_ds_date(dataset):
     except ValueError:
         logger.exception("\nThe dataset does not contain a data variable named 'date'")
         return None
-    date_datetime = datetime.utcfromtimestamp(date_64.tolist() / 1e9)
+    date_datetime = dt64_2_datetime(date_64)
     return date_datetime
 
 
