@@ -24,6 +24,7 @@ from learning_lidar.generation.daily_signals_generations_utils import get_daily_
 from learning_lidar.utils.utils import create_and_configer_logger
 import learning_lidar.generation.generation_utils as gen_utils
 
+
 # %% Dataset creating helper functions
 def create_dataset(station_name='haifa', start_date=datetime(2017, 9, 1),
                    end_date=datetime(2017, 9, 2), sample_size='29.5min', list_dates=[]):
@@ -118,6 +119,10 @@ def create_dataset(station_name='haifa', start_date=datetime(2017, 9, 1),
     return full_df.reset_index(drop=True)
 
 
+def timestamp2datetime(time_stamp):
+    return datetime.combine(time_stamp.date(), time_stamp.time())
+
+
 # %% Dataset extending helper functions
 def extend_calibration_info(df):
     """
@@ -129,14 +134,14 @@ def extend_calibration_info(df):
     """
     logger = logging.getLogger()
     tqdm.pandas()
-    logger.info(f"Start LC calculations")
+    logger.info(f"\nStart LC calculations")
     df[['LC_recalc', 'LCp_recalc']] = df.progress_apply(recalc_LC, axis=1, result_type='expand')
     logger.info(f"Start mid-reference range calculations")
     df['bin_rm'] = df[['bin_r0', 'bin_r1']].progress_apply(np.mean, axis=1,
                                                            result_type='expand').astype(int)
     df['rm'] = df[['r0', 'r1']].progress_apply(np.mean, axis=1, result_type='expand').astype(
         float)
-    logger.info(f"Done database extension")
+    logger.info(f"\nDone database extension")
     return df
 
 
@@ -206,6 +211,7 @@ def create_generated_dataset(station, start_date, end_date, sample_size='30min')
     :param sample_size: string. the sample size to create in the dataset. e.g, '30min' or '60min'
     :return: gen_df : pd.Dataframe(). A Database of generated samples for the learning phase.
     """
+    logger = logging.getLogger()
     dates = pd.date_range(start=start_date,
                           end=end_date + timedelta(days=1),  # include all times in the last day
                           freq=sample_size)[0:-1]  # excludes last - the next day after end_date
@@ -274,7 +280,7 @@ def create_generated_dataset(station, start_date, end_date, sample_size='30min')
 
             gen_df = gen_df.append(df)
         except FileNotFoundError as e:
-            print(e)
+            logger.error(e)
     return gen_df
 
 
@@ -292,7 +298,7 @@ def calc_data_statistics(station, start_date, end_date):
     csv_gen_path = os.path.join(data_folder, csv_gen_fname)
     df = pd.read_csv(csv_gen_path, parse_dates=['date', 'start_time_period', 'end_time_period'])
     days_groups = df.groupby('date').groups
-    days_list = list(days_groups.keys())
+    days_list = [timestamp2datetime(key) for key in days_groups.keys()]
     wavelengths = gs.LAMBDA_nm().get_elastic()
 
     molsource = 'molecular'
@@ -332,32 +338,32 @@ def calc_day_statistics(station, day_date):
     :param day_date: day_date: datetime.date object of the required date
     :return: dataframe, each row corresponds to a wavelength
     """
+    logger = logging.getLogger()
     wavelengths = gs.LAMBDA_nm().get_elastic()
     molsource = 'molecular'
     sigsource = 'signal'
     lidsource = 'lidar'
 
     df_stats = pd.DataFrame(index=pd.Index(wavelengths, name='wavelength [nm]'))
-    cur_date = datetime.combine(day_date.date(), day_date.time())
-    print(f'Calculating stats for {cur_date}')
+    logger.debug(f'\nCalculating stats for {day_date}')
     # folder names
-    mol_folder = prep.get_month_folder_name(station.molecular_dataset, cur_date)
-    signal_folder = prep.get_month_folder_name(station.gen_signal_dataset, cur_date)
-    lidar_folder = prep.get_month_folder_name(station.gen_lidar_dataset, cur_date)
+    mol_folder = prep.get_month_folder_name(station.molecular_dataset, day_date)
+    signal_folder = prep.get_month_folder_name(station.gen_signal_dataset, day_date)
+    lidar_folder = prep.get_month_folder_name(station.gen_lidar_dataset, day_date)
 
     # File names
     signal_nc_name = os.path.join(signal_folder,
-                                  gen_utils.get_gen_dataset_file_name(station, cur_date, data_source=sigsource))
+                                  gen_utils.get_gen_dataset_file_name(station, day_date, data_source=sigsource))
     lidar_nc_name = os.path.join(lidar_folder,
-                                 gen_utils.get_gen_dataset_file_name(station, cur_date, data_source=lidsource))
-    mol_nc_name = os.path.join(mol_folder, prep.get_prep_dataset_file_name(station, cur_date, data_source=molsource,
+                                 gen_utils.get_gen_dataset_file_name(station, day_date, data_source=lidsource))
+    mol_nc_name = os.path.join(mol_folder, prep.get_prep_dataset_file_name(station, day_date, data_source=molsource,
                                                                            lambda_nm='all'))
 
     # Load datasets
     mol_ds = prep.load_dataset(mol_nc_name)
     signal_ds = prep.load_dataset(signal_nc_name)
     lidar_ds = prep.load_dataset(lidar_nc_name)
-    p_bg = get_daily_bg(station, cur_date)  # daily background: p_bg
+    p_bg = get_daily_bg(station, day_date)  # daily background: p_bg
 
     # update daily profiles stats
     datasets_with_names_time_height = [(signal_ds.p, f'p_{sigsource}'),
@@ -378,10 +384,10 @@ def calc_day_statistics(station, day_date):
     return df_stats
 
 
-def main(station_name, start_date, end_date):
+def main(station_name, start_date, end_date, log_level=logging.DEBUG):
     logging.getLogger('matplotlib').setLevel(logging.ERROR)  # Fix annoying matplotlib logs
     logging.getLogger('PIL').setLevel(logging.ERROR)  # Fix annoying PIL logs
-    logger = create_and_configer_logger('dataseting_log.log', level=logging.INFO)
+    logger = create_and_configer_logger(f"{os.path.basename(__file__)}.log", level=log_level)
 
     # set operating mode
     DO_DATASET = False
@@ -410,7 +416,7 @@ def main(station_name, start_date, end_date):
 
     if DO_DATASET:
         logger.info(
-            f"Start generating dataset for period: [{start_date.strftime('%Y-%m-%d')},{end_date.strftime('%Y-%m-%d')}]")
+            f"\nStart generating dataset for period: [{start_date.strftime('%Y-%m-%d')},{end_date.strftime('%Y-%m-%d')}]")
         # Generate dataset for learning
         sample_size = '29.5min'
         df = create_dataset(station_name=station_name, start_date=start_date,
@@ -421,7 +427,7 @@ def main(station_name, start_date, end_date):
             df = convert_Y_features_units(df)
 
         df.to_csv(csv_path, index=False)
-        logger.info(f"Done database creation, saving to: {csv_path}")
+        logger.info(f"\nDone database creation, saving to: {csv_path}")
         # TODO: add creation of dataset statistics following its creation.
         #         adapt calc_data_statistics(station, start_date, end_date)
 
@@ -458,24 +464,28 @@ def main(station_name, start_date, end_date):
         logger.info(f"The calibration dataset saved to :{ds_path_extended}")
 
     if DO_GENERATED_DATASET:
+        logger.info(
+            f"\nStart creating generated dataset for period:"
+            f" [{start_date.strftime('%Y-%m-%d')},{end_date.strftime('%Y-%m-%d')}]")
         generated_df = create_generated_dataset(station, start_date, end_date)
         generated_df.to_csv(csv_gen_path, index=False)
-        logger.info(f"\nThe generation dataset saved to :{csv_gen_path}")
+        logger.info(f"\nDone generated database creation, saving to: {csv_gen_path}")
 
         logger.info(f"\nStart calculating dataset statistics")
         _, csv_stats_path = calc_data_statistics(station, start_date, end_date)
-        logger.info(f"\nFinish calculating dataset statistics. saved to:{csv_stats_path}")
+        logger.info(f"\nDone calculating dataset statistics. saved to:{csv_stats_path}")
 
     if SPLIT_GENERATED_DATASET:
         logger.info(
-            f"Splitting to train-test the dataset for period: [{start_date.strftime('%Y-%m-%d')},"
+            f"\nSplitting to train-test the dataset for period: [{start_date.strftime('%Y-%m-%d')},"
             f"{end_date.strftime('%Y-%m-%d')}]")
         split_save_train_test_ds(csv_path=csv_gen_path)
-        logger.info(f"Done splitting train-test dataset for {csv_gen_path}")
+        logger.info(f"\nDone splitting train-test dataset for {csv_gen_path}")
 
 
 if __name__ == '__main__':
     station_name = 'haifa'
     start_date = datetime(2017, 9, 1)
     end_date = datetime(2017, 10, 31)
-    main(station_name, start_date, end_date)
+    log_level = logging.DEBUG
+    main(station_name, start_date, end_date, log_level)
