@@ -225,13 +225,14 @@ Each sample contains the followings:
       4. `smooth.py`
       5. `utils.py`
     * TODOS: Split utils folder to : 
-      1. `misc_lidar.py` - lidar formulas (prev: miscLidar)
-      2. `proc_utils.py` - processing and math utils (bezier, smooth, normalize & make_interpolated_image - from generate_density_utils)
-      3. `utils.py`- General system and run utils (what is currently utils.py)  
-      4. `global_settings.py`
+      1. `misc_lidar.py` - lidar formulas (prev: miscLidar) ***DONE***
+      2. `proc_utils.py` - processing and math utils (bezier, smooth, normalize & make_interpolated_image - from generate_density_utils)***DONE***
+      3. `utils.py`- General system and run utils (what is currently utils.py)  ***DONE***
+      4. `global_settings.py` ***ALMOST DONE*** required some clearness to vis_utils.py) 
+      5. `vis_utils.py` - All visualizations styling and plot figures of xarray in 2D or 1D or 3D (surf) ***OPEN***
 4. Dataset Folder:
    - data_station
-        - AERONET (Requires rearangment)
+        - AERONET (Requires rearrangement)
         - DATA FROM TROPOS : 
           - lidar_dataset (X)
           - molecular_dataset (X)
