@@ -23,16 +23,15 @@
 Modules for physical and pollyXT constants.
 """
 import pandas as pd
-import numpy as np
 from dataclasses import dataclass
 import os
 from datetime import datetime, timedelta
-
+import numpy as np
 # %% Basic physics constants
 import seaborn as sns
 from matplotlib import pyplot as plt, dates as mdates
 
-eps = np.finfo(np.float).eps
+eps = np.finfo(float).eps
 C_km_s = 299792.458  # Speed of light [Km/sec]
 C_m_s = C_km_s * 1E+3  # Speed of light [m/sec]
 h_plank = 6.62606e-34  # plank constant [J sec]
@@ -49,8 +48,8 @@ class Station:
     def __init__(self, station_name='haifa',
                  stations_csv_path=
                  os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))),
-                 'data',
-                 'stations.csv')):
+                              'data',
+                              'stations.csv')):
         """
         A station class that stores all the below information
 
@@ -66,17 +65,17 @@ class Station:
             raise e
         self.name = station_name
         self.location = station_df['location']
-        self.lon = np.float(station_df['longitude'])
-        self.lat = np.float(station_df['latitude'])
-        self.altitude = np.float(
+        self.lon = float(station_df['longitude'])
+        self.lat = float(station_df['latitude'])
+        self.altitude = float(
             station_df['altitude'])  # [m] The Lidar's altitude   ( above sea level, see 'altitude' in ' *_att_bsc.nc)
-        self.start_bin_height = np.float(station_df[
-                                             'start_bin_height'])  # [m] The first bin's height ( above ground level - a.k.a above the lidar, see height[0]  in *_att_bsc.nc)
-        self.end_bin_height = np.float(
+        self.start_bin_height = float(station_df[
+                                          'start_bin_height'])  # [m] The first bin's height ( above ground level - a.k.a above the lidar, see height[0]  in *_att_bsc.nc)
+        self.end_bin_height = float(
             station_df['end_bin_height'])  # [m] The last bin's height  ( see height[-1] in *_att_bsc.nc)
-        self.n_bins = np.int(
+        self.n_bins = int(
             station_df['n_bins'])  # [#] Number of height bins         ( see height.shape  in  *_att_bsc.nc)
-        self.dt = np.float(eval(station_df['dt']))  # [sec] temporal pulse width of the lidar note: dr = C*dt/2
+        self.dt = float(eval(station_df['dt']))  # [sec] temporal pulse width of the lidar note: dr = C*dt/2
         self.freq = 30  # [sec] Frequency of measurments, currently every 30 sec, if this value changes, add it to the stations.csv
         self.total_time_bins = 2880  # Total measurment per day, currently 2880 time bins, if this value changes, add it to the stations.csv
         self.gdas1_folder = station_df['gdas1_folder']
@@ -189,6 +188,39 @@ class LAMBDA_m(LAMBDA_nm):
         LAMBDA_nm.__init__(self, 1E-9)
 
 
+# %% VISUALIZATIONS
+# TODO : move to vis_utils.py
+FIGURE_DPI = 300
+SAVEFIG_DPI = 300
+SMALL_FONT_SIZE = 14
+MEDIUM_FONT_SIZE = 16
+BIG_FONT_SIZE = 18
+TITLE_FONT_SIZE = 18
+SUPTITLE_FONT_SIZE = 20
+TIMEFORMAT = mdates.DateFormatter('%H:%M')
+MONTHFORMAT = mdates.DateFormatter('%Y-%m')
+COLORS = ["darkblue", "darkgreen", "darkred"]
+
+def set_visualization_settings():
+    # TODO : move to vis_utils.py
+    # TODO make sure this actually propagates to other functions
+    plt.rcParams['figure.dpi'] = FIGURE_DPI
+    plt.rcParams['savefig.dpi'] = SAVEFIG_DPI
+
+    # Create an array with the colors to use
+
+    # Set a custom color palette
+    sns.set_palette(sns.color_palette(COLORS))
+
+    plt.rc('font', size=SMALL_FONT_SIZE)  # controls default text sizes
+    plt.rc('axes', titlesize=TITLE_FONT_SIZE)  # fontsize of the axes title
+    plt.rc('axes', labelsize=BIG_FONT_SIZE)  # fontsize of the x and y labels
+    plt.rc('xtick', labelsize=SMALL_FONT_SIZE)  # fontsize of the tick labels
+    plt.rc('ytick', labelsize=SMALL_FONT_SIZE)  # fontsize of the tick labels
+    plt.rc('legend', fontsize=MEDIUM_FONT_SIZE)  # legend fontsize
+    plt.rc('figure', titlesize=SUPTITLE_FONT_SIZE)  # fontsize of the figure title
+
+
 # %%DEBUG -----------------------------
 if __name__ == '__main__':
     print('This files contains some useful constants')
@@ -198,34 +230,3 @@ if __name__ == '__main__':
     print(wavelengths_m.get_elastic())
     haifa_station = Station()
     print(haifa_station)
-
-# %% VISUALIZATIONS
-FIGURE_DPI = 300
-SAVEFIG_DPI = 300
-
-SMALL_FONT_SIZE = 14
-MEDIUM_FONT_SIZE = 16
-BIG_FONT_SIZE = 18
-TITLE_FONT_SIZE = 20
-SUPTITLE_FONT_SIZE = 24
-
-TIMEFORMAT = mdates.DateFormatter('%H:%M')
-
-
-def set_visualization_settings():
-    # TODO make sure this actualyl propages to other functions
-    plt.rcParams['figure.dpi'] = FIGURE_DPI
-    plt.rcParams['savefig.dpi'] = SAVEFIG_DPI
-
-    # Create an array with the colors to use
-    colors = ["darkblue", "darkgreen", "darkred"]
-    # Set a custom color palette
-    sns.set_palette(sns.color_palette(colors))
-
-    plt.rc('font', size=SMALL_FONT_SIZE)  # controls default text sizes
-    plt.rc('axes', titlesize=TITLE_FONT_SIZE)  # fontsize of the axes title
-    plt.rc('axes', labelsize=BIG_FONT_SIZE)  # fontsize of the x and y labels
-    plt.rc('xtick', labelsize=SMALL_FONT_SIZE)  # fontsize of the tick labels
-    plt.rc('ytick', labelsize=SMALL_FONT_SIZE)  # fontsize of the tick labels
-    plt.rc('legend', fontsize=MEDIUM_FONT_SIZE)  # legend fontsize
-    plt.rc('figure', titlesize=SUPTITLE_FONT_SIZE)  # fontsize of the figure title

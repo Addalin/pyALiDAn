@@ -11,6 +11,7 @@ from scipy.ndimage import gaussian_filter1d, gaussian_filter
 from scipy.stats import multivariate_normal
 from sklearn.model_selection import train_test_split
 
+from learning_lidar.generation.generation_utils import dt2binscale
 from learning_lidar.utils.global_settings import TIMEFORMAT
 from learning_lidar.preprocessing import preprocessing as prep
 import learning_lidar.generation.generation_utils as gen_utils
@@ -26,20 +27,6 @@ LR_tropos = 55
 
 
 # Functions of Daily Aerosols' Density Generation
-def dt2binscale(dt_time, res_sec=30):
-    """
-    TODO move this function to Station
-    Returns the bin index corresponds to dt_time
-    binscale - is the time scale [0,2880], of a daily lidar bin index from 00:00:00 to 23:59:30.
-    The lidar has a bin measure every 30 sec, in total 2880 bins per day.
-    :param dt_time: datetime.datetime object
-    :return: binscale - float in [0,2880]
-    """
-    res_minute = 60 / res_sec
-    res_hour = 60 * res_minute
-    res_musec = (1e-6) / res_sec
-    tind = dt_time.hour * res_hour + dt_time.minute * res_minute + dt_time.second / res_sec + dt_time.microsecond * res_musec
-    return tind
 
 
 def get_random_sample_grid(nx, ny, orig_x, orig_y, std_ratio=.125):
@@ -644,7 +631,7 @@ def get_LR_ds(day_params_ds, time_index):
     LRs = day_params_ds.LR.values
 
     # 2. Setting the time parameter of the curve - tbins
-    tbins = np.round([int(dt2binscale(datetime.utcfromtimestamp(dt.tolist() / 1e9))) for
+    tbins = np.round([int(dt2binscale(prep.dt64_2_datetime(dt))) for
                       dt in day_params_ds.ang355532.Time.values])
 
     # The last bin is added or updated to 2880 artificially.
@@ -706,7 +693,7 @@ def get_angstrom_ds(day_params_ds, time_index):
     ang5321064s = day_params_ds.ang5321064.values
 
     # 2. Setting the time parameter of the curve - tbins
-    tbins = np.round([int(dt2binscale(datetime.utcfromtimestamp(dt.tolist() / 1e9))) for
+    tbins = np.round([int(dt2binscale(prep.dt64_2_datetime(dt))) for
                       dt in day_params_ds.ang355532.Time.values])
 
     # The last bin is added or updated to 2880 artificially.

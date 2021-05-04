@@ -1,10 +1,5 @@
 import os
 from datetime import datetime, timedelta
-import matplotlib.pyplot as plt
-import matplotlib.dates as mdates
-import numpy as np
-import xarray as xr
-import seaborn as sns
 import logging
 from multiprocessing import Pool, cpu_count
 from itertools import repeat
@@ -66,6 +61,6 @@ def main(station_name='haifa', start_date=datetime(2017, 9, 1), end_date=datetim
 
 if __name__ == '__main__':
     station_name = 'haifa'
-    start_date = datetime(2017, 9, 1)
+    start_date = datetime(2017, 9, 25)
     end_date = datetime(2017, 10, 31)
     main(station_name, start_date, end_date)

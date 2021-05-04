@@ -21,7 +21,7 @@ from learning_lidar.utils.misc_lidar import calc_tau, generate_poisson_signal_ST
 from learning_lidar.utils.global_settings import eps
 from learning_lidar.utils.global_settings import TIMEFORMAT
 # %%
-logger = create_and_configer_logger(f"{os.path.basename(__file__)}.log", level=logging.DEBUG)
+logger = create_and_configer_logger(f"{os.path.basename(__file__)}.log", level=logging.INFO)
 gs.set_visualization_settings()
 wavelengths = gs.LAMBDA_nm().get_elastic()
 PLOT_RESULTS = False
@@ -29,6 +29,7 @@ PLOT_RESULTS = False
 
 # %% Helper functions
 def plot_daily_profile(data, height_slice=None, figsize=(16, 6)):
+    # TODO : move to vis_utils.py
     # TODO: add low/high thresholds (single or per channel) see prep.visualize_ds_profile_chan()
     if height_slice is None:
         height_slice = slice(data.Height[0].values, data.Height[-1].values)
@@ -194,7 +195,7 @@ def calc_range_corr_signal_ds(station, day_date, attbsc_ds, lc_ds):
      with share 3 dimensions : 'Wavelength', 'Height', 'Time'
     """
     logger = logging.getLogger()
-    logger.debug(f"\nCalculating Range corrected signal for {day_date.strftime('%Y-%m-%d')}")
+    logger.info(f"\nCalculating Range corrected signal for {day_date.strftime('%Y-%m-%d')}")
     pr2_c = []
     for wavelength in wavelengths:
         pr2_t = []
@@ -337,7 +338,7 @@ def calc_poiss_measurement(station, day_date, p_mean):
     :return: pn_ds: xr.Dataset(). The daily lidar signal measurement.
     """
     logger = logging.getLogger()
-    logger.debug(f"\nCalculating Poisson signal for {day_date.strftime('%Y-%m-%d')}")
+    logger.info(f"\nCalculating Poisson signal for {day_date.strftime('%Y-%m-%d')}")
     tic0 = TicToc()
     tic0.tic()
     pn_h = xr.apply_ufunc(
@@ -434,7 +435,7 @@ def calc_daily_measurement(station, day_date, signal_ds):
 # %% Analysis part
 
 def explore_orig_day(main_folder, station_name, start_date, end_date, day_date, timedelta, wavelengths, time_indx):
-    # TODO - organize this part
+    # TODO - organize this part and move to gen_utils.py or Analysis notebook
     day_str = day_date.strftime('%Y-%m-%d')
     ds_path_extended = os.path.join(main_folder, 'data',
                                     f"dataset_{station_name}_{start_date.strftime('%Y-%m-%d')}_{end_date.strftime('%Y-%m-%d')}_extended.nc")

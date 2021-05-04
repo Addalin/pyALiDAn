@@ -1,7 +1,7 @@
 import learning_lidar.preprocessing.preprocessing as prep
 from datetime import datetime, date, timedelta
 import os
-
+import calendar
 
 def get_gen_dataset_file_name(station, day_date, wavelength='*', data_source='lidar', file_type='range_corr'):
     """
@@ -95,7 +95,7 @@ def get_month_gen_params_path(station, day_date, type='density_params'):
     year = day_date.year
     month = day_date.month
     month_start_day = datetime(year, month, 1, 0, 0)
-    monthdays = (date(year, month + 1, 1) - date(year, month, 1)).days
+    _, monthdays = calendar.monthrange(year, month)
     month_end_day = datetime(year, month, monthdays, 0, 0)
 
     nc_name = f"generated_{type}_{station.location}_{month_start_day.strftime('%Y-%m-%d')}_" \
@@ -141,3 +141,20 @@ def get_daily_gen_param_ds(station, day_date, type='density_params'):
     return day_params_ds
 
 
+def dt2binscale(dt_time, res_sec=30):
+    """
+    TODO consider to move this function to Station ?
+    Returns the bin index corresponds to dt_time
+    binscale - is the time scale [0,2880], of a daily lidar bin index from 00:00:00 to 23:59:30.
+    The lidar has a bin measure every 30 sec, in total 2880 bins per day.
+    :param dt_time: datetime.datetime object
+    :return: binscale - float in [0,2880]
+    """
+    res_minute = 60 / res_sec
+    res_hour = 60 * res_minute
+    res_musec = (1e-6) / res_sec
+    tind = dt_time.hour * res_hour +\
+           dt_time.minute * res_minute + \
+           dt_time.second / res_sec + \
+           dt_time.microsecond * res_musec
+    return tind
