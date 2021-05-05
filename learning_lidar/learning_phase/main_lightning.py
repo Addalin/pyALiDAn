@@ -89,9 +89,10 @@ if __name__ == '__main__':
     use_ray = True
     if use_ray:
         hyper_params = {
-            "hidden_sizes": tune.choice([[16, 32, 8]]), # TODO: add options of [ 8, 16, 32], [16, 32, 8], [ 64, 32, 16]
+            "hidden_sizes": tune.choice([[3, 3, 3], [16, 32, 8]]),
+            # TODO: add options of [ 8, 16, 32], [16, 32, 8], [ 64, 32, 16]
             "lr": tune.grid_search([1e-3, 0.5 * 1e-3, 1e-4]),
-            "bsize": tune.choice([32]),#[16, 8]),
+            "bsize": tune.choice([32]),  # [16, 8]),
             "loss_type": tune.choice(['MSELoss', 'MAELoss']),  # ['MARELoss']
             "Y_features": tune.choice([['LC']]),
             # [['LC'], ['r0', 'r1', 'LC'], ['r0', 'r1'], ['r0', 'r1', 'dr'], ['r0', 'r1', 'dr', 'LC']]
