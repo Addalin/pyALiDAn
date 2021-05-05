@@ -10,20 +10,20 @@ NUM_AVAILABLE_GPU = torch.cuda.device_count()
 def get_paths(station_name, start_date, end_date):
     base_path = os.path.dirname(os.path.dirname(os.path.dirname(__file__)))
 
-    csv_base_name = os.path.join(base_path, 'data', f"dataset_gen_{station_name}_"
+    csv_base_name = os.path.join(base_path, 'data', f"gen_{station_name}_"
                                                     f"{start_date.strftime('%Y-%m-%d')}_"
                                                     f"{end_date.strftime('%Y-%m-%d')}")
-    train_csv_path = csv_base_name + '_train.csv'
-    test_csv_path = csv_base_name + '_test.csv'
-
+    train_csv_path = "dataset_" + csv_base_name + '_train.csv'
+    test_csv_path = "dataset_" + csv_base_name + '_test.csv'
+    stats_csv_path = "stats_" + csv_base_name + '.csv'
     results_path = os.path.join(base_path, 'results')
 
-    return train_csv_path, test_csv_path, results_path
+    return train_csv_path, test_csv_path, stats_csv_path, results_path
 
 
-train_csv_path, test_csv_path, RESULTS_PATH = get_paths(station_name='haifa',
-                                                        start_date=datetime(2017, 9, 1),
-                                                        end_date=datetime(2017, 10, 31))
+train_csv_path, test_csv_path, stats_csv_path, RESULTS_PATH = get_paths(station_name='haifa',
+                                                                        start_date=datetime(2017, 9, 1),
+                                                                        end_date=datetime(2017, 10, 31))
 
 # Constants - should correspond to data, dataloader and model
 CONSTS = {
@@ -32,9 +32,11 @@ CONSTS = {
     'num_workers': 6,
     'train_csv_path': train_csv_path,
     'test_csv_path': test_csv_path,
+    'stats_csv_path': stats_csv_path,
     'powers': {'range_corr': 0.5, 'attbsc': 0.5, 'p_bg': 0.5,
                'LC': 0.5, 'LC_std': 0.5, 'r0': 1, 'r1': 1, 'dr': 1},
     'num_gpus': NUM_AVAILABLE_GPU,
+    "top_height": 15.3,  # NOTE: CHANGING IT WILL AFFECT BOTH THE INPUT DIMENSIONS TO THE NET, AND THE STATS !!!
 }
 
 # Note, replace tune.choice with grid_search if want all possible combinations
@@ -49,7 +51,8 @@ RAY_HYPER_PARAMS = {
     "use_bg": tune.grid_search([False]),
     # True - bg is relevant for 'lidar' case # TODO if lidar - bg T\F, if signal - bg F
     "source": tune.grid_search(['signal', 'lidar']),
-    'data_filter': tune.grid_search([('wavelength', [355]), None])
+    'data_filter': tune.grid_search([('wavelength', [355]), None]),
+    'data_norm': tune.grid_search([True, False])
 }
 
 NON_RAY_HYPER_PARAMS = {
@@ -62,4 +65,7 @@ NON_RAY_HYPER_PARAMS = {
     "source": 'signal',
     "hidden_sizes": [16, 32, 8],
     'data_filter': None,
+    'data_norm': True,
 }
+USE_RAY = True
+DEBUG_RAY = False

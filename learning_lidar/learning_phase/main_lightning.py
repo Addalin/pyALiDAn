@@ -5,8 +5,10 @@ from datetime import datetime
 import ray
 from ray import tune
 from ray.tune import CLIReporter
-from ray.tune.integration.pytorch_lightning import TuneReportCallback, TuneReportCheckpointCallback
-from run_params import CONSTS, RAY_HYPER_PARAMS, RESULTS_PATH, NUM_AVAILABLE_GPU, NON_RAY_HYPER_PARAMS
+from ray.tune.integration.pytorch_lightning import TuneReportCheckpointCallback
+
+from learning_lidar.learning_phase.run_params import USE_RAY, DEBUG_RAY, CONSTS, RAY_HYPER_PARAMS, RESULTS_PATH,\
+    NUM_AVAILABLE_GPU, NON_RAY_HYPER_PARAMS
 
 from pytorch_lightning import Trainer, seed_everything
 
@@ -64,9 +66,6 @@ def main(config, checkpoint_dir=None, consts=None):
 
 
 if __name__ == '__main__':
-    USE_RAY = True
-    DEBUG_RAY = False
-
     # Override number of workers if debugging
     CONSTS['num_workers'] = 0 if DEBUG_RAY else CONSTS['num_workers']
 
