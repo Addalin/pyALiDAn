@@ -15,6 +15,8 @@ from learning_lidar.learning_phase.models.defaultCNN import DefaultCNN
 from learning_lidar.utils.utils import create_and_configer_logger
 
 seed_everything(8318)  # Note, for full deterministic result add deterministic=True to trainer
+
+
 # for pytorch lightning and Ray integration see example at
 # https://github.com/ray-project/ray/blob/35ec91c4e04c67adc7123aa8461cf50923a316b4/python/ray/tune/examples/mnist_pytorch_lightning.py
 
@@ -34,14 +36,14 @@ def main(config, checkpoint_dir=None, consts=None):
                        learning_rate=config['lr'])
 
     # Define Data
-    lidar_dm = LidarDataModule(train_csv_path=consts["train_csv_path"],
-                               test_csv_path=consts["test_csv_path"],
+    lidar_dm = LidarDataModule(train_csv_path=consts["train_csv_path"], test_csv_path=consts["test_csv_path"],
+                               stats_csv_path=consts["stats_csv_path"],
                                powers=consts['powers'] if config['use_power'] else None,
-                               X_features_profiles=X_features,
-                               Y_features=config['Y_features'],
-                               batch_size=config['bsize'],
+                               top_height=consts["top_height"], X_features_profiles=X_features,
+                               Y_features=config['Y_features'], batch_size=config['bsize'],
                                num_workers=consts['num_workers'],
-                               data_filter=config['data_filter'])
+                               data_filter=config['data_filter'],
+                               data_norm=config['data_norm'])
 
     # Define minimization parameter
     metrics = {"loss": f"{config['loss_type']}_val",
