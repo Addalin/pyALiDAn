@@ -3,7 +3,7 @@ from datetime import datetime
 
 import ray
 from ray import tune
-from ray.tune.integration.pytorch_lightning import TuneReportCallback
+from ray.tune.integration.pytorch_lightning import TuneReportCallback, TuneReportCheckpointCallback
 
 from pytorch_lightning import Trainer, seed_everything
 
@@ -11,9 +11,10 @@ from learning_lidar.learning_phase.data_modules.lidar_data_module import LidarDa
 from learning_lidar.learning_phase.models.defaultCNN import DefaultCNN
 
 seed_everything(8318)  # Note, for full deterministic result add deterministic=True to trainer
+# for pytorch lightning and Ray integration see example at
+# https://github.com/ray-project/ray/blob/35ec91c4e04c67adc7123aa8461cf50923a316b4/python/ray/tune/examples/mnist_pytorch_lightning.py
 
-
-def main(config, consts):
+def main(config, checkpoint_dir=None, consts=None):
     # Define X_features
     source_features = (f"{config['source']}_path", "range_corr")
     mol_features = ("molecular_path", "attbsc")
@@ -37,7 +38,7 @@ def main(config, consts):
     # Define minimization parameter
     metrics = {"loss": f"{config['loss_type']}_val",
                "MARELoss": "MARELoss_val"}
-    callbacks = [TuneReportCallback(metrics, on="validation_end")]
+    callbacks = [TuneReportCheckpointCallback(metrics,filename="checkpoint", on="validation_end")]
 
     # Setup the pytorchlighting trainer and run the model
     trainer = Trainer(max_epochs=consts['max_epochs'], callbacks=callbacks, gpus=[1])
@@ -121,7 +122,8 @@ if __name__ == '__main__':
             "Y_features": ['LC'],
             "use_power": True,
             "use_bg": False,
-            "source": 'signal'
+            "source": 'signal',
+            'data_filter': None,
 
         }
 
