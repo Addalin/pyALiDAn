@@ -284,12 +284,14 @@ def create_generated_dataset(station, start_date, end_date, sample_size='30min')
     return gen_df
 
 
-def calc_data_statistics(station, start_date, end_date):
+def calc_data_statistics(station, start_date, end_date, top_height=15.3):
     """
     Calculated statistics for the period of the dataset of the given station during start_date, end_date
     :param station:  gs.station() object of the lidar station
     :param start_date: datetime.date object of the initial period date
     :param end_date:  datetime.date object of the end period date
+    :param top_height: np.float(). The Height[km] **above** ground (Lidar) level - up to which slice the samples.
+    Note: default is 15.3 [km]. IF ONE CHANGES IT - THAN THIS WILL AFFECT THE INPUT DIMENSIONS AND STATISTICS !!!
     :return: df_stats: pd.Dataframe, containing statistics of mean and std values for generation signals during
      the desired period [start_date, end_date]. Note: one should previously save the generated dataset for this period.
     """
@@ -312,11 +314,11 @@ def calc_data_statistics(station, start_date, end_date):
                f'attbsc_{molsource}_mean', f'attbsc_{molsource}_std',  # molecular signal - attbsc
                'p_bg_mean', 'p_bg_std',  # background signal - p_bg
                'LC_mean', 'LC_std']  # Lidar calibration value - LC
-    df_stats = pd.DataFrame(0, index=pd.Index(wavelengths, name='wavelength [nm]'), columns=columns)
+    df_stats = pd.DataFrame(0, index=pd.Index(wavelengths, name='wavelength'), columns=columns)
 
     num_processes = min((cpu_count() - 1, len(days_list)))
     with Pool(num_processes) as p:
-        results = p.starmap(calc_day_statistics, zip(repeat(station), days_list))
+        results = p.starmap(calc_day_statistics, zip(repeat(station), days_list, repeat(top_height)))
     for result in results:
         df_stats += result
 
@@ -330,12 +332,14 @@ def calc_data_statistics(station, start_date, end_date):
     return df_stats, csv_stats_path
 
 
-def calc_day_statistics(station, day_date):
+def calc_day_statistics(station, day_date, top_height=15.3):
     """
     Calculates mean & std for params in datasets_with_names_time_height and datasets_with_names_time
 
     :param station: gs.station() object of the lidar station
     :param day_date: day_date: datetime.date object of the required date
+    :param top_height: np.float(). The Height[km] **above** ground (Lidar) level - up to which slice the samples.
+    Note: default is 15.3 [km]. IF ONE CHANGES IT - THAN THIS WILL AFFECT THE INPUT DIMENSIONS AND STATISTICS !!!
     :return: dataframe, each row corresponds to a wavelength
     """
     logger = logging.getLogger()
@@ -344,7 +348,7 @@ def calc_day_statistics(station, day_date):
     sigsource = 'signal'
     lidsource = 'lidar'
 
-    df_stats = pd.DataFrame(index=pd.Index(wavelengths, name='wavelength [nm]'))
+    df_stats = pd.DataFrame(index=pd.Index(wavelengths, name='wavelength'))
     logger.debug(f'\nCalculating stats for {day_date}')
     # folder names
     mol_folder = prep.get_month_folder_name(station.molecular_dataset, day_date)
@@ -373,8 +377,9 @@ def calc_day_statistics(station, day_date):
                                        (mol_ds.attbsc, f'attbsc_{molsource}')]
 
     for ds, ds_name in datasets_with_names_time_height:
-        df_stats[f'{ds_name}_mean'] = ds.mean(dim={'Height', 'Time'}).values
-        df_stats[f'{ds_name}_std'] = ds.std(dim={'Height', 'Time'}).values
+        height_slice = slice(ds.Height.min().values.tolist(), ds.Height.min().values.tolist() + top_height)
+        df_stats[f'{ds_name}_mean'] = ds.sel(Height=height_slice).mean(dim={'Height', 'Time'}).values
+        df_stats[f'{ds_name}_std'] = ds.sel(Height=height_slice).std(dim={'Height', 'Time'}).values
 
     datasets_with_names_time = [(p_bg, f'p_bg'), (signal_ds.LC, f'LC')]
     for ds, ds_name in datasets_with_names_time:
@@ -393,10 +398,10 @@ def main(station_name, start_date, end_date, log_level=logging.DEBUG):
     DO_DATASET = False
     EXTEND_DATASET = False
     DO_CALIB_DATASET = False
-    USE_KM_UNITS = False
+    USE_KM_UNITS = True
     DO_GENERATED_DATASET = True
     SPLIT_DATASET = False
-    SPLIT_GENERATED_DATASET = False
+    SPLIT_GENERATED_DATASET = True
 
     # Load data of station
     station = gs.Station(station_name=station_name)
