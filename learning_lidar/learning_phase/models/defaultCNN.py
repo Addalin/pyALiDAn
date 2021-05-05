@@ -77,9 +77,9 @@ class DefaultCNN(LightningModule):
         loss = self.criterion(y, y_pred)
         if torch.isnan(loss):
             raise ValueError('Val loss is NaN!')
-        self.log(f"{self.loss_type}_train", loss)
+        self.log(f"loss\{self.loss_type}_train", loss)
         rel_loss = self.rel_loss(y, y_pred)
-        self.log(f"{self.rel_loss_type}_train", rel_loss)
+        self.log(f"rel_loss\{self.rel_loss_type}_train", rel_loss)
         return loss
 
     def validation_step(self, batch, batch_idx):
@@ -87,11 +87,11 @@ class DefaultCNN(LightningModule):
         y = batch['y']
         y_pred = self(x)
         loss = self.criterion(y, y_pred)
-        self.log(f"{self.loss_type}_val", loss)
+        self.log(f"loss\{self.loss_type}_val", loss)
         # for feature_num, feature in enumerate(features):
         #     self.log(f"{"MARE_{feature_num}_val", loss_mare)
         rel_loss = self.rel_loss(y, y_pred)
-        self.log(f"{self.rel_loss_type}_val", rel_loss)
+        self.log(f"rel_loss\{self.rel_loss_type}_val", rel_loss)
         return loss
 
     def configure_optimizers(self):

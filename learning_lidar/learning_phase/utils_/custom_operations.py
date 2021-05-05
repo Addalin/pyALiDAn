@@ -50,7 +50,7 @@ class TrimNegative(object):
         return {'x': X, 'y': Y}
 
 
-class LidarToTensor(object):
+class SampleXR2Tensor(object):
     """Convert a lidar sample {x,y}  to Tensors."""
 
     def __call__(self, sample):
@@ -68,4 +68,3 @@ class LidarToTensor(object):
         Y = torch.from_numpy(np.array(Y).astype(np.float32))
 
         return {'x': X, 'y': Y}
-    # TODO : apply poisson noise (miscLidar.generate_poisson_signal(mu, n)), add gaussian noise for augmentation
