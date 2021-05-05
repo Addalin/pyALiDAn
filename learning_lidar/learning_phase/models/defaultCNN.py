@@ -8,7 +8,7 @@ from learning_lidar.learning_phase.utils_.custom_losses import MARELoss
 
 class DefaultCNN(LightningModule):
 
-    def __init__(self, in_channels, output_size, hidden_sizes, loss_type, learning_rate):
+    def __init__(self, in_channels, output_size, hidden_sizes, fc_size, loss_type, learning_rate):
         super().__init__()
         self.save_hyperparameters()
         self.lr = learning_rate
@@ -37,10 +37,10 @@ class DefaultCNN(LightningModule):
         )
 
         self.fc_layer = nn.Sequential(
-            nn.Linear(8 * 32 * 8, 512),
+            nn.Linear(8 * 32 * hidden_sizes[2], fc_size[0]),
             nn.ReLU(inplace=True),
             nn.Dropout(p=0.1),
-            nn.Linear(512, output_size),
+            nn.Linear(fc_size[0], output_size),
             nn.ReLU(inplace=True)
         )
 

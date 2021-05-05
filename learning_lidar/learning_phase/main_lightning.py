@@ -21,8 +21,11 @@ def main(config, consts):
     X_features = (source_features, mol_features, bg_features) if config["use_bg"] else (source_features, mol_features)
 
     # Define Model
-    model = DefaultCNN(in_channels=len(X_features), output_size=len(config['Y_features']),
-                       hidden_sizes=consts['hidden_sizes'], loss_type=config['loss_type'],
+    model = DefaultCNN(in_channels=len(X_features),
+                       output_size=len(config['Y_features']),
+                       hidden_sizes=config['hidden_sizes'],
+                       fc_size=consts['fc_size'],
+                       loss_type=config['loss_type'],
                        learning_rate=config['lr'])
 
     # Define Data
@@ -32,13 +35,14 @@ def main(config, consts):
                                X_features_profiles=X_features,
                                Y_features=config['Y_features'],
                                batch_size=config['bsize'],
-                               num_workers=consts['num_workers'], data_filter=config['data_filter'])
+                               num_workers=consts['num_workers'],
+                               data_filter=config['data_filter'])
 
     # Define minimization parameter
     metrics = {"loss": f"{config['loss_type']}_val"}
     callbacks = [TuneReportCallback(metrics, on="validation_end")]
 
-    # Setup the pytorchlighting trainer and run the model
+    # Setup the pytorch-lighting trainer and run the model
     trainer = Trainer(max_epochs=consts['max_epochs'], callbacks=callbacks, gpus=[1])
     # trainer = Trainer(max_steps=consts['max_steps'])
     lidar_dm.setup('fit')
@@ -71,7 +75,7 @@ if __name__ == '__main__':
 
     # Constants - should correspond to data, dataloader and model
     consts = {
-        "hidden_sizes": [16, 32, 8],  # TODO: add options of [ 8, 16, 32], [16, 32, 8], [ 64, 32, 16]
+        "fc_size": [512],
         'max_epochs': 2,
         'num_workers': 0 if DEBUG_RAY else max_workers,
         'train_csv_path': train_csv_path,
@@ -85,14 +89,14 @@ if __name__ == '__main__':
     use_ray = True
     if use_ray:
         hyper_params = {
+            "hidden_sizes": tune.choice([[16, 32, 8]]), # TODO: add options of [ 8, 16, 32], [16, 32, 8], [ 64, 32, 16]
             "lr": tune.grid_search([1e-3, 0.5 * 1e-3, 1e-4]),
-            "bsize": tune.choice([16, 8]),
-            # "wavelengths": tune.grid_search([355, 532, 1064]),  # TODO change to const - all wavelengths
+            "bsize": tune.choice([32]),#[16, 8]),
             "loss_type": tune.choice(['MSELoss', 'MAELoss']),  # ['MARELoss']
             "Y_features": tune.choice([['LC']]),
             # [['LC'], ['r0', 'r1', 'LC'], ['r0', 'r1'], ['r0', 'r1', 'dr'], ['r0', 'r1', 'dr', 'LC']]
             "use_power": tune.grid_search([True, False]),
-            "use_bg": tune.grid_search([False, True]),
+            "use_bg": tune.grid_search([False]),  # True - bg is relevant for 'lidar' case
             "source": tune.grid_search(['signal', 'lidar']),
             'data_filter': tune.grid_search([('wavelength', [355]), None])
         }
@@ -120,7 +124,8 @@ if __name__ == '__main__':
             "Y_features": ['LC'],
             "use_power": True,
             "use_bg": False,
-            "source": 'signal'
+            "source": 'signal',
+            "hidden_sizes": [16, 32, 8],
 
         }
 

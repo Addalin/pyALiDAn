@@ -8,10 +8,12 @@ import pandas as pd
 import numpy as np
 from matplotlib import pyplot as plt
 from matplotlib import rc
+
 rc('font', **{'family': 'sans-serif', 'sans-serif': ['Helvetica']})
 rc('text', usetex=True)
 rc('font', family='serif')
 plt.rcParams['text.latex.preamble'] = r"\usepackage{amsmath}"
+
 
 def create_and_configer_logger(log_name='log_file.log', level=logging.DEBUG):
     """
@@ -43,7 +45,7 @@ def create_and_configer_logger(log_name='log_file.log', level=logging.DEBUG):
 
     # set up logging to console
     console = logging.StreamHandler()
-    console.setLevel(logging.DEBUG)
+    console.setLevel(level=level)
     # set a format which is simpler for console use
     formatter = logging.Formatter('[%(asctime)s] {%(pathname)s:%(lineno)d} %(levelname)s - %(message)s')
     console.setFormatter(formatter)
