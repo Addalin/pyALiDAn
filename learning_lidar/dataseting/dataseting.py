@@ -263,7 +263,7 @@ def create_generated_dataset(station, start_date, end_date, sample_size='30min')
             df_subsets = [df.iloc[inds] for inds in inds_subsets]
             subsets = []
             for cur_day, subset in zip(days_list, df_subsets):
-                subsets.append(add_X_path(subset, station, cur_day, lambda_nm=wavelength, data_source='molecular',
+                subsets.append(add_X_path(subset.copy(deep=True), station, cur_day, lambda_nm=wavelength, data_source='molecular',
                                           file_type='attbsc'))
             df = pd.concat([subset for subset in subsets]).sort_values('start_time_period')
 

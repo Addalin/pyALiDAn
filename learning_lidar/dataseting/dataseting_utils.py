@@ -124,7 +124,7 @@ def add_X_path(df, station, day_date, lambda_nm=532, data_source='molecular', fi
     elif len(paths) != 1:
         raise Exception(
             f"\n Expected ONE '{data_source}' path for {station.location} station, at {day_date.strftime('%Y-%m-%d')}.\nGot: {paths} ")
-    df[f"{data_source}_path"] = paths[0]
+    df.loc[:, f"{data_source}_path"] = paths[0]
     return df
 
 
