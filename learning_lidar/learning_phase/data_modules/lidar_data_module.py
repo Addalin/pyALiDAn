@@ -6,7 +6,7 @@ from pytorch_lightning import LightningDataModule
 from torch.utils.data import DataLoader, random_split
 
 from learning_lidar.preprocessing import preprocessing as prep
-from learning_lidar.learning_phase.utils_.custom_operations import PowTransform, LidarToTensor
+from learning_lidar.learning_phase.utils_.custom_operations import PowTransform, SampleXR2Tensor
 
 
 class LidarDataSet(torch.utils.data.Dataset):
@@ -152,8 +152,8 @@ class LidarDataModule(LightningDataModule):
 
         # Step 1. Load Dataset
         # TODO: add option - y = {bin(r0),bin(r1)}
-        transformations_list = [PowTransform(self.Y_features, self.profiles, self.powers), LidarToTensor()]\
-                                if self.powers else [LidarToTensor()]
+        transformations_list = [PowTransform(self.Y_features, self.profiles, self.powers), SampleXR2Tensor()]\
+                                if self.powers else [SampleXR2Tensor()]
         lidar_transforms = torchvision.transforms.Compose(transformations_list)
 
         if stage == 'fit' or stage is None:
