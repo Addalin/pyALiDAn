@@ -28,16 +28,23 @@ class DefaultCNN(LightningModule):
             nn.Dropout2d(p=0.15),
             nn.MaxPool2d(kernel_size=(4, 2), stride=(4, 2)),
 
-            # Conv layer 2
+            # Conv layer 3
             nn.Conv2d(in_channels=hidden_sizes[1], out_channels=hidden_sizes[2], kernel_size=3, padding=1),
             nn.BatchNorm2d(hidden_sizes[2]),
             nn.ReLU(inplace=True),
             nn.Dropout2d(p=0.15),
             nn.MaxPool2d(kernel_size=(4, 2), stride=(4, 2)),
-        )
 
+            # Conv layer 4
+            nn.Conv2d(in_channels=hidden_sizes[2], out_channels=hidden_sizes[3], kernel_size=3, padding=1),
+            nn.BatchNorm2d(hidden_sizes[3]),
+            nn.ReLU(inplace=True),
+            nn.Dropout2d(p=0.15),
+            nn.MaxPool2d(kernel_size=(4, 2), stride=(4, 2)),
+        )
+        # TODO: calc the first FC layer automatically (not hard coded), based on prev layer dimensions.
         self.fc_layer = nn.Sequential(
-            nn.Linear(8 * 32 * hidden_sizes[2], fc_size[0]),
+            nn.Linear(4 * 8 * hidden_sizes[3], fc_size[0]),
             nn.ReLU(inplace=True),
             nn.Dropout(p=0.1),
             nn.Linear(fc_size[0], output_size),
@@ -77,9 +84,9 @@ class DefaultCNN(LightningModule):
         loss = self.criterion(y, y_pred)
         if torch.isnan(loss):
             raise ValueError('Val loss is NaN!')
-        self.log(f"loss\{self.loss_type}_train", loss)
+        self.log(f"loss/{self.loss_type}_train", loss)
         rel_loss = self.rel_loss(y, y_pred)
-        self.log(f"rel_loss\{self.rel_loss_type}_train", rel_loss)
+        self.log(f"rel_loss/{self.rel_loss_type}_train", rel_loss)
         return loss
 
     def validation_step(self, batch, batch_idx):
@@ -87,11 +94,11 @@ class DefaultCNN(LightningModule):
         y = batch['y']
         y_pred = self(x)
         loss = self.criterion(y, y_pred)
-        self.log(f"loss\{self.loss_type}_val", loss)
+        self.log(f"loss/{self.loss_type}_val", loss)
         # for feature_num, feature in enumerate(features):
         #     self.log(f"{"MARE_{feature_num}_val", loss_mare)
         rel_loss = self.rel_loss(y, y_pred)
-        self.log(f"rel_loss\{self.rel_loss_type}_val", rel_loss)
+        self.log(f"rel_loss/{self.rel_loss_type}_val", rel_loss)
         return loss
 
     def configure_optimizers(self):
