@@ -31,10 +31,10 @@ def main(config, checkpoint_dir=None, consts=None):
 
     # Define Model
     model = DefaultCNN(in_channels=len(X_features),
-                       output_size=len(config['Y_features']),
-                       hidden_sizes=config['hidden_sizes'],
-                       fc_size=consts['fc_size'],
-                       loss_type=config['loss_type'],
+                       output_size=len(consts['Y_features']),
+                       hidden_sizes=config['hsizes'],
+                       fc_size=config['fc_size'],
+                       loss_type=config['ltype'],
                        learning_rate=config['lr'])
 
     # Define Data
@@ -42,14 +42,14 @@ def main(config, checkpoint_dir=None, consts=None):
                                stats_csv_path=consts["stats_csv_path"],
                                powers=consts['powers'] if config['use_power'] else None,
                                top_height=consts["top_height"], X_features_profiles=X_features,
-                               Y_features=config['Y_features'], batch_size=config['bsize'],
+                               Y_features=consts['Y_features'], batch_size=config['bsize'],
                                num_workers=consts['num_workers'],
-                               data_filter=config['data_filter'],
-                               data_norm=config['data_norm'])
+                               data_filter=config['dfilter'],
+                               data_norm=config['dnorm'])
 
     # Define minimization parameter
-    metrics = {"loss": f"{config['loss_type']}_val",
-               "MARELoss": "MARELoss_val"}
+    metrics = {"loss": f"loss/{config['ltype']}_val",
+               "MARELoss": "rel_loss/MARELoss_val"}
     callbacks = [TuneReportCheckpointCallback(metrics, filename="checkpoint", on="validation_end")]
 
     # Setup the pytorch-lighting trainer and run the model
