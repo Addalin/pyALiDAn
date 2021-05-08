@@ -2,6 +2,9 @@ import torch
 import numpy as np
 import xarray as xr
 
+# TODO: Apply Poiss noise on p
+# TODO: Apply r^2 multiplication on P
+
 class PowTransform(object):
     def __init__(self, Y_features, profiles, powers={'range_corr': 0.5, 'attbsc': 0.5,
                                                      'LC': 0.5, 'LC_std': 0.5, 'r0': 1.0, 'r1': 1.0, 'dr': 1.0}):

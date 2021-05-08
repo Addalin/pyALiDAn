@@ -40,8 +40,8 @@ CONSTS = {
 
 # Note, replace tune.choice with grid_search if want all possible combinations
 RAY_HYPER_PARAMS = {
-    "hsizes": tune.grid_search([[3, 3, 3, 3], [2, 2, 2, 2]]),
-    "fc_size": tune.grid_search([[4], [32]]),
+    "hsizes": tune.grid_search([[2, 2, 2, 2], [3, 3, 3, 3]]),
+    "fc_size": tune.grid_search([[16]]),  # [4], [32]]),
     # ,[16, 32, 8]]),  # TODO: add options of [ 8, 16, 32], [16, 32, 8], [ 64, 32, 16]
     "lr": tune.grid_search([1e-3, 0.5 * 1e-3, 1e-4]),
     "bsize": tune.grid_search([32]),  # 48 , 64]),  # [16, 8]),
