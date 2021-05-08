@@ -21,7 +21,9 @@ Separate/merge and organize the following modules:
    1. preprocessing: 
       - cleanup- ***DONE***
       - TODOS - ***OPEN***
-   2. micLidar:
+      - Explore dynamic range of range corrected signal - ***DONE***
+
+   2. mic_lidar:
       - cleanup- ***DONE***
       - cleanup duplicated code - make sure only micLidar.py are used , and move `generate_atmosphere.py` to  `legacy code` ***DONE*** 
       - TODOS - not urgent - ***OPEN***
@@ -89,9 +91,6 @@ Each sample contains the followings:
 
     - bin_r1        < int >          - index of max reference height bin (r0)
 
-## CLEANUP tasks:
--
-
 # 3. Generation - workflow
 
 ## Current Workflow:
@@ -104,7 +103,9 @@ Each sample contains the followings:
        - Output: nc file of generate mean bg is saved per month
             - Folder : `D:\data_haifa\GENERATION\bg_dataset`.
             - NC file name: `generated_bg_haifa_2017-01-01_2017-01-31.nc`
-        
+       - TODOS: 
+            - clean and update imports ***DONE***
+            - create module `generate_bg_signals.py` ***OPEN***
     2. **Daily Angstrom Exponent and Optical Depth**
        - Notebook: `read_AERONET_data.ipynb`
        - Read Aeronet measurement for a month, and generate per month, the angstrom and aerosols optical depth (aod) datasets.
@@ -113,7 +114,8 @@ Each sample contains the followings:
        - TODOS:
          - Adapt to run more month (at least October). Requires the download from AERONET site ( Look in `cameraNetwork` to see how this is done)
          - Create a python module - ***OPEN***
-
+         - Run on two more months ***OPEN***
+        
     3. **Initial parameters for density generation**
        - Notebook: `KDE_estimation_sample.ipynb`
        - Parameters: $r_ref$, $\beta_{532}^{max}$, $Angstrom_{355,532}$, $Angstrom_{532,1064}$,LR 
@@ -126,9 +128,9 @@ Each sample contains the followings:
             - Folder:  `D:\data_haifa\GENERATION`
             - NC File name: `generated_density_params_haifa_2017-09-01_2017-09-30.nc`
        - TODOS: 
-            - Need some cleanup and organising
+            - Need some cleanup and organising ***DONE***
             - Generate on more months (at least for Oct 2017), currently available only for september.
-            - Create a python module - ***OPEN***
+            - Create a python module that runs the parameters' creation (includes  `KDE_estimation_sample.ipynb` & `read_AERONET_data.ipynb`) ***OPEN***
    4. **Lidar Constant for a period**
       - Notebook: `generate_LC_pattern.ipynb`   
       - Creates varying Lidar Power for a period. Currently, done for sep-oct 2017. Values are manually initialized based on values found in `ds_extended` (created in `dataseting.py`).
@@ -172,14 +174,14 @@ Each sample contains the followings:
     * For sep-oct 2017 ***DONE*** 
     * For other times ***OPEN** - This is dependent on finishing the above stages of density creation. 
   5. Create a python module - ***DONE***
+  6. Save range_corre after poisson procedure (without bg)  ***OPEN***
     
-- Open issues: 
-- Why the signal has appearance of stairs? Check also TROPOS measurements
+## Issues:
+   1. Debug propagation of PLOT_RESULTS flag in `generate_density_utils.py` & `daily_signals_generations_utils.py`
+   2. loggers :
+      - Make sure the logger type can be passed as argument to main() - e.g. in `generate_density_utils.py` & `daily_signals_generations_utils.py`
+      - Set loggers folder to be withing the submodule that created it.  
 
-## Tasks:
-   1. 
-   2. 
-   3. 
 
 # 4. Learning system - workflow
 ##  Dataloader Tasks:
@@ -194,14 +196,34 @@ Each sample contains the followings:
     - split errors by the wavelength ***OPEN***
 5. Filter the dataset - to train on a specific populations - ***DONE*** 
     - currently, works for features written in the dataset file
-6. Use the calculated statistics of the database (mean , std) for Normalization - ***OPEN***
-7. Simplify the Net - ***OPEN***
+6. Use the calculated statistics of the database (mean , std) for Normalization - ***DONE***
+7. LC Net Architecture - ***ON GOING***
+   
+    a. runs of hiden_sizes,fc_size
+    
+    * hiden_sizes : [2,2,2,2] , [3,3,3,3] , fc_size: [4,32,16] ***ALMOST DONE***
+    * hiden_sizes : [1,1,1,1] , [4,4,4,4] , fc_size: [4,32,16] ***OPEN***
+    
+    b. runs for testing inputs:
+    * range corrected of `signal` and `lidar` - ***ALMOST DONE*** 
+    * range_corrected of `signal` after poisson noise ***OPEN***
+    * Adding bg ***OPEN***
+    
+    c. Run LC net data on 2 more months (Jun & April 2017) - this requires creation of signals before. ***OPEN***
+    
+    d. Create summery of the runs in csv for each run include also : 
+        number of parameters, run time.
+        This summery should help up decide on LC net: 
+        hiden sizes , fc size , type of input signal (what range_corrected should be use and if using bg) 
 
+8. Load checkpoint - for more train epochs ***OPEN***
+9. Run checkpoint on test dataset ***OPEN***
+10. change results folder (D is better)
+11. Resolve Errors during training (issues in github)***OPEN***
+12. Keep only relevant files for training (from the databse ) on the SSD disk.
 
-
-
-4. Explore dynamic range of range corrected signal - done , waiting for TROPOS response
-
+13. Decide if using auto encoder de-noiser  ***TBD***
+14. Decide on RNN architecture ***TBD***
 
 # Others
 ## Other repo and coding issues:
