@@ -121,7 +121,7 @@ Each sample contains the followings:
        - Parameters: $r_ref$, $\beta_{532}^{max}$, $Angstrom_{355,532}$, $Angstrom_{532,1064}$,LR 
        - Input datasets: 
             - df_extended (created in `preprocessing.py`). File name: `.\dataset_haifa_2017-09-01_2017-10-31_extended.csv` (for ref height)
-            - ds_profile - profile retrival od TROPOS (for max beta) 
+            - ds_profile - profile retrieval of TROPOS (for max beta) 
             - ds_ang - Angstrom dataset created in `read_AERONET_data.ipynb`. File name:`D:\data_haifa\AERONET\20170901_20170930_haifa_ang.nc`
             - df_A_LR -  Angstrom-Lidar dataset from pre-measured figure. File name: `C:\Users\addalin\Dropbox\Lidar\code\Angstrom_LidarRatio\plot_data\plot_data\data_points_with_error_bars.csv` 
        - Output: nc file containing the parameters above 
@@ -154,7 +154,7 @@ Each sample contains the followings:
 2. **Lidar Signal generation**:
 - Notebook: `daily_signals_generation.ipynb`
 - Generating lidar signals
-- Workfolow: 
+- Workflow: 
     1. Calculates total backscatter and total extinction profile (of molecular and aerosols)
     2. Calculate averaged daily lidar power (p +  p_bg)
     3. Calculate Poisson measurement of the signal
@@ -218,9 +218,11 @@ Each sample contains the followings:
 
 8. Load checkpoint - for more train epochs ***OPEN***
 9. Run checkpoint on test dataset ***OPEN***
-10. change results folder (D is better)
-11. Resolve Errors during training (issues in github)***OPEN***
-12. Keep only relevant files for training (from the databse ) on the SSD disk.
+10. change results folder (D is better)  ***OPEN***
+11. Resolve Errors & warnings during training ***OPEN***: 
+    - [issue1](https://github.com/Addalin/learning_lidar/issues/28#issue-881010672) 
+    - [issue2](https://github.com/Addalin/learning_lidar/issues/27#issue-881005719)
+12. Keep only relevant files for training ( create a script that runs on the csv database that will pass only the relevant files) on the SSD disk. ***OPEN***
 
 13. Decide if using auto encoder de-noiser  ***TBD***
 14. Decide on RNN architecture ***TBD***
@@ -266,8 +268,8 @@ Each sample contains the followings:
           - aerosol_dataset
           - bg_dataset
 4. Update environment installations documents. as: 
-   - ARLreader ***OPEM**
-   - molecular/ lidar_molecular   - ask Ioannis Binietoglou, Mike Kottas - for link to updated repo inorder to cite their work. ***OPEM**
+   - ARLreader ***OPEN***
+   - molecular/ lidar_molecular   - ask Ioannis Binietoglou, Mike Kottas - for link to updated repo inorder to cite their work. ***OPEN***
    - pytorch. ***OPEN***
 5. Add version number to dataset files (with relation to git version). - currently will be solved as folder versions  ***OPEN***
 6. merge visualization and plotting settings
