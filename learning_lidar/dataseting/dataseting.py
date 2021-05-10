@@ -323,7 +323,7 @@ def calc_data_statistics(station, start_date, end_date, top_height=15.3):
         df_stats += result
 
     norm_scale = 1 / len(days_list)
-    df_stats /= norm_scale  # normalize by number of days
+    df_stats *= norm_scale  # normalize by number of days
 
     # Save stats
     stats_fname = f"stats_gen_{station.name}_{start_date.strftime('%Y-%m-%d')}_{end_date.strftime('%Y-%m-%d')}.csv"
