@@ -3,11 +3,14 @@ import learning_lidar.preprocessing.preprocessing as prep
 from datetime import datetime, date, timedelta
 import os
 import calendar
-from learning_lidar.generation.daily_signals_generations_utils import wavelengths
 from learning_lidar.utils.global_settings import TIMEFORMAT
+from tqdm import tqdm
+import pandas as pd
 
 
-def get_gen_dataset_file_name(station, day_date, wavelength='*', data_source='lidar', file_type='range_corr'):
+def get_gen_dataset_file_name(station, day_date, wavelength='*',
+                              data_source='lidar', file_type='range_corr',
+                              time_slice=None):
     """
      Retrieves file pattern name of generated lidar dataset according to:
       station, date, wavelength.
@@ -21,20 +24,24 @@ def get_gen_dataset_file_name(station, day_date, wavelength='*', data_source='li
 
     :return: dataset file name (netcdf) file of the data_type required per given day, wavelength, data_source and file_type
     """
+    dt_str = day_date.strftime('%Y_%m_%d')
+    if time_slice:
+        dt_str += f"_{time_slice.start.strftime('%H%M%S')}_{time_slice.stop.strftime('%H%M%S')}"
     if wavelength == '*':
-        file_name = f"{day_date.strftime('%Y_%m_%d')}_{station.location}_generated_{data_source}.nc"
+        file_name = f"{dt_str}_{station.location}_generated_{data_source}.nc"
     else:
-        file_name = f"{day_date.strftime('%Y_%m_%d')}_{station.location}_generated_{file_type}_{wavelength}_{data_source}.nc"
+        file_name = f"{dt_str}_{station.location}_generated_{file_type}_{wavelength}_{data_source}.nc"
 
     return file_name
 
 
-def save_generated_dataset(station, dataset, data_source='lidar', save_mode='both', profiles=None):
+def save_generated_dataset(station, dataset, data_source='lidar', save_mode='both',
+                           profiles=None, time_slices=None):
     """
     Save the input dataset to netcdf file
     If this name is not provided, then the first profile is automatically selected
     :param station: station: gs.station() object of the lidar station
-    :param dataset: array.Dataset() a daily generated lidar signal, holding 5 data variables:
+    :param dataset: xarray.Dataset() a daily generated lidar signal, holding 5 data variables:
              4 daily dataset, with dimensions of : Height, Time, Wavelength.
               name of profiles: 'range_corr','range_corr_p', 'lidar_sig','lidar_sig_p'
              1 shared variable: date
@@ -70,11 +77,22 @@ def save_generated_dataset(station, dataset, data_source='lidar', save_mode='bot
             for wavelength in dataset.Wavelength.values:
                 ds_profile = dataset.sel(Wavelength=wavelength)[profile]
                 ds_profile['date'] = date_datetime
-                file_name = get_gen_dataset_file_name(station, date_datetime, data_source=data_source,
-                                                      wavelength=wavelength, file_type=profile)
-                ncpath = prep.save_dataset(ds_profile, month_folder, file_name)
-                if ncpath:
-                    ncpaths.append(ncpath)
+                if time_slices:
+                    for time_slice in tqdm(time_slices,
+                                           desc=f"Split and save time slices for: {profile}, {wavelength}"):
+                        file_name = get_gen_dataset_file_name(station, date_datetime, data_source=data_source,
+                                                              wavelength=wavelength, file_type=profile,
+                                                              time_slice=time_slice)
+                        ds_slice = ds_profile.sel(Time=time_slice)
+                        ncpath = prep.save_dataset(ds_slice, month_folder, file_name)
+                        if ncpath:
+                            ncpaths.append(ncpath)
+                else:
+                    file_name = get_gen_dataset_file_name(station, date_datetime, data_source=data_source,
+                                                          wavelength=wavelength, file_type=profile)
+                    ncpath = prep.save_dataset(ds_profile, month_folder, file_name)
+                    if ncpath:
+                        ncpaths.append(ncpath)
 
     '''save the dataset to a single netcdf'''
     if save_mode in ['both', 'single']:
@@ -83,6 +101,33 @@ def save_generated_dataset(station, dataset, data_source='lidar', save_mode='bot
         ncpath = prep.save_dataset(dataset, month_folder, file_name)
         if ncpath:
             ncpaths.append(ncpath)
+    return ncpaths
+
+
+def save_time_splits_generated_dataset(station, dataset, data_source='lidar',
+                                       profiles=None, sample_size='30min'):
+    """
+    Save the dataset split into time samples per wavelength
+    :param station: station: station: gs.station() object of the lidar station
+    :param dataset:  xarray.Dataset() a daily generated lidar signal
+    :param data_source: source type of the file, i.e., 'lidar' - for lidar dataset, and 'aerosol' - aerosols dataset.
+    :param profiles: A list containing the names of profiles desired to be saved separately.
+    :param sample_size: string. The sample size. such as '30min'
+    :return:
+    """
+    day_date = prep.get_daily_ds_date(dataset)
+    sample_start = pd.date_range(start=day_date,
+                                 end=day_date + timedelta(days=1),
+                                 freq=sample_size)[0:-1]
+    sample_end = pd.date_range(start=day_date,
+                               end=day_date + timedelta(days=1),
+                               freq=sample_size)[1:]
+    sample_end -= timedelta(seconds=station.freq)
+    time_slices = [slice(sample_s, sample_e) for sample_s, sample_e in zip(sample_start, sample_end)]
+    ncpaths = save_generated_dataset(station,
+                                     dataset=dataset,
+                                     data_source=data_source, save_mode='sep',
+                                     profiles=profiles, time_slices=time_slices)
     return ncpaths
 
 
@@ -157,24 +202,25 @@ def dt2binscale(dt_time, res_sec=30):
     res_minute = 60 / res_sec
     res_hour = 60 * res_minute
     res_musec = (1e-6) / res_sec
-    tind = dt_time.hour * res_hour +\
+    tind = dt_time.hour * res_hour + \
            dt_time.minute * res_minute + \
            dt_time.second / res_sec + \
            dt_time.microsecond * res_musec
     return tind
 
 
-def plot_daily_profile(data, height_slice=None, figsize=(16, 6)):
+def plot_daily_profile(profile_ds, height_slice=None, figsize=(16, 6)):
     # TODO : move to vis_utils.py
     # TODO: add low/high thresholds (single or per channel) see prep.visualize_ds_profile_chan()
+    wavelengths = profile_ds.Wavelength.values
     if height_slice is None:
-        height_slice = slice(data.Height[0].values, data.Height[-1].values)
-    str_date = data.Time[0].dt.strftime("%Y-%m-%d").values.tolist()
+        height_slice = slice(profile_ds.Height[0].values, profile_ds.Height[-1].values)
+    str_date = profile_ds.Time[0].dt.strftime("%Y-%m-%d").values.tolist()
     fig, axes = plt.subplots(nrows=1, ncols=3, figsize=figsize, sharey=True)
     for wavelength, ax in zip(wavelengths, axes.ravel()):
-        data.sel(Height=height_slice, Wavelength=wavelength).plot(cmap='turbo', ax=ax)
+        profile_ds.sel(Height=height_slice, Wavelength=wavelength).plot(cmap='turbo', ax=ax)
         ax.xaxis.set_major_formatter(TIMEFORMAT)
         ax.xaxis.set_tick_params(rotation=0)
-    plt.suptitle(f"{data.info} - {str_date}")
+    plt.suptitle(f"{profile_ds.info} - {str_date}")
     plt.tight_layout()
     plt.show()

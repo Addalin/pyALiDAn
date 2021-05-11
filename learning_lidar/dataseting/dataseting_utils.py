@@ -11,7 +11,7 @@ import xarray as xr
 from scipy.ndimage import gaussian_filter1d
 from sklearn.model_selection import train_test_split
 
-from learning_lidar.generation.generation_utils import get_gen_dataset_file_name
+import learning_lidar.generation.generation_utils as gen_utils
 from learning_lidar.preprocessing import preprocessing as prep
 from learning_lidar.utils.global_settings import eps
 
@@ -274,7 +274,8 @@ def split_save_train_test_ds(csv_path='', train_size=0.8, df=None):
     train_path = f'{source_path}_train.csv'
     test_path = f'{source_path}_test.csv'
     df_copy = df.copy(deep=True)
-    train_set, test_set = train_test_split(df_copy, train_size=train_size, random_state=2021, shuffle=True, stratify=df_copy['wavelength'])
+    train_set, test_set = train_test_split(df_copy, train_size=train_size, random_state=2021, shuffle=True,
+                                           stratify=df_copy['wavelength'])
     train_set = train_set.copy(deep=True)
     test_set = test_set.copy(deep=True)
     train_set.sort_index(inplace=True)
@@ -288,11 +289,18 @@ def split_save_train_test_ds(csv_path='', train_size=0.8, df=None):
     return train_set, test_set
 
 
-def get_generated_X_path(station, parent_folder, day_date, data_source, wavelength, file_type=None):
-    data_month = prep.get_month_folder_name(parent_folder=parent_folder, day_date=day_date)
-    nc_name = get_gen_dataset_file_name(station, day_date, data_source=data_source, wavelength=wavelength,
-                                        file_type=file_type)
-    data_path = os.path.join(data_month, nc_name)
+def get_generated_X_path(station, parent_folder, day_date, data_source, wavelength, file_type=None, time_slice=None):
+    month_folder = prep.get_month_folder_name(parent_folder=parent_folder, day_date=day_date)
+    nc_name = gen_utils.get_gen_dataset_file_name(station, day_date, data_source=data_source, wavelength=wavelength,
+                                        file_type=file_type, time_slice=time_slice)
+    nc_path = os.path.join(month_folder, nc_name)
+    return nc_path
+
+def get_prep_X_path(station, parent_folder, day_date, data_source, wavelength, file_type=None, time_slice=None):
+    month_folder = prep.get_month_folder_name(parent_folder=parent_folder, day_date=day_date)
+    nc_name = prep.get_prep_dataset_file_name(station, day_date, data_source=data_source, lambda_nm =wavelength,
+                                        file_type=file_type, time_slice=time_slice)
+    data_path = os.path.join(month_folder, nc_name)
     return data_path
 
 

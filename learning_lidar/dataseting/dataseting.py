@@ -19,7 +19,7 @@ import learning_lidar.utils.global_settings as gs
 import learning_lidar.preprocessing.preprocessing as prep
 from learning_lidar.dataseting.dataseting_utils import get_query, query_database, add_profiles_values, add_X_path, \
     get_time_slots_expanded, convert_Y_features_units, recalc_LC, split_save_train_test_ds, get_generated_X_path, \
-    get_mean_lc
+    get_mean_lc, get_prep_X_path
 from learning_lidar.generation.daily_signals_generations_utils import get_daily_bg
 from learning_lidar.utils.utils import create_and_configer_logger
 import learning_lidar.generation.generation_utils as gen_utils
@@ -228,50 +228,52 @@ def create_generated_dataset(station, start_date, end_date, sample_size='30min')
 
             # add bg path
             df['bg_path'] = df.apply(
-                lambda row: get_generated_X_path(station=station,
-                                                 parent_folder=station.gen_bg_dataset,
-                                                 day_date=row['start_time_period'],
-                                                 data_source='bg',
-                                                 wavelength=wavelength,
-                                                 file_type='p_bg'),
+                lambda row: get_generated_X_path(station=station, parent_folder=station.gen_bg_dataset,
+                                                 day_date=row['start_time_period'], data_source='bg',
+                                                 wavelength=wavelength, file_type='p_bg',
+                                                 time_slice=slice(row['start_time_period'], row['end_time_period'])),
                 axis=1, result_type='expand')
 
             # add lidar path
             df['lidar_path'] = df.apply(
-                lambda row: get_generated_X_path(station=station,
-                                                 parent_folder=station.gen_lidar_dataset,
-                                                 day_date=row['start_time_period'],
-                                                 data_source='lidar',
-                                                 wavelength=wavelength,
-                                                 file_type='range_corr'),
+                lambda row: get_generated_X_path(station=station, parent_folder=station.gen_lidar_dataset,
+                                                 day_date=row['start_time_period'], data_source='lidar',
+                                                 wavelength=wavelength, file_type='range_corr',
+                                                 time_slice=slice(row['start_time_period'], row['end_time_period'])),
                 axis=1, result_type='expand')
 
             # add signal path
             df['signal_path'] = df.apply(
-                lambda row: get_generated_X_path(station=station,
-                                                 parent_folder=station.gen_signal_dataset,
-                                                 day_date=row['start_time_period'],
-                                                 data_source='signal',
-                                                 wavelength=wavelength,
-                                                 file_type='range_corr'),
+                lambda row: get_generated_X_path(station=station, parent_folder=station.gen_signal_dataset,
+                                                 day_date=row['start_time_period'], data_source='signal',
+                                                 wavelength=wavelength, file_type='range_corr',
+                                                 time_slice=slice(row['start_time_period'], row['end_time_period'])),
+                axis=1, result_type='expand')
+
+            # add signal path - poisson without bg
+            df['signal_p_path'] = df.apply(
+                lambda row: get_generated_X_path(station=station, parent_folder=station.gen_signal_dataset,
+                                                 day_date=row['start_time_period'], data_source='signal',
+                                                 wavelength=wavelength, file_type='range_corr_p',
+                                                 time_slice=slice(row['start_time_period'], row['end_time_period'])),
                 axis=1, result_type='expand')
 
             # Add molecular path
-            days_groups = df.groupby('date').groups
-            days_list = days_groups.keys()
-            inds_subsets = [days_groups[key] for key in days_list]
-            df_subsets = [df.iloc[inds] for inds in inds_subsets]
-            subsets = []
-            for cur_day, subset in zip(days_list, df_subsets):
-                subsets.append(add_X_path(subset.copy(deep=True), station, cur_day, lambda_nm=wavelength, data_source='molecular',
-                                          file_type='attbsc'))
-            df = pd.concat([subset for subset in subsets]).sort_values('start_time_period')
+            df['molecular_path'] = df.apply(
+                lambda row: get_prep_X_path(station=station, parent_folder=station.molecular_dataset,
+                                            day_date=row['start_time_period'], data_source='molecular',
+                                            wavelength=wavelength, file_type='attbsc',
+                                            time_slice=slice(row['start_time_period'], row['end_time_period'])),
+                axis=1, result_type='expand')
 
             CALC_MEAN_LC = True
             if CALC_MEAN_LC:
                 # get the mean LC from signal_paths, one day at a time
                 # TODO: adapt this part and get_mean_lc() to retrieve mean LC for 3 wavelength at once
                 #  (should be faster then reading the file 3 times per wavelength)
+                days_groups = df.groupby('date').groups
+                days_list = days_groups.keys()
+                inds_subsets = [days_groups[key] for key in days_list]
                 df_subsets = [df.iloc[inds] for inds in inds_subsets]
                 num_processes = min((cpu_count() - 1, len(days_list)))
                 with Pool(num_processes) as p:
@@ -307,7 +309,9 @@ def calc_data_statistics(station, start_date, end_date, top_height=15.3):
     sigsource = 'signal'
     lidsource = 'lidar'
     columns = [f'p_{sigsource}_mean', f'p_{sigsource}_std',  # clean signal - p
-               f'range_corr_{sigsource}_mean', f'range_corr_{sigsource}_std',  # clean signal - range_corr (pr2)
+               f'range_corr_{sigsource}_mean', f'range_corr_{sigsource}_std',  # clean signal - range_corr (pr2),
+               f'range_corr_p_{sigsource}_mean', f'range_corr_p_{sigsource}_std',
+               # signal - range_corr (pr2) with poiss (no bg),
                f'p_{lidsource}_mean', f'p_{lidsource}_std',  # Pois measurement signal - p_n
                f'range_corr_{lidsource}_mean', f'range_corr_{lidsource}_std',
                # Pois measurement signal - range_corr (p_nr2)
@@ -372,6 +376,7 @@ def calc_day_statistics(station, day_date, top_height=15.3):
     # update daily profiles stats
     datasets_with_names_time_height = [(signal_ds.p, f'p_{sigsource}'),
                                        (signal_ds.range_corr, f'range_corr_{sigsource}'),
+                                       (signal_ds.range_corr_p, f'range_corr_p_{sigsource}'),
                                        (lidar_ds.p, f'p_{lidsource}'),
                                        (lidar_ds.range_corr, f'range_corr_{lidsource}'),
                                        (mol_ds.attbsc, f'attbsc_{molsource}')]
@@ -401,7 +406,7 @@ def main(station_name, start_date, end_date, log_level=logging.DEBUG):
     USE_KM_UNITS = True
     DO_GENERATED_DATASET = True
     SPLIT_DATASET = False
-    SPLIT_GENERATED_DATASET = True
+    SPLIT_GENERATED_DATASET = False
 
     # Load data of station
     station = gs.Station(station_name=station_name)
@@ -491,6 +496,6 @@ def main(station_name, start_date, end_date, log_level=logging.DEBUG):
 if __name__ == '__main__':
     station_name = 'haifa'
     start_date = datetime(2017, 9, 1)
-    end_date = datetime(2017, 10, 31)
+    end_date = datetime(2017, 9, 2)
     log_level = logging.DEBUG
     main(station_name, start_date, end_date, log_level)

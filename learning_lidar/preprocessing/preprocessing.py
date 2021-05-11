@@ -658,6 +658,33 @@ def dt64_2_datetime(dt_64):
     return date_datetime
 
 
+def save_time_splits_generated_dataset(station, dataset, data_source='molecular',
+                                       profiles=None, sample_size='30min'):
+    """
+    Save the dataset split into time samples per wavelength
+    :param station: station: station: gs.station() object of the lidar station
+    :param dataset:  xarray.Dataset() a daily generated lidar signal
+    :param data_source: source type of the file, i.e., 'lidar' - for lidar dataset, and 'aerosol' - aerosols dataset.
+    :param profiles: A list containing the names of profiles desired to be saved separately.
+    :param sample_size: string. The sample size. such as '30min'
+    :return:
+    """
+    day_date = get_daily_ds_date(dataset)
+    sample_start = pd.date_range(start=day_date,
+                                 end=day_date + timedelta(days=1),
+                                 freq=sample_size)[0:-1]
+    sample_end = pd.date_range(start=day_date,
+                               end=day_date + timedelta(days=1),
+                               freq=sample_size)[1:]
+    sample_end -= timedelta(seconds=station.freq)
+    time_slices = [slice(sample_s, sample_e) for sample_s, sample_e in zip(sample_start, sample_end)]
+    ncpaths = save_prep_dataset(station,
+                                dataset=dataset,
+                                data_source=data_source, save_mode='sep',
+                                profiles=profiles, time_slices=time_slices)
+    return ncpaths
+
+
 def get_daily_ds_date(dataset):
     logger = logging.getLogger()
     try:
@@ -669,7 +696,8 @@ def get_daily_ds_date(dataset):
     return date_datetime
 
 
-def get_prep_dataset_file_name(station, day_date, data_source='molecular', lambda_nm='*', file_type='*'):
+def get_prep_dataset_file_name(station, day_date, data_source='molecular',
+                               lambda_nm='*', file_type='*', time_slice=None):
     """
      Retrieves file pattern name of preprocessed dataset according to date, station, wavelength dataset source, and profile type.
     :param station: gs.station() object of the lidar station
@@ -680,14 +708,17 @@ def get_prep_dataset_file_name(station, day_date, data_source='molecular', lambd
 
     :return: dataset file name (netcdf) file of the data_type required per given day and wavelength, data_source and file_type
     """
+    dt_str = day_date.strftime('%Y_%m_%d')
+    if time_slice:
+        dt_str += f"_{time_slice.start.strftime('%H%M%S')}_{time_slice.stop.strftime('%H%M%S')}"
     if lambda_nm == 'all':
         file_type = ''
     if file_type == '*' or lambda_nm == '*':  # * for lambd_nm - means any wavelength and profile
         # retrieves any file of this date
-        file_name = f"{day_date.strftime('%Y_%m_%d')}_{station.location}_{file_type}_{lambda_nm}*{data_source}.nc"
+        file_name = f"{dt_str}_{station.location}_{file_type}_{lambda_nm}*{data_source}.nc"
     else:
         # this option is mainly to set new file names
-        file_name = f"{day_date.strftime('%Y_%m_%d')}_{station.location}_{file_type}_{lambda_nm}_{data_source}.nc"
+        file_name = f"{dt_str}_{station.location}_{file_type}_{lambda_nm}_{data_source}.nc"
     file_name = file_name.replace('all', '').replace('__', '_').replace('__', '_')
     return (file_name)
 
@@ -849,9 +880,11 @@ def convert_profiles_units(dataset, units=[r'$1/m$', r'$1/km$'], scale=1e+3):
     return dataset
 
 
-def save_prep_dataset(station, dataset, data_source='lidar', save_mode='both', profiles=None):
+def save_prep_dataset(station, dataset, data_source='lidar', save_mode='both',
+                      profiles=None, time_slices=None):
     """
     Save the input dataset to netcdf file
+    :param time_slices:
     :param profiles: The name of profile desired to be saved separately.
     If this name is not provided, then the first profile is automatically selected
     :param station: station: gs.station() object of the lidar station
@@ -882,11 +915,22 @@ def save_prep_dataset(station, dataset, data_source='lidar', save_mode='both', p
             for wavelength in dataset.Wavelength.values:
                 ds_profile = dataset.sel(Wavelength=wavelength)[profile]
                 ds_profile['date'] = date_datetime
-                file_name = get_prep_dataset_file_name(station, date_datetime, data_source=data_source,
-                                                       lambda_nm=wavelength, file_type=profile)
-                ncpath = save_dataset(ds_profile, month_folder, file_name)
-                if ncpath:
-                    ncpaths.append(ncpath)
+                if time_slices:
+                    for time_slice in tqdm(time_slices,
+                                           desc=f"Split and save time slices for: {profile}, {wavelength}"):
+                        file_name = get_prep_dataset_file_name(station, date_datetime, data_source=data_source,
+                                                               lambda_nm=wavelength, file_type=profile,
+                                                               time_slice=time_slice)
+                        ds_slice = ds_profile.sel(Time=time_slice)
+                        ncpath = save_dataset(ds_slice, month_folder, file_name)
+                        if ncpath:
+                            ncpaths.append(ncpath)
+                else:
+                    file_name = get_prep_dataset_file_name(station, date_datetime, data_source=data_source,
+                                                           lambda_nm=wavelength, file_type=profile)
+                    ncpath = save_dataset(ds_profile, month_folder, file_name)
+                    if ncpath:
+                        ncpaths.append(ncpath)
 
     '''save the dataset to a single netcdf'''
     if save_mode in ['both', 'single']:
@@ -985,9 +1029,7 @@ def main(station_name='haifa', start_date=datetime(2017, 9, 1), end_date=datetim
                                             USE_KM_UNITS=USE_KM_UNITS)
 
             # Save lidar dataset
-            lidar_paths = save_prep_dataset(station, lidar_ds,
-                                            data_source='lidar',
-                                            save_mode='both',
+            lidar_paths = save_prep_dataset(station, lidar_ds, data_source='lidar', save_mode='both',
                                             profiles=['range_corr'])
             lidarpaths.extend(lidar_paths)
         logger.info(
