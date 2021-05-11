@@ -496,6 +496,6 @@ def main(station_name, start_date, end_date, log_level=logging.DEBUG):
 if __name__ == '__main__':
     station_name = 'haifa'
     start_date = datetime(2017, 9, 1)
-    end_date = datetime(2017, 9, 2)
+    end_date = datetime(2017, 10, 31)
     log_level = logging.DEBUG
     main(station_name, start_date, end_date, log_level)
