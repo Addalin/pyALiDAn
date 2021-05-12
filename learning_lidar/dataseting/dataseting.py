@@ -506,14 +506,6 @@ def main(station_name, start_date, end_date, log_level=logging.DEBUG):
         logger.info(f"\nDone splitting train-test dataset for {csv_gen_path}")
 
 
-if __name__ == '__main__':
-    station_name = 'haifa'
-    start_date = datetime(2017, 9, 1)
-    end_date = datetime(2017, 10, 31)
-    log_level = logging.DEBUG
-    main(station_name, start_date, end_date, log_level)
-
-
 def save_dataset2timesplits(station, dataset, data_source='lidar', mod_source='gen',
                             profiles=None, sample_size='30min',
                             time_slices=None):
@@ -545,8 +537,8 @@ def save_dataset2timesplits(station, dataset, data_source='lidar', mod_source='g
     return ncpaths
 
 
-def prepare_generated_samples(station, start_date, end_date,top_height=15.3):
-    # TODO: Addapt this func to get a list of time slices, and group on days to seperate the signal (in case the
+def prepare_generated_samples(station, start_date, end_date, top_height=15.3):
+    # TODO: Adapt this func to get a list of time slices, and group on days to seperate the signal (in case the
     #  times slots are not consecutive)
     logger = logging.getLogger()
     dates = pd.date_range(start_date, end_date, freq='D')
@@ -570,6 +562,16 @@ def prepare_generated_samples(station, start_date, end_date,top_height=15.3):
             month_folder = prep.get_month_folder_name(base_folder, day_date)
             nc_path = os.path.join(month_folder, nc_name)
             dataset = prep.load_dataset(ncpath=nc_path)
-            save_dataset2timesplits(station, dataset.sel(Height=slice(0, top_height)),
+            height_slice = slice(dataset.Height.min().values.tolist(),
+                                 dataset.Height.min().values.tolist() + top_height)
+            save_dataset2timesplits(station, dataset.sel(Height=height_slice),
                                     data_source=data_source, profiles=[profile],
                                     sample_size=sample_size, mod_source=mode)
+
+
+if __name__ == '__main__':
+    station_name = 'haifa'
+    start_date = datetime(2017, 9, 1)
+    end_date = datetime(2017, 10, 31)
+    log_level = logging.DEBUG
+    main(station_name, start_date, end_date, log_level)
