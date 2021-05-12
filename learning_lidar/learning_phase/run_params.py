@@ -40,11 +40,11 @@ CONSTS = {
 
 # Note, replace tune.choice with grid_search if want all possible combinations
 RAY_HYPER_PARAMS = {
-    "hsizes": tune.grid_search([[2, 2, 2, 2], [3, 3, 3, 3]]),
-    "fc_size": tune.grid_search([[16]]),  # [4], [32]]),
+    "hsizes": tune.grid_search([[1, 1, 1, 1], [2, 2, 2, 2], [3, 3, 3, 3], [4, 4, 4, 4]]),
+    "fc_size": tune.grid_search([[4], [16], [32]]),
     # ,[16, 32, 8]]),  # TODO: add options of [ 8, 16, 32], [16, 32, 8], [ 64, 32, 16]
-    "lr": tune.grid_search([1e-3, 0.5 * 1e-3, 1e-4]),
-    "bsize": tune.grid_search([32]),  # 48 , 64]),  # [16, 8]),
+    "lr": tune.choice([0.5 * 1e-3]),  # [1e-3, 0.5 * 1e-3, 1e-4]),
+    "bsize": tune.choice([32]),  # 48 , 64]),  # [16, 8]),
     "ltype": tune.choice(['MAELoss']),  # , 'MSELoss']),  # ['MARELoss']
     # [['LC'], ['r0', 'r1', 'LC'], ['r0', 'r1'], ['r0', 'r1', 'dr'], ['r0', 'r1', 'dr', 'LC']]
     "use_power": tune.choice([True]),  # , False]),
@@ -52,7 +52,7 @@ RAY_HYPER_PARAMS = {
     # True - bg is relevant for 'lidar' case # TODO if lidar - bg T\F, if signal - bg F
     "source": tune.grid_search(['lidar', 'signal']),
     'dfilter': tune.grid_search([None]),  # , ('wavelength', [355])]), # data_filter
-    'dnorm': tune.grid_search([True, False])  # data_norm
+    'dnorm': tune.grid_search([True])  # data_norm, , False
 }
 
 NON_RAY_HYPER_PARAMS = {
