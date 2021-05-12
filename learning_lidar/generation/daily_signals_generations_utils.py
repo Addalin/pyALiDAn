@@ -265,6 +265,7 @@ def calc_r2_ds(station, day_date):
 
 def calc_lidar_signal(station, day_date, total_ds):
     """
+    TODO update usage
     Generate daily lidar signal, using the optical densities and the LC (Lidar Constant)
     :param station: gs.station() object of the lidar station
     :param day_date: datetime.date object of the required date
@@ -276,7 +277,15 @@ def calc_lidar_signal(station, day_date, total_ds):
     pr2_ds = calc_range_corr_signal_ds(station, day_date, attbsc_ds, lc_ds)  # pr2 = LC * attbsc
     r2_ds = calc_r2_ds(station, day_date)  # r^2
     p_ds = calc_lidar_signal_ds(station, day_date, r2_ds, pr2_ds)  # p = pr2 / r^2
-    signal_ds = xr.Dataset().assign(attbsc=attbsc_ds, LC=lc_ds, range_corr=pr2_ds, p=p_ds, r2=r2_ds)
+
+    pn_ds = calc_poiss_measurement(station, day_date, p_ds)  # lidar measurement: pn ~Poiss(mu_p)
+    pr2n_ds = calc_range_corr_measurement(station, day_date, pn_ds,
+                                          r2_ds)  # range corrected measurement: pr2n = pn * r^2
+    pr2n_ds.attrs['info'] += ' - w.o. background'
+
+    signal_ds = xr.Dataset().assign(attbsc=attbsc_ds, LC=lc_ds,
+                                    range_corr=pr2_ds, range_corr_p=pr2n_ds,
+                                    p=p_ds, r2=r2_ds)
     signal_ds['date'] = day_date
     signal_ds.attrs = {'location': station.location,
                        'info': 'Daily generated lidar signals.',

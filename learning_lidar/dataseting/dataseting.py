@@ -545,12 +545,11 @@ def save_dataset2timesplits(station, dataset, data_source='lidar', mod_source='g
     return ncpaths
 
 
-def prepare_generated_samples(station, start_date, end_date):
+def prepare_generated_samples(station, start_date, end_date,top_height=15.3):
+    # TODO: Addapt this func to get a list of time slices, and group on days to seperate the signal (in case the
+    #  times slots are not consecutive)
     logger = logging.getLogger()
-
     dates = pd.date_range(start_date, end_date, freq='D')
-
-    top_height = 15.3
     sample_size = '30min'
     source_profile_path_mode = [('signal_p', 'range_corr_p', station.gen_signal_dataset, 'gen'),
                                 ('signal', 'range_corr', station.gen_signal_dataset, 'gen'),

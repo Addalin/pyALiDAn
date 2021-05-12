@@ -20,6 +20,9 @@ def generate_daily_lidar_measurement(station, day_date, SAVE_DS=True):
     measure_ds = calc_daily_measurement(station, day_date, signal_ds)
 
     if SAVE_DS:
+        # TODO: check that the range_corr_p is added to measure_ds, and that the LCNET is uploading the new paths
+        #  (especially if range_corr_p )  . and if so, save only 2 single files of measure_ds, and signal_ds to save
+        #  time and space
         gen_utils.save_generated_dataset(station, measure_ds,
                                          data_source='lidar',
                                          save_mode='both',
