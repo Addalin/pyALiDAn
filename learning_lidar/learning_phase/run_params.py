@@ -31,7 +31,7 @@ CONSTS = {
     'train_csv_path': train_csv_path,
     'test_csv_path': test_csv_path,
     'stats_csv_path': stats_csv_path,
-    'powers': {'range_corr': 0.5, 'attbsc': 0.5, 'p_bg': 0.5,
+    'powers': {'range_corr': 0.5, 'range_corr_p': 0.5, 'attbsc': 0.5, 'p_bg': 0.5,
                'LC': 0.5, 'LC_std': 0.5, 'r0': 1, 'r1': 1, 'dr': 1},
     'num_gpus': NUM_AVAILABLE_GPU,
     "top_height": 15.3,  # NOTE: CHANGING IT WILL AFFECT BOTH THE INPUT DIMENSIONS TO THE NET, AND THE STATS !!!
@@ -50,13 +50,13 @@ RAY_HYPER_PARAMS = {
     "use_power": tune.choice([True]),  # , False]),
     "use_bg": tune.grid_search([False]),  # , True]),
     # True - bg is relevant for 'lidar' case # TODO if lidar - bg T\F, if signal - bg F
-    "source": tune.grid_search(['lidar', 'signal']),
+    "source": tune.grid_search(['signal_p']),  # ['lidar', 'signal']
     'dfilter': tune.grid_search([None]),  # , ('wavelength', [355])]), # data_filter
-    'dnorm': tune.grid_search([True])  # data_norm, , False
+    'dnorm': tune.grid_search([True, False])  # data_norm, , False
 }
 
 NON_RAY_HYPER_PARAMS = {
-    "lr": 0.5 * 1e-3,
+    "lr": 1 * 1e-3,
     "bsize": 32,
     "ltype": 'MAELoss',  # loss_type
     "use_power": True,

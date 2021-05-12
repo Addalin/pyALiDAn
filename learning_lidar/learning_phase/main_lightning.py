@@ -7,7 +7,7 @@ from ray import tune
 from ray.tune import CLIReporter
 from ray.tune.integration.pytorch_lightning import TuneReportCheckpointCallback
 
-from learning_lidar.learning_phase.run_params import USE_RAY, DEBUG_RAY, CONSTS, RAY_HYPER_PARAMS, RESULTS_PATH,\
+from learning_lidar.learning_phase.run_params import USE_RAY, DEBUG_RAY, CONSTS, RAY_HYPER_PARAMS, RESULTS_PATH, \
     NUM_AVAILABLE_GPU, NON_RAY_HYPER_PARAMS
 
 from pytorch_lightning import Trainer, seed_everything
@@ -24,7 +24,10 @@ seed_everything(8318)  # Note, for full deterministic result add deterministic=T
 
 def main(config, checkpoint_dir=None, consts=None):
     # Define X_features
-    source_features = (f"{config['source']}_path", "range_corr")
+    source_x = config['source']
+    source_features = (f"{source_x}_path", "range_corr") \
+        if (source_x == 'lidar' or source_x == 'signal') \
+        else (f"{source_x}_path", "range_corr_p")
     mol_features = ("molecular_path", "attbsc")
     bg_features = ("bg_path", "p_bg")
     X_features = (source_features, mol_features, bg_features) if config["use_bg"] else (source_features, mol_features)
@@ -77,7 +80,9 @@ if __name__ == '__main__':
 
     if USE_RAY:
         reporter = CLIReporter(
-            metric_columns=["loss", "MARELoss", "training_iteration"])
+            metric_columns=["loss", "MARELoss", "training_iteration"],
+            max_progress_rows=50,
+            print_intermediate_tables=True)
 
         analysis = tune.run(
             tune.with_parameters(main, consts=CONSTS),
