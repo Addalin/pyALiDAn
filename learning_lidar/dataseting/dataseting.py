@@ -323,7 +323,7 @@ def calc_data_statistics(station, start_date, end_date, top_height=15.3):
     lidsource = 'lidar'
     columns = [f'p_{sigsource}_mean', f'p_{sigsource}_std',  # clean signal - p
                f'range_corr_{sigsource}_mean', f'range_corr_{sigsource}_std',  # clean signal - range_corr (pr2),
-               f'range_corr_p_{sigsource}_mean', f'range_corr_p_{sigsource}_std',
+               f'range_corr_p_{sigsource}_p_mean', f'range_corr_p_{sigsource}_p_std',
                # signal - range_corr (pr2) with poiss (no bg),
                f'p_{lidsource}_mean', f'p_{lidsource}_std',  # Pois measurement signal - p_n
                f'range_corr_{lidsource}_mean', f'range_corr_{lidsource}_std',
@@ -419,7 +419,7 @@ def main(station_name, start_date, end_date, log_level=logging.DEBUG):
     USE_KM_UNITS = True
     DO_GENERATED_DATASET = True
     SPLIT_DATASET = False
-    SPLIT_GENERATED_DATASET = False
+    SPLIT_GENERATED_DATASET = True
 
     # Load data of station
     station = gs.Station(station_name=station_name)
