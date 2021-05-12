@@ -275,7 +275,7 @@ def get_daily_gdas_paths(station, day_date, f_type='gdas1'):
     and returns an EMPTY list of gdas_paths. The creation of NEW gdas_paths is done in convert_daily_gdas()
     """
     logger = logging.getLogger()
-
+    # TODO oif gdas1 file does not exists - download from NOA
     if f_type == 'gdas1':
         parent_folder = station.gdas1_folder
     elif f_type == 'txt':
