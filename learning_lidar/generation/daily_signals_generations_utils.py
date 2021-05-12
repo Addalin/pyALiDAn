@@ -44,8 +44,8 @@ def calc_total_optical_density(station, day_date):
 
     if PLOT_RESULTS:
         height_slice = slice(0.0, 15)
-        gen_utils.plot_daily_profile(data=ds_aer.sigma, height_slice=height_slice)
-        gen_utils.plot_daily_profile(data=ds_aer.beta, height_slice=height_slice)
+        gen_utils.plot_daily_profile(profile_ds=ds_aer.sigma, height_slice=height_slice)
+        gen_utils.plot_daily_profile(profile_ds=ds_aer.beta, height_slice=height_slice)
 
     # %% 2. Load molecular profiles
     month_folder = prep.get_month_folder_name(station.molecular_dataset, day_date)
@@ -70,8 +70,8 @@ def calc_total_optical_density(station, day_date):
     total_ds['date'] = day_date
 
     if PLOT_RESULTS:
-        gen_utils.plot_daily_profile(data=total_ds.sigma)
-        gen_utils.plot_daily_profile(data=total_ds.beta)
+        gen_utils.plot_daily_profile(profile_ds=total_ds.sigma)
+        gen_utils.plot_daily_profile(profile_ds=total_ds.beta)
 
     return total_ds
 
@@ -113,7 +113,7 @@ def calc_attbsc_ds(station, day_date, total_ds):
     attbsc_ds['date'] = day_date
 
     if PLOT_RESULTS:
-        gen_utils.plot_daily_profile(data=attbsc_ds.attbsc, figsize=(16, 8))
+        gen_utils.plot_daily_profile(profile_ds=attbsc_ds.attbsc, figsize=(16, 8))
 
     return attbsc_ds
 
@@ -200,7 +200,7 @@ def calc_range_corr_signal_ds(station, day_date, attbsc_ds, lc_ds):
     attbsc_ds.Wavelength.attrs = {'units': r'$\lambda$', 'units': r'$nm$'}
     attbsc_ds['date'] = day_date
     if PLOT_RESULTS:
-        gen_utils.plot_daily_profile(data=pr2_ds, figsize=(16, 8))
+        gen_utils.plot_daily_profile(profile_ds=pr2_ds, figsize=(16, 8))
 
     return pr2_ds
 
@@ -233,7 +233,7 @@ def calc_lidar_signal_ds(station, day_date, r2_ds, pr2_ds):
         raise ValueError(msg)
 
     if PLOT_RESULTS:
-        gen_utils.plot_daily_profile(data=p_ds, height_slice=slice(0, 5), figsize=(16, 8))
+        gen_utils.plot_daily_profile(profile_ds=p_ds, height_slice=slice(0, 5), figsize=(16, 8))
     return p_ds
 
 

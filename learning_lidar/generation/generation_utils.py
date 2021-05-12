@@ -1,11 +1,10 @@
 from matplotlib import pyplot as plt
 import learning_lidar.preprocessing.preprocessing as prep
-from datetime import datetime, date, timedelta
+from datetime import datetime, timedelta
 import os
 import calendar
 from learning_lidar.utils.global_settings import TIMEFORMAT
 from tqdm import tqdm
-import pandas as pd
 
 
 def get_gen_dataset_file_name(station, day_date, wavelength='*',
@@ -101,33 +100,6 @@ def save_generated_dataset(station, dataset, data_source='lidar', save_mode='bot
         ncpath = prep.save_dataset(dataset, month_folder, file_name)
         if ncpath:
             ncpaths.append(ncpath)
-    return ncpaths
-
-
-def save_time_splits_generated_dataset(station, dataset, data_source='lidar',
-                                       profiles=None, sample_size='30min'):
-    """
-    Save the dataset split into time samples per wavelength
-    :param station: station: station: gs.station() object of the lidar station
-    :param dataset:  xarray.Dataset() a daily generated lidar signal
-    :param data_source: source type of the file, i.e., 'lidar' - for lidar dataset, and 'aerosol' - aerosols dataset.
-    :param profiles: A list containing the names of profiles desired to be saved separately.
-    :param sample_size: string. The sample size. such as '30min'
-    :return:
-    """
-    day_date = prep.get_daily_ds_date(dataset)
-    sample_start = pd.date_range(start=day_date,
-                                 end=day_date + timedelta(days=1),
-                                 freq=sample_size)[0:-1]
-    sample_end = pd.date_range(start=day_date,
-                               end=day_date + timedelta(days=1),
-                               freq=sample_size)[1:]
-    sample_end -= timedelta(seconds=station.freq)
-    time_slices = [slice(sample_s, sample_e) for sample_s, sample_e in zip(sample_start, sample_end)]
-    ncpaths = save_generated_dataset(station,
-                                     dataset=dataset,
-                                     data_source=data_source, save_mode='sep',
-                                     profiles=profiles, time_slices=time_slices)
     return ncpaths
 
 

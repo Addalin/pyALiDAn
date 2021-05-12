@@ -201,11 +201,12 @@ Each sample contains the followings:
    
     a. runs of hiden_sizes,fc_size
     
-    * hiden_sizes : [2,2,2,2] , [3,3,3,3] , fc_size: [4,32,16] ***ALMOST DONE***
-    * hiden_sizes : [1,1,1,1] , [4,4,4,4] , fc_size: [4,32,16] ***OPEN***
+    * hiden_sizes : [2,2,2,2] , [3,3,3,3] , fc_size: [4,32,16] ***DONE***
+    * hiden_sizes : [1,1,1,1] , [4,4,4,4] , fc_size: [4,32,16] ***ON GOING*** 
+    * With Normaliztion - hiden_sizes : [1,1,1,1] ,[2,2,2,2], [3,3,3,3], [4,4,4,4] fc_size: [4,32,16] ***OPEN***
     
     b. runs for testing inputs:
-    * range corrected of `signal` and `lidar` - ***ALMOST DONE*** 
+    * range corrected of `signal` and `lidar` - ***ON GOING*** 
     * range_corrected of `signal` after poisson noise ***OPEN***
     * Adding bg ***OPEN***
     

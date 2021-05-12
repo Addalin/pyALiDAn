@@ -10,7 +10,6 @@ import numpy as np
 from learning_lidar.utils.misc_lidar import RadiosondeProfile
 import re
 from netCDF4 import Dataset
-import fnmatch
 import matplotlib.pyplot as plt
 import learning_lidar.utils.global_settings as gs
 import learning_lidar.utils.misc_lidar as mscLid
@@ -18,7 +17,6 @@ from learning_lidar.utils.utils import create_and_configer_logger, write_row_to_
 import logging
 import xarray as xr
 import matplotlib.dates as mdates
-from pytictoc import TicToc
 from multiprocessing import Pool, cpu_count
 from tqdm import tqdm
 
@@ -656,33 +654,6 @@ def get_range_corr_ds_chan(darray, altitude, lambda_nm, height_units='km', optim
 def dt64_2_datetime(dt_64):
     date_datetime = datetime.utcfromtimestamp(dt_64.tolist() / 1e9)
     return date_datetime
-
-
-def save_time_splits_generated_dataset(station, dataset, data_source='molecular',
-                                       profiles=None, sample_size='30min'):
-    """
-    Save the dataset split into time samples per wavelength
-    :param station: station: station: gs.station() object of the lidar station
-    :param dataset:  xarray.Dataset() a daily generated lidar signal
-    :param data_source: source type of the file, i.e., 'lidar' - for lidar dataset, and 'aerosol' - aerosols dataset.
-    :param profiles: A list containing the names of profiles desired to be saved separately.
-    :param sample_size: string. The sample size. such as '30min'
-    :return:
-    """
-    day_date = get_daily_ds_date(dataset)
-    sample_start = pd.date_range(start=day_date,
-                                 end=day_date + timedelta(days=1),
-                                 freq=sample_size)[0:-1]
-    sample_end = pd.date_range(start=day_date,
-                               end=day_date + timedelta(days=1),
-                               freq=sample_size)[1:]
-    sample_end -= timedelta(seconds=station.freq)
-    time_slices = [slice(sample_s, sample_e) for sample_s, sample_e in zip(sample_start, sample_end)]
-    ncpaths = save_prep_dataset(station,
-                                dataset=dataset,
-                                data_source=data_source, save_mode='sep',
-                                profiles=profiles, time_slices=time_slices)
-    return ncpaths
 
 
 def get_daily_ds_date(dataset):

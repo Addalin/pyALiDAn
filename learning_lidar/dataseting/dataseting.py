@@ -21,6 +21,7 @@ from learning_lidar.dataseting.dataseting_utils import get_query, query_database
     get_time_slots_expanded, convert_Y_features_units, recalc_LC, split_save_train_test_ds, get_generated_X_path, \
     get_mean_lc, get_prep_X_path
 from learning_lidar.generation.daily_signals_generations_utils import get_daily_bg
+from learning_lidar.preprocessing import preprocessing as prep
 from learning_lidar.utils.utils import create_and_configer_logger
 import learning_lidar.generation.generation_utils as gen_utils
 
@@ -121,6 +122,18 @@ def create_dataset(station_name='haifa', start_date=datetime(2017, 9, 1),
 
 def timestamp2datetime(time_stamp):
     return datetime.combine(time_stamp.date(), time_stamp.time())
+
+
+def get_time_splits(station, start_date, end_date, sample_size):
+    sample_start = pd.date_range(start=start_date,
+                                 end=end_date + timedelta(days=1),
+                                 freq=sample_size)[0:-1]
+    sample_end = pd.date_range(start=start_date,
+                               end=end_date + timedelta(days=1),
+                               freq=sample_size)[1:]
+    sample_end -= timedelta(seconds=station.freq)
+    time_slices = [slice(sample_s, sample_e) for sample_s, sample_e in zip(sample_start, sample_end)]
+    return time_slices
 
 
 # %% Dataset extending helper functions
@@ -499,3 +512,65 @@ if __name__ == '__main__':
     end_date = datetime(2017, 10, 31)
     log_level = logging.DEBUG
     main(station_name, start_date, end_date, log_level)
+
+
+def save_dataset2timesplits(station, dataset, data_source='lidar', mod_source='gen',
+                            profiles=None, sample_size='30min',
+                            time_slices=None):
+    """
+    Save the dataset split into time samples per wavelength
+
+    :param station: station: station: gs.station() object of the lidar station
+    :param dataset:  xarray.Dataset() a daily generated lidar signal
+    :param mod_source:
+    :param data_source: source type of the file, i.e., 'lidar' - for lidar dataset, and 'aerosol' - aerosols dataset.
+    :param profiles: A list containing the names of profiles desired to be saved separately.
+    :param sample_size: string. The sample size. such as '30min'
+    :param time_slices:
+    :return:
+    """
+    day_date = prep.get_daily_ds_date(dataset)
+    if time_slices is None:
+        time_slices = get_time_splits(station, start_date=day_date, end_date=day_date, sample_size=sample_size)
+    if mod_source == 'gen':
+        ncpaths = gen_utils.save_generated_dataset(station,
+                                                   dataset=dataset,
+                                                   data_source=data_source, save_mode='sep',
+                                                   profiles=profiles, time_slices=time_slices)
+    else:
+        ncpaths = prep.save_prep_dataset(station,
+                                         dataset=dataset,
+                                         data_source=data_source, save_mode='sep',
+                                         profiles=profiles, time_slices=time_slices)
+    return ncpaths
+
+
+def prepare_generated_samples(station, start_date, end_date):
+    logger = logging.getLogger()
+
+    dates = pd.date_range(start_date, end_date, freq='D')
+
+    top_height = 15.3
+    sample_size = '30min'
+    source_profile_path_mode = [('signal_p', 'range_corr_p', station.gen_signal_dataset, 'gen'),
+                                ('signal', 'range_corr', station.gen_signal_dataset, 'gen'),
+                                ('lidar', 'range_corr', station.gen_lidar_dataset, 'gen'),
+                                ('bg', 'p_bg', station.gen_lidar_dataset, 'gen'),
+                                ('molecular', 'attbsc', station.molecular_dataset, 'prep')]
+
+    for day_date in dates:
+        logger.info(f"Load and split datasets for {day_date.strftime('%Y-%m-%d')}")
+        for data_source, profile, base_folder, mode in source_profile_path_mode:
+            data_source = 'signal' if data_source == 'signal_p' else data_source
+            dsource = 'lidar' if data_source == 'bg' else data_source
+
+            if mode == 'prep':
+                nc_name = prep.get_prep_dataset_file_name(station, day_date, data_source=dsource, lambda_nm='all')
+            else:
+                nc_name = gen_utils.get_gen_dataset_file_name(station, day_date, data_source=dsource)
+            month_folder = prep.get_month_folder_name(base_folder, day_date)
+            nc_path = os.path.join(month_folder, nc_name)
+            dataset = prep.load_dataset(ncpath=nc_path)
+            save_dataset2timesplits(station, dataset.sel(Height=slice(0, top_height)),
+                                    data_source=data_source, profiles=[profile],
+                                    sample_size=sample_size, mod_source=mode)
