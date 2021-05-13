@@ -32,18 +32,31 @@ def main(config, checkpoint_dir=None, consts=None):
     bg_features = ("bg_path", "p_bg")
     X_features = (source_features, mol_features, bg_features) if config["use_bg"] else (source_features, mol_features)
 
-    # Define Model
+    # Update powers
+    powers = consts['powers']
+    use_power = config['use_power']
+    if use_power and type(use_power) == str:
+        power_in, power_out = eval(use_power)
+        for yf, pow in zip(consts['Y_features'], power_out):
+            powers[yf] = pow
+
+        for xf, pow in zip(X_features, power_in):
+            _, profile = xf
+            powers[profile] = pow
+        config.update({'power_in': str(power_in), 'power_out': str(power_out), 'use_power': True})
+
+        # Define Model
     model = DefaultCNN(in_channels=len(X_features),
                        output_size=len(consts['Y_features']),
-                       hidden_sizes=config['hsizes'],
-                       fc_size=config['fc_size'],
+                       hidden_sizes=eval(config['hsizes']),
+                       fc_size=eval(config['fc_size']),
                        loss_type=config['ltype'],
                        learning_rate=config['lr'])
 
     # Define Data
     lidar_dm = LidarDataModule(train_csv_path=consts["train_csv_path"], test_csv_path=consts["test_csv_path"],
                                stats_csv_path=consts["stats_csv_path"],
-                               powers=consts['powers'] if config['use_power'] else None,
+                               powers=powers if config['use_power'] else None,
                                top_height=consts["top_height"], X_features_profiles=X_features,
                                Y_features=consts['Y_features'], batch_size=config['bsize'],
                                num_workers=consts['num_workers'],
@@ -100,7 +113,7 @@ if __name__ == '__main__':
         logger.info(f"best_logdir {analysis.best_logdir}")
         logger.info(f"best_checkpoint {analysis.best_checkpoint}")
         logger.info(f"best_result {analysis.best_result}")
-        results_df = analysis.dataframe(metric="MARELoss",mode="min",)
+        results_df = analysis.dataframe(metric="MARELoss", mode="min", )
         results_df.to_csv(os.path.join(analysis._experiment_dir, f'output_table.csv'))
     else:
         main(NON_RAY_HYPER_PARAMS, CONSTS)

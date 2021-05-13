@@ -40,19 +40,21 @@ CONSTS = {
 
 # Note, replace tune.choice with grid_search if want all possible combinations
 RAY_HYPER_PARAMS = {
-    "hsizes": tune.grid_search([[1, 1, 1, 1], [2, 2, 2, 2], [3, 3, 3, 3], [4, 4, 4, 4]]),
-    "fc_size": tune.grid_search([[4], [16], [32]]),
-    # ,[16, 32, 8]]),  # TODO: add options of [ 8, 16, 32], [16, 32, 8], [ 64, 32, 16]
-    "lr": tune.choice([0.5 * 1e-3]),  # [1e-3, 0.5 * 1e-3, 1e-4]),
+    "hsizes": tune.grid_search(['[3, 3, 3, 3]', '[4, 4, 4, 4]', '[5, 5, 5, 5]']),  # '[1,1,1,1]','[2,2,2,2]',
+    "fc_size": tune.grid_search(['[16]', '[32]']),  # '[4]',
+    "lr": tune.choice([1 * 1e-3]),  # [1e-3, 0.5 * 1e-3, 1e-4]),
     "bsize": tune.choice([32]),  # 48 , 64]),  # [16, 8]),
     "ltype": tune.choice(['MAELoss']),  # , 'MSELoss']),  # ['MARELoss']
     # [['LC'], ['r0', 'r1', 'LC'], ['r0', 'r1'], ['r0', 'r1', 'dr'], ['r0', 'r1', 'dr', 'LC']]
-    "use_power": tune.choice([True]),  # , False]),
+    "use_power": tune.grid_search([False, "([0.5, 0.5], [0.5])", "([0.5, 0.5], [1])",
+                                   "([0.5 ,0.5], [0.5])", "([0.5, 0.5], [1])",
+                                   "([0.5, 0.25], [0.5])", "([0.5, 0.25], [1])",
+                                   "([0.5, -0.25], [0.5])", "([0.5, -0.25], [1])"]),
     "use_bg": tune.grid_search([False]),  # , True]),
     # True - bg is relevant for 'lidar' case # TODO if lidar - bg T\F, if signal - bg F
-    "source": tune.grid_search(['signal_p']),  # ['lidar', 'signal']
+    "source": tune.grid_search(['lidar', 'signal', 'signal_p']),
     'dfilter': tune.grid_search([None]),  # , ('wavelength', [355])]), # data_filter
-    'dnorm': tune.grid_search([True, False])  # data_norm, , False
+    'dnorm': tune.grid_search([True, False]),  # data_norm, , False
 }
 
 NON_RAY_HYPER_PARAMS = {
