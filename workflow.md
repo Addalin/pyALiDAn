@@ -202,8 +202,9 @@ Each sample contains the followings:
     a. runs of hiden_sizes,fc_size
     
     * hiden_sizes : [2,2,2,2] , [3,3,3,3] , fc_size: [4,32,16] ***DONE***
-    * hiden_sizes : [1,1,1,1] , [4,4,4,4] , fc_size: [4,32,16] ***ON GOING*** 
-    * With Normaliztion - hiden_sizes : [1,1,1,1] ,[2,2,2,2], [3,3,3,3], [4,4,4,4] fc_size: [4,32,16] ***OPEN***
+    * hiden_sizes : [1,1,1,1] , [4,4,4,4] , fc_size: [4,32,16] ***DONE*** 
+    * With Normaliztion - hiden_sizes : [1,1,1,1] ,[2,2,2,2], [3,3,3,3], [4,4,4,4] fc_size: [4,32,16], lr: 1e-3 ***OPEN***
+    * poisson signal With Normaliztion - hiden_sizes : [1,1,1,1] ,[2,2,2,2], [3,3,3,3], [4,4,4,4] fc_size: [4,32,16], lr: 1e-3 ***ON Going***
     
     b. runs for testing inputs:
     * range corrected of `signal` and `lidar` - ***ON GOING*** 

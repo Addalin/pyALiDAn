@@ -6,8 +6,7 @@ from torch import Tensor
 import warnings
 from learning_lidar.utils.global_settings import eps
 warnings.filterwarnings("ignore")
-
-
+torch.nn.L1Loss
 def mare_loss(input, target, size_average=None, reduce=None, reduction='mean'):
     # type: (Tensor, Tensor, Optional[bool], Optional[bool], str) -> Tensor
 
@@ -33,7 +32,7 @@ def mare_loss(input, target, size_average=None, reduce=None, reduction='mean'):
 
     expanded_input, expanded_target = torch.broadcast_tensors(input, target)
     loss = torch.mean(
-        torch.abs((expanded_target - expanded_input) / (expanded_target + eps)))  # add eps to avois devision by zero
+        torch.abs((expanded_target - expanded_input) / (expanded_input + eps)))  # add eps to avoid division by zero
     # return torch._C._nn.l1_loss ( expanded_input/expanded_target , torch.div(expanded_target/expanded_target) , _Reduction.get_enum ( reduction ) )
     return loss
 
