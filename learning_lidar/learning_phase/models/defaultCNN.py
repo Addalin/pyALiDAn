@@ -72,7 +72,7 @@ class DefaultCNN(LightningModule):
         # flatten
         x = x.view(batch_size, -1)
 
-        # fc layer # TODO: add option to change in_channels to fc_layer (when changing hidden sizes of CNN)
+        # fc layer
         out = self.fc_layer(x)
 
         return out

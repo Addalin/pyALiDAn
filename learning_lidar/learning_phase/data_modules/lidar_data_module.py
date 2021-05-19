@@ -197,7 +197,7 @@ class LidarDataModule(LightningDataModule):
 
         if stage == 'fit' or stage is None:
             trainable_dataset = LidarDataSet(dataset_csv_file=self.train_csv_path,
-                                             transform=lidar_transforms,torch_transforms=torch_transforms,
+                                             transform=lidar_transforms, torch_transforms=torch_transforms,
                                              top_height=self.top_height, X_features=self.X_features,
                                              profiles=self.profiles, Y_features=self.Y_features,
                                              filter_by=self.filter_by, filter_values=self.filter_values)
@@ -206,7 +206,7 @@ class LidarDataModule(LightningDataModule):
 
         if stage == 'test' or stage is None:
             self.test = LidarDataSet(dataset_csv_file=self.test_csv_path,
-                                     transform=lidar_transforms,torch_transforms=torch_transforms,
+                                     transform=lidar_transforms, torch_transforms=torch_transforms,
                                      top_height=self.top_height, X_features=self.X_features, profiles=self.profiles,
                                      Y_features=self.Y_features, filter_by=self.filter_by,
                                      filter_values=self.filter_values)

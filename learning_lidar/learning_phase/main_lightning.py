@@ -54,7 +54,8 @@ def main(config, checkpoint_dir=None, consts=None):
                        learning_rate=config['lr'])
 
     # Define Data
-    lidar_dm = LidarDataModule(train_csv_path=consts["train_csv_path"], test_csv_path=consts["test_csv_path"],
+    lidar_dm = LidarDataModule(train_csv_path=consts["train_csv_path"],
+                               test_csv_path=consts["test_csv_path"],
                                stats_csv_path=consts["stats_csv_path"],
                                powers=powers if config['use_power'] else None,
                                top_height=consts["top_height"], X_features_profiles=X_features,
