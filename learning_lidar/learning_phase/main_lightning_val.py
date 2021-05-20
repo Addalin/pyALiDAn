@@ -8,7 +8,7 @@ from ray.tune import CLIReporter
 from ray.tune.integration.pytorch_lightning import TuneReportCheckpointCallback
 
 from learning_lidar.learning_phase.run_params import USE_RAY, DEBUG_RAY, CONSTS, RAY_HYPER_PARAMS, RESULTS_PATH, \
-    NUM_AVAILABLE_GPU, NON_RAY_HYPER_PARAMS
+    NUM_AVAILABLE_GPU, NON_RAY_HYPER_PARAMS, RESTORE_TRIAL_PARAMS
 
 from pytorch_lightning import Trainer, seed_everything
 
@@ -45,8 +45,11 @@ def main(config, checkpoint_dir=None, consts=None):
             powers[profile] = pow
         config.update({'power_in': str(power_in), 'power_out': str(power_out), 'use_power': True})
 
-        # Define Model
-    model = DefaultCNN(in_channels=len(X_features),
+    if checkpoint_dir:
+        model = DefaultCNN.load_from_checkpoint(os.path.join(checkpoint_dir, "checkpoint"))
+    # Define Model
+    else:
+        model = DefaultCNN(in_channels=len(X_features),
                        output_size=len(consts['Y_features']),
                        hidden_sizes=eval(config['hsizes']),
                        fc_size=eval(config['fc_size']),
@@ -72,7 +75,7 @@ def main(config, checkpoint_dir=None, consts=None):
     # Setup the pytorch-lighting trainer and run the model
     trainer = Trainer(max_epochs=consts['max_epochs'],
                       callbacks=callbacks,
-                      gpus=[0] if consts['num_gpus'] > 0 else 0)
+                      gpus=[1] if consts['num_gpus'] > 0 else 0)
 
     lidar_dm.setup('fit')
     trainer.fit(model=model, datamodule=lidar_dm)
@@ -80,7 +83,6 @@ def main(config, checkpoint_dir=None, consts=None):
     # test
     lidar_dm.setup('test')
     trainer.test(model=model, datamodule=lidar_dm)
-
 
 if __name__ == '__main__':
     # Override number of workers if debugging
@@ -107,7 +109,9 @@ if __name__ == '__main__':
             mode="min",
             progress_reporter=reporter,
             log_to_file=True,
-            resources_per_trial={"cpu": 7, "gpu": NUM_AVAILABLE_GPU})
+            resources_per_trial={"cpu": 7, "gpu": NUM_AVAILABLE_GPU},
+            resume=CONSTS['resume'], name=CONSTS['name'],
+            restore=r'C:\Users\addalin\Dropbox\Lidar\lidar_learning\results\main_2021-05-19_23-17-25\main_39b80_00000_0_bsize=32,dfilter=None,dnorm=True,fc_size=[16],hsizes=[3, 3, 3, 3],lr=0.001,ltype=MAELoss,source=lidar,use_bg=Tr_2021-05-19_23-17-25\checkpoint_epoch=0-step=175'        )
 
         logger.info(f"best_trial {analysis.best_trial}")
         logger.info(f"best_config {analysis.best_config}")

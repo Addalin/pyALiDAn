@@ -562,7 +562,7 @@ def prepare_generated_samples(station, start_date, end_date, top_height=15.3):
 
     for day_date in dates:
         logger.info(f"Load and split datasets for {day_date.strftime('%Y-%m-%d')}")
-        for data_source, profile, base_folder, mode in source_profile_path_mode[3:4]:
+        for data_source, profile, base_folder, mode in source_profile_path_mode:
             data_source = 'signal' if data_source == 'signal_p' else data_source
             dsource = 'lidar' if data_source == 'bg' else data_source
 
@@ -582,7 +582,7 @@ def prepare_generated_samples(station, start_date, end_date, top_height=15.3):
 
 if __name__ == '__main__':
     station_name = 'haifa'
-    start_date = datetime(2017, 9, 1)
+    start_date = datetime(2017, 10, 31)
     end_date = datetime(2017, 10, 31)
     log_level = logging.DEBUG
     main(station_name, start_date, end_date, log_level)
