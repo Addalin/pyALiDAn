@@ -42,7 +42,8 @@ CONSTS = {
     'train_csv_path': train_csv_path,
     'test_csv_path': test_csv_path,
     'stats_csv_path': stats_csv_path,
-    'powers': {'range_corr': 0.5, 'range_corr_p': 0.5, 'attbsc': 0.5, 'p_bg': 0.5,
+    'powers': {'range_corr': 0.5, 'range_corr_p': 0.5, 'attbsc': 0.5,
+               'p_bg': 0.5, 'p_bg_r2': 0.5,
                'LC': 0.5, 'LC_std': 0.5, 'r0': 1, 'r1': 1, 'dr': 1},
     'num_gpus': NUM_AVAILABLE_GPU,
     "top_height": 15.3,  # NOTE: CHANGING IT WILL AFFECT BOTH THE INPUT DIMENSIONS TO THE NET, AND THE STATS !!!
@@ -62,13 +63,13 @@ RAY_HYPER_PARAMS = {
     "ltype": tune.choice(['MAELoss']),  # , 'MSELoss']),  # ['MARELoss']
     # [['LC'], ['r0', 'r1', 'LC'], ['r0', 'r1'], ['r0', 'r1', 'dr'], ['r0', 'r1', 'dr', 'LC']]
     "use_power": tune.grid_search([  # False,
-        "([0.5, 0.5], [0.5])",
-        "([0.5,-0.2], [0.5])",
-        "([0.5,0.25], [0.5])",
-        "([0.5,-0.25],[0.5])"]),
+        "([0.5, 0.5, 0.5], [0.5])",
+        "([0.5,-0.2, 0.5], [0.5])",
+        "([0.5,0.25, 0.5], [0.5])",
+        "([0.5,-0.25, 0.5],[0.5])"]),
     # "([0.5, 0.25], [0.5])", "([0.5, 0.25], [1])",
     # "([0.5, -0.25], [0.5])", "([0.5, -0.25], [1])"]),
-    "use_bg": tune.grid_search([False]),  # , True]),
+    "use_bg": tune.grid_search(['range_corr']),  #  False, True,'range_corr'
     # True - bg is relevant for 'lidar' case # TODO if lidar - bg T\F, if signal - bg F
     "source": tune.grid_search(['lidar']),  # , 'signal', 'signal_p'
     'dfilter': tune.grid_search([None]),  # , ('wavelength', [355])]), # data_filter

@@ -29,8 +29,11 @@ def main(config, checkpoint_dir=None, consts=None):
         if (source_x == 'lidar' or source_x == 'signal') \
         else (f"{source_x}_path", "range_corr_p")
     mol_features = ("molecular_path", "attbsc")
-    bg_features = ("bg_path", "p_bg")
-    X_features = (source_features, mol_features, bg_features) if config["use_bg"] else (source_features, mol_features)
+    if config['use_bg']:
+        bg_features = ("bg_path", "p_bg_r2") if config['use_bg'] == "range_corr" else ("bg_path", "p_bg")
+        X_features = (source_features, mol_features, bg_features)
+    else:
+        X_features = (source_features, mol_features)
 
     # Update powers
     powers = consts['powers']
