@@ -88,7 +88,7 @@ def load_dataset(ncpath):
     """
     logger = logging.getLogger()
     try:
-        dataset = xr.open_dataset(ncpath, engine='netcdf4').expand_dims()
+        dataset = xr.load_dataset(ncpath, engine='netcdf4').expand_dims()
         dataset.close()
         logger.debug(f"\nLoading dataset file: {ncpath}")
     except Exception as e:
