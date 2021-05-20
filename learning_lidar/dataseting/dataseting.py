@@ -518,7 +518,7 @@ def main(station_name, start_date, end_date, log_level=logging.DEBUG):
 
 
 def save_dataset2timesplits(station, dataset, data_source='lidar', mod_source='gen',
-                            profiles=None, sample_size='30min',
+                            profiles=None, sample_size='30min', save_mode='sep',
                             time_slices=None):
     """
     Save the dataset split into time samples per wavelength
@@ -529,6 +529,10 @@ def save_dataset2timesplits(station, dataset, data_source='lidar', mod_source='g
     :param data_source: source type of the file, i.e., 'lidar' - for lidar dataset, and 'aerosol' - aerosols dataset.
     :param profiles: A list containing the names of profiles desired to be saved separately.
     :param sample_size: string. The sample size. such as '30min'
+    :param save_mode: save mode options:
+                'sep' - for separated profiles (each is file is per profile per wavelength)
+                'single' - save the dataset a single file per day
+                'both' - saving both options
     :param time_slices:
     :return:
     """
@@ -538,12 +542,12 @@ def save_dataset2timesplits(station, dataset, data_source='lidar', mod_source='g
     if mod_source == 'gen':
         ncpaths = gen_utils.save_generated_dataset(station,
                                                    dataset=dataset,
-                                                   data_source=data_source, save_mode='sep',
+                                                   data_source=data_source, save_mode=save_mode,
                                                    profiles=profiles, time_slices=time_slices)
     else:
         ncpaths = prep.save_prep_dataset(station,
                                          dataset=dataset,
-                                         data_source=data_source, save_mode='sep',
+                                         data_source=data_source, save_mode=save_mode,
                                          profiles=profiles, time_slices=time_slices)
     return ncpaths
 
