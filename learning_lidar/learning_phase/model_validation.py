@@ -2,7 +2,7 @@ import logging
 import os.path
 from datetime import datetime
 
-from learning_lidar.learning_phase.run_params import DEBUG_RAY, CONSTS, RESULTS_PATH
+from learning_lidar.learning_phase.run_params import DEBUG_RAY, CONSTS, RESULTS_PATH, update_params
 
 import json
 from pytorch_lightning import Trainer, seed_everything
@@ -14,27 +14,8 @@ from learning_lidar.utils.utils import create_and_configer_logger
 seed_everything(8318)  # Note, for full deterministic result add deterministic=True to trainer
 
 def main(config, checkpoint_dir=None, consts=None):
-    # Define X_features
-    source_x = config['source']
-    source_features = (f"{source_x}_path", "range_corr") \
-        if (source_x == 'lidar' or source_x == 'signal') \
-        else (f"{source_x}_path", "range_corr_p")
-    mol_features = ("molecular_path", "attbsc")
-    bg_features = ("bg_path", "p_bg")
-    X_features = (source_features, mol_features, bg_features) if config["use_bg"] else (source_features, mol_features)
 
-    # Update powers
-    powers = consts['powers']
-    use_power = config['use_power']
-    if use_power and type(use_power) == str:
-        power_in, power_out = eval(use_power)
-        for yf, pow in zip(consts['Y_features'], power_out):
-            powers[yf] = pow
-
-        for xf, pow in zip(X_features, power_in):
-            _, profile = xf
-            powers[profile] = pow
-        config.update({'power_in': str(power_in), 'power_out': str(power_out), 'use_power': True})
+    config, X_features, powers = update_params(config, consts)
 
     model = DefaultCNN.load_from_checkpoint(os.path.join(checkpoint_dir, "checkpoint"))
 

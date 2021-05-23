@@ -25,6 +25,36 @@ train_csv_path, test_csv_path, stats_csv_path, RESULTS_PATH = get_paths(station_
                                                                         end_date=datetime(2017, 10, 31))
 
 
+
+def update_params(config, consts):
+    # Define X_features
+    source_x = config['source']
+    source_features = (f"{source_x}_path", "range_corr") \
+        if (source_x == 'lidar' or source_x == 'signal') \
+        else (f"{source_x}_path", "range_corr_p")
+    mol_features = ("molecular_path", "attbsc")
+    if config['use_bg']:
+        bg_features = ("bg_path", "p_bg_r2") if config['use_bg'] == "range_corr" else ("bg_path", "p_bg")
+        X_features = (source_features, mol_features, bg_features)
+    else:
+        X_features = (source_features, mol_features)
+
+    # Update powers
+    powers = consts['powers']
+    use_power = config['use_power']
+    if use_power and type(use_power) == str:
+        power_in, power_out = eval(use_power)
+        for yf, pow in zip(consts['Y_features'], power_out):
+            powers[yf] = pow
+
+        for xf, pow in zip(X_features, power_in):
+            _, profile = xf
+            powers[profile] = pow
+        config.update({'power_in': str(power_in), 'power_out': str(power_out), 'use_power': True})
+
+    return config, X_features, powers
+
+
 experiment_dir = 'main_2021-05-19_23-17-25'
 trial_dir = r'main_39b80_00000_0_bsize=32,dfilter=None,dnorm=True,fc_size=[16],hsizes=[3, 3, 3, 3],lr=0.001,ltype=MAELoss,source=lidar,use_bg=Tr_2021-05-19_23-17-25'
 check_point_path = 'checkpoint_epoch=0-step=175'

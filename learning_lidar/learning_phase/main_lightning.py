@@ -8,7 +8,7 @@ from ray.tune import CLIReporter
 from ray.tune.integration.pytorch_lightning import TuneReportCheckpointCallback
 
 from learning_lidar.learning_phase.run_params import USE_RAY, DEBUG_RAY, CONSTS, RAY_HYPER_PARAMS, RESULTS_PATH, \
-    NUM_AVAILABLE_GPU, NON_RAY_HYPER_PARAMS
+    NUM_AVAILABLE_GPU, NON_RAY_HYPER_PARAMS, update_params
 
 from pytorch_lightning import Trainer, seed_everything
 
@@ -23,30 +23,8 @@ seed_everything(8318)  # Note, for full deterministic result add deterministic=T
 # https://github.com/ray-project/ray/blob/35ec91c4e04c67adc7123aa8461cf50923a316b4/python/ray/tune/examples/mnist_pytorch_lightning.py
 
 def main(config, checkpoint_dir=None, consts=None):
-    # Define X_features
-    source_x = config['source']
-    source_features = (f"{source_x}_path", "range_corr") \
-        if (source_x == 'lidar' or source_x == 'signal') \
-        else (f"{source_x}_path", "range_corr_p")
-    mol_features = ("molecular_path", "attbsc")
-    if config['use_bg']:
-        bg_features = ("bg_path", "p_bg_r2") if config['use_bg'] == "range_corr" else ("bg_path", "p_bg")
-        X_features = (source_features, mol_features, bg_features)
-    else:
-        X_features = (source_features, mol_features)
 
-    # Update powers
-    powers = consts['powers']
-    use_power = config['use_power']
-    if use_power and type(use_power) == str:
-        power_in, power_out = eval(use_power)
-        for yf, pow in zip(consts['Y_features'], power_out):
-            powers[yf] = pow
-
-        for xf, pow in zip(X_features, power_in):
-            _, profile = xf
-            powers[profile] = pow
-        config.update({'power_in': str(power_in), 'power_out': str(power_out), 'use_power': True})
+    config, X_features, powers = update_params(config, consts)
 
         # Define Model
     model = DefaultCNN(in_channels=len(X_features),
