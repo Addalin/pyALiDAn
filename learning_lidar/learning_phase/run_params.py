@@ -56,26 +56,38 @@ def update_params(config, consts):
 
 
 # ######## RESUME EXPERIMENT #########
-RESUME_EXP = False  # Can be "LOCAL" to continue experiment when it was disrupted,
-# or "ERRORED_ONLY" to reset and rerun ERRORED trials. Otherwise False to start a new experiment.
+RESUME_EXP = False  # Can be "LOCAL" to continue experiment when it was disrupted
+# (trials that were completed seem to continue training),
+# or "ERRORED_ONLY" to reset and rerun ERRORED trials (not tested). Otherwise False to start a new experiment.
 
 EXP_NAME = None  # 'main_2021-05-19_22-35-50'  # If 'resume' is not False, must enter experiment path.
 # e.g. - "main_2021-05-19_21-50-40". Path is relative to RESULTS_PATH. Otherwise can keep it None.
 # And it is generated automatically.
 
-# ######## RESTORE TRIAL #########
-RESTORE_TRIAL = None
+
+# ######## RESTORE or VALIDATE TRIAL PARAMS #########
 experiment_dir = 'main_2021-05-19_23-17-25'
 trial_dir = r'main_39b80_00000_0_bsize=32,dfilter=None,dnorm=True,fc_size=[16],hsizes=[3, 3, 3, 3],lr=0.001,' \
             r'ltype=MAELoss,source=lidar,use_bg=Tr_2021-05-19_23-17-25'
 check_point_name = 'checkpoint_epoch=0-step=175'
 
-if RESTORE_TRIAL:
+
+def get_trial_params_and_checkpoint(experiment_dir, trial_dir, check_point_name):
     trial_params_path = os.path.join(RESULTS_PATH, experiment_dir, trial_dir, 'params.json')
     with open(trial_params_path) as params_file:
-        TRIAL_PARAMS = json.load(params_file)
-    CHECKPOINT_PATH = os.path.join(RESULTS_PATH, experiment_dir, trial_dir, check_point_name)
+        params = json.load(params_file)
+    checkpoint = os.path.join(RESULTS_PATH, experiment_dir, trial_dir, check_point_name)
 
+    return checkpoint, params
+
+
+# ######## VALIDATE TRIAL #########
+PRETRAINED_MODEL_PATH, MODEL_PARAMS = get_trial_params_and_checkpoint(experiment_dir, trial_dir, check_point_name)
+
+# ######## RESTORE TRIAL #########
+RESTORE_TRIAL = False  # If true restores the given trial
+if RESTORE_TRIAL:
+    CHECKPOINT_PATH, TRIAL_PARAMS = get_trial_params_and_checkpoint(experiment_dir, trial_dir, check_point_name)
 else:
     TRIAL_PARAMS = None
     CHECKPOINT_PATH = None

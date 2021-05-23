@@ -2,9 +2,9 @@ import logging
 import os.path
 from datetime import datetime
 
-from learning_lidar.learning_phase.run_params import DEBUG_RAY, CONSTS, RESULTS_PATH, update_params
+from learning_lidar.learning_phase.run_params import DEBUG_RAY, CONSTS, update_params, MODEL_PARAMS, \
+    PRETRAINED_MODEL_PATH
 
-import json
 from pytorch_lightning import Trainer, seed_everything
 
 from learning_lidar.learning_phase.data_modules.lidar_data_module import LidarDataModule
@@ -49,14 +49,4 @@ if __name__ == '__main__':
     logger = create_and_configer_logger(
         log_name=f"{os.path.dirname(__file__)}_{datetime.now().strftime('%Y-%m-%d %H_%M_%S')}.log", level=logging.INFO)
 
-    experiment_dir = 'main_2021-05-19_23-17-25'
-    trial_dir = r'main_39b80_00000_0_bsize=32,dfilter=None,dnorm=True,fc_size=[16],hsizes=[3, 3, 3, 3],lr=0.001,ltype=MAELoss,source=lidar,use_bg=Tr_2021-05-19_23-17-25'
-    check_point_path = 'checkpoint_epoch=0-step=175'
-
-    model_path = os.path.join(RESULTS_PATH, experiment_dir, trial_dir, check_point_path)
-    params_path = os.path.join(RESULTS_PATH, experiment_dir, trial_dir, 'params.json')
-
-    with open(params_path) as params_file:
-        params = json.load(params_file)
-
-    main(config=params, checkpoint_dir=model_path, consts=CONSTS)
+    main(config=MODEL_PARAMS, checkpoint_dir=PRETRAINED_MODEL_PATH, consts=CONSTS)
