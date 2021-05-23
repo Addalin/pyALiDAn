@@ -4,6 +4,7 @@ from datetime import datetime
 import torch
 from ray import tune
 import json
+
 NUM_AVAILABLE_GPU = torch.cuda.device_count()
 
 
@@ -23,7 +24,6 @@ def get_paths(station_name, start_date, end_date):
 train_csv_path, test_csv_path, stats_csv_path, RESULTS_PATH = get_paths(station_name='haifa',
                                                                         start_date=datetime(2017, 9, 1),
                                                                         end_date=datetime(2017, 10, 31))
-
 
 
 def update_params(config, consts):
@@ -55,15 +55,30 @@ def update_params(config, consts):
     return config, X_features, powers
 
 
+# ######## RESUME EXPERIMENT #########
+RESUME_EXP = False  # Can be "LOCAL" to continue experiment when it was disrupted,
+# or "ERRORED_ONLY" to reset and rerun ERRORED trials. Otherwise False to start a new experiment.
+
+EXP_NAME = None  # 'main_2021-05-19_22-35-50'  # If 'resume' is not False, must enter experiment path.
+# e.g. - "main_2021-05-19_21-50-40". Path is relative to RESULTS_PATH. Otherwise can keep it None.
+# And it is generated automatically.
+
+# ######## RESTORE TRIAL #########
+RESTORE_TRIAL = None
 experiment_dir = 'main_2021-05-19_23-17-25'
-trial_dir = r'main_39b80_00000_0_bsize=32,dfilter=None,dnorm=True,fc_size=[16],hsizes=[3, 3, 3, 3],lr=0.001,ltype=MAELoss,source=lidar,use_bg=Tr_2021-05-19_23-17-25'
-check_point_path = 'checkpoint_epoch=0-step=175'
+trial_dir = r'main_39b80_00000_0_bsize=32,dfilter=None,dnorm=True,fc_size=[16],hsizes=[3, 3, 3, 3],lr=0.001,' \
+            r'ltype=MAELoss,source=lidar,use_bg=Tr_2021-05-19_23-17-25'
+check_point_name = 'checkpoint_epoch=0-step=175'
 
-model_path = os.path.join(RESULTS_PATH, experiment_dir, trial_dir, check_point_path)
-params_path = os.path.join(RESULTS_PATH, experiment_dir, trial_dir, 'params.json')
+if RESTORE_TRIAL:
+    trial_params_path = os.path.join(RESULTS_PATH, experiment_dir, trial_dir, 'params.json')
+    with open(trial_params_path) as params_file:
+        TRIAL_PARAMS = json.load(params_file)
+    CHECKPOINT_PATH = os.path.join(RESULTS_PATH, experiment_dir, trial_dir, check_point_name)
 
-with open(params_path) as params_file:
-    params = json.load(params_file)
+else:
+    TRIAL_PARAMS = None
+    CHECKPOINT_PATH = None
 
 # Constants - should correspond to data, dataloader and model
 CONSTS = {
@@ -78,10 +93,6 @@ CONSTS = {
     'num_gpus': NUM_AVAILABLE_GPU,
     "top_height": 15.3,  # NOTE: CHANGING IT WILL AFFECT BOTH THE INPUT DIMENSIONS TO THE NET, AND THE STATS !!!
     "Y_features": ['LC'],
-    'resume': False,  # Can be "LOCAL" to continue experiment when it was disrupted,
-    # or "ERRORED_ONLY" to reset and rerun ERRORED trials. Otherwise False to start a new experiment.
-    'name': None  # 'main_2021-05-19_22-35-50'  # If 'resume' is not False, must enter experiment path.
-    # e.g. - "main_2021-05-19_21-50-40". Path is relative to RESULTS_PATH. Otherwise can keep it None.
 }
 
 # Note, replace tune.choice with grid_search if want all possible combinations
@@ -99,26 +110,11 @@ RAY_HYPER_PARAMS = {
         "([0.5,-0.25, 0.5],[0.5])"]),
     # "([0.5, 0.25], [0.5])", "([0.5, 0.25], [1])",
     # "([0.5, -0.25], [0.5])", "([0.5, -0.25], [1])"]),
-    "use_bg": tune.grid_search(['range_corr']),  #  False, True,'range_corr'
+    "use_bg": tune.grid_search(['range_corr']),  # False, True,'range_corr'
     # True - bg is relevant for 'lidar' case # TODO if lidar - bg T\F, if signal - bg F
     "source": tune.grid_search(['lidar']),  # , 'signal', 'signal_p'
     'dfilter': tune.grid_search([None]),  # , ('wavelength', [355])]), # data_filter
     'dnorm': tune.grid_search([False]),  # data_norm, , False, True
-}
-
-RESTORE_TRIAL_PARAMS = {
-    "hsizes": tune.grid_search(['[3, 3, 3, 3]']),
-    "fc_size": tune.grid_search(['[16]']),
-    "lr": tune.choice([1 * 1e-3]),
-    "bsize": tune.choice([32]),
-    "ltype": tune.choice(['MAELoss']),
-    "use_power": tune.grid_search(["([0.5,0.25, 1], [0.5])"]),
-    "use_bg": tune.choice([False]),
-    # True - bg is relevant for 'lidar' case # TODO if lidar - bg T\F, if signal - bg F
-    "source": tune.grid_search(['lidar']),
-    'dfilter': tune.grid_search([None]),
-    'dnorm': tune.grid_search([False]),
-
 }
 
 NON_RAY_HYPER_PARAMS = {
