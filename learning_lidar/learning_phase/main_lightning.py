@@ -100,4 +100,4 @@ if __name__ == '__main__':
         results_df = analysis.dataframe(metric="MARELoss", mode="min", )
         results_df.to_csv(os.path.join(analysis._experiment_dir, f'output_table.csv'))
     else:
-        main(NON_RAY_HYPER_PARAMS, CONSTS)
+        main(config=NON_RAY_HYPER_PARAMS, consts=CONSTS)

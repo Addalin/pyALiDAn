@@ -159,6 +159,10 @@ class LidarDataModule(LightningDataModule):
                 raise Exception('Dataframe is empty! Make sure filter_by and filter_values are correct.')
 
         sources = [x_feature.split('_path')[0] for x_feature in self.X_features]
+        sources[0] = 'signal' if sources[0] == 'signal_p' else sources[0]
+        # TODO: This is a hack for getting the range_corr_p info from the dataset stats file.
+        #  See the related command in dataseting.prepare_generated_samples()
+
         X_mean = [stats_df[f"{profile}_{source}_mean"].mean() for profile, source in zip(self.profiles, sources)]
         X_std = [stats_df[f"{profile}_{source}_std"].mean() for profile, source in zip(self.profiles, sources)]
         Y_mean = [stats_df[f"{y_feature}_mean"].mean() for y_feature in self.Y_features]
