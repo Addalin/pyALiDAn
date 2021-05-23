@@ -567,13 +567,19 @@ def prepare_generated_samples(station, start_date, end_date, top_height=15.3):
     for day_date in dates:
         logger.info(f"Load and split datasets for {day_date.strftime('%Y-%m-%d')}")
         for data_source, profile, base_folder, mode in source_profile_path_mode:
+
+            # Special care for loading/saving different profiles from a specific dataset.
+            # E.g. The 'lidar' dataset contains 'range_corr' and 'p_bg' as well
+            # The 'signal' dataset contains 'range_corr' and 'range_corr_p' as well
+            # load_source - is from where to upload the datasets. data_source - is in what folder to save
+            # TODO: Fix this 'source_folder', and 'profile' such that it want require hard coded sollutions in the modules.
             data_source = 'signal' if data_source == 'signal_p' else data_source
-            dsource = 'lidar' if data_source == 'bg' else data_source
+            load_source = 'lidar' if data_source == 'bg' else data_source
 
             if mode == 'prep':
-                nc_name = prep.get_prep_dataset_file_name(station, day_date, data_source=dsource, lambda_nm='all')
+                nc_name = prep.get_prep_dataset_file_name(station, day_date, data_source=load_source, lambda_nm='all')
             else:
-                nc_name = gen_utils.get_gen_dataset_file_name(station, day_date, data_source=dsource)
+                nc_name = gen_utils.get_gen_dataset_file_name(station, day_date, data_source=load_source)
             month_folder = prep.get_month_folder_name(base_folder, day_date)
             nc_path = os.path.join(month_folder, nc_name)
             dataset = prep.load_dataset(ncpath=nc_path)
