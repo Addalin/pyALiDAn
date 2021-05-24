@@ -84,7 +84,7 @@ class LidarDataSet(torch.utils.data.Dataset):
         :return: A list of two element each is of type xarray.core.dataarray.DataArray.
         0 - is for lidar measurements, 1 - is for molecular measurements
         """
-        row = self.data.loc[idx, :]
+        row = self.data.iloc[idx, :]
 
         # Load X datasets
         X_paths = row[self.X_features]
@@ -109,7 +109,7 @@ class LidarDataSet(torch.utils.data.Dataset):
         :return: pandas.core.series.Series
         """
 
-        row = self.data.loc[idx, :]
+        row = self.data.iloc[idx, :]
         Y = row[self.Y_features]
         return Y
 
@@ -120,7 +120,7 @@ class LidarDataSet(torch.utils.data.Dataset):
         :param key: key is any of self.key values. e.g, 'idx', 'wavelength' etc...
         :return: The values of the required key for the sample
         """
-        row = self.data.loc[idx, :]
+        row = self.data.iloc[idx, :]
         key_val = row[key]
         return key_val
 
