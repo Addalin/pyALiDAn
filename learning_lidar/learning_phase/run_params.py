@@ -112,20 +112,21 @@ CONSTS = {
 
 # Note, replace tune.choice with grid_search if want all possible combinations
 RAY_HYPER_PARAMS = {
-    "hsizes": tune.grid_search(['[3, 3, 3, 3]', '[4, 4, 4, 4]', '[5, 5, 5, 5]']),
-    "fc_size": tune.grid_search(['[1]']),  # '[4]','[16]', '[32]'
+    "hsizes": tune.grid_search([ '[4, 4, 4, 4]', '[5, 5, 5, 5]']), #'[3, 3, 3, 3]',
+    "fc_size": tune.grid_search(['[16]', '[32]']),  # '[4]','[1]'
     "lr": tune.grid_search([1 * 1e-3]),
     "bsize": tune.grid_search([32]),
     "ltype": tune.choice(['MAELoss']),  # , 'MSELoss']),  # ['MARELoss']
-    "use_power": tune.grid_search(["([0.5, 1], [0.5])"]),  # "([0.5, -0.11], [0.5])"]),
+    "use_power": tune.grid_search(["([0.5, 1, 1], [0.5])",
+                                   "([0.5, 1, 0.5], [0.5])"]),
     # UV : -0.27 , G: -0.263 , IR: -0.11
-    "use_bg": tune.grid_search([False]),  # ,'range_corr'
+    "use_bg": tune.grid_search([True, 'range_corr']),
     # True - bg is relevant for 'lidar' case # TODO if lidar - bg T\F, if signal - bg F
     "source": tune.grid_search(['lidar']),  # , 'lidar','signal_p'
     'dfilter': tune.grid_search([('wavelength', [355]),
                                  ('wavelength', [532]),
-                                 ('wavelength', [1064]),
-                                 None]),  # , ('wavelength', [355]) , # data_filter
+                                 ('wavelength', [1064])]),
+                                 #None]),  # , ('wavelength', [355]) , # data_filter
     'dnorm': tune.grid_search([False]),  # data_norm True - only for the best results achieved.
 }
 

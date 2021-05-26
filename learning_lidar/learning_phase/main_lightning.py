@@ -82,7 +82,7 @@ if __name__ == '__main__':
             tune.with_parameters(main, consts=CONSTS),
             config=TRIAL_PARAMS if TRIAL_PARAMS else RAY_HYPER_PARAMS,
             local_dir=RESULTS_PATH,  # where to save the results
-            fail_fast=True,  # if one run fails - stop all runs
+            fail_fast=False,  # if one run fails - stop all runs
             metric="MARELoss",
             mode="min",
             progress_reporter=reporter,
