@@ -26,7 +26,8 @@ def angstrom(tau_1, tau_2, lambda_1, lambda_2):
     :param lambda_2: wavelength lambda_2 , lambda_1<lambda_2 (e.g. 532 nm)
     :return: angstrom exponent A_1,2
     """
-    return -np.log(tau_1 / tau_2) / np.log(lambda_1 / lambda_2)
+    val = -np.log(tau_1 / tau_2) / np.log(lambda_1 / lambda_2)
+    return val
 
 
 def main(station, month, year):
@@ -37,7 +38,7 @@ def main(station, month, year):
     Mean values per day will be using as typical values for aerosols creation
     :return:
     """
-    # Load AERONET file of September 2017
+    # Load AERONET file of month-year
 
     monthdays = (date(year, month + 1, 1) - date(year, month, 1)).days
     start_day = datetime(year, month, 1, 0, 0)
