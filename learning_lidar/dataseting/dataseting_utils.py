@@ -112,19 +112,21 @@ def add_X_path(df, station, day_date, lambda_nm=532, data_source='molecular', fi
     :param file_type: string object: e.g., 'attbsc' for molecular_dataset or 'range_corr' for a lidar_dataset
     :return: ds with the added collum of the relevant raw
     """
-
+    logger = logging.getLogger()
     paths = prep.get_prep_dataset_paths(station=station,
                                         day_date=day_date,
                                         data_source=data_source,
                                         lambda_nm=lambda_nm,
                                         file_type=file_type)
     if not paths:
-        raise Exception(
-            f"\n Not exiting any '{data_source}' path for {station.location} station, at {day_date.strftime('%Y-%m-%d')}")
+        df.loc[:, f"{data_source}_path"] = ""
+        logger.debug(f"\n Not existing any '{data_source}' path for {station.location} station, at {day_date.strftime('%Y-%m-%d')}")
+
     elif len(paths) != 1:
         raise Exception(
             f"\n Expected ONE '{data_source}' path for {station.location} station, at {day_date.strftime('%Y-%m-%d')}.\nGot: {paths} ")
-    df.loc[:, f"{data_source}_path"] = paths[0]
+    else:
+        df.loc[:, f"{data_source}_path"] = paths[0]
     return df
 
 

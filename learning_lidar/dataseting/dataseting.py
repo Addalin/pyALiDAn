@@ -1,6 +1,6 @@
 # %% #General Imports
 import os
-from datetime import datetime, timedelta  # time,
+from datetime import datetime, timedelta
 from IPython.display import display
 import logging
 from tqdm import tqdm
@@ -24,6 +24,115 @@ from learning_lidar.generation.daily_signals_generations_utils import get_daily_
 from learning_lidar.preprocessing import preprocessing as prep
 from learning_lidar.utils.utils import create_and_configer_logger
 import learning_lidar.generation.generation_utils as gen_utils
+
+
+def main(station_name, start_date, end_date, log_level=logging.DEBUG):
+    logging.getLogger('matplotlib').setLevel(logging.ERROR)  # Fix annoying matplotlib logs
+    logging.getLogger('PIL').setLevel(logging.ERROR)  # Fix annoying PIL logs
+    logger = create_and_configer_logger(f"{os.path.basename(__file__)}.log", level=log_level)
+
+    # set operating mode
+    DO_DATASET = False
+    EXTEND_DATASET = True
+    DO_CALIB_DATASET = False
+    USE_KM_UNITS = True
+    DO_GENERATED_DATASET = False
+    SPLIT_DATASET = False
+    SPLIT_GENERATED_DATASET = False
+    CALC_GENERATED_STATS = False
+    CREATE_SAMPLES = False
+
+    # Load data of station
+    station = gs.Station(station_name=station_name)
+    logger.info(f"Loading {station.location} station")
+
+    # Set new paths
+    data_folder = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))), 'data')
+    csv_path = os.path.join(data_folder, f"dataset_{station_name}_"
+                                         f"{start_date.strftime('%Y-%m-%d')}_{end_date.strftime('%Y-%m-%d')}.csv")
+    csv_path_extended = os.path.join(data_folder, f"dataset_{station_name}_"
+                                                  f"{start_date.strftime('%Y-%m-%d')}_{end_date.strftime('%Y-%m-%d')}_extended.csv")
+    ds_path_extended = os.path.join(data_folder, f"dataset_{station_name}_"
+                                                 f"{start_date.strftime('%Y-%m-%d')}_{end_date.strftime('%Y-%m-%d')}_extended.nc")
+
+    csv_gen_path = os.path.join(data_folder, f"dataset_gen_{station_name}_"
+                                             f"{start_date.strftime('%Y-%m-%d')}_{end_date.strftime('%Y-%m-%d')}.csv")
+
+    if DO_DATASET:
+        logger.info(
+            f"\nStart generating dataset for period: [{start_date.strftime('%Y-%m-%d')},{end_date.strftime('%Y-%m-%d')}]")
+        # Generate dataset for learning
+        sample_size = '29.5min'
+        df = create_dataset(station_name=station_name, start_date=start_date,
+                            end_date=end_date, sample_size=sample_size)
+
+        # Convert m to km
+        if USE_KM_UNITS:
+            df = convert_Y_features_units(df)
+
+        df.to_csv(csv_path, index=False)
+        logger.info(f"\nDone database creation, saving to: {csv_path}")
+        # TODO: add creation of dataset statistics following its creation.
+        #         adapt calc_data_statistics(station, start_date, end_date)
+
+    if SPLIT_DATASET:
+        logger.info(
+            f"Splitting to train-test the dataset for period: [{start_date.strftime('%Y-%m-%d')},"
+            f"{end_date.strftime('%Y-%m-%d')}]")
+        split_save_train_test_ds(csv_path=csv_path)
+        logger.info(f"Done splitting train-test dataset for {csv_path}")
+
+    # Create extended dataset and save to csv - recalculation of Lidar Constant (currently this is a naive calculation)
+    if EXTEND_DATASET:
+        logger.info(
+            f"Start extending dataset for period: [{start_date.strftime('%Y-%m-%d')},{end_date.strftime('%Y-%m-%d')}]")
+        if 'df' not in globals():
+            df = pd.read_csv(csv_path)
+        df = extend_calibration_info(df)
+        display(df)
+        df.to_csv(csv_path_extended, index=False)
+        logger.info(f"\n The extended dataset saved to :{csv_path_extended}")
+
+    # Create calibration dataset from the extended df (or csv) = by splitting df to A dataset according to wavelengths
+    # and time coordinates.
+    if DO_CALIB_DATASET:
+        logger.info(
+            f"Start creating calibration dataset for period: [{start_date.strftime('%Y-%m-%d')},"
+            f"{end_date.strftime('%Y-%m-%d')}]")
+
+        if 'df' not in globals():
+            df = pd.read_csv(csv_path_extended)
+        ds_calibration = create_calibration_ds(df, station, source_file=csv_path_extended)
+        # Save the calibration dataset
+        prep.save_dataset(ds_calibration, os.path.curdir, ds_path_extended)
+        logger.info(f"The calibration dataset saved to :{ds_path_extended}")
+
+    if DO_GENERATED_DATASET:
+        logger.info(
+            f"\nStart creating generated dataset for period:"
+            f" [{start_date.strftime('%Y-%m-%d')},{end_date.strftime('%Y-%m-%d')}]")
+        generated_df = create_generated_dataset(station, start_date, end_date)
+        generated_df.to_csv(csv_gen_path, index=False)
+        logger.info(f"\nDone generated database creation, saving to: {csv_gen_path}")
+
+    if CALC_GENERATED_STATS:
+        logger.info(f"\nStart calculating dataset statistics")
+        _, csv_stats_path = calc_data_statistics(station, start_date, end_date)
+        logger.info(f"\nDone calculating dataset statistics. saved to:{csv_stats_path}")
+
+    if SPLIT_GENERATED_DATASET:
+        logger.info(
+            f"\nSplitting to train-test the dataset for period: [{start_date.strftime('%Y-%m-%d')},"
+            f"{end_date.strftime('%Y-%m-%d')}]")
+        split_save_train_test_ds(csv_path=csv_gen_path)
+        logger.info(f"\nDone splitting train-test dataset for {csv_gen_path}")
+
+    if CREATE_SAMPLES:
+        prepare_generated_samples(station, start_date, end_date, top_height=15.3)
+
+
+
+
 
 
 # %% Dataset creating helper functions
@@ -148,12 +257,17 @@ def extend_calibration_info(df):
     logger = logging.getLogger()
     tqdm.pandas()
     logger.info(f"\nStart LC calculations")
-    df[['LC_recalc', 'LCp_recalc']] = df.progress_apply(recalc_LC, axis=1, result_type='expand')
+    try:
+        df[['LC_recalc', 'LCp_recalc']] = df.progress_apply(recalc_LC, axis=1, result_type='expand')
+    except ValueError:
+        logger.debug("Issue with recalc_LC. Possibly due to missing lidar/molecular paths. Inserting NaNs")
+        df[['LC_recalc', 'LCp_recalc']] = None
     logger.info(f"Start mid-reference range calculations")
     df['bin_rm'] = df[['bin_r0', 'bin_r1']].progress_apply(np.mean, axis=1,
                                                            result_type='expand').astype(int)
     df['rm'] = df[['r0', 'r1']].progress_apply(np.mean, axis=1, result_type='expand').astype(
         float)
+
     logger.info(f"\nDone database extension")
     return df
 
@@ -412,111 +526,6 @@ def calc_day_statistics(station, day_date, top_height=15.3):
     return df_stats
 
 
-def main(station_name, start_date, end_date, log_level=logging.DEBUG):
-    logging.getLogger('matplotlib').setLevel(logging.ERROR)  # Fix annoying matplotlib logs
-    logging.getLogger('PIL').setLevel(logging.ERROR)  # Fix annoying PIL logs
-    logger = create_and_configer_logger(f"{os.path.basename(__file__)}.log", level=log_level)
-
-    # set operating mode
-    DO_DATASET = False
-    EXTEND_DATASET = False
-    DO_CALIB_DATASET = False
-    USE_KM_UNITS = True
-    DO_GENERATED_DATASET = False
-    SPLIT_DATASET = False
-    SPLIT_GENERATED_DATASET = False
-    CALC_GENERATED_STATS = False
-    CREATE_SAMPLES = True
-
-    # Load data of station
-    station = gs.Station(station_name=station_name)
-    logger.info(f"Loading {station.location} station")
-
-    # Set new paths
-    data_folder = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))), 'data')
-    csv_path = os.path.join(data_folder, f"dataset_{station_name}_"
-                                         f"{start_date.strftime('%Y-%m-%d')}_{end_date.strftime('%Y-%m-%d')}.csv")
-    csv_path_extended = os.path.join(data_folder, f"dataset_{station_name}_"
-                                                  f"{start_date.strftime('%Y-%m-%d')}_{end_date.strftime('%Y-%m-%d')}_extended.csv")
-    ds_path_extended = os.path.join(data_folder, f"dataset_{station_name}_"
-                                                 f"{start_date.strftime('%Y-%m-%d')}_{end_date.strftime('%Y-%m-%d')}_extended.nc")
-
-    csv_gen_path = os.path.join(data_folder, f"dataset_gen_{station_name}_"
-                                             f"{start_date.strftime('%Y-%m-%d')}_{end_date.strftime('%Y-%m-%d')}.csv")
-
-    if DO_DATASET:
-        logger.info(
-            f"\nStart generating dataset for period: [{start_date.strftime('%Y-%m-%d')},{end_date.strftime('%Y-%m-%d')}]")
-        # Generate dataset for learning
-        sample_size = '29.5min'
-        df = create_dataset(station_name=station_name, start_date=start_date,
-                            end_date=end_date, sample_size=sample_size)
-
-        # Convert m to km
-        if USE_KM_UNITS:
-            df = convert_Y_features_units(df)
-
-        df.to_csv(csv_path, index=False)
-        logger.info(f"\nDone database creation, saving to: {csv_path}")
-        # TODO: add creation of dataset statistics following its creation.
-        #         adapt calc_data_statistics(station, start_date, end_date)
-
-    if SPLIT_DATASET:
-        logger.info(
-            f"Splitting to train-test the dataset for period: [{start_date.strftime('%Y-%m-%d')},"
-            f"{end_date.strftime('%Y-%m-%d')}]")
-        split_save_train_test_ds(csv_path=csv_path)
-        logger.info(f"Done splitting train-test dataset for {csv_path}")
-
-    # Create extended dataset and save to csv - recalculation of Lidar Constant (currently this is a naive calculation)
-    if EXTEND_DATASET:
-        logger.info(
-            f"Start extending dataset for period: [{start_date.strftime('%Y-%m-%d')},{end_date.strftime('%Y-%m-%d')}]")
-        if 'df' not in globals():
-            df = pd.read_csv(csv_path)
-        df = extend_calibration_info(df)
-        display(df)
-        df.to_csv(csv_path_extended, index=False)
-        logger.info(f"\n The extended dataset saved to :{csv_path_extended}")
-
-    # Create calibration dataset from the extended df (or csv) = by splitting df to A dataset according to wavelengths
-    # and time coordinates.
-    if DO_CALIB_DATASET:
-        logger.info(
-            f"Start creating calibration dataset for period: [{start_date.strftime('%Y-%m-%d')},"
-            f"{end_date.strftime('%Y-%m-%d')}]")
-
-        if 'df' not in globals():
-            df = pd.read_csv(csv_path_extended)
-        ds_calibration = create_calibration_ds(df, station, source_file=csv_path_extended)
-        # Save the calibration dataset
-        prep.save_dataset(ds_calibration, os.path.curdir, ds_path_extended)
-        logger.info(f"The calibration dataset saved to :{ds_path_extended}")
-
-    if DO_GENERATED_DATASET:
-        logger.info(
-            f"\nStart creating generated dataset for period:"
-            f" [{start_date.strftime('%Y-%m-%d')},{end_date.strftime('%Y-%m-%d')}]")
-        generated_df = create_generated_dataset(station, start_date, end_date)
-        generated_df.to_csv(csv_gen_path, index=False)
-        logger.info(f"\nDone generated database creation, saving to: {csv_gen_path}")
-
-    if CALC_GENERATED_STATS:
-        logger.info(f"\nStart calculating dataset statistics")
-        _, csv_stats_path = calc_data_statistics(station, start_date, end_date)
-        logger.info(f"\nDone calculating dataset statistics. saved to:{csv_stats_path}")
-
-    if SPLIT_GENERATED_DATASET:
-        logger.info(
-            f"\nSplitting to train-test the dataset for period: [{start_date.strftime('%Y-%m-%d')},"
-            f"{end_date.strftime('%Y-%m-%d')}]")
-        split_save_train_test_ds(csv_path=csv_gen_path)
-        logger.info(f"\nDone splitting train-test dataset for {csv_gen_path}")
-
-    if CREATE_SAMPLES:
-        prepare_generated_samples(station, start_date, end_date, top_height=15.3)
-
-
 def save_dataset2timesplits(station, dataset, data_source='lidar', mod_source='gen',
                             profiles=None, sample_size='30min', save_mode='sep',
                             time_slices=None):
@@ -592,7 +601,7 @@ def prepare_generated_samples(station, start_date, end_date, top_height=15.3):
 
 if __name__ == '__main__':
     station_name = 'haifa'
-    start_date = datetime(2017, 10, 31)
-    end_date = datetime(2017, 10, 31)
+    start_date = datetime(2017, 4, 1)
+    end_date = datetime(2017, 5, 31)
     log_level = logging.DEBUG
     main(station_name, start_date, end_date, log_level)
