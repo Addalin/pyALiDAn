@@ -816,7 +816,7 @@ def gen_daily_molecular_ds(day_date):
     #  as variables when running with multiprocessing.
     logger = logging.getLogger()
     optim_size = False
-    save_mode = 'both'
+    save_mode = 'single' #'both'
     USE_KM_UNITS = True
 
     logger.debug(f"\nStart generation of molecular dataset for {day_date.strftime('%Y-%m-%d')}")

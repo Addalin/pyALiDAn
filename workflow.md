@@ -3,6 +3,7 @@
 # 1. Preprocessing Workflow - for TROPOS measurements
 
 ## Preprocessing Tasks
+0. Download gdas
 1. Convert all gdas files in the directory `H:\data_haifa\DATA FROM TROPOS\GDAS\haifa` to txt files (using gdas2radiosonde()) - ***DONE*** 
 2. Generate a daily molecular profile (2D) from the converted txt files  - ***DONE***
 3. create a class of station(<location_name>) loaded from stations_info.csv - ***DONE*** 
