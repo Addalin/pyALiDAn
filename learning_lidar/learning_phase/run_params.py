@@ -25,6 +25,7 @@ train_csv_path, test_csv_path, stats_csv_path, RESULTS_PATH = get_paths(station_
                                                                         start_date=datetime(2017, 9, 1),
                                                                         end_date=datetime(2017, 10, 31))
 
+
 def update_params(config, consts):
     # Define X_features
     source_x = config['source']
@@ -55,11 +56,12 @@ def update_params(config, consts):
 
 
 # ######## RESUME EXPERIMENT #########
-RESUME_EXP = False  # Can be "LOCAL" to continue experiment when it was disrupted
+RESUME_EXP = False  # #'ERRORED_ONLY' # Can be "LOCAL" to continue experiment when it was disrupted
 # (trials that were completed seem to continue training),
 # or "ERRORED_ONLY" to reset and rerun ERRORED trials (not tested). Otherwise False to start a new experiment.
+# Note: if fail_fast was 'True' in the the folder of 'EXP_NAME', then tune will not be able to load trials that didn't store any folder
 
-EXP_NAME = None  # 'main_2021-05-19_22-35-50'  # If 'resume' is not False, must enter experiment path.
+EXP_NAME = None  # If 'resume' is not False, must enter experiment path.
 # e.g. - "main_2021-05-19_21-50-40". Path is relative to RESULTS_PATH. Otherwise can keep it None.
 # And it is generated automatically.
 
@@ -81,7 +83,9 @@ def get_trial_params_and_checkpoint(experiment_dir, trial_dir, check_point_name)
 
 
 # ######## VALIDATE TRIAL #########
-PRETRAINED_MODEL_PATH, MODEL_PARAMS = get_trial_params_and_checkpoint(experiment_dir, trial_dir, check_point_name)
+VALIDATE_TRIAL = False  # TODO: What is the mode for validating experiment / trial?
+if VALIDATE_TRIAL:
+    PRETRAINED_MODEL_PATH, MODEL_PARAMS = get_trial_params_and_checkpoint(experiment_dir, trial_dir, check_point_name)
 
 # ######## RESTORE TRIAL #########
 RESTORE_TRIAL = False  # If true restores the given trial
@@ -93,7 +97,7 @@ else:
 
 # Constants - should correspond to data, dataloader and model
 CONSTS = {
-    'max_epochs': 4,
+    'max_epochs': 12,
     'num_workers': 6,
     'train_csv_path': train_csv_path,
     'test_csv_path': test_csv_path,
@@ -108,22 +112,20 @@ CONSTS = {
 
 # Note, replace tune.choice with grid_search if want all possible combinations
 RAY_HYPER_PARAMS = {
-    "hsizes": tune.grid_search(['[3, 3, 3, 3]', '[4, 4, 4, 4]', '[5, 5, 5, 5]']),  # '[1,1,1,1]', '[2,2,2,2]',
-    "fc_size": tune.grid_search(['[16]', '[32]']),  # '[4]',
-    "lr": tune.grid_search([1 * 1e-3, 2 * 1e-3, 4 * 1e-3]),  # 0.5 * 1e-3, 1e-4,1 * 1e-3  - later for hsizes of :1,2
-    "bsize": tune.grid_search([32]),  # 48 , 64]),  # [16, 8]),
+    "hsizes": tune.grid_search(['[3, 3, 3, 3]', '[4, 4, 4, 4]', '[5, 5, 5, 5]']),
+    "fc_size": tune.grid_search(['[1]']),  # '[4]','[16]', '[32]'
+    "lr": tune.grid_search([1 * 1e-3]),
+    "bsize": tune.grid_search([32]),
     "ltype": tune.choice(['MAELoss']),  # , 'MSELoss']),  # ['MARELoss']
-    # [['LC'], ['r0', 'r1', 'LC'], ['r0', 'r1'], ['r0', 'r1', 'dr'], ['r0', 'r1', 'dr', 'LC']]
-    "use_power": tune.grid_search(["([0.5, -0.25], [0.5])"]),
-    # "([0.5,-0.2, 0.5], [0.5])",
-    # "([0.5,0.25, 0.5], [0.5])",
-    # "([0.5,-0.25, 0.5],[0.5])"]),
-    # "([0.5, 0.25], [0.5])", "([0.5, 0.25], [1])",
-    # "([0.5, -0.25], [0.5])", "([0.5, -0.25], [1])"]),
+    "use_power": tune.grid_search(["([0.5, 1], [0.5])"]),  # "([0.5, -0.11], [0.5])"]),
+    # UV : -0.27 , G: -0.263 , IR: -0.11
     "use_bg": tune.grid_search([False]),  # ,'range_corr'
     # True - bg is relevant for 'lidar' case # TODO if lidar - bg T\F, if signal - bg F
-    "source": tune.grid_search(['signal', 'signal_p' ]),  # , 'lidar'
-    'dfilter': tune.grid_search([None]),  # , ('wavelength', [355])]), # data_filter
+    "source": tune.grid_search(['lidar']),  # , 'lidar','signal_p'
+    'dfilter': tune.grid_search([('wavelength', [355]),
+                                 ('wavelength', [532]),
+                                 ('wavelength', [1064]),
+                                 None]),  # , ('wavelength', [355]) , # data_filter
     'dnorm': tune.grid_search([False]),  # data_norm True - only for the best results achieved.
 }
 

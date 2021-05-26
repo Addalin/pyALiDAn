@@ -43,13 +43,20 @@ class DefaultCNN(LightningModule):
             nn.MaxPool2d(kernel_size=(4, 2), stride=(4, 2)),
         )
         # TODO: calc the first FC layer automatically (not hard coded), based on prev layer dimensions.
-        self.fc_layer = nn.Sequential(
+        self.fc_2layer = nn.Sequential(
             nn.Linear(4 * 8 * hidden_sizes[3], fc_size[0]),
             nn.ReLU(inplace=True),
             nn.Dropout(p=0.1),
             nn.Linear(fc_size[0], output_size),
-            nn.ReLU(inplace=True)
+            nn.ReLU(inplace=True))
+
+        self.fc_1layer = nn.Sequential(
+            nn.Linear(4 * 8 * hidden_sizes[3], output_size),
+            nn.ReLU(inplace=True),
+            nn.Dropout(p=0.1),
         )
+
+        self.fc_layer = self.fc_1layer if fc_size[0] == 1 else self.fc_2layer
 
         # Step 3. Instantiate Loss Class
         self.loss_type = loss_type
