@@ -21,6 +21,7 @@ from multiprocessing import Pool, cpu_count
 from tqdm import tqdm
 from learning_lidar.preprocessing.fix_gdas_errors import download_from_noa_gdas_files
 
+
 # %% General functions
 
 
@@ -48,7 +49,7 @@ def extract_date_time(path, format_filename, format_times):
     return time_stamps
 
 
-def save_dataset(dataset, folder_name='', nc_name='', nc_path=None):
+def save_dataset(dataset, folder_name='', nc_name='', nc_path=None, optim_size=True):
     """
     Save the input dataset to netcdf file
     :param nc_path: full path to netcdf file if already known
@@ -56,11 +57,23 @@ def save_dataset(dataset, folder_name='', nc_name='', nc_path=None):
     :param folder_name: folder name
     :param nc_name: netcdf file name
     :return: nc_path - full path to netcdf file created if succeeded, else none
+    :param optim_size: Boolean. False: the saved dataset will be type 'float64',
+	                            True: the saved dataset will be type 'float64'(default).
+
     """
     logger = logging.getLogger()
     if nc_path:
         folder_name, nc_name = os.path.dirname(nc_path), os.path.basename(nc_path)
-
+    if optim_size:
+        try:
+            dataset = dataset.astype(dtype=np.float32(),
+                                     keep_attrs=True,
+                                     copy=False,
+                                     casting='same_kind')
+            logger.exception(f"\nCasting float64 to float32")
+        except Exception:
+            logger.exception(f"\nFailed casting float64 to float32")
+            return None
     if not os.path.exists(folder_name):
         try:
             os.makedirs(folder_name)
@@ -934,8 +947,9 @@ def main(station_name='haifa', start_date=datetime(2017, 9, 1), end_date=datetim
     ''' Generate molecular datasets for required period'''
     if DOWNLOAD_GDAS:
         # TODO Test that this works as expected
-        download_from_noa_gdas_files(dates_to_retrieve=pd.date_range(start=start_date, end=end_date, freq=timedelta(days=1)),
-                                     save_folder=station.gdas1_folder)
+        download_from_noa_gdas_files(
+            dates_to_retrieve=pd.date_range(start=start_date, end=end_date, freq=timedelta(days=1)),
+            save_folder=station.gdas1_folder)
 
     gdas_paths = []
     if CONV_GDAS:
