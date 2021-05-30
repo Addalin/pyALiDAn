@@ -22,7 +22,7 @@ import seaborn as sns
 eps = np.finfo(np.float).eps
 torch.manual_seed(8318)
 
-
+# TODO:  add 2 flags - Debug and save figure.
 # %% Helper Functions
 def decay_p(t, t0, p0, days_decay):
     return p0 * (np.exp(-(t - t0) / days_decay))
@@ -95,10 +95,10 @@ def main(station_name, start_date, end_date):
 
     # Set parameters for generating a decay power pattern p(t)
     days_decay = 70
-    peak_days = np.array([-10, 40])
+    peak_days = np.array([-1, 50])
     period1 = (df_times.t_day >= peak_days[0]) & (df_times.t_day < peak_days[1])
     period2 = (df_times.t_day >= peak_days[1])
-    max_powers = [15000, 45000, 35000]
+    max_powers = [25000, 70000, 60000]
     ds_chans = []
     for wavelength, p0 in zip(wavelengths, max_powers):
         c1 = df_times[period1].apply(lambda row: decay_p(row.t_day, peak_days[0], p0, days_decay), axis=1, result_type='expand')
@@ -240,7 +240,7 @@ def main(station_name, start_date, end_date):
         gen_source_path = gen_utils.get_month_gen_params_path(station, start_dt, type='LC')
         month_slice = slice(start_dt, end_dt)
         prep.save_dataset(dataset=new_p.sel(Time=month_slice), nc_path=gen_source_path)
-        print(gen_source_path)
+        print(gen_source_path)  # TODO:  log
 
     folder_name = station.generation_folder
     nc_name = f"generated_LC_{station.name}_{start_date.strftime('%Y-%m-%d')}_{end_date.strftime('%Y-%m-%d')}.nc"

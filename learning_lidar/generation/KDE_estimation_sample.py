@@ -14,7 +14,7 @@ import learning_lidar.generation.generation_utils as gen_utils
 
 gs.set_visualization_settings()
 
-
+# TODO: add debug and save of figures option
 def valid_box_domain(x, y, bounds_x, bounds_y):
     return bounds_x[0] <= x <= bounds_x[1] and bounds_y[0] <= y <= bounds_y[1]
 
@@ -298,6 +298,7 @@ def main(station, month, year, start_date, end_date, DATA_DIR):
     # Remove irrelevant values
     index_to_remove = df_rm_beta[(df_rm_beta['beta-532'] > 1.0) | (df_rm_beta['beta-532'] < 0.0)].index
     df_rm_beta.drop(index=index_to_remove, inplace=True)
+    df_rm_beta.dropna(inplace=True)
 
     fig, ax = plt.subplots(nrows=1, ncols=1)
     df_rm_beta.plot.scatter(x='rm', y='beta-532', ax=ax, s=10)
@@ -398,44 +399,45 @@ def main(station, month, year, start_date, end_date, DATA_DIR):
                               'info': '$Aerosol Backscatter'}
 
     # save the dataset
-    SAVE_DS = False
+    SAVE_DS = True
     if SAVE_DS:
         gen_source_path = gen_utils.get_month_gen_params_path(station, start_day, type='density_params')
         print(gen_source_path)
-        prep.save_dataset(ds_month, os.path.dirname(gen_source_path),
-                          os.path.basename(gen_source_path))
+        prep.save_dataset(ds_month, os.path.dirname(gen_source_path), os.path.basename(gen_source_path))
 
-    # #### 6. Converting Bezier paths to LC(t) and creating dataset of generated lidar power.
-    # Set the period for calculating bezier fitting
-    start_time = start_day
-    end_time = end_day + timedelta(days=1)  # - timedelta(seconds = 30) #start_time +timedelta(hours=freq_H)# final_dt# datetime(2017,10,31)
-    tslice = slice(start_time, end_time)
-    p_slice = ds_month.ang355532.sel(Time=tslice)
-    n_pts = p_slice.Time.size
-    t0 = p_slice.Time[0].values
-    t1 = p_slice.Time[-1].values
-    dt0 = prep.dt64_2_datetime(t0)
-    dt1 = prep.dt64_2_datetime(t1)
-    difft = (end_time - start_time)
+    EXTEND_SMOOTHING_BEZIER = False
+    if EXTEND_SMOOTHING_BEZIER:
+        # #### 6. Converting Bezier paths to LC(t) and creating dataset of generated lidar power.
+        # Set the period for calculating bezier fitting
+        start_time = start_day
+        end_time = end_day + timedelta(days=1)  # - timedelta(seconds = 30) #start_time +timedelta(hours=freq_H)# final_dt# datetime(2017,10,31)
+        tslice = slice(start_time, end_time)
+        p_slice = ds_month.ang355532.sel(Time=tslice)
+        n_pts = p_slice.Time.size
+        t0 = p_slice.Time[0].values
+        t1 = p_slice.Time[-1].values
+        dt0 = prep.dt64_2_datetime(t0)
+        dt1 = prep.dt64_2_datetime(t1)
+        difft = (end_time - start_time)
 
-    n_total = difft.days * station.total_time_bins + difft.seconds / station.freq
-    dn_t = np.int(n_total / (n_pts))
-    # initialize the points at times of n_pts
-    points = np.empty((n_pts + 1, 2))
-    points[:, 0] = np.array([n * dn_t for n in range(n_pts + 1)])
-    points[0:monthdays * 2, 1] = p_slice.values
-    points[-1, 1] = p_slice.values[-1]
-    # calc bezier
-    path_ang355532 = Bezier.evaluate_bezier(points, int(dn_t))
-    # Set the time index in which the interpolation is calculated.
-    time_index = pd.date_range(start=start_date, end=end_time, freq=f'30S')
-    ds_bezier = xr.Dataset(
-        data_vars={'ang355532': (('Time'), path_ang355532[0:-1, 1])},
-        coords={'Time': time_index.values[0:-1]})
+        n_total = difft.days * station.total_time_bins + difft.seconds / station.freq
+        dn_t = np.int(n_total / (n_pts))
+        # initialize the points at times of n_pts
+        points = np.empty((n_pts + 1, 2))
+        points[:, 0] = np.array([n * dn_t for n in range(n_pts + 1)])
+        points[0:monthdays * 2, 1] = p_slice.values
+        points[-1, 1] = p_slice.values[-1]
+        # calc bezier
+        path_ang355532 = Bezier.evaluate_bezier(points, int(dn_t))
+        # Set the time index in which the interpolation is calculated.
+        time_index = pd.date_range(start=start_date, end=end_time, freq=f'30S')
+        ds_bezier = xr.Dataset(
+            data_vars={'ang355532': (('Time'), path_ang355532[0:-1, 1])},
+            coords={'Time': time_index.values[0:-1]})
 
-    ds_bezier.ang355532.plot()
-    ds_month.plot.scatter(x='Time', y='ang355532')
-    plt.show()
+        ds_bezier.ang355532.plot()
+        ds_month.plot.scatter(x='Time', y='ang355532')
+        plt.show()
 
 
 if __name__ == '__main__':

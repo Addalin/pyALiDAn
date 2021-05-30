@@ -13,6 +13,7 @@ import learning_lidar.generation.daily_signals_generations_utils as gen_sig_util
 from learning_lidar.utils.utils import create_and_configer_logger
 import pandas as pd
 
+# TODO:  add 2 flags - Debug and save figure.
 
 def generate_daily_lidar_measurement(station, day_date, SAVE_DS=True):
     ds_total = calc_total_optical_density(station=station, day_date=day_date)
@@ -64,6 +65,6 @@ def main(station_name='haifa', start_date=datetime(2017, 9, 1), end_date=datetim
 
 if __name__ == '__main__':
     station_name = 'haifa'
-    start_date = datetime(2017, 9, 1)
-    end_date = datetime(2017, 10, 31)
+    start_date = datetime(2017, 4, 1)
+    end_date = datetime(2017, 4, 2)
     main(station_name, start_date, end_date)

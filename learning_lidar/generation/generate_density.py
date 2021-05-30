@@ -12,7 +12,7 @@ from multiprocessing import Pool, cpu_count
 import learning_lidar.generation.generate_density_utils as gen_den_utils
 from learning_lidar.utils.utils import create_and_configer_logger
 
-
+# TODO:  add 2 flags - Debug and save figure.
 def generate_daily_aerosol_density(station, day_date, SAVE_DS=True):
     """
     TODO: add usage
@@ -68,6 +68,6 @@ def main(station_name='haifa', start_date=datetime(2017, 9, 1), end_date=datetim
 
 if __name__ == '__main__':
     station_name = 'haifa'
-    start_date = datetime(2017, 10, 1)
-    end_date = datetime(2017, 10, 1)
+    start_date = datetime(2017, 4, 3)
+    end_date = datetime(2017, 4, 4)
     main(station_name, start_date, end_date)
