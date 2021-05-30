@@ -24,6 +24,7 @@ def generate_daily_lidar_measurement(station, day_date, SAVE_DS=True):
         # TODO: check that the range_corr_p is added to measure_ds, and that the LCNET is uploading the new paths
         #  (especially if range_corr_p )  . and if so, save only 2 single files of measure_ds, and signal_ds to save
         #  time and space
+        # NOTE: saving to separated datasets (for the use of the learning phase), is done in dataseting.prepare_generated_samples()
         gen_utils.save_generated_dataset(station, measure_ds,
                                          data_source='lidar',
                                          save_mode='single')
