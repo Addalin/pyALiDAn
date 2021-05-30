@@ -6,7 +6,7 @@ from datetime import datetime
 import logging
 import csv
 
-from utils import create_and_configer_logger
+from learning_lidar.utils.utils import create_and_configer_logger
 
 
 def extract_dates_to_retrieve(failed_gdas_files_path='gdas2radiosonde_failed_files.csv', mark_as_downloaded=False):

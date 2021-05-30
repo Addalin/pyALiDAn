@@ -3,7 +3,7 @@
 # 1. Preprocessing Workflow - for TROPOS measurements
 
 ## Preprocessing Tasks
-0. Download gdas
+0. Download gdas from NOA - DOWNLOAD_GDAS Flag in preprocessing.main
 1. Convert all gdas files in the directory `H:\data_haifa\DATA FROM TROPOS\GDAS\haifa` to txt files (using gdas2radiosonde()) - ***DONE*** 
 2. Generate a daily molecular profile (2D) from the converted txt files  - ***DONE***
 3. create a class of station(<location_name>) loaded from stations_info.csv - ***DONE*** 
@@ -108,6 +108,7 @@ Each sample contains the followings:
             - clean and update imports ***DONE***
             - create module `generate_bg_signals.py` ***OPEN***
     2. **Daily Angstrom Exponent and Optical Depth**
+       - Download aeronet from [NASA](https://aeronet.gsfc.nasa.gov/cgi-bin/webtool_aod_v3?stage=3&region=Middle_East&state=Israel&site=Technion_Haifa_IL&place_code=10&if_polarized=0)
        - Notebook: `read_AERONET_data.ipynb`
        - Read Aeronet measurement for a month, and generate per month, the angstrom and aerosols optical depth (aod) datasets.
        - Input: `D:\data_haifa\AERONET\20170901_20170930_Technion_Haifa_IL\20170901_20170930_Technion_Haifa_IL.lev20`

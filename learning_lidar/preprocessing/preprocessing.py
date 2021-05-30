@@ -19,7 +19,7 @@ import xarray as xr
 import matplotlib.dates as mdates
 from multiprocessing import Pool, cpu_count
 from tqdm import tqdm
-
+from learning_lidar.preprocessing.fix_gdas_errors import download_from_noa_gdas_files
 
 # %% General functions
 
@@ -816,7 +816,7 @@ def gen_daily_molecular_ds(day_date):
     #  as variables when running with multiprocessing.
     logger = logging.getLogger()
     optim_size = False
-    save_mode = 'single' #'both'
+    save_mode = 'single'
     USE_KM_UNITS = True
 
     logger.debug(f"\nStart generation of molecular dataset for {day_date.strftime('%Y-%m-%d')}")
@@ -918,6 +918,7 @@ def main(station_name='haifa', start_date=datetime(2017, 9, 1), end_date=datetim
     logging.getLogger('matplotlib').setLevel(logging.ERROR)  # Fix annoying matplotlib logs
     logging.getLogger('PIL').setLevel(logging.ERROR)  # Fix annoying PIL logs
     logger = create_and_configer_logger(f"{os.path.basename(__file__)}.log", level=logging.INFO)
+    DOWNLOAD_GDAS = False
     CONV_GDAS = False
     GEN_MOL_DS = True
     GEN_LIDAR_DS = False
@@ -931,6 +932,11 @@ def main(station_name='haifa', start_date=datetime(2017, 9, 1), end_date=datetim
         f"\nStart preprocessing for period: [{start_date.strftime('%Y-%m-%d')},{end_date.strftime('%Y-%m-%d')}]")
 
     ''' Generate molecular datasets for required period'''
+    if DOWNLOAD_GDAS:
+        # TODO Test that this works as expected
+        download_from_noa_gdas_files(dates_to_retrieve=pd.date_range(start=start_date, end=end_date, freq=timedelta(days=1)),
+                                     save_folder=station.gdas1_folder)
+
     gdas_paths = []
     if CONV_GDAS:
         # Convert gdas files for a period
