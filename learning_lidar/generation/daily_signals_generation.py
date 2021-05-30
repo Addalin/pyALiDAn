@@ -26,18 +26,11 @@ def generate_daily_lidar_measurement(station, day_date, SAVE_DS=True):
         #  time and space
         gen_utils.save_generated_dataset(station, measure_ds,
                                          data_source='lidar',
-                                         save_mode='both',
-                                         profiles=['range_corr'])
-
-        gen_utils.save_generated_dataset(station, measure_ds,
-                                         data_source='bg',
-                                         save_mode='sep',
-                                         profiles=['p_bg'])
+                                         save_mode='single')
 
         gen_utils.save_generated_dataset(station, signal_ds,
                                          data_source='signal',
-                                         save_mode='both',
-                                         profiles=['range_corr'])
+                                         save_mode='single')
 
     return measure_ds, signal_ds
 
