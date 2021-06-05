@@ -113,7 +113,7 @@ def calc_attbsc_ds(station, day_date, total_ds):
     attbsc_ds['date'] = day_date
 
     if PLOT_RESULTS:
-        gen_utils.plot_daily_profile(profile_ds=attbsc_ds.attbsc, figsize=(16, 8))
+        gen_utils.plot_daily_profile(profile_ds=attbsc_ds, figsize=(16, 8))
 
     return attbsc_ds
 
@@ -411,7 +411,7 @@ def calc_daily_measurement(station, day_date, signal_ds):
     pn_ds = calc_poiss_measurement(station, day_date, p_mean)  # lidar measurement: pn ~Poiss(mu_p)
     pr2n_ds = calc_range_corr_measurement(station, day_date, pn_ds,
                                           signal_ds.r2)  # range corrected measurement: pr2n = pn * r^2
-    measure_ds = xr.Dataset().assign(p=pr2n_ds, range_corr=pr2n_ds, p_mean=p_mean, p_bg=bg_ds)
+    measure_ds = xr.Dataset().assign(p=pn_ds, range_corr=pr2n_ds, p_mean=p_mean, p_bg=bg_ds)
     measure_ds['date'] = day_date
     measure_ds.attrs = {'location': station.location,
                         'info': 'Daily generated lidar signals measurement.',
