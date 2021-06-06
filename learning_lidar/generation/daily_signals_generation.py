@@ -36,7 +36,7 @@ def generate_daily_lidar_measurement(station, day_date, SAVE_DS=True):
     return measure_ds, signal_ds
 
 
-def main(station_name='haifa', start_date=datetime(2017, 9, 1), end_date=datetime(2017, 9, 2)):
+def daily_signals_generation_main(station_name='haifa', start_date=datetime(2017, 9, 1), end_date=datetime(2017, 9, 2)):
     gs.set_visualization_settings()
     gen_sig_utils.PLOT_RESULTS = False  # Toggle True for debug. False for run.
     # TODO: Toggle PLOT_RESULTS to True - doesn't seem to work
@@ -60,5 +60,5 @@ def main(station_name='haifa', start_date=datetime(2017, 9, 1), end_date=datetim
 if __name__ == '__main__':
     station_name = 'haifa'
     start_date = datetime(2017, 4, 1)
-    end_date = datetime(2017, 4, 2)
-    main(station_name, start_date, end_date)
+    end_date = datetime(2017, 5, 31)
+    daily_signals_generation_main(station_name, start_date, end_date)

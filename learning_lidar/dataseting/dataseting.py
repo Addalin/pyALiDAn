@@ -16,7 +16,6 @@ import xarray as xr
 
 # %% Local modules imports
 import learning_lidar.utils.global_settings as gs
-import learning_lidar.preprocessing.preprocessing as prep
 from learning_lidar.dataseting.dataseting_utils import get_query, query_database, add_profiles_values, add_X_path, \
     get_time_slots_expanded, convert_Y_features_units, recalc_LC, split_save_train_test_ds, get_generated_X_path, \
     get_mean_lc, get_prep_X_path
@@ -26,21 +25,21 @@ from learning_lidar.utils.utils import create_and_configer_logger
 import learning_lidar.generation.generation_utils as gen_utils
 
 
-def main(station_name, start_date, end_date, log_level=logging.DEBUG):
+def dataseting_main(station_name, start_date, end_date, log_level=logging.DEBUG):
     logging.getLogger('matplotlib').setLevel(logging.ERROR)  # Fix annoying matplotlib logs
     logging.getLogger('PIL').setLevel(logging.ERROR)  # Fix annoying PIL logs
     logger = create_and_configer_logger(f"{os.path.basename(__file__)}.log", level=log_level)
 
     # set operating mode
     DO_DATASET = False
-    EXTEND_DATASET = True
+    EXTEND_DATASET = False
     DO_CALIB_DATASET = False
     USE_KM_UNITS = True
-    DO_GENERATED_DATASET = False
+    DO_GENERATED_DATASET = True
     SPLIT_DATASET = False
-    SPLIT_GENERATED_DATASET = False
-    CALC_GENERATED_STATS = False
-    CREATE_SAMPLES = False
+    SPLIT_GENERATED_DATASET = True
+    CALC_GENERATED_STATS = True
+    CREATE_SAMPLES = True
 
     # Load data of station
     station = gs.Station(station_name=station_name)
@@ -129,10 +128,6 @@ def main(station_name, start_date, end_date, log_level=logging.DEBUG):
 
     if CREATE_SAMPLES:
         prepare_generated_samples(station, start_date, end_date, top_height=15.3)
-
-
-
-
 
 
 # %% Dataset creating helper functions
@@ -604,4 +599,4 @@ if __name__ == '__main__':
     start_date = datetime(2017, 4, 1)
     end_date = datetime(2017, 5, 31)
     log_level = logging.DEBUG
-    main(station_name, start_date, end_date, log_level)
+    dataseting_main(station_name, start_date, end_date, log_level)

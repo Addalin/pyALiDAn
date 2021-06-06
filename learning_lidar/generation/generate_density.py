@@ -43,7 +43,7 @@ def generate_daily_aerosol_density(station, day_date, SAVE_DS=True):
     return aer_ds, density_ds
 
 
-def main(station_name='haifa', start_date=datetime(2017, 9, 1), end_date=datetime(2017, 9, 2)):
+def generate_density_main(station_name='haifa', start_date=datetime(2017, 9, 1), end_date=datetime(2017, 9, 2)):
     gs.set_visualization_settings()
     gen_den_utils.PLOT_RESULTS = False  # Toggle True for debug. False for run.
     logging.getLogger('PIL').setLevel(logging.ERROR)  # Fix annoying PIL logs
@@ -68,6 +68,6 @@ def main(station_name='haifa', start_date=datetime(2017, 9, 1), end_date=datetim
 
 if __name__ == '__main__':
     station_name = 'haifa'
-    start_date = datetime(2017, 4, 3)
-    end_date = datetime(2017, 4, 4)
-    main(station_name, start_date, end_date)
+    start_date = datetime(2017, 9, 1)
+    end_date = datetime(2017, 9, 2)
+    generate_density_main(station_name, start_date, end_date)
