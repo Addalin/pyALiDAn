@@ -52,13 +52,13 @@ def extract_date_time(path, format_filename, format_times):
 def save_dataset(dataset, folder_name='', nc_name='', nc_path=None, optim_size=True):
     """
     Save the input dataset to netcdf file
+
     :param nc_path: full path to netcdf file if already known
     :param dataset: array.Dataset()
     :param folder_name: folder name
     :param nc_name: netcdf file name
+    :param optim_size: Boolean. False: the saved dataset will be type 'float64', True: the saved dataset will be type 'float64'(default).
     :return: nc_path - full path to netcdf file created if succeeded, else none
-    :param optim_size: Boolean. False: the saved dataset will be type 'float64',
-	                            True: the saved dataset will be type 'float64'(default).
 
     """
     logger = logging.getLogger()
@@ -66,11 +66,22 @@ def save_dataset(dataset, folder_name='', nc_name='', nc_path=None, optim_size=T
         folder_name, nc_name = os.path.dirname(nc_path), os.path.basename(nc_path)
     if optim_size:
         try:
-            dataset = dataset.astype(dtype=np.float32(),
-                                     keep_attrs=True,
-                                     copy=False,
-                                     casting='same_kind')
-            logger.exception(f"\nCasting float64 to float32")
+            # Separate whether its a dataset (has data_vars) or dataarray
+            if hasattr(dataset, 'data_vars'):
+                for var in dataset.data_vars:
+                    if dataset[var].dtype == np.float64 and len(dataset[var].dims) >= 2:
+                        dataset[var] = dataset[var].astype(np.float32,
+                                                           casting='same_kind',
+                                                           copy=False,
+                                                           keep_attrs=True)
+            else:
+                if dataset.dtype == np.float64 and len(dataset.dims) >= 2:
+                    dataset = dataset.astype(np.float32,
+                                             casting='same_kind',
+                                             copy=False,
+                                             keep_attrs=True)
+
+            logger.debug(f"\nCasting float64 to float32 in file - {folder_name} {nc_name}")
         except Exception:
             logger.exception(f"\nFailed casting float64 to float32")
             return None
