@@ -5,7 +5,7 @@ import os
 import calendar
 from learning_lidar.utils.global_settings import TIMEFORMAT
 from tqdm import tqdm
-
+import pandas as pd
 
 def get_gen_dataset_file_name(station, day_date, wavelength='*',
                               data_source='lidar', file_type='range_corr',
@@ -183,16 +183,49 @@ def dt2binscale(dt_time, res_sec=30):
 
 def plot_daily_profile(profile_ds, height_slice=None, figsize=(16, 6)):
     # TODO : move to vis_utils.py
-    # TODO: add low/high thresholds (single or per channel) see prep.visualize_ds_profile_chan()
+    # TODO: add scintific ticks on colorbar
     wavelengths = profile_ds.Wavelength.values
     if height_slice is None:
         height_slice = slice(profile_ds.Height[0].values, profile_ds.Height[-1].values)
     str_date = profile_ds.Time[0].dt.strftime("%Y-%m-%d").values.tolist()
-    fig, axes = plt.subplots(nrows=1, ncols=3, figsize=figsize, sharey=True)
-    for wavelength, ax in zip(wavelengths, axes.ravel()):
-        profile_ds.sel(Height=height_slice, Wavelength=wavelength).plot(cmap='turbo', ax=ax)
+    ncols = wavelengths.size
+    fig, axes = plt.subplots(nrows=1, ncols=ncols, figsize=figsize, sharey=True)
+    if ncols > 1:
+        for wavelength, ax in zip(wavelengths, axes.ravel()):
+            profile_ds.sel(Height=height_slice, Wavelength=wavelength).plot(cmap='turbo', ax=ax)
+            ax.xaxis.set_major_formatter(TIMEFORMAT)
+            ax.xaxis.set_tick_params(rotation=0)
+    else:
+        ax = axes
+        profile_ds.sel(Height=height_slice).plot(cmap='turbo', ax=ax)
         ax.xaxis.set_major_formatter(TIMEFORMAT)
         ax.xaxis.set_tick_params(rotation=0)
     plt.suptitle(f"{profile_ds.info} - {str_date}")
+    plt.ticklabel_format(axis="y", style="sci", scilimits=(0, 0))
+    plt.tight_layout()
+    plt.show()
+
+
+def plot_hourly_profile(profile_ds, height_slice=None, figsize=(10, 6), times=None):
+    # TODO : move to vis_utils.py
+    # TODO: add scintific ticks on colorbar
+    day_date = prep.dt64_2_datetime(profile_ds.Time[0].values)
+    str_date = day_date.strftime("%Y-%m-%d")
+    if times == None:
+        times = [day_date + timedelta(hours=8),
+                 day_date + timedelta(hours=12),
+                 day_date + timedelta(hours=18)]
+    if height_slice is None:
+        height_slice = slice(profile_ds.Height[0].values, profile_ds.Height[-1].values)
+
+    ncols = len(times)
+    fig, axes = plt.subplots(nrows=1, ncols=ncols, figsize=figsize, sharey=True)
+    for t, ax in zip(times,
+                     axes.ravel()):
+        profile_ds.sel(Time=t, Height=height_slice).plot.line(ax=ax, y='Height', hue='Wavelength')
+        ax.set_title(pd.to_datetime(str(t)).strftime('%H:%M:%S'))
+    plt.tight_layout()
+    plt.suptitle(f"{profile_ds.info} - {str_date}")
+    plt.ticklabel_format(axis="y", style="sci", scilimits=(0, 0))
     plt.tight_layout()
     plt.show()

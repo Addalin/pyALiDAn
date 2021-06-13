@@ -6,7 +6,7 @@ import xarray as xr
 import learning_lidar.utils.global_settings as gs
 import numpy as np
 import learning_lidar.preprocessing.preprocessing as prep
-
+gs.set_visualization_settings()
 
 # TODO
 #  1. Add a section of AERONET dataset preparation to preprocessing.py
@@ -47,6 +47,7 @@ def main(station, month, year):
 
     base_name = f"{start_day.strftime('%Y%m%d')}_{end_day.strftime('%Y%m%d')}_{station.aeronet_name}"
     file_name = os.path.join(station.aeronet_folder, base_name, base_name + '.lev20')
+    # TODO : add automatic download of `.lev20' file from AERONET in case a file is missing.
     aeronet_data = pd.read_csv(file_name, skiprows=6).dropna()
 
     # #### Parse data and rename columns for easier extrapolation of AOD values
@@ -115,7 +116,7 @@ def main(station, month, year):
                     'start_time': start_day.strftime("%Y-%d-%m"), 'end_time': end_day.strftime("%Y-%d-%m")}
 
     # Show AOD and Angstrom Exponent for a period
-    fig, axes = plt.subplots(nrows=2, ncols=1, figsize=(8, 8))
+    fig, axes = plt.subplots(nrows=1, ncols=2, figsize=(8, 8))
     t_slice = slice(start_day, start_day + timedelta(days=30) - timedelta(seconds=30))
     ax = axes.ravel()
     for wavelength in wavelengths:
@@ -177,7 +178,7 @@ def main(station, month, year):
 
 if __name__ == '__main__':
     station = gs.Station('haifa')
-    months = [4, 5, 6]
+    months = [9]#, 5, 6]
     year = 2017
     for month in months:
         main(station, month, year)

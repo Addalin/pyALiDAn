@@ -38,7 +38,7 @@ def generate_daily_lidar_measurement(station, day_date, SAVE_DS=True):
 
 def daily_signals_generation_main(station_name='haifa', start_date=datetime(2017, 9, 1), end_date=datetime(2017, 9, 2)):
     gs.set_visualization_settings()
-    gen_sig_utils.PLOT_RESULTS = False  # Toggle True for debug. False for run.
+    gen_sig_utils.PLOT_RESULTS = True  # Toggle True for debug. False for run.
     # TODO: Toggle PLOT_RESULTS to True - doesn't seem to work
     logging.getLogger('PIL').setLevel(logging.ERROR)  # Fix annoying PIL logs
     logging.getLogger('matplotlib').setLevel(logging.ERROR)  # Fix annoying matplotlib logs
@@ -51,7 +51,7 @@ def daily_signals_generation_main(station_name='haifa', start_date=datetime(2017
     num_days = len(days_list)
     num_processes = 1 if gen_sig_utils.PLOT_RESULTS else min((cpu_count() - 1, num_days))
     with Pool(num_processes) as p:
-        p.starmap(generate_daily_lidar_measurement, zip(repeat(station), days_list))
+        p.starmap(generate_daily_lidar_measurement, zip(repeat(station), days_list, repeat(False)))
 
     logger.info(f"\nDone generating lidar signals & measurements "
                 f"for period: [{start_date.strftime('%Y-%m-%d')},{end_date.strftime('%Y-%m-%d')}]")
@@ -60,5 +60,5 @@ def daily_signals_generation_main(station_name='haifa', start_date=datetime(2017
 if __name__ == '__main__':
     station_name = 'haifa'
     start_date = datetime(2017, 4, 1)
-    end_date = datetime(2017, 5, 31)
+    end_date = datetime(2017, 4, 2)
     daily_signals_generation_main(station_name, start_date, end_date)

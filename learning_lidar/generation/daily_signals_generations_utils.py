@@ -19,7 +19,7 @@ from learning_lidar.utils.global_settings import TIMEFORMAT
 logger = create_and_configer_logger(f"{os.path.basename(__file__)}.log", level=logging.INFO)
 gs.set_visualization_settings()
 wavelengths = gs.LAMBDA_nm().get_elastic()
-PLOT_RESULTS = False
+PLOT_RESULTS = True
 
 
 # %% Helper functions
