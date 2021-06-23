@@ -260,7 +260,7 @@ Each sample contains the followings:
       5. `vis_utils.py` - All visualizations styling and plot figures of xarray in 2D or 1D or 3D (surf) ***OPEN***
 4. Dataset Folder:
    - data_<station_name>
-        - AERONET (Requires arrangement accorging to years)
+        - AERONET (Requires arrangement according to years)
         - DATA FROM TROPOS : 
           - lidar_dataset_calib : containing lidar_ds generated from the calibrated dataset of TROPOS
           - lidar_dataset : containing lidar_ds from raw lidar measurements (p,range_corr,p_bg) generated from raw nc files 
