@@ -40,12 +40,12 @@ def calc_total_optical_density(station, day_date):
     # %% 1. Load generated aerosol profiles
     month_folder = prep.get_month_folder_name(station.gen_aerosol_dataset, day_date)
     nc_aer = gen_utils.get_gen_dataset_file_name(station, day_date, data_source='aerosol')
-    ds_aer = prep.load_dataset(os.path.join(month_folder, nc_aer))
+    aer_ds = prep.load_dataset(os.path.join(month_folder, nc_aer))
 
     if PLOT_RESULTS:
         height_slice = slice(0.0, 15)
-        gen_utils.plot_daily_profile(profile_ds=ds_aer.sigma, height_slice=height_slice)
-        gen_utils.plot_daily_profile(profile_ds=ds_aer.beta, height_slice=height_slice)
+        gen_utils.plot_daily_profile(profile_ds=aer_ds.sigma, height_slice=height_slice)
+        gen_utils.plot_daily_profile(profile_ds=aer_ds.beta, height_slice=height_slice)
 
     # %% 2. Load molecular profiles
     month_folder = prep.get_month_folder_name(station.molecular_dataset, day_date)
@@ -53,10 +53,10 @@ def calc_total_optical_density(station, day_date):
     ds_mol = prep.load_dataset(os.path.join(month_folder, nc_name))
 
     # %% 3. Calculate total densities
-    total_sigma = (ds_aer.sigma + ds_mol.sigma).assign_attrs({'info': "Daily total extinction coefficient",
+    total_sigma = (aer_ds.sigma + ds_mol.sigma).assign_attrs({'info': "Daily total extinction coefficient",
                                                               'long_name': r'$\sigma$', 'units': r'$1/km$',
                                                               'name': 'sigma'})
-    total_beta = (ds_aer.beta + ds_mol.beta).assign_attrs({'info': "Daily total backscatter coefficient",
+    total_beta = (aer_ds.beta + ds_mol.beta).assign_attrs({'info': "Daily total backscatter coefficient",
                                                            'long_name': r'$\beta$', 'units': r'$1/km$',
                                                            'name': 'beta'})
 

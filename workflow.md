@@ -145,7 +145,7 @@ Each sample contains the followings:
       - Notebook: `generate_density.ipynb`  
       - Generate daily backscatter and extinction of aerosols
       - Inputs: ds_month_params `generated_density_params_haifa_2017-09-01_2017-09-30.nc` (created in `KDE_estimation_sample.ipynb`)
-      - Output: ds_aer per day as: `D:\data_haifa\GENERATION\aerosol_dataset\09\2017_09_02_Haifa_aerosol_check.nc`
+      - Output: aer_ds per day as: `D:\data_haifa\GENERATION\aerosol_dataset\09\2017_09_02_Haifa_aerosol_check.nc`
       - **TODOS**: 
         - Create a python module - ***DONE***
         - Adapt the code to run automatically for a required period:
@@ -162,8 +162,8 @@ Each sample contains the followings:
     3. Calculate Poisson measurement of the signal
     
 - Inputs:
-  1. ds_aer - as `D:\data_haifa\GENERATION\aerosol_dataset\09\2017_09_02_Haifa_aerosol.nc` (created in `generate_density.ipynb`)
-  2. ds_mol - as `D:\data_haifa\DATA FROM TROPOS\molecular_dataset\2017\09\2017_09_18_Haifa_molecular.nc` (created in `preprocessing.py`)
+  1. aer_ds - as `D:\data_haifa\GENERATION\aerosol_dataset\09\2017_09_02_Haifa_aerosol.nc` (created in `generate_density.ipynb`)
+  2. mol_ds - as `D:\data_haifa\DATA FROM TROPOS\molecular_dataset\2017\09\2017_09_18_Haifa_molecular.nc` (created in `preprocessing.py`)
   3. ds_bg  - as `D:\data_haifa\GENERATION\bg_dataset\generated_bg_haifa_2017-01-01_2017-01-31.nc` (created in `generate_bg_signals.ipynb`)
   4. ds_gen_p - `D:\data_haifa\GENERATION\generated_LC_haifa_2017-09-01_2017-10-31.nc` (created in `generate_LC_pattern.ipynb`)
 - Output:  TBD
@@ -259,17 +259,20 @@ Each sample contains the followings:
       4. `global_settings.py` ***ALMOST DONE*** required some clearness to vis_utils.py) 
       5. `vis_utils.py` - All visualizations styling and plot figures of xarray in 2D or 1D or 3D (surf) ***OPEN***
 4. Dataset Folder:
-   - data_station
-        - AERONET (Requires rearrangement)
+   - data_<station_name>
+        - AERONET (Requires arrangement accorging to years)
         - DATA FROM TROPOS : 
-          - lidar_dataset (X)
-          - molecular_dataset (X)
+          - lidar_dataset : containing lidar_ds generated from the calibrated dataset of TROPOS
+          - lidar_dataset_raw : containing raw_ds of lidar measurements (p,range_corr,p_bg) generated from raw nc files 
+          - molecular_dataset : containing mol_ds generated from gdas files
           - GDAS:
             - haifa (files form NOAA)
             - haifa_preproc (created in preproccesing.py) 
-          - data ( FROM TROPOS)
+          - data ( FROM TROPOS):
+            - level1a - the post-calibrated dataset from TROPOS
+            - level0 - the raw measurements
         - GENERATION:
-          - aerosol_dataset
+          - aerosol_dataset : contains 
           - bg_dataset
 4. Update environment installations documents. as: 
    - ARLreader ***OPEN***
