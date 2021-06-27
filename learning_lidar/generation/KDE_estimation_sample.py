@@ -15,6 +15,7 @@ import learning_lidar.generation.generation_utils as gen_utils
 gs.set_visualization_settings()
 
 # TODO: add debug and save of figures option
+# TODO : organize main() to functions & comments
 def valid_box_domain(x, y, bounds_x, bounds_y):
     return bounds_x[0] <= x <= bounds_x[1] and bounds_y[0] <= y <= bounds_y[1]
 

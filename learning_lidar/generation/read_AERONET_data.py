@@ -12,6 +12,7 @@ gs.set_visualization_settings()
 #  1. Add a section of AERONET dataset preparation to preprocessing.py
 #  2. Apply this notebook on any month measured during the year.
 #  3. Add the calibration info to ds_day in synthisize_lidar_measurments.ipynb
+#  4. Organize main() to functions & comments
 
 
 # TODO NAN values in ds_aod.aod??

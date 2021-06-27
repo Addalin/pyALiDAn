@@ -208,7 +208,7 @@ def plot_daily_profile(profile_ds, height_slice=None, figsize=(16, 6)):
 
 def plot_hourly_profile(profile_ds, height_slice=None, figsize=(10, 6), times=None):
     # TODO : move to vis_utils.py
-    # TODO: add scintific ticks on colorbar
+    # TODO: add scientific ticks on color-bar
     day_date = prep.dt64_2_datetime(profile_ds.Time[0].values)
     str_date = day_date.strftime("%Y-%m-%d")
     if times == None:

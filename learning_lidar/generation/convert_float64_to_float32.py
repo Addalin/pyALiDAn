@@ -5,7 +5,7 @@ from learning_lidar.preprocessing import preprocessing as prep
 from tqdm import tqdm
 import numpy as np
 
-
+# TODO - add this to utils , an as well to any "save" process of xarray dataset
 def convert_to32(nc_path):
     ds = prep.load_dataset(str(nc_path))
     prep.save_dataset(ds, nc_path=str(nc_path))

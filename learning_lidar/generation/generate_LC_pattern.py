@@ -23,6 +23,7 @@ eps = np.finfo(np.float).eps
 torch.manual_seed(8318)
 
 # TODO:  add 2 flags - Debug and save figure.
+# TODO : organize main() to functions & comments
 # %% Helper Functions
 def decay_p(t, t0, p0, days_decay):
     return p0 * (np.exp(-(t - t0) / days_decay))
