@@ -20,9 +20,9 @@ import matplotlib.dates as mdates
 from multiprocessing import Pool, cpu_count
 from tqdm import tqdm
 from learning_lidar.preprocessing.fix_gdas_errors import download_from_noa_gdas_files
+import time
+from zipfile import ZipFile
 
-
-# %% General functions
 
 
 def get_month_folder_name(parent_folder, day_date):
@@ -210,7 +210,7 @@ def get_TROPOS_dataset_paths(station, day_date, start_time=None, end_time=None, 
     paths_pattern = os.path.join(lidar_day_folder, file_name)
 
     paths = sorted(glob.glob(paths_pattern))
-    paths = sorted(glob.glob('/home/shubi/PycharmProjects/learning_lidar/data/' + lidar_day_folder + '/*.nc')) # TODO Shubi
+    # paths = sorted(glob.glob('/home/shubi/PycharmProjects/learning_lidar/data/' + lidar_day_folder + '/*.nc')) # TODO Shubi
     return paths
 
 
@@ -1005,7 +1005,6 @@ def save_prep_dataset(station, dataset, data_source='lidar', save_mode='both',
     return ncpaths
 
 
-# %% MAIN
 def main(station_name='haifa', start_date=datetime(2017, 9, 1), end_date=datetime(2017, 9, 2)):
     logging.getLogger('matplotlib').setLevel(logging.ERROR)  # Fix annoying matplotlib logs
     logging.getLogger('PIL').setLevel(logging.ERROR)  # Fix annoying PIL logs
@@ -1013,8 +1012,9 @@ def main(station_name='haifa', start_date=datetime(2017, 9, 1), end_date=datetim
     DOWNLOAD_GDAS = False
     CONV_GDAS = False
     GEN_MOL_DS = False
-    GEN_LIDAR_DS = True
+    GEN_LIDAR_DS = False
     USE_KM_UNITS = True
+    UNZIP_TROPOS_LIDAR = True
 
     """set day,location"""
     station = gs.Station(station_name=station_name)
@@ -1030,7 +1030,7 @@ def main(station_name='haifa', start_date=datetime(2017, 9, 1), end_date=datetim
             dates_to_retrieve=pd.date_range(start=start_date, end=end_date, freq=timedelta(days=1)),
             save_folder=station.gdas1_folder)
 
-    gdas_paths = [1]
+    gdas_paths = [1] #TODO delete
     if CONV_GDAS:
         # Convert gdas files for a period
         gdas_paths.extend(convert_periodic_gdas(station, start_date, end_date))
@@ -1083,6 +1083,16 @@ def main(station_name='haifa', start_date=datetime(2017, 9, 1), end_date=datetim
         logger.info(
             f"\nFinished generating and saving of molecular datasets for period [{start_date.strftime('%Y-%m-%d')},{end_date.strftime('%Y-%m-%d')}]")
 
+
+    if UNZIP_TROPOS_LIDAR:
+        for file_name in sorted(
+                glob.glob('/home/shubi/PycharmProjects/learning_lidar/data/DATA FROM TROPOS/2017/09/*.zip')):
+            nc_day = os.path.basename(file_name).split("_")[2]  # extract day of the file. 0 - year, 1 - month, 2 - day
+            save_path = os.path.join(os.path.dirname(file_name), nc_day)
+
+            logger.info(f"extracting {file_name} to {save_path}")
+            zip = ZipFile(file_name)
+            zip.extractall(save_path)
     ''' Generate lidar datasets for required period'''
     if GEN_LIDAR_DS:
         lidarpaths = []
