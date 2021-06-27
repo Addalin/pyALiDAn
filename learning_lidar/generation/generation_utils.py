@@ -1,8 +1,13 @@
+import numpy as np
 from matplotlib import pyplot as plt
+from scipy.ndimage import gaussian_filter1d
+
 import learning_lidar.preprocessing.preprocessing as prep
 from datetime import datetime, timedelta
 import os
 import calendar
+
+from learning_lidar.generation.generate_density_utils import PLOT_RESULTS
 from learning_lidar.utils.global_settings import TIMEFORMAT
 from tqdm import tqdm
 import pandas as pd
@@ -229,3 +234,51 @@ def plot_hourly_profile(profile_ds, height_slice=None, figsize=(10, 6), times=No
     plt.ticklabel_format(axis="y", style="sci", scilimits=(0, 0))
     plt.tight_layout()
     plt.show()
+
+
+def create_ratio(start_height, total_bins, mode='ones', ref_height=None, ref_height_bin=None):
+    """
+    Generating ratio, mainly for applying different endings on the daily profile, or overlap function.
+    Currently the ratio is "1" for all bins.
+    Change this function to produce more options of generated aerosol densities.
+    :param start_height: Start measuring height ( the height of 1st bin) in km
+    :param total_bins: Total bins in one column of measurements (through height)
+    :param mode: The mode of the generated ratio:
+        1. "ones" - all bins are equal
+        2. "end" - apply different ratio on the endings of the aerosols density
+        3. "overlap" - generate some overlap function on the lidar measurement, the varying ratio is on lower heights.
+    :param ref_height: Reference height in km
+    :param ref_height_bin: The bin number of reference height
+    :return: Ratio 0-1 throughout height , that affect on the aerosols density or the lidar measurement.
+    """
+    t_interp = np.arange(start=1, stop=total_bins + 1, step=1)
+    if mode == "end":
+        t_start = start_height / ref_height
+        t_ending = np.array(
+            [0, 0.125 * t_start, 0.25 * t_start, .5 * t_start, t_start, 0.05, 0.1, .3, .4, .5, .6, .7, .8, .9,
+             1.0]) * np.float(ref_height_bin)
+        ratios = np.array([1, 1, 1, 1, 1, 1.0, 1, 1, 1, 1, 0.95, 0.85, 0.4, .3, 0.2])
+        ratio_interp = np.interp(t_interp, t_ending, ratios)
+        smooth_ratio = gaussian_filter1d(ratio_interp, sigma=40)
+    elif mode == "overlap":
+        # the overlap function is relevant to heights up 600-700 meter. setting to 95 means 90*7.5 =675 [m]
+        t_start = 95
+        r_start = 1
+        t_overlap = np.array(
+            [0, 0.125 * t_start, 0.25 * t_start, .5 * t_start, t_start, 0.05, 0.1, .3, .4, .5, .6, .7, .8, .9,
+             1.0]) * np.float(ref_height_bin)
+        ratios = np.array([.0, .01, 0.02, .2, 0.75*r_start, r_start, 1, 1, 1, 1, 1, 1, 1, 1, 1])
+        ratio_interp = np.interp(t_interp, t_overlap, ratios)
+        smooth_ratio = gaussian_filter1d(ratio_interp, sigma=20)
+    elif mode == "ones":
+        y = np.arange(total_bins)
+        smooth_ratio = np.ones_like(y)
+
+    if PLOT_RESULTS:
+        plt.figure(figsize=(3, 3))
+        plt.plot(smooth_ratio, t_interp, label=mode)
+        plt.ylabel('Height bins')
+        plt.xlabel('ratio')
+        plt.show()
+
+    return smooth_ratio

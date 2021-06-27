@@ -1,17 +1,15 @@
 import logging
 import os
-from datetime import datetime
 import numpy as np
 import pandas as pd
 import xarray as xr
 from matplotlib import pyplot as plt
 from scipy import signal
 from scipy.interpolate import CubicSpline
-from scipy.ndimage import gaussian_filter1d, gaussian_filter
+from scipy.ndimage import gaussian_filter
 from scipy.stats import multivariate_normal
 from sklearn.model_selection import train_test_split
 
-from learning_lidar.generation.generation_utils import dt2binscale
 from learning_lidar.utils.global_settings import TIMEFORMAT
 from learning_lidar.preprocessing import preprocessing as prep
 import learning_lidar.generation.generation_utils as gen_utils
@@ -131,45 +129,6 @@ def get_sub_sample_level(density, source_indexes, target_indexes):
     sampled_interp = interp_sigma_df.values
     sampled_interp = normalize(sampled_interp)
     return sampled_interp
-
-
-def create_ratio(start_height, ref_height, ref_height_bin, total_bins):
-    """
-    TODO: add usage
-    :param start_height:
-    :param ref_height:
-    :param ref_height_bin:
-    :param total_bins:
-    :return:
-    """
-    t_start = start_height / ref_height
-    r_start = 0.7
-    t_r = np.array(
-        [0, 0.125 * t_start, 0.25 * t_start, .5 * t_start, t_start, 0.05, 0.1, .3, .4, .5, .6, .7, .8, .9,
-         1.0]) * np.float(ref_height_bin)
-    ratios = np.array([1, 1, 1, 1, 1, 1.0, 1, 1, 1, 1, 0.95, 0.85, 0.4, .3, 0.2])
-    t_o = np.array(
-        [0, 0.125 * t_start, 0.25 * t_start, .5 * t_start, t_start, 0.05, 0.1, .3, .4, .5, .6, .7, .8, .9,
-         1.0]) * np.float(ref_height_bin)
-    overlaps = np.array([.0, .01, 0.02, .1, r_start, 0.9, 1, 1, 1, 1, 1, 1, 1, 1, 1])
-    t_interp = np.arange(start=1, stop=total_bins + 1, step=1)
-    ratio_interp = np.interp(t_interp, t_r, ratios)
-    overlap_interp = np.interp(t_interp, t_o, overlaps)
-
-    smooth_ratio = gaussian_filter1d(ratio_interp, sigma=40)  # TODO apply smooth ratio as overlap function
-    smooth_overlap = gaussian_filter1d(overlap_interp, sigma=20)
-    y = np.arange(total_bins)
-    smooth_ratio = np.ones_like(y)
-
-    if PLOT_RESULTS:
-        plt.figure(figsize=(3, 3))
-        plt.plot(smooth_ratio, t_interp, label='density ratio')
-        plt.plot(smooth_overlap, t_interp, linestyle='--', label='overlap')
-        plt.ylabel('Height bins')
-        plt.xlabel('ratio')
-        plt.show()
-
-    return smooth_ratio
 
 
 def set_gaussian_component(nx, ny, cov_size, choose_ratio, std_ratio, cov_r_lbounds, grid,
@@ -560,10 +519,9 @@ def generate_density(station, day_date, day_params_ds):
     density_ds = generate_density_components(total_time_bins=station.total_time_bins, total_height_bins=station.n_bins,
                                              time_index=time_index, heights=heights, ref_height_bin=ref_height_bin)
 
-    # set ratio - this is mainly for overlap function and/ or applying differnet endings on the daily profile.
-    # currently the ratio is "1" for all bins.
-    ratio = create_ratio(start_height=heights[0], ref_height=ref_height, ref_height_bin=ref_height_bin,
-                         total_bins=total_bins)
+    # Set ratio to the "ending" of aerosol layer (currently all is "1")
+    ratio = gen_utils.create_ratio(start_height=heights[0], total_bins=total_bins, mode="ones", ref_height=ref_height,
+                                   ref_height_bin=ref_height_bin)
     density_ds = density_ds.assign({'ratio': ('Height', ratio)})
 
     # Merge density components
@@ -627,7 +585,7 @@ def get_LR_ds(station, day_date, day_params_ds):
     LRs = day_params_ds.LR.values
 
     # 2. Setting the time parameter of the curve - tbins
-    tbins = np.round([int(dt2binscale(prep.dt64_2_datetime(dt))) for
+    tbins = np.round([int(gen_utils.dt2binscale(prep.dt64_2_datetime(dt))) for
                       dt in day_params_ds.ang355532.Time.values])
 
     # The last bin is added or updated to 2880 artificially.
@@ -692,7 +650,7 @@ def get_angstrom_ds(station, day_date, day_params_ds):
     ang5321064s = day_params_ds.ang5321064.values
 
     # 2. Setting the time parameter of the curve - tbins
-    tbins = np.round([int(dt2binscale(prep.dt64_2_datetime(dt))) for
+    tbins = np.round([int(gen_utils.dt2binscale(prep.dt64_2_datetime(dt))) for
                       dt in day_params_ds.ang355532.Time.values])
 
     # The last bin is added or updated to 2880 artificially. If it was zero, it represents the time 00:00 of the next

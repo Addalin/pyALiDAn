@@ -277,8 +277,7 @@ def calc_lidar_signal(station, day_date, total_ds):
     pr2_ds = calc_range_corr_signal_ds(station, day_date, attbsc_ds, lc_ds)  # pr2 = LC * attbsc
     r2_ds = calc_r2_ds(station, day_date)  # r^2
     p_ds = calc_lidar_signal_ds(station, day_date, r2_ds, pr2_ds)  # p = pr2 / r^2
-
-    pn_ds = calc_poiss_measurement(station, day_date, p_ds)  # lidar measurement: pn ~Poiss(mu_p)
+    pn_ds = calc_poiss_measurement(station, day_date, p_ds)  # lidar measurement: pn ~Poiss(p), w.o background
     pr2n_ds = calc_range_corr_measurement(station, day_date, pn_ds,
                                           r2_ds)  # range corrected measurement: pr2n = pn * r^2
     pr2n_ds.attrs['info'] += ' - w.o. background'
@@ -408,6 +407,10 @@ def calc_daily_measurement(station, day_date, signal_ds):
     bg_ds = p_bg.broadcast_like(signal_ds.range_corr)
 
     p_mean = calc_mean_measurement(station, day_date, signal_ds, bg_ds)  # mean lidar signal: mu_p = p_bg + p
+    #TODO: test the overlapfunction and apply it onto p_mean
+    overlap = gen_utils.create_ratio(start_height=p_mean.Height.values[0], total_bins=p_mean.Height.size,
+                                     mode='overlap')
+    # TODO: p_mean = p_mean*overlap
     pn_ds = calc_poiss_measurement(station, day_date, p_mean)  # lidar measurement: pn ~Poiss(mu_p)
     pr2n_ds = calc_range_corr_measurement(station, day_date, pn_ds,
                                           signal_ds.r2)  # range corrected measurement: pr2n = pn * r^2
