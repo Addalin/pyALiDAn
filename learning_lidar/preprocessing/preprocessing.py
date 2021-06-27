@@ -210,7 +210,7 @@ def get_TROPOS_dataset_paths(station, day_date, start_time=None, end_time=None, 
     paths_pattern = os.path.join(lidar_day_folder, file_name)
 
     paths = sorted(glob.glob(paths_pattern))
-
+    paths = sorted(glob.glob('/home/shubi/PycharmProjects/learning_lidar/data/' + lidar_day_folder + '/*.nc')) # TODO Shubi
     return paths
 
 
@@ -548,20 +548,22 @@ def generate_daily_molecular(station, day_date, time_res='30S', height_units='km
 def get_daily_range_corr(station, day_date, height_units='km',
                          optim_size=False, verbose=False, USE_KM_UNITS=True):
     """
-	Retrieving daily range corrected lidar signal (pr^2) from attenuated_backscatter signals in three channels (355,532,1064).
-	The attenuated_backscatter are from 4 files of 6-hours *att_bsc.nc for a given day_date and station
+    Retrieving daily range corrected lidar signal (pr^2) from attenuated_backscatter signals in three channels (355,532,1064).
+
+    The attenuated_backscatter are from 4 files of 6-hours *att_bsc.nc for a given day_date and station
+
     :param USE_KM_UNITS:
-	:param station: gs.station() object of the lidar station
-	:param day_date: datetime.date object of the required date
-	:param height_units:  Output units of height grid in 'km' (default) or 'm'
+    :param station: gs.station() object of the lidar station
+    :param day_date: datetime.date object of the required date
+    :param height_units:  Output units of height grid in 'km' (default) or 'm'
     :param optim_size: Boolean. False(default): the retrieved values are of type 'float64',
-	                            True: the retrieved values are of type 'float'.
-	:param verbose: Boolean. False(default). True: prints information regarding size optimization.
-	:return: xarray.Dataset() a daily range corrected lidar signal, holding 5 data variables:
-			 1 daily dataset of range_corrected signal in 3 channels, with dimensions of : Height, Time, Wavelength
-			 3 variables : lambda_nm, plot_min_range, plot_max_range, with dimension of : Wavelength
-			 1 shared variable: date
-	"""
+                                True: the retrieved values are of type 'float'.
+    :param verbose: Boolean. False(default). True: prints information regarding size optimization.
+    :return: xarray.Dataset() a daily range corrected lidar signal, holding 5 data variables:
+             1 daily dataset of range_corrected signal in 3 channels, with dimensions of : Height, Time, Wavelength
+             3 variables : lambda_nm, plot_min_range, plot_max_range, with dimension of : Wavelength
+             1 shared variable: date
+    """
 
     """ get netcdf paths of the attenuation backscatter for given day_date"""
     date_datetime = datetime.combine(date=day_date, time=time.min) \
@@ -571,6 +573,72 @@ def get_daily_range_corr(station, day_date, height_units='km',
     bsc_ds0 = load_dataset(bsc_paths[0])
     altitude = bsc_ds0.altitude.values[0]
     profiles = [dvar for dvar in list(bsc_ds0.data_vars) if 'attenuated_backscatter' in dvar]
+    wavelengths = [np.uint(pname.split(sep='_')[-1].strip('nm')) for pname in profiles]
+
+    min_range = np.empty((len(wavelengths), len(bsc_paths)))
+    max_range = np.empty((len(wavelengths), len(bsc_paths)))
+
+    ds_range_corrs = []
+    for ind_path, bsc_path in enumerate(bsc_paths):
+        cur_ds = load_dataset(bsc_path)
+        '''get 6-hours range corrected dataset for three channels [355,532,1064]'''
+        ds_chans = []
+        for ind_wavelength, (pname, lambda_nm) in enumerate(zip(profiles, wavelengths)):
+            cur_darry = cur_ds.get(pname).transpose(transpose_coords=True)
+            ds_chan, LC = get_range_corr_ds_chan(cur_darry, altitude, lambda_nm, height_units, optim_size,
+                                                 verbose)
+            min_range[ind_wavelength, ind_path] = LC * cur_darry.attrs['plot_range'][0]
+            max_range[ind_wavelength, ind_path] = LC * cur_darry.attrs['plot_range'][1]
+            ds_chans.append(ds_chan)
+
+        cur_ds_range_corr = xr.concat(ds_chans, dim='Wavelength')
+        ds_range_corrs.append(cur_ds_range_corr)
+
+    '''merge range corrected of lidar through 24-hours'''
+    range_corr_ds = xr.merge(ds_range_corrs, compat='no_conflicts')
+
+    # Fixing missing timestamps values:
+    time_indx = station.calc_daily_time_index(date_datetime)
+    range_corr_ds = range_corr_ds.reindex({"Time": time_indx}, fill_value=0)
+    range_corr_ds = range_corr_ds.assign({'plot_min_range': ('Wavelength', min_range.min(axis=1)),
+                                          'plot_max_range': ('Wavelength', max_range.max(axis=1))})
+    range_corr_ds['date'] = date_datetime
+    range_corr_ds.attrs = {'location': station.location,
+                           'info': 'Daily range corrected lidar signal',
+                           'source_type': 'att_bsc'}
+    if USE_KM_UNITS:
+        range_corr_ds = convert_profiles_units(range_corr_ds, units=[r'$m^2$', r'$km^2$'], scale=1e-6)
+    return range_corr_ds
+
+def get_daily_range_corr_raw(station, day_date, height_units='km',
+                         optim_size=False, verbose=False, USE_KM_UNITS=True):
+    """
+    Retrieving daily range corrected lidar signal (pr^2) from attenuated_backscatter signals in three channels (355,532,1064).
+
+    The attenuated_backscatter are from 4 files of 6-hours *att_bsc.nc for a given day_date and station
+
+    :param USE_KM_UNITS:
+    :param station: gs.station() object of the lidar station
+    :param day_date: datetime.date object of the required date
+    :param height_units:  Output units of height grid in 'km' (default) or 'm'
+    :param optim_size: Boolean. False(default): the retrieved values are of type 'float64',
+                                True: the retrieved values are of type 'float'.
+    :param verbose: Boolean. False(default). True: prints information regarding size optimization.
+    :return: xarray.Dataset() a daily range corrected lidar signal, holding 5 data variables:
+             1 daily dataset of range_corrected signal in 3 channels, with dimensions of : Height, Time, Wavelength
+             3 variables : lambda_nm, plot_min_range, plot_max_range, with dimension of : Wavelength
+             1 shared variable: date
+    """
+
+    """ get netcdf paths of the attenuation backscatter for given day_date"""
+    date_datetime = datetime.combine(date=day_date, time=time.min) \
+        if isinstance(day_date, date) else day_date
+
+    bsc_paths = get_TROPOS_dataset_paths(station, date_datetime, file_type='att_bsc')
+    bsc_ds0 = load_dataset(bsc_paths[0])
+    altitude = float(bsc_ds0.location_height.values)
+    # profiles = [dvar for dvar in list(bsc_ds0.data_vars) if 'attenuated_backscatter' in dvar] # TODO okay?
+    profiles = ['raw_signal']
     wavelengths = [np.uint(pname.split(sep='_')[-1].strip('nm')) for pname in profiles]
 
     min_range = np.empty((len(wavelengths), len(bsc_paths)))
@@ -944,8 +1012,8 @@ def main(station_name='haifa', start_date=datetime(2017, 9, 1), end_date=datetim
     logger = create_and_configer_logger(f"{os.path.basename(__file__)}.log", level=logging.INFO)
     DOWNLOAD_GDAS = False
     CONV_GDAS = False
-    GEN_MOL_DS = True
-    GEN_LIDAR_DS = False
+    GEN_MOL_DS = False
+    GEN_LIDAR_DS = True
     USE_KM_UNITS = True
 
     """set day,location"""
@@ -962,7 +1030,7 @@ def main(station_name='haifa', start_date=datetime(2017, 9, 1), end_date=datetim
             dates_to_retrieve=pd.date_range(start=start_date, end=end_date, freq=timedelta(days=1)),
             save_folder=station.gdas1_folder)
 
-    gdas_paths = []
+    gdas_paths = [1]
     if CONV_GDAS:
         # Convert gdas files for a period
         gdas_paths.extend(convert_periodic_gdas(station, start_date, end_date))
@@ -1022,9 +1090,9 @@ def main(station_name='haifa', start_date=datetime(2017, 9, 1), end_date=datetim
             f"\nStart generating lidar datasets for period [{start_date.strftime('%Y-%m-%d')},"
             f"{end_date.strftime('%Y-%m-%d')}]")
 
-        for day_date in tqdm(valid_gdas_days):
+        for day_date in tqdm([start_date]):
             # Generate daily range corrected
-            lidar_ds = get_daily_range_corr(station, day_date,
+            lidar_ds = get_daily_range_corr_raw(station, day_date,
                                             height_units='km',
                                             optim_size=False,
                                             verbose=False,
@@ -1041,8 +1109,8 @@ def main(station_name='haifa', start_date=datetime(2017, 9, 1), end_date=datetim
 
 
 if __name__ == '__main__':
-    station_name = 'haifa'
+    station_name = 'haifa_shubi'
     start_date = datetime(2017, 9, 1)
-    end_date = datetime(2017, 10, 31)
+    end_date = datetime(2017, 9, 2)
     main(station_name, start_date, end_date)
     # TODO: Add flags as args.
