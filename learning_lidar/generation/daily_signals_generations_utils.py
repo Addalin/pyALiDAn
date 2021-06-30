@@ -9,6 +9,8 @@ import pandas as pd
 import xarray as xr
 from scipy.ndimage import gaussian_filter1d
 import logging
+
+import learning_lidar.preprocessing.preprocessing_utils as prep_utils
 from learning_lidar.utils.utils import create_and_configer_logger
 import learning_lidar.utils.global_settings as gs
 import learning_lidar.generation.generation_utils as gen_utils
@@ -38,7 +40,7 @@ def calc_total_optical_density(station, day_date):
         The datasets' variable, share 3 dimensions : 'Wavelength', 'Height', 'Time'
     """
     # %% 1. Load generated aerosol profiles
-    month_folder = prep.get_month_folder_name(station.gen_aerosol_dataset, day_date)
+    month_folder = prep_utils.get_month_folder_name(station.gen_aerosol_dataset, day_date)
     nc_aer = gen_utils.get_gen_dataset_file_name(station, day_date, data_source='aerosol')
     aer_ds = prep.load_dataset(os.path.join(month_folder, nc_aer))
 
@@ -48,7 +50,7 @@ def calc_total_optical_density(station, day_date):
         gen_utils.plot_daily_profile(profile_ds=aer_ds.beta, height_slice=height_slice)
 
     # %% 2. Load molecular profiles
-    month_folder = prep.get_month_folder_name(station.molecular_dataset, day_date)
+    month_folder = prep_utils.get_month_folder_name(station.molecular_dataset, day_date)
     nc_name = prep.get_prep_dataset_file_name(station, day_date, data_source='molecular', lambda_nm='all')
     ds_mol = prep.load_dataset(os.path.join(month_folder, nc_name))
 
