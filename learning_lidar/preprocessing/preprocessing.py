@@ -286,7 +286,7 @@ def get_daily_range_corr(station, day_date, height_units='km',
 
     The attenuated_backscatter are from 4 files of 6-hours *att_bsc.nc for a given day_date and station
 
-    :param USE_KM_UNITS:
+    :param USE_KM_UNITS: BOOLEAN flag, to set the scale of units of the output data ,True - km units, False - meter units
     :param station: gs.station() object of the lidar station
     :param day_date: datetime.date object of the required date
     :param height_units:  Output units of height grid in 'km' (default) or 'm'
