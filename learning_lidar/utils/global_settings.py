@@ -25,11 +25,9 @@ Modules for physical and pollyXT constants.
 import pandas as pd
 from dataclasses import dataclass
 import os
-from datetime import datetime, timedelta
+from datetime import timedelta
 import numpy as np
 # %% Basic physics constants
-import seaborn as sns
-from matplotlib import pyplot as plt, dates as mdates
 
 eps = np.finfo(float).eps
 C_km_s = 299792.458  # Speed of light [Km/sec]
@@ -142,7 +140,7 @@ class Station:
         return time_index
 
 
-class CHANNELS():
+class CHANNELS:
     def __init__(self):
         ''' Class of pollyXT lidar channel numbers '''
         self.UV = 0  # UV channel - 355[nm]
@@ -165,7 +163,7 @@ class CHANNELS():
         return ("\n " + str(self.__class__) + ": " + str(self.__dict__)).replace(" {", "\n  {").replace(",", ",\n  ")
 
 
-class LAMBDA_nm(object):
+class LAMBDA_nm:
     def __init__(self, scale=1):
         # pass
         """ Class of pollyXT lidar wavelengths, values are in micro meters
@@ -188,39 +186,6 @@ class LAMBDA_nm(object):
 class LAMBDA_m(LAMBDA_nm):
     def __init__(self):
         LAMBDA_nm.__init__(self, 1E-9)
-
-
-# %% VISUALIZATIONS
-# TODO : move to vis_utils.py
-FIGURE_DPI = 300
-SAVEFIG_DPI = 300
-SMALL_FONT_SIZE = 14
-MEDIUM_FONT_SIZE = 16
-BIG_FONT_SIZE = 18
-TITLE_FONT_SIZE = 18
-SUPTITLE_FONT_SIZE = 20
-TIMEFORMAT = mdates.DateFormatter('%H:%M')
-MONTHFORMAT = mdates.DateFormatter('%Y-%m')
-COLORS = ["darkblue", "darkgreen", "darkred"]
-
-def set_visualization_settings():
-    # TODO : move to vis_utils.py
-    # TODO make sure this actually propagates to other functions
-    plt.rcParams['figure.dpi'] = FIGURE_DPI
-    plt.rcParams['savefig.dpi'] = SAVEFIG_DPI
-
-    # Create an array with the colors to use
-
-    # Set a custom color palette
-    sns.set_palette(sns.color_palette(COLORS))
-
-    plt.rc('font', size=SMALL_FONT_SIZE)  # controls default text sizes
-    plt.rc('axes', titlesize=TITLE_FONT_SIZE)  # fontsize of the axes title
-    plt.rc('axes', labelsize=BIG_FONT_SIZE)  # fontsize of the x and y labels
-    plt.rc('xtick', labelsize=SMALL_FONT_SIZE)  # fontsize of the tick labels
-    plt.rc('ytick', labelsize=SMALL_FONT_SIZE)  # fontsize of the tick labels
-    plt.rc('legend', fontsize=MEDIUM_FONT_SIZE)  # legend fontsize
-    plt.rc('figure', titlesize=SUPTITLE_FONT_SIZE)  # fontsize of the figure title
 
 
 # %%DEBUG -----------------------------

@@ -1,20 +1,22 @@
-from datetime import datetime, timedelta, date
-import learning_lidar.preprocessing.preprocessing as prep
 import os
-import numpy as np
-from scipy import stats
+from datetime import datetime, timedelta, date
+
 import matplotlib.pyplot as plt
+import numpy as np
 import pandas as pd
 import sklearn as sns
-from scipy.stats import multivariate_normal
 import xarray as xr
+from scipy import stats
+from scipy.stats import multivariate_normal
 
-import learning_lidar.preprocessing.preprocessing_utils as prep_utils
-from learning_lidar.utils.proc_utils import Bezier
-import learning_lidar.utils.global_settings as gs
 import learning_lidar.generation.generation_utils as gen_utils
+import learning_lidar.preprocessing.preprocessing as prep
+import learning_lidar.preprocessing.preprocessing_utils as prep_utils
+import learning_lidar.utils.global_settings as gs
+import learning_lidar.utils.vis_utils as vis_utils
+from learning_lidar.utils.proc_utils import Bezier
 
-gs.set_visualization_settings()
+vis_utils.set_visualization_settings()
 
 # TODO: add debug and save of figures option
 # TODO : organize main() to functions & comments
