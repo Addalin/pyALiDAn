@@ -22,7 +22,7 @@ from learning_lidar.utils.global_settings import TIMEFORMAT
 logger = create_and_configer_logger(f"{os.path.basename(__file__)}.log", level=logging.INFO)
 gs.set_visualization_settings()
 wavelengths = gs.LAMBDA_nm().get_elastic()
-PLOT_RESULTS = True
+PLOT_RESULTS = False
 
 
 # %% Helper functions
@@ -254,8 +254,7 @@ def calc_lidar_signal(station, day_date, total_ds):
     pr2_ds = calc_range_corr_signal_ds(station, day_date, attbsc_ds, lc_ds)  # pr2 = LC * attbsc
     r2_ds = calc_r2_ds(station, day_date)  # r^2
     p_ds = calc_lidar_signal_ds(station, day_date, r2_ds, pr2_ds)  # p = pr2 / r^2
-
-    pn_ds = calc_poiss_measurement(station, day_date, p_ds)  # lidar measurement: pn ~Poiss(mu_p)
+    pn_ds = calc_poiss_measurement(station, day_date, p_ds)  # lidar measurement: pn ~Poiss(p), w.o background
     pr2n_ds = calc_range_corr_measurement(station, day_date, pn_ds,
                                           r2_ds)  # range corrected measurement: pr2n = pn * r^2
     pr2n_ds.attrs['info'] += ' - w.o. background'
@@ -385,10 +384,21 @@ def calc_daily_measurement(station, day_date, signal_ds):
     bg_ds = p_bg.broadcast_like(signal_ds.range_corr)
 
     p_mean = calc_mean_measurement(station, day_date, signal_ds, bg_ds)  # mean lidar signal: mu_p = p_bg + p
+    # Apply Overlap function
+    Height_indx = p_mean.Height
+    # TODO : this is a dummy function --> need to adapt with more info from TROPOS
+    overlap = gen_utils.create_ratio(total_bins=Height_indx.size, mode='overlap')
+    overlap_ds = xr.Dataset(data_vars={'overlap': ('Height', overlap)},
+                            coords={'Height': Height_indx.values},
+                            attrs={'name': 'Overlap Function'})
+    p_mean = xr.apply_ufunc(lambda x, r: (x * r),
+                            p_mean, overlap_ds.overlap,
+                            keep_attrs=True).assign_attrs({'info': p_mean.info+' with applied overlap'})
+
     pn_ds = calc_poiss_measurement(station, day_date, p_mean)  # lidar measurement: pn ~Poiss(mu_p)
     pr2n_ds = calc_range_corr_measurement(station, day_date, pn_ds,
                                           signal_ds.r2)  # range corrected measurement: pr2n = pn * r^2
-    measure_ds = xr.Dataset().assign(p=pn_ds, range_corr=pr2n_ds, p_mean=p_mean, p_bg=bg_ds)
+    measure_ds = xr.Dataset().assign(p=pn_ds, range_corr=pr2n_ds, p_mean=p_mean, p_bg=bg_ds, overlap= overlap_ds)
     measure_ds['date'] = day_date
     measure_ds.attrs = {'location': station.location,
                         'info': 'Daily generated lidar signals measurement.',

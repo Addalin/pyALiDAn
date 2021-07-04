@@ -1,13 +1,18 @@
+import numpy as np
 from matplotlib import pyplot as plt
-import learning_lidar.preprocessing.preprocessing as prep
+from scipy.ndimage import gaussian_filter1d
+from tqdm import tqdm
+import pandas as pd
+
 from datetime import datetime, timedelta
 import os
 import calendar
 
+import learning_lidar.preprocessing.preprocessing as prep
 import learning_lidar.preprocessing.preprocessing_utils as prep_utils
+from learning_lidar.generation.generate_density_utils import PLOT_RESULTS
 from learning_lidar.utils.global_settings import TIMEFORMAT
-from tqdm import tqdm
-import pandas as pd
+
 
 def get_gen_dataset_file_name(station, day_date, wavelength='*',
                               data_source='lidar', file_type='range_corr',
@@ -22,6 +27,7 @@ def get_gen_dataset_file_name(station, day_date, wavelength='*',
     :param data_source: string object: 'aerosol' or 'lidar'
     :param file_type: string object: e.g., 'range_corr'/'lidar_power' for separated files per wavelength
     (355,532, or 1064) or 'lidar'/'aerosol' for all wavelengths
+    :param time_slice:
 
     :return: dataset file name (netcdf) file of the data_type required per given day, wavelength, data_source and file_type
     """
@@ -41,6 +47,7 @@ def save_generated_dataset(station, dataset, data_source='lidar', save_mode='bot
     """
     Save the input dataset to netcdf file
     If this name is not provided, then the first profile is automatically selected
+    :param time_slices:
     :param station: station: gs.station() object of the lidar station
     :param dataset: xarray.Dataset() a daily generated lidar signal, holding 5 data variables:
              4 daily dataset, with dimensions of : Height, Time, Wavelength.
@@ -231,3 +238,51 @@ def plot_hourly_profile(profile_ds, height_slice=None, figsize=(10, 6), times=No
     plt.ticklabel_format(axis="y", style="sci", scilimits=(0, 0))
     plt.tight_layout()
     plt.show()
+
+
+def create_ratio(total_bins, mode='ones', start_height=0.3, ref_height=2.5, ref_height_bin=300):
+    """
+    Generating ratio, mainly for applying different endings on the daily profile, or overlap function.
+    Currently the ratio is "1" for all bins.
+    Change this function to produce more options of generated aerosol densities.
+    :param total_bins: Total bins in one column of measurements (through height)
+    :param start_height: Start measuring height ( the height of 1st bin) in km
+    :param mode: The mode of the generated ratio:
+        1. "ones" - all bins are equal
+        2. "end" - apply different ratio on the endings of the aerosols density
+        3. "overlap" - generate some overlap function on the lidar measurement, the varying ratio is on lower heights.
+    :param ref_height: Reference height in km
+    :param ref_height_bin: The bin number of reference height
+    :return: Ratio 0-1 throughout height , that affect on the aerosols density or the lidar measurement.
+    """
+    t_interp = np.arange(start=1, stop=total_bins + 1, step=1)
+    if mode == "end":
+        t_start = start_height / ref_height
+        t_ending = np.array(
+            [0, 0.125 * t_start, 0.25 * t_start, .5 * t_start, t_start, 0.05, 0.1, .3, .4, .5, .6, .7, .8, .9,
+             1.0]) * np.float(ref_height_bin)
+        ratios = np.array([1, 1, 1, 1, 1, 1.0, 1, 1, 1, 1, 0.95, 0.85, 0.4, .3, 0.2])
+        ratio_interp = np.interp(t_interp, t_ending, ratios)
+        smooth_ratio = gaussian_filter1d(ratio_interp, sigma=40)
+    elif mode == "overlap":
+        # the overlap function is relevant to heights up 600-700 meter. setting to 95 means 90*7.5 =675 [m]
+        t_start = 95 / total_bins
+        r_start = 1
+        t_overlap = np.array(
+            [0.0, 0.2 * t_start, 0.5 * t_start, .75 * t_start, t_start, 0.05, 0.1, .3, .4, .5, .6, .7, .8, .9,
+             1.0]) * np.float(ref_height_bin)
+        ratios = np.array([.0, 0.2 * r_start, 0.5 * r_start, 0.75 * r_start, r_start, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1])
+        ratio_interp = np.interp(t_interp, t_overlap, ratios)
+        smooth_ratio = gaussian_filter1d(ratio_interp, sigma=40)
+    elif mode == "ones":
+        y = np.arange(total_bins)
+        smooth_ratio = np.ones_like(y)
+
+    if PLOT_RESULTS:
+        plt.figure(figsize=(3, 3))
+        plt.plot(smooth_ratio, t_interp, label=mode)
+        plt.ylabel('Height bins')
+        plt.xlabel('ratio')
+        plt.show()
+
+    return smooth_ratio
