@@ -11,6 +11,7 @@ from matplotlib import dates as mdates, pyplot as plt
 from molecular import rayleigh_scattering
 from pandas.core.dtypes.common import is_numeric_dtype
 
+import learning_lidar.utils.vis_utils as vis_utils
 from learning_lidar.utils import misc_lidar as mscLid, global_settings as gs
 from learning_lidar.utils.misc_lidar import RadiosondeProfile
 from learning_lidar.utils.utils import write_row_to_csv
@@ -217,7 +218,7 @@ def get_daily_gdas_paths(station, day_date, f_type='gdas1'):
     and returns an EMPTY list of gdas_paths. The creation of NEW gdas_paths is done in convert_daily_gdas()
     """
     logger = logging.getLogger()
-    # TODO oif gdas1 file does not exists - download from NOA
+    # TODO if gdas1 file does not exists - download from NOA
     if f_type == 'gdas1':
         parent_folder = station.gdas1_folder
     elif f_type == 'txt':
@@ -319,7 +320,7 @@ def visualize_ds_profile_chan(dataset, lambda_nm=532, profile_type='range_corr',
         g = sub_ds.plot(x='Time', figsize=(10, 6))[0]
 
     # Set time on x-axis
-    g.axes.xaxis.set_major_formatter(gs.TIMEFORMAT)
+    g.axes.xaxis.set_major_formatter(vis_utils.TIMEFORMAT)
     g.axes.xaxis_date()
     g.axes.get_xaxis().set_major_locator(mdates.HourLocator(interval=4))
     plt.setp(g.axes.get_xticklabels(), rotation=0, horizontalalignment='center')

@@ -1,5 +1,6 @@
 import logging
 import os
+
 import numpy as np
 import pandas as pd
 import xarray as xr
@@ -10,18 +11,18 @@ from scipy.ndimage import gaussian_filter
 from scipy.stats import multivariate_normal
 from sklearn.model_selection import train_test_split
 
-import learning_lidar.preprocessing.preprocessing_utils as prep_utils
-from learning_lidar.preprocessing import preprocessing as prep
-from learning_lidar.utils.global_settings import TIMEFORMAT
 import learning_lidar.generation.generation_utils as gen_utils
-import learning_lidar.utils.misc_lidar as misc_lidar
+import learning_lidar.preprocessing.preprocessing_utils as prep_utils
 import learning_lidar.utils.global_settings as gs
-
+import learning_lidar.utils.misc_lidar as misc_lidar
+import learning_lidar.utils.vis_utils as vis_utils
+from learning_lidar.preprocessing import preprocessing as prep
 from learning_lidar.utils.proc_utils import make_interpolated_image, normalize
+from learning_lidar.utils.vis_utils import TIMEFORMAT
 
 # Profiles at different times
 t_index = [500, 1500, 2500]
-gs.set_visualization_settings()
+vis_utils.set_visualization_settings()
 wavelengths = gs.LAMBDA_nm().get_elastic()
 PLOT_RESULTS = False
 LR_tropos = 55

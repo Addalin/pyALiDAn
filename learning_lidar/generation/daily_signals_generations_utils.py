@@ -11,24 +11,20 @@ from scipy.ndimage import gaussian_filter1d
 import logging
 
 import learning_lidar.preprocessing.preprocessing_utils as prep_utils
-from learning_lidar.preprocessing.preprocessing_utils import calc_r2_ds
+import learning_lidar.utils.vis_utils as vis_utils
 from learning_lidar.utils.utils import create_and_configer_logger
 import learning_lidar.utils.global_settings as gs
 import learning_lidar.generation.generation_utils as gen_utils
 from learning_lidar.preprocessing import preprocessing as prep
 from learning_lidar.utils.misc_lidar import calc_tau, generate_poisson_signal_STEP
-from learning_lidar.utils.global_settings import TIMEFORMAT
-# %%
+from learning_lidar.utils.vis_utils import TIMEFORMAT
+
 logger = create_and_configer_logger(f"{os.path.basename(__file__)}.log", level=logging.INFO)
-gs.set_visualization_settings()
+vis_utils.set_visualization_settings()
 wavelengths = gs.LAMBDA_nm().get_elastic()
 PLOT_RESULTS = False
 
 
-# %% Helper functions
-
-
-# %%
 def calc_total_optical_density(station, day_date):
     """
     Generate total backscatter and extinction profiles
@@ -252,7 +248,7 @@ def calc_lidar_signal(station, day_date, total_ds):
     attbsc_ds = calc_attbsc_ds(station, day_date, total_ds)  # attbsc = beta*exp(-2*tau)
     lc_ds = get_daily_LC(station, day_date)  # LC
     pr2_ds = calc_range_corr_signal_ds(station, day_date, attbsc_ds, lc_ds)  # pr2 = LC * attbsc
-    r2_ds = calc_r2_ds(station, day_date)  # r^2
+    r2_ds = prep_utils.calc_r2_ds(station, day_date)  # r^2
     p_ds = calc_lidar_signal_ds(station, day_date, r2_ds, pr2_ds)  # p = pr2 / r^2
     pn_ds = calc_poiss_measurement(station, day_date, p_ds)  # lidar measurement: pn ~Poiss(p), w.o background
     pr2n_ds = calc_range_corr_measurement(station, day_date, pn_ds,

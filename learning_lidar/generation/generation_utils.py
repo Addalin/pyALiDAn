@@ -11,7 +11,7 @@ import calendar
 import learning_lidar.preprocessing.preprocessing as prep
 import learning_lidar.preprocessing.preprocessing_utils as prep_utils
 from learning_lidar.generation.generate_density_utils import PLOT_RESULTS
-from learning_lidar.utils.global_settings import TIMEFORMAT
+from learning_lidar.utils.vis_utils import TIMEFORMAT
 
 
 def get_gen_dataset_file_name(station, day_date, wavelength='*',

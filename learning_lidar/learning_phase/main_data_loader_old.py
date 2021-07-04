@@ -22,7 +22,7 @@ from torch.overrides import has_torch_function , handle_torch_function
 torch.manual_seed(8318)
 import json
 
-
+# TODO DELETE THIS FILE - NOT IN USE AND AND NOT MAINTAINED. JUST SEE IF NEED ANYTHING FROM HERE BEFORE
 class lidarDataSet(torch.utils.data.Dataset):
     """
     TODO: add usage
