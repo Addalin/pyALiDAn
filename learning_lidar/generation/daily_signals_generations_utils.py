@@ -9,6 +9,9 @@ import pandas as pd
 import xarray as xr
 from scipy.ndimage import gaussian_filter1d
 import logging
+
+import learning_lidar.preprocessing.preprocessing_utils as prep_utils
+from learning_lidar.preprocessing.preprocessing_utils import calc_r2_ds
 from learning_lidar.utils.utils import create_and_configer_logger
 import learning_lidar.utils.global_settings as gs
 import learning_lidar.generation.generation_utils as gen_utils
@@ -38,7 +41,7 @@ def calc_total_optical_density(station, day_date):
         The datasets' variable, share 3 dimensions : 'Wavelength', 'Height', 'Time'
     """
     # %% 1. Load generated aerosol profiles
-    month_folder = prep.get_month_folder_name(station.gen_aerosol_dataset, day_date)
+    month_folder = prep_utils.get_month_folder_name(station.gen_aerosol_dataset, day_date)
     nc_aer = gen_utils.get_gen_dataset_file_name(station, day_date, data_source='aerosol')
     aer_ds = prep.load_dataset(os.path.join(month_folder, nc_aer))
 
@@ -48,7 +51,7 @@ def calc_total_optical_density(station, day_date):
         gen_utils.plot_daily_profile(profile_ds=aer_ds.beta, height_slice=height_slice)
 
     # %% 2. Load molecular profiles
-    month_folder = prep.get_month_folder_name(station.molecular_dataset, day_date)
+    month_folder = prep_utils.get_month_folder_name(station.molecular_dataset, day_date)
     nc_name = prep.get_prep_dataset_file_name(station, day_date, data_source='molecular', lambda_nm='all')
     ds_mol = prep.load_dataset(os.path.join(month_folder, nc_name))
 
@@ -235,32 +238,6 @@ def calc_lidar_signal_ds(station, day_date, r2_ds, pr2_ds):
     if PLOT_RESULTS:
         gen_utils.plot_daily_profile(profile_ds=p_ds, height_slice=slice(0, 5), figsize=(16, 8))
     return p_ds
-
-
-def calc_r2_ds(station, day_date):
-    """
-    calc r^2 (as 2D image)
-    :param station: gs.station() object of the lidar station
-    :param day_date: datetime.date object of the required date
-    :return: xr.Dataset(). A a daily r^2 dataset
-    """
-    height_bins = station.get_height_bins_values()
-    wavelengths = gs.LAMBDA_nm().get_elastic()
-    r_im = np.tile(height_bins.reshape(height_bins.size, 1), (len(wavelengths), 1, station.total_time_bins))
-    rr_im = r_im ** 2
-    r2_ds = xr.Dataset(data_vars={'r': (['Wavelength', 'Height', 'Time'], r_im,
-                                        {'info': 'The heights bins',
-                                         'name': 'r', 'long_name': r'$r$',
-                                         'units': r'$km$'}),
-                                  'r2': (['Wavelength', 'Height', 'Time'], rr_im,
-                                         {'info': 'The heights bins squared',
-                                          'name': 'r2', 'long_name': r'$r^2$',
-                                          'units': r'$km^2$'})},
-                       coords={'Wavelength': wavelengths,
-                               'Height': station.calc_height_index(),
-                               'Time': station.calc_daily_time_index(day_date).values})
-    r2_ds = r2_ds.transpose('Wavelength', 'Height', 'Time')
-    return r2_ds.r2
 
 
 def calc_lidar_signal(station, day_date, total_ds):

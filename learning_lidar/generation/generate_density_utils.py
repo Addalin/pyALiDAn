@@ -10,8 +10,9 @@ from scipy.ndimage import gaussian_filter
 from scipy.stats import multivariate_normal
 from sklearn.model_selection import train_test_split
 
-from learning_lidar.utils.global_settings import TIMEFORMAT
+import learning_lidar.preprocessing.preprocessing_utils as prep_utils
 from learning_lidar.preprocessing import preprocessing as prep
+from learning_lidar.utils.global_settings import TIMEFORMAT
 import learning_lidar.generation.generation_utils as gen_utils
 import learning_lidar.utils.misc_lidar as misc_lidar
 import learning_lidar.utils.global_settings as gs
@@ -585,7 +586,7 @@ def get_LR_ds(station, day_date, day_params_ds):
     LRs = day_params_ds.LR.values
 
     # 2. Setting the time parameter of the curve - tbins
-    tbins = np.round([int(gen_utils.dt2binscale(prep.dt64_2_datetime(dt))) for
+    tbins = np.round([int(gen_utils.dt2binscale(prep_utils.dt64_2_datetime(dt))) for
                       dt in day_params_ds.ang355532.Time.values])
 
     # The last bin is added or updated to 2880 artificially.
@@ -650,7 +651,7 @@ def get_angstrom_ds(station, day_date, day_params_ds):
     ang5321064s = day_params_ds.ang5321064.values
 
     # 2. Setting the time parameter of the curve - tbins
-    tbins = np.round([int(gen_utils.dt2binscale(prep.dt64_2_datetime(dt))) for
+    tbins = np.round([int(gen_utils.dt2binscale(prep_utils.dt64_2_datetime(dt))) for
                       dt in day_params_ds.ang355532.Time.values])
 
     # The last bin is added or updated to 2880 artificially. If it was zero, it represents the time 00:00 of the next
@@ -881,7 +882,7 @@ def wrap_aerosol_dataset(station, day_date, day_params_ds, sigma_ds, beta_ds, an
 def explore_gen_day(station, day_date, aer_ds, density_ds):
     # Show relative ratios between aerosols and molecular backscatter
 
-    mol_month_folder = prep.get_month_folder_name(station.molecular_dataset, day_date)
+    mol_month_folder = prep_utils.get_month_folder_name(station.molecular_dataset, day_date)
     nc_mol = fr"{day_date.strftime('%Y_%m_%d')}_{station.location}_molecular.nc"
     mol_ds = prep.load_dataset(os.path.join(mol_month_folder, nc_mol))
     ratio_beta = aer_ds.beta / (mol_ds.beta + aer_ds.beta)

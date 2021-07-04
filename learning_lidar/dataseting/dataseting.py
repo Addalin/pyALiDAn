@@ -15,6 +15,7 @@ import pandas as pd
 import xarray as xr
 
 # %% Local modules imports
+import learning_lidar.preprocessing.preprocessing_utils as prep_utils
 import learning_lidar.utils.global_settings as gs
 from learning_lidar.dataseting.dataseting_utils import get_query, query_database, add_profiles_values, add_X_path, \
     get_time_slots_expanded, convert_Y_features_units, recalc_LC, split_save_train_test_ds, get_generated_X_path, \
@@ -478,9 +479,9 @@ def calc_day_statistics(station, day_date, top_height=15.3):
     df_stats = pd.DataFrame(index=pd.Index(wavelengths, name='wavelength'))
     logger.debug(f'\nCalculating stats for {day_date}')
     # folder names
-    mol_folder = prep.get_month_folder_name(station.molecular_dataset, day_date)
-    signal_folder = prep.get_month_folder_name(station.gen_signal_dataset, day_date)
-    lidar_folder = prep.get_month_folder_name(station.gen_lidar_dataset, day_date)
+    mol_folder = prep_utils.get_month_folder_name(station.molecular_dataset, day_date)
+    signal_folder = prep_utils.get_month_folder_name(station.gen_signal_dataset, day_date)
+    lidar_folder = prep_utils.get_month_folder_name(station.gen_lidar_dataset, day_date)
 
     # File names
     signal_nc_name = os.path.join(signal_folder,
@@ -540,7 +541,7 @@ def save_dataset2timesplits(station, dataset, data_source='lidar', mod_source='g
     :param time_slices:
     :return:
     """
-    day_date = prep.get_daily_ds_date(dataset)
+    day_date = prep_utils.get_daily_ds_date(dataset)
     if time_slices is None:
         time_slices = get_time_splits(station, start_date=day_date, end_date=day_date, sample_size=sample_size)
     if mod_source == 'gen':
@@ -584,7 +585,7 @@ def prepare_generated_samples(station, start_date, end_date, top_height=15.3):
                 nc_name = prep.get_prep_dataset_file_name(station, day_date, data_source=load_source, lambda_nm='all')
             else:
                 nc_name = gen_utils.get_gen_dataset_file_name(station, day_date, data_source=load_source)
-            month_folder = prep.get_month_folder_name(base_folder, day_date)
+            month_folder = prep_utils.get_month_folder_name(base_folder, day_date)
             nc_path = os.path.join(month_folder, nc_name)
             dataset = prep.load_dataset(ncpath=nc_path)
             height_slice = slice(dataset.Height.min().values.tolist(),

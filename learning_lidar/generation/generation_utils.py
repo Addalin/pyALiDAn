@@ -1,16 +1,18 @@
 import numpy as np
 from matplotlib import pyplot as plt
 from scipy.ndimage import gaussian_filter1d
+from tqdm import tqdm
+import pandas as pd
 
-import learning_lidar.preprocessing.preprocessing as prep
 from datetime import datetime, timedelta
 import os
 import calendar
 
+import learning_lidar.preprocessing.preprocessing as prep
+import learning_lidar.preprocessing.preprocessing_utils as prep_utils
 from learning_lidar.generation.generate_density_utils import PLOT_RESULTS
 from learning_lidar.utils.global_settings import TIMEFORMAT
-from tqdm import tqdm
-import pandas as pd
+
 
 def get_gen_dataset_file_name(station, day_date, wavelength='*',
                               data_source='lidar', file_type='range_corr',
@@ -45,6 +47,7 @@ def save_generated_dataset(station, dataset, data_source='lidar', save_mode='bot
     """
     Save the input dataset to netcdf file
     If this name is not provided, then the first profile is automatically selected
+    :param time_slices: list of time slices slice(start_time, end_time), times are of datetime.datime() object
     :param station: station: gs.station() object of the lidar station
     :param dataset: xarray.Dataset() a daily generated lidar signal, holding 5 data variables:
              4 daily dataset, with dimensions of : Height, Time, Wavelength.
@@ -58,7 +61,7 @@ def save_generated_dataset(station, dataset, data_source='lidar', save_mode='bot
     :param profiles: The name of profile desired to be saved separately.
     :return: ncpaths - the paths of the saved dataset/s . None - for failure.
     """
-    date_datetime = prep.get_daily_ds_date(dataset)
+    date_datetime = prep_utils.get_daily_ds_date(dataset)
     if data_source == 'lidar':
         base_folder = station.gen_lidar_dataset
     elif data_source == 'signal':
@@ -69,9 +72,9 @@ def save_generated_dataset(station, dataset, data_source='lidar', save_mode='bot
         base_folder = station.gen_density_dataset
     elif data_source == 'bg':
         base_folder = station.gen_bg_dataset
-    month_folder = prep.get_month_folder_name(base_folder, date_datetime)
+    month_folder = prep_utils.get_month_folder_name(base_folder, date_datetime)
 
-    prep.get_daily_ds_date(dataset)
+    prep_utils.get_daily_ds_date(dataset)
     '''save the dataset to separated netcdf files: per profile per wavelength'''
     ncpaths = []
 
@@ -128,7 +131,7 @@ def get_month_gen_params_path(station, day_date, type='density_params'):
     nc_name = f"generated_{type}_{station.location}_{month_start_day.strftime('%Y-%m-%d')}_" \
               f"{month_end_day.strftime('%Y-%m-%d')}.nc"
 
-    folder_name = prep.get_month_folder_name(station.generation_folder, day_date)
+    folder_name = prep_utils.get_month_folder_name(station.generation_folder, day_date)
 
     gen_source_path = os.path.join(folder_name, nc_name)
     return gen_source_path
@@ -215,7 +218,7 @@ def plot_daily_profile(profile_ds, height_slice=None, figsize=(16, 6)):
 def plot_hourly_profile(profile_ds, height_slice=None, figsize=(10, 6), times=None):
     # TODO : move to vis_utils.py
     # TODO: add scientific ticks on color-bar
-    day_date = prep.dt64_2_datetime(profile_ds.Time[0].values)
+    day_date = prep_utils.dt64_2_datetime(profile_ds.Time[0].values)
     str_date = day_date.strftime("%Y-%m-%d")
     if times == None:
         times = [day_date + timedelta(hours=8),
@@ -263,12 +266,12 @@ def create_ratio(total_bins, mode='ones', start_height=0.3, ref_height=2.5, ref_
         smooth_ratio = gaussian_filter1d(ratio_interp, sigma=40)
     elif mode == "overlap":
         # the overlap function is relevant to heights up 600-700 meter. setting to 95 means 90*7.5 =675 [m]
-        t_start = 95/total_bins
+        t_start = 95 / total_bins
         r_start = 1
         t_overlap = np.array(
             [0.0, 0.2 * t_start, 0.5 * t_start, .75 * t_start, t_start, 0.05, 0.1, .3, .4, .5, .6, .7, .8, .9,
              1.0]) * np.float(ref_height_bin)
-        ratios = np.array([.0, 0.2* r_start,0.5 * r_start, 0.75 * r_start, r_start, 1, 1, 1, 1, 1, 1, 1, 1, 1,1])
+        ratios = np.array([.0, 0.2 * r_start, 0.5 * r_start, 0.75 * r_start, r_start, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1])
         ratio_interp = np.interp(t_interp, t_overlap, ratios)
         smooth_ratio = gaussian_filter1d(ratio_interp, sigma=40)
     elif mode == "ones":

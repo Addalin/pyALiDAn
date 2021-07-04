@@ -78,11 +78,13 @@ class Station:
         self.dt = float(eval(station_df['dt']))  # [sec] temporal pulse width of the lidar note: dr = C*dt/2
         self.freq = 30  # [sec] Frequency of measurments, currently every 30 sec, if this value changes, add it to the stations.csv
         self.total_time_bins = 2880  # Total measurment per day, currently 2880 time bins, if this value changes, add it to the stations.csv
+        self.pt_bin = station_df['pt_bin']  # number of pre trigger bins
         self.gdas1_folder = station_df['gdas1_folder']
         self.gdastxt_folder = station_df['gdastxt_folder']
         self.lidar_src_folder = station_df['lidar_src_folder']
         self.molecular_dataset = station_df['molecular_dataset']
         self.lidar_dataset = station_df['lidar_dataset']
+        self.lidar_dataset_calib = station_df['lidar_dataset_calib']
         self.db_file = station_df['db_file']
         self.aeronet_folder = station_df['aeronet_folder']
         self.aeronet_name = station_df['aeronet_name']

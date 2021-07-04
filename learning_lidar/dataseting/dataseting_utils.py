@@ -12,6 +12,7 @@ from scipy.ndimage import gaussian_filter1d
 from sklearn.model_selection import train_test_split
 
 import learning_lidar.generation.generation_utils as gen_utils
+import learning_lidar.preprocessing.preprocessing_utils as prep_utils
 from learning_lidar.preprocessing import preprocessing as prep
 from learning_lidar.utils.global_settings import eps
 
@@ -71,10 +72,10 @@ def query_database(query="SELECT * FROM lidar_calibration_constant;",
 def add_profiles_values(df, station, day_date, file_type='profiles'):
     logger = logging.getLogger()
     try:
-        df['matched_nc_profile'] = df.apply(lambda row: prep.get_TROPOS_dataset_paths(station, day_date,
-                                                                                      start_time=row.cali_start_time,
-                                                                                      end_time=row.cali_stop_time,
-                                                                                      file_type=file_type)[0],
+        df['matched_nc_profile'] = df.apply(lambda row: prep_utils.get_TROPOS_dataset_paths(station, day_date,
+                                                                                                                                  start_time=row.cali_start_time,
+                                                                                                                                  end_time=row.cali_stop_time,
+                                                                                                                                  file_type=file_type)[0],
                                             axis=1, result_type='expand')
     except Exception:
         logger.exception(
@@ -292,14 +293,14 @@ def split_save_train_test_ds(csv_path='', train_size=0.8, df=None):
 
 
 def get_generated_X_path(station, parent_folder, day_date, data_source, wavelength, file_type=None, time_slice=None):
-    month_folder = prep.get_month_folder_name(parent_folder=parent_folder, day_date=day_date)
+    month_folder = prep_utils.get_month_folder_name(parent_folder=parent_folder, day_date=day_date)
     nc_name = gen_utils.get_gen_dataset_file_name(station, day_date, data_source=data_source, wavelength=wavelength,
                                         file_type=file_type, time_slice=time_slice)
     nc_path = os.path.join(month_folder, nc_name)
     return nc_path
 
 def get_prep_X_path(station, parent_folder, day_date, data_source, wavelength, file_type=None, time_slice=None):
-    month_folder = prep.get_month_folder_name(parent_folder=parent_folder, day_date=day_date)
+    month_folder = prep_utils.get_month_folder_name(parent_folder=parent_folder, day_date=day_date)
     nc_name = prep.get_prep_dataset_file_name(station, day_date, data_source=data_source, lambda_nm =wavelength,
                                         file_type=file_type, time_slice=time_slice)
     data_path = os.path.join(month_folder, nc_name)

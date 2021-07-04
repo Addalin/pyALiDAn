@@ -8,6 +8,8 @@ import pandas as pd
 import sklearn as sns
 from scipy.stats import multivariate_normal
 import xarray as xr
+
+import learning_lidar.preprocessing.preprocessing_utils as prep_utils
 from learning_lidar.utils.proc_utils import Bezier
 import learning_lidar.utils.global_settings as gs
 import learning_lidar.generation.generation_utils as gen_utils
@@ -417,8 +419,8 @@ def main(station, month, year, start_date, end_date, DATA_DIR):
         n_pts = p_slice.Time.size
         t0 = p_slice.Time[0].values
         t1 = p_slice.Time[-1].values
-        dt0 = prep.dt64_2_datetime(t0)
-        dt1 = prep.dt64_2_datetime(t1)
+        dt0 = prep_utils.dt64_2_datetime(t0)
+        dt1 = prep_utils.dt64_2_datetime(t1)
         difft = (end_time - start_time)
 
         n_total = difft.days * station.total_time_bins + difft.seconds / station.freq
