@@ -5,10 +5,7 @@ import os
 from datetime import datetime, timedelta, time, date
 import glob
 import numpy as np
-
-from learning_lidar.preprocessing.preprocessing_utils import convert_profiles_units, get_month_folder_name, \
-    get_gdas_timestamp, get_daily_gdas_paths, convert_daily_gdas, \
-    get_daily_ds_date, get_TROPOS_dataset_paths, get_range_corr_ds_chan, generate_daily_molecular_chan, calc_r2_ds
+import learning_lidar.preprocessing.preprocessing_utils as prep_utils
 import learning_lidar.utils.global_settings as gs
 from learning_lidar.utils.utils import create_and_configer_logger
 import logging
@@ -55,10 +52,10 @@ def preprocessing_main(station_name='haifa', start_date=datetime(2017, 9, 1), en
         logger.debug('\nGet all days in the required period that have a converted gdas file')
         dates = pd.date_range(start=start_date, end=end_date, freq='D').to_pydatetime().tolist()
         for day in tqdm(dates):
-            _, curpath = get_daily_gdas_paths(station, day, f_type='txt')
+            _, curpath = prep_utils.get_daily_gdas_paths(station, day, f_type='txt')
             if curpath:
                 gdas_paths.extend(curpath)
-        timestamps = [get_gdas_timestamp(station, path) for path in gdas_paths]
+        timestamps = [prep_utils.get_gdas_timestamp(station, path) for path in gdas_paths]
         df_times = pd.DataFrame(data=timestamps, columns=['timestamp'])
         days_g = df_times.groupby([df_times.timestamp.dt.date]).groups
         valid_gdas_days = list(days_g.keys())
@@ -232,7 +229,7 @@ def convert_periodic_gdas(station, start_day, end_day):
     expected_file_no = len(day_dates) * 8  # 8 timestamps per day
     gdastxt_paths = []
     for day in day_dates:
-        gdastxt_paths.extend(convert_daily_gdas(station, day))
+        gdastxt_paths.extend(prep_utils.convert_daily_gdas(station, day))
     total_converted = len(gdastxt_paths)
     logger.debug(f"\nDone conversion of {total_converted} gdas files for period [{start_day.strftime('%Y-%m-%d')},"
                  f"{end_day.strftime('%Y-%m-%d')}], {(expected_file_no - total_converted)} failed.")
@@ -250,6 +247,7 @@ def generate_daily_molecular(station, day_date, time_res='30S', height_units='km
     :param optim_size: Boolean. False(default): the retrieved values are of type 'float64',
                                 True: the retrieved values are of type 'float'.
     :param verbose: Boolean. False(default). True: prints information regarding size optimization.
+    :param USE_KM_UNITS: Boolean flag, to set the scale of units of the output data ,True - km units, False - meter units
     :return: xarray.Dataset() holding 5 data variables:
              3 daily dataframes: beta,sigma,att_bsc with shared dimensions(Height, Time, Wavelength)
              and 2 shared variables: lambda_nm with dimension (Wavelength), and date
@@ -262,7 +260,7 @@ def generate_daily_molecular(station, day_date, time_res='30S', height_units='km
     # t = TicToc()
     # t.tic()
     for lambda_nm in wavelengths:
-        ds_chan = generate_daily_molecular_chan(station, date_datetime, lambda_nm, time_res=time_res,
+        ds_chan = prep_utils.generate_daily_molecular_chan(station, date_datetime, lambda_nm, time_res=time_res,
                                                 height_units=height_units, optim_size=optim_size,
                                                 verbose=verbose)
         ds_list.append(ds_chan)
@@ -274,7 +272,7 @@ def generate_daily_molecular(station, day_date, time_res='30S', height_units='km
                     'location': station.name,
                     'source_type': 'gdas'}
     if USE_KM_UNITS:
-        mol_ds = convert_profiles_units(mol_ds, units=['1/m', '1/km'], scale=1e+3)
+        mol_ds = prep_utils.convert_profiles_units(mol_ds, units=['1/m', '1/km'], scale=1e+3)
 
     return mol_ds
 
@@ -285,14 +283,14 @@ def get_daily_range_corr(station, day_date, height_units='km',
     Retrieving daily range corrected lidar signal (pr^2) from attenuated_backscatter signals in three channels (355,532,1064).
 
     The attenuated_backscatter are from 4 files of 6-hours *att_bsc.nc for a given day_date and station
-
-    :param USE_KM_UNITS:
+    
     :param station: gs.station() object of the lidar station
     :param day_date: datetime.date object of the required date
     :param height_units:  Output units of height grid in 'km' (default) or 'm'
     :param optim_size: Boolean. False(default): the retrieved values are of type 'float64',
                                 True: the retrieved values are of type 'float'.
     :param verbose: Boolean. False(default). True: prints information regarding size optimization.
+    :param USE_KM_UNITS: Boolean flag, to set the scale of units of the output data ,True - km units, False - meter units
     :return: xarray.Dataset() a daily range corrected lidar signal, holding 5 data variables:
              1 daily dataset of range_corrected signal in 3 channels, with dimensions of : Height, Time, Wavelength
              3 variables : lambda_nm, plot_min_range, plot_max_range, with dimension of : Wavelength
@@ -302,7 +300,7 @@ def get_daily_range_corr(station, day_date, height_units='km',
     """ get netcdf paths of the attenuation backscatter for given day_date"""
     date_datetime = datetime.combine(date=day_date, time=time.min) if isinstance(day_date, date) else day_date
 
-    bsc_paths = get_TROPOS_dataset_paths(station, date_datetime, file_type='att_bsc')
+    bsc_paths = prep_utils.get_TROPOS_dataset_paths(station, date_datetime, file_type='att_bsc')
     bsc_ds0 = load_dataset(bsc_paths[0])
     altitude = bsc_ds0.altitude.values[0]
     profiles = [dvar for dvar in list(bsc_ds0.data_vars) if 'attenuated_backscatter' in dvar]
@@ -318,7 +316,7 @@ def get_daily_range_corr(station, day_date, height_units='km',
         ds_chans = []
         for ind_wavelength, (pname, lambda_nm) in enumerate(zip(profiles, wavelengths)):
             cur_darry = cur_ds.get(pname).transpose(transpose_coords=True)
-            ds_chan, LC = get_range_corr_ds_chan(cur_darry, altitude, lambda_nm, height_units, optim_size,
+            ds_chan, LC = prep_utils.get_range_corr_ds_chan(cur_darry, altitude, lambda_nm, height_units, optim_size,
                                                  verbose)
             min_range[ind_wavelength, ind_path] = LC * cur_darry.attrs['plot_range'][0]
             max_range[ind_wavelength, ind_path] = LC * cur_darry.attrs['plot_range'][1]
@@ -340,7 +338,7 @@ def get_daily_range_corr(station, day_date, height_units='km',
                            'info': 'Daily range corrected lidar signal',
                            'source_type': 'att_bsc'}
     if USE_KM_UNITS:
-        range_corr_ds = convert_profiles_units(range_corr_ds, units=[r'$m^2$', r'$km^2$'], scale=1e-6)
+        range_corr_ds = prep_utils.convert_profiles_units(range_corr_ds, units=[r'$m^2$', r'$km^2$'], scale=1e-6)
     return range_corr_ds
 
 
@@ -367,7 +365,7 @@ def get_raw_lidar_signal(station: gs.Station, day_date: datetime.date, height_sl
              1 shared variable: date
     """
     date_datetime = datetime.combine(date=day_date, time=time.min) if isinstance(day_date, date) else day_date
-    raw_paths = get_TROPOS_dataset_paths(station, date_datetime, file_type=None)
+    raw_paths = prep_utils.get_TROPOS_dataset_paths(station, date_datetime, file_type=None)
 
     profile = 'raw_signal'
     num_times = int(station.total_time_bins / 4)
@@ -401,12 +399,12 @@ def get_raw_lidar_signal(station: gs.Station, day_date: datetime.date, height_sl
 
     ds.attrs = ds_attr
     ds.Height.attrs = {'units': r'$km$', 'info': 'Measurements heights above sea level'}
-    ds.Wavelength.attrs = {'units': r'$\lambda$', 'units': r'$nm$'}  # TODO double units key
+    ds.Wavelength.attrs = {'long_name': r'$\lambda$', 'units': r'$nm$'}  
 
     ds['date'] = date_datetime
 
     if use_km_units:
-        ds = convert_profiles_units(ds, units=[r'$m^2$', r'$km^2$'], scale=1e-6)
+        ds = prep_utils.convert_profiles_units(ds, units=[r'$m^2$', r'$km^2$'], scale=1e-6)
 
     return ds
 
@@ -454,14 +452,14 @@ def get_daily_measurements(station: gs.Station, day_date: datetime.date, use_km_
     bg_ds = bg_mean.broadcast_like(pn_ds.p)
 
     # Raw Range Corrected Lidar Signal
-    r2_ds = calc_r2_ds(station, day_date)
+    r2_ds = prep_utils.calc_r2_ds(station, day_date)
     pr2n_ds = (pn_ds.copy(deep=True) * r2_ds)  # calc_range_corr_measurement
     pr2n_ds.attrs = {'info': 'Raw Range Corrected Lidar Signal',
                      'long_name': r'$p$' + r'$\cdot r^2$', 'name': 'range_corr',
                      'units': r'$\rm$' + r'$photons$' + r'$\cdot km^2$',
                      'location': station.location, }
     pr2n_ds.Height.attrs = {'units': r'$km$', 'info': 'Measurements heights above sea level'}
-    pr2n_ds.Wavelength.attrs = {'units': r'$\lambda$', 'units': r'$nm$'}  # TODO double units key
+    pr2n_ds.Wavelength.attrs = {'long_name': r'$\lambda$', 'units': r'$nm$'} 
     pr2n_ds['date'] = day_date
 
     # Daily raw lidar measurement from TROPOS.
@@ -517,7 +515,7 @@ def get_prep_dataset_paths(station, day_date, data_source='molecular', lambda_nm
     elif data_source == 'lidar':
         parent_folder = station.lidar_dataset
 
-    month_folder = get_month_folder_name(parent_folder, day_date)
+    month_folder = prep_utils.get_month_folder_name(parent_folder, day_date)
     file_name = get_prep_dataset_file_name(station, day_date, data_source, lambda_nm, file_type)
 
     # print(os.listdir(month_folder))
@@ -572,14 +570,14 @@ def save_prep_dataset(station, dataset, data_source='lidar', save_mode='both',
                     'both' - saving both options
     :return: ncpaths - the paths of the saved dataset/s . None - for failure.
     """
-    date_datetime = get_daily_ds_date(dataset)
+    date_datetime = prep_utils.get_daily_ds_date(dataset)
     if data_source == 'lidar':
         base_folder = station.lidar_dataset
     elif data_source == 'molecular':
         base_folder = station.molecular_dataset
-    month_folder = get_month_folder_name(base_folder, date_datetime)
+    month_folder = prep_utils.get_month_folder_name(base_folder, date_datetime)
 
-    get_daily_ds_date(dataset)
+    prep_utils.get_daily_ds_date(dataset)
     '''save the dataset to separated netcdf files: per profile per wavelength'''
     ncpaths = []
 

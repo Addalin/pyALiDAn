@@ -196,7 +196,7 @@ def create_dataset(station_name='haifa', start_date=datetime(2017, 9, 1),
                 df['date'] = day_date.strftime('%Y-%m-%d')
 
                 df = add_profiles_values(df, station, day_date, file_type='profiles')
-
+                # TODO: use get_prep_X_path for : 'lidar':'range_corr' ; 'molecular':'attbsc' ; 'bg': 'p_bg'
                 df = add_X_path(df, station, day_date, lambda_nm=wavelength, data_source='lidar',
                                 file_type='range_corr')
                 df = add_X_path(df, station, day_date, lambda_nm=wavelength, data_source='molecular',
@@ -560,6 +560,8 @@ def save_dataset2timesplits(station, dataset, data_source='lidar', mod_source='g
 def prepare_generated_samples(station, start_date, end_date, top_height=15.3):
     # TODO: Adapt this func to get a list of time slices, and group on days to seperate the signal (in case the
     #  times slots are not consecutive)
+    #  TODO: prepare_raw_samples()
+
     logger = logging.getLogger()
     dates = pd.date_range(start_date, end_date, freq='D')
     sample_size = '30min'
