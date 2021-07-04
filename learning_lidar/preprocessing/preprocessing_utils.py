@@ -127,7 +127,7 @@ def gdas2radiosonde(src_file, dst_file, col_names=None):
 
 def get_month_folder_name(parent_folder, day_date):
     month_folder = os.path.join(parent_folder, day_date.strftime("%Y"), day_date.strftime("%m"))
-    return (month_folder)
+    return month_folder
 
 
 def extract_date_time(path, format_filename, format_times):
@@ -415,7 +415,6 @@ def get_range_corr_ds_chan(darray, altitude, lambda_nm, height_units='km', optim
 			 2. shared variable: lambda_nm with dimension (Wavelength)
 			 LC - The lidar constant calibration used
 	"""
-    logger = logging.getLogger()
     LC = darray.attrs['Lidar_calibration_constant_used']
     times = pd.to_datetime(
         [datetime.utcfromtimestamp(np.round(vtime)) for vtime in darray.time.values]).values
@@ -426,73 +425,31 @@ def get_range_corr_ds_chan(darray, altitude, lambda_nm, height_units='km', optim
     heights_ind = scale * (darray.height.values + altitude)
     rangecorr_df = pd.DataFrame(LC * darray.values, index=heights_ind, columns=times)
 
-    ''' memory size - optimization '''
-    if optim_size:
-        if verbose:
-            logger.debug('\nMemory optimization - converting molecular values from double to float')
-            size_rangecorr = rangecorr_df.memory_usage(deep=True).sum()
-
-        rangecorr_df = (rangecorr_df.select_dtypes(include=['float64'])). \
-            apply(pd.to_numeric, downcast='float')
-
-        if verbose:
-            size_rangecorr_opt = rangecorr_df.memory_usage(deep=True).sum()
-            logger.debug('\nMemory saved for wavelength {} range corrected: {:.2f}%'.
-                         format(lambda_nm,
-                                100.0 * float(size_rangecorr - size_rangecorr_opt) / float(size_rangecorr)))
-
-    ''' Create range_corr_chan lidar dataset'''
-    range_corr_ds_chan = xr.Dataset(
-        data_vars={'range_corr': (('Height', 'Time'), rangecorr_df),
-                   'lambda_nm': ('Wavelength', [lambda_nm])
-                   },
-        coords={'Height': rangecorr_df.index.to_list(),
-                'Time': rangecorr_df.columns,
-                'Wavelength': [lambda_nm]
-                }
-    )
-    range_corr_ds_chan.range_corr.attrs = {'long_name': r'$LC \beta \cdot \exp(-2\tau)$',
-                                           'units': r'$photons$' + r'$\cdot$' + r'$m^2$',
-                                           'info': 'Range corrected lidar signal from attenuated backscatter '
-                                                   'multiplied by LC'}
-    # set attributes of coordinates
-    range_corr_ds_chan.Height.attrs = {'units': fr'${height_units}$',
-                                       'info': 'Measurements heights above sea level'}
-    range_corr_ds_chan.Wavelength.attrs = {'long_name': r'$\lambda$', 'units': r'$nm$'}
+    range_corr_ds_chan = create_range_corr_ds_chan(rangecorr_df=rangecorr_df, lambda_nm=lambda_nm,
+                                                   height_units=height_units, optim_size=optim_size, verbose=verbose)
 
     return range_corr_ds_chan, LC
 
-def get_range_corr_ds_chan_raw(darray, altitude, lambda_nm, height_units='km', optim_size=False,
-                           verbose=False):
+
+def create_range_corr_ds_chan(rangecorr_df: pd.DataFrame, lambda_nm: int, height_units: str,
+                              optim_size: bool = False, verbose: bool = False) -> xr.Dataset:
     """
-	Retrieving a 6-hours range corrected lidar signal (pr^2) from attenuated_backscatter signals in three channels (355,532,1064).
-	The attenuated_backscatter are from a 6-hours *att_bsc.nc loaded earlier by darray
-	:param darray: is xarray.DataArray object, containing a 6-hours of attenuated_backscatter (loaded from TROPOS *att_bsc.nc)
-	:param altitude: altitude of the station [m]
-	:param lambda_nm: wavelength in [nm], e.g, for green lambda_nm = 532.0 [nm]
-	:param height_units:  Output units of height grid in 'km' (default) or 'm'
-	:param optim_size: Boolean. False(default): the retrieved values are of type 'float64',
-	                            True: the retrieved values are of type 'float'.
-	:param verbose: Boolean. False(default). True: prints information regarding size optimization.
-	:return: xarray.Dataset() holding 2 data variables:
-	         1. 6-hours dataframe: range_corr with dimensions (Height, Time)
-			 2. shared variable: lambda_nm with dimension (Wavelength)
-			 LC - The lidar constant calibration used
-	"""
-    logger = logging.getLogger()
-    # LC = darray.attrs['Lidar_calibration_constant_used'] # SHUBO
-    LC = 9.96921e+36
-    times = pd.to_datetime(
-        [datetime.utcfromtimestamp(np.round(vtime)) for vtime in darray.time.values]).values
-    # station.calc_daily_time_index(day_date)
-    if height_units == 'km':
-        scale = 1e-3
-    elif height_units == 'm':
-        scale = 1
-    heights_ind = scale * (darray.height.values + altitude)
-    rangecorr_df = pd.DataFrame(LC * darray.values, index=heights_ind, columns=times)
+    Retrieving a 6-hours range corrected lidar signal (pr^2) from attenuated_backscatter signals in three channels (355,532,1064).
+    The attenuated_backscatter are from a 6-hours *att_bsc.nc loaded earlier by darray
 
-    ''' memory size - optimization '''
+    :param lambda_nm: wavelength in [nm], e.g, for green lambda_nm = 532.0 [nm]
+    :param height_units:  Output units of height grid in 'km' (default) or 'm'
+    :param optim_size: Boolean. False(default): the retrieved values are of type 'float64',
+                                True: the retrieved values are of type 'float'.
+    :param verbose: Boolean. False(default). True: prints information regarding size optimization.
+
+    :return: xarray.Dataset() holding 2 data variables:
+             1. 6-hours dataframe: range_corr with dimensions (Height, Time)
+             2. shared variable: lambda_nm with dimension (Wavelength)
+             LC - The lidar constant calibration used
+    """
+    logger = logging.getLogger()
+    # memory size - optimization
     if optim_size:
         if verbose:
             logger.debug('\nMemory optimization - converting molecular values from double to float')
@@ -504,8 +461,7 @@ def get_range_corr_ds_chan_raw(darray, altitude, lambda_nm, height_units='km', o
         if verbose:
             size_rangecorr_opt = rangecorr_df.memory_usage(deep=True).sum()
             logger.debug('\nMemory saved for wavelength {} range corrected: {:.2f}%'.
-                         format(lambda_nm,
-                                100.0 * float(size_rangecorr - size_rangecorr_opt) / float(size_rangecorr)))
+                         format(lambda_nm, 100.0 * float(size_rangecorr - size_rangecorr_opt) / float(size_rangecorr)))
 
     ''' Create range_corr_chan lidar dataset'''
     range_corr_ds_chan = xr.Dataset(
@@ -526,7 +482,7 @@ def get_range_corr_ds_chan_raw(darray, altitude, lambda_nm, height_units='km', o
                                        'info': 'Measurements heights above sea level'}
     range_corr_ds_chan.Wavelength.attrs = {'long_name': r'$\lambda$', 'units': r'$nm$'}
 
-    return range_corr_ds_chan, LC
+    return range_corr_ds_chan
 
 
 def generate_daily_molecular_chan(station, day_date, lambda_nm, time_res='30S',
@@ -612,3 +568,29 @@ def generate_daily_molecular_chan(station, day_date, lambda_nm, time_res='30S',
     ds_chan.Wavelength.attrs = {'long_name': r'$\lambda$', 'units': r'$nm$'}
 
     return ds_chan
+
+
+def calc_r2_ds(station, day_date):
+    """
+    calc r^2 (as 2D image)
+    :param station: gs.station() object of the lidar station
+    :param day_date: datetime.date object of the required date
+    :return: xr.Dataset(). A a daily r^2 dataset
+    """
+    height_bins = station.get_height_bins_values()
+    wavelengths = gs.LAMBDA_nm().get_elastic()
+    r_im = np.tile(height_bins.reshape(height_bins.size, 1), (len(wavelengths), 1, station.total_time_bins))
+    rr_im = r_im ** 2
+    r2_ds = xr.Dataset(data_vars={'r': (['Wavelength', 'Height', 'Time'], r_im,
+                                        {'info': 'The heights bins',
+                                         'name': 'r', 'long_name': r'$r$',
+                                         'units': r'$km$'}),
+                                  'r2': (['Wavelength', 'Height', 'Time'], rr_im,
+                                         {'info': 'The heights bins squared',
+                                          'name': 'r2', 'long_name': r'$r^2$',
+                                          'units': r'$km^2$'})},
+                       coords={'Wavelength': wavelengths,
+                               'Height': station.calc_height_index(),
+                               'Time': station.calc_daily_time_index(day_date).values})
+    r2_ds = r2_ds.transpose('Wavelength', 'Height', 'Time')
+    return r2_ds.r2
