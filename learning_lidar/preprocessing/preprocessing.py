@@ -250,6 +250,7 @@ def generate_daily_molecular(station, day_date, time_res='30S', height_units='km
     :param optim_size: Boolean. False(default): the retrieved values are of type 'float64',
                                 True: the retrieved values are of type 'float'.
     :param verbose: Boolean. False(default). True: prints information regarding size optimization.
+    :param USE_KM_UNITS: Boolean flag, to set the scale of units of the output data ,True - km units, False - meter units
     :return: xarray.Dataset() holding 5 data variables:
              3 daily dataframes: beta,sigma,att_bsc with shared dimensions(Height, Time, Wavelength)
              and 2 shared variables: lambda_nm with dimension (Wavelength), and date
@@ -285,14 +286,14 @@ def get_daily_range_corr(station, day_date, height_units='km',
     Retrieving daily range corrected lidar signal (pr^2) from attenuated_backscatter signals in three channels (355,532,1064).
 
     The attenuated_backscatter are from 4 files of 6-hours *att_bsc.nc for a given day_date and station
-
-    :param USE_KM_UNITS: BOOLEAN flag, to set the scale of units of the output data ,True - km units, False - meter units
+    
     :param station: gs.station() object of the lidar station
     :param day_date: datetime.date object of the required date
     :param height_units:  Output units of height grid in 'km' (default) or 'm'
     :param optim_size: Boolean. False(default): the retrieved values are of type 'float64',
                                 True: the retrieved values are of type 'float'.
     :param verbose: Boolean. False(default). True: prints information regarding size optimization.
+    :param USE_KM_UNITS: Boolean flag, to set the scale of units of the output data ,True - km units, False - meter units
     :return: xarray.Dataset() a daily range corrected lidar signal, holding 5 data variables:
              1 daily dataset of range_corrected signal in 3 channels, with dimensions of : Height, Time, Wavelength
              3 variables : lambda_nm, plot_min_range, plot_max_range, with dimension of : Wavelength
