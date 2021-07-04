@@ -1,8 +1,9 @@
+from pathlib import Path
+
 import numpy as np
 from matplotlib import pyplot as plt
 from scipy.ndimage import gaussian_filter1d
 from tqdm import tqdm
-import pandas as pd
 
 from datetime import datetime, timedelta
 import os
@@ -11,7 +12,6 @@ import calendar
 import learning_lidar.preprocessing.preprocessing as prep
 import learning_lidar.preprocessing.preprocessing_utils as prep_utils
 from learning_lidar.generation.generate_density_utils import PLOT_RESULTS
-from learning_lidar.utils.vis_utils import TIMEFORMAT
 
 
 def get_gen_dataset_file_name(station, day_date, wavelength='*',
@@ -190,56 +190,6 @@ def dt2binscale(dt_time, res_sec=30):
     return tind
 
 
-def plot_daily_profile(profile_ds, height_slice=None, figsize=(16, 6)):
-    # TODO : move to vis_utils.py
-    # TODO: add scintific ticks on colorbar
-    wavelengths = profile_ds.Wavelength.values
-    if height_slice is None:
-        height_slice = slice(profile_ds.Height[0].values, profile_ds.Height[-1].values)
-    str_date = profile_ds.Time[0].dt.strftime("%Y-%m-%d").values.tolist()
-    ncols = wavelengths.size
-    fig, axes = plt.subplots(nrows=1, ncols=ncols, figsize=figsize, sharey=True)
-    if ncols > 1:
-        for wavelength, ax in zip(wavelengths, axes.ravel()):
-            profile_ds.sel(Height=height_slice, Wavelength=wavelength).plot(cmap='turbo', ax=ax)
-            ax.xaxis.set_major_formatter(TIMEFORMAT)
-            ax.xaxis.set_tick_params(rotation=0)
-    else:
-        ax = axes
-        profile_ds.sel(Height=height_slice).plot(cmap='turbo', ax=ax)
-        ax.xaxis.set_major_formatter(TIMEFORMAT)
-        ax.xaxis.set_tick_params(rotation=0)
-    plt.suptitle(f"{profile_ds.info} - {str_date}")
-    plt.ticklabel_format(axis="y", style="sci", scilimits=(0, 0))
-    plt.tight_layout()
-    plt.show()
-
-
-def plot_hourly_profile(profile_ds, height_slice=None, figsize=(10, 6), times=None):
-    # TODO : move to vis_utils.py
-    # TODO: add scientific ticks on color-bar
-    day_date = prep_utils.dt64_2_datetime(profile_ds.Time[0].values)
-    str_date = day_date.strftime("%Y-%m-%d")
-    if times == None:
-        times = [day_date + timedelta(hours=8),
-                 day_date + timedelta(hours=12),
-                 day_date + timedelta(hours=18)]
-    if height_slice is None:
-        height_slice = slice(profile_ds.Height[0].values, profile_ds.Height[-1].values)
-
-    ncols = len(times)
-    fig, axes = plt.subplots(nrows=1, ncols=ncols, figsize=figsize, sharey=True)
-    for t, ax in zip(times,
-                     axes.ravel()):
-        profile_ds.sel(Time=t, Height=height_slice).plot.line(ax=ax, y='Height', hue='Wavelength')
-        ax.set_title(pd.to_datetime(str(t)).strftime('%H:%M:%S'))
-    plt.tight_layout()
-    plt.suptitle(f"{profile_ds.info} - {str_date}")
-    plt.ticklabel_format(axis="y", style="sci", scilimits=(0, 0))
-    plt.tight_layout()
-    plt.show()
-
-
 def create_ratio(total_bins, mode='ones', start_height=0.3, ref_height=2.5, ref_height_bin=300):
     """
     Generating ratio, mainly for applying different endings on the daily profile, or overlap function.
@@ -286,3 +236,36 @@ def create_ratio(total_bins, mode='ones', start_height=0.3, ref_height=2.5, ref_
         plt.show()
 
     return smooth_ratio
+
+
+def convert_to32(base_path, paths, exclude_paths):
+    """
+    Loads and saves all nc files in paths, excluding exclude_paths from base_path.
+    Can be used to convert to nc fiels previously saved as float64 as float32 (current default)
+
+    Example:
+        base_path = r"D:"
+        paths = [r"\data_haifa\GENERATION",
+                 r"\data_haifa\DATA FROM TROPOS\molecular_dataset",
+                 r"\data_haifa\DATA FROM TROPOS\lidar_dataset"]
+
+        exclude_paths = [r"D:\data_haifa\GENERATION\density_dataset\2017\04",
+                         r"D:\data_haifa\GENERATION\density_dataset\2017\05"]
+
+    :return: None
+    """
+
+    exclude_files = []
+    for exclude_path in exclude_paths:
+        exclude_files.extend(list(Path(exclude_path).glob("**/*.nc")))
+    exclude_files = [str(x) for x in exclude_files]
+    exclude_files = set(exclude_files)
+
+    for path in paths:
+        full_paths = Path(base_path + path)
+        file_list = set([str(pp) for pp in full_paths.glob("**/*.nc")])
+        file_list = file_list - exclude_files
+        print(f"found {len(file_list)} nc files in path {base_path + path}")
+        for nc_path in tqdm(file_list):
+            ds = prep.load_dataset(str(nc_path))
+            prep.save_dataset(ds, nc_path=str(nc_path))

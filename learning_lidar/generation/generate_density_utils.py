@@ -776,7 +776,7 @@ def generate_sigma_ds(station, day_date, day_params_ds, density_ds):
     sigma_ds['date'] = day_date
 
     if PLOT_RESULTS:
-        gen_utils.plot_daily_profile(sigma_ds, height_slice=slice(0, 15))
+        vis_utils.plot_daily_profile(sigma_ds, height_slice=slice(0, 15))
 
         times = [sigma_ds.Time[ind].values for ind in t_index]
         fig, axes = plt.subplots(nrows=1, ncols=3, figsize=(10, 6), sharey=True)
@@ -814,7 +814,7 @@ def generate_beta_ds(station, day_date, day_params_ds, sigma_ds):
 
     sigma_ds['date'] = day_date
     if PLOT_RESULTS:
-        gen_utils.plot_daily_profile(beta_ds, height_slice=slice(0, 15))
+        vis_utils.plot_daily_profile(beta_ds, height_slice=slice(0, 15))
 
     return beta_ds, LR_ds
 
