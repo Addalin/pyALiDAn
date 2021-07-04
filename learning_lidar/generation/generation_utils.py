@@ -47,7 +47,7 @@ def save_generated_dataset(station, dataset, data_source='lidar', save_mode='bot
     """
     Save the input dataset to netcdf file
     If this name is not provided, then the first profile is automatically selected
-    :param time_slices:
+    :param time_slices: list of time slices slice(start_time, end_time), times are of datetime.datime() object
     :param station: station: gs.station() object of the lidar station
     :param dataset: xarray.Dataset() a daily generated lidar signal, holding 5 data variables:
              4 daily dataset, with dimensions of : Height, Time, Wavelength.
