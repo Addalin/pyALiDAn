@@ -399,7 +399,7 @@ def get_raw_lidar_signal(station: gs.Station, day_date: datetime.date, height_sl
 
     ds.attrs = ds_attr
     ds.Height.attrs = {'units': r'$km$', 'info': 'Measurements heights above sea level'}
-    ds.Wavelength.attrs = {'units': r'$\lambda$', 'units': r'$nm$'}  # TODO double units key
+    ds.Wavelength.attrs = {'long_name': r'$\lambda$', 'units': r'$nm$'}  
 
     ds['date'] = date_datetime
 
@@ -459,7 +459,7 @@ def get_daily_measurements(station: gs.Station, day_date: datetime.date, use_km_
                      'units': r'$\rm$' + r'$photons$' + r'$\cdot km^2$',
                      'location': station.location, }
     pr2n_ds.Height.attrs = {'units': r'$km$', 'info': 'Measurements heights above sea level'}
-    pr2n_ds.Wavelength.attrs = {'units': r'$\lambda$', 'units': r'$nm$'}  # TODO double units key
+    pr2n_ds.Wavelength.attrs = {'long_name': r'$\lambda$', 'units': r'$nm$'} 
     pr2n_ds['date'] = day_date
 
     # Daily raw lidar measurement from TROPOS.
