@@ -26,21 +26,31 @@ from learning_lidar.utils.utils import create_and_configer_logger
 import learning_lidar.generation.generation_utils as gen_utils
 
 
+class Error(Exception):
+    """Base class for other exceptions"""
+    pass
+
+
+class EmptyDataFrameError(Error):
+    """Raised when the data frame is empty and should not have been"""
+    pass
+
+
 def dataseting_main(station_name, start_date, end_date, log_level=logging.DEBUG):
     logging.getLogger('matplotlib').setLevel(logging.ERROR)  # Fix annoying matplotlib logs
     logging.getLogger('PIL').setLevel(logging.ERROR)  # Fix annoying PIL logs
     logger = create_and_configer_logger(f"{os.path.basename(__file__)}.log", level=log_level)
 
     # set operating mode
-    DO_DATASET = False
+    DO_DATASET = True
     EXTEND_DATASET = False
     DO_CALIB_DATASET = False
     USE_KM_UNITS = True
-    DO_GENERATED_DATASET = True
+    DO_GENERATED_DATASET = False
     SPLIT_DATASET = False
-    SPLIT_GENERATED_DATASET = True
-    CALC_GENERATED_STATS = True
-    CREATE_SAMPLES = True
+    SPLIT_GENERATED_DATASET = False
+    CALC_GENERATED_STATS = False
+    CREATE_SAMPLES = False
 
     # Load data of station
     station = gs.Station(station_name=station_name)
@@ -191,33 +201,55 @@ def create_dataset(station_name='haifa', start_date=datetime(2017, 9, 1),
                 query = get_query(wavelength, cali_method, day_date)
                 df = query_database(query=query, database_path=db_path)
                 if df.empty:
-                    raise Exception(
+                    raise EmptyDataFrameError(
                         f"\n Not existing data for {station.location} station, during {day_date.strftime('%Y-%m-%d')} in '{db_path}'")
                 df['date'] = day_date.strftime('%Y-%m-%d')
 
                 df = add_profiles_values(df, station, day_date, file_type='profiles')
-                # TODO: use get_prep_X_path for : 'lidar':'range_corr' ; 'molecular':'attbsc' ; 'bg': 'p_bg'
-                df = add_X_path(df, station, day_date, lambda_nm=wavelength, data_source='lidar',
-                                file_type='range_corr')
-                df = add_X_path(df, station, day_date, lambda_nm=wavelength, data_source='molecular',
-                                file_type='attbsc')
+
 
                 df = df.rename(
                     {'liconst': 'LC', 'uncertainty_liconst': 'LC_std', 'matched_nc_profile': 'profile_path'},
                     axis='columns')
+
                 expanded_df = get_time_slots_expanded(df, sample_size)
+
+                # Add molecular path
+                expanded_df['molecular_path'] = expanded_df.apply(
+                    lambda row: get_prep_X_path(station=station, parent_folder=station.molecular_dataset,
+                                                day_date=row['start_time_period'], data_source='molecular',
+                                                wavelength=wavelength, file_type='attbsc',
+                                                time_slice=slice(row['start_time_period'], row['end_time_period'])),
+                    axis=1, result_type='expand')
+
+                # Add bg path
+                expanded_df['bg_path'] = expanded_df.apply(
+                    lambda row: get_prep_X_path(station=station, parent_folder=station.molecular_dataset,
+                                                day_date=row['start_time_period'], data_source='bg',
+                                                wavelength=wavelength, file_type='p_bg',
+                                                time_slice=slice(row['start_time_period'], row['end_time_period'])),
+                    axis=1, result_type='expand')
+
+                # Add lidar path
+                expanded_df['lidar_path'] = expanded_df.apply(
+                    lambda row: get_prep_X_path(station=station, parent_folder=station.molecular_dataset,
+                                                day_date=row['start_time_period'], data_source='lidar',
+                                                wavelength=wavelength, file_type='range_corr',
+                                                time_slice=slice(row['start_time_period'], row['end_time_period'])),
+                    axis=1, result_type='expand')
 
                 # reorder the columns
                 key = ['date', 'wavelength', 'cali_method', 'telescope', 'cali_start_time', 'cali_stop_time',
                        'start_time_period', 'end_time_period', 'profile_path']
                 Y_features = ['LC', 'LC_std', 'r0', 'r1', 'dr', 'bin_r0', 'bin_r1']
-                X_features = ['lidar_path', 'molecular_path']
+                X_features = ['lidar_path', 'molecular_path', 'bg_path']
                 expanded_df = expanded_df[key + X_features + Y_features]
                 full_df = full_df.append(expanded_df)
-            except Exception as e:
+            except EmptyDataFrameError as e:
                 logger.exception(f"{e}, skipping to next day.")
                 continue
-
+    if full_df.empty:
+        raise Exception("Empty Dataframe. No days retrieved!. Stopping dataseting.")
     # convert height bins to int
     full_df['bin_r0'] = full_df['bin_r0'].astype(np.uint16)
     full_df['bin_r1'] = full_df['bin_r1'].astype(np.uint16)
@@ -598,8 +630,8 @@ def prepare_generated_samples(station, start_date, end_date, top_height=15.3):
 
 
 if __name__ == '__main__':
-    station_name = 'haifa'
-    start_date = datetime(2017, 4, 1)
-    end_date = datetime(2017, 5, 31)
+    station_name = 'haifa_shubi'
+    start_date = datetime(2017, 9, 1)
+    end_date = datetime(2017, 9, 1)
     log_level = logging.DEBUG
     dataseting_main(station_name, start_date, end_date, log_level)

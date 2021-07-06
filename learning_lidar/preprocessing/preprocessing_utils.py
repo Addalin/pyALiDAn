@@ -361,12 +361,12 @@ def get_TROPOS_dataset_file_name(start_time=None, end_time=None, file_type='prof
           for daily attenuation backscatter profile "*<att_bsc>.nc" ( or  "*<start_time>_<file_type>.nc" if start_time is given)
           for daily lidar raw signal - None # TODO adi correct me please
     """
-    if start_time and end_time and ('profiles' in file_type):
+    if file_type is None:
+        pattern = f"*[0-9].nc"
+    elif start_time and end_time and ('profiles' in file_type):
         pattern = f"*[0-9]_{start_time.strftime('%H%M')}_{end_time.strftime('%H%M')}_{file_type}.nc"
     elif start_time:
         pattern = f"*{start_time.strftime('%H_%M_%S')}_{file_type}.nc"
-    elif file_type is None:
-        pattern = f"*[0-9].nc"
     else:
         pattern = f"*[0-9]_{file_type}.nc"
     return pattern

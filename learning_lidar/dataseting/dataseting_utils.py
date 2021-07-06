@@ -1,6 +1,7 @@
 import logging
 import os
 import sqlite3
+import sys
 from datetime import datetime
 from functools import partial
 
@@ -53,15 +54,17 @@ def query_database(query="SELECT * FROM lidar_calibration_constant;",
         (cali_start_time BETWEEN '2017-09-01' AND '2017-09-02');
     "
     """
-    # logger = logging.getLogger ( )
+    logger = logging.getLogger()
 
     # Connect to the db and query it directly into pandas df.
-    # try:
-    with sqlite3.connect(database_path) as c:
-        # Query to df
-        # optionally parse 'id' as index column and 'cali_start_time', 'cali_stop_time' as dates
-        df = pd.read_sql(sql=query, con=c, parse_dates=['cali_start_time', 'cali_stop_time'])
-    # except sqlite3.OperationalError as e: logger.exception ( f"{e}: Unable to load dataset." ) sys.exit(1)
+    try:
+        with sqlite3.connect(database_path) as c:
+            # Query to df
+            # optionally parse 'id' as index column and 'cali_start_time', 'cali_stop_time' as dates
+            df = pd.read_sql(sql=query, con=c, parse_dates=['cali_start_time', 'cali_stop_time'])
+    except sqlite3.OperationalError as e:
+        logger.exception(f"{e}: {database_path}. Stopping dataseting.")
+        sys.exit(1)
     # TODO:
     #  raise load exception if file does not exits. the above commented solution is not really catching this and
     #  continues to run
@@ -73,8 +76,8 @@ def add_profiles_values(df, station, day_date, file_type='profiles'):
     logger = logging.getLogger()
     try:
         df['matched_nc_profile'] = df.apply(lambda row: prep_utils.get_TROPOS_dataset_paths(station, day_date,
-                                                                                                                                  start_time=row.cali_start_time,
-                                                                                                                                  end_time=row.cali_stop_time,
+                                                                                            start_time=row.cali_start_time,
+                                                                                            end_time=row.cali_stop_time,
                                                                                                                                   file_type=file_type)[0],
                                             axis=1, result_type='expand')
     except Exception:
@@ -121,7 +124,8 @@ def add_X_path(df, station, day_date, lambda_nm=532, data_source='molecular', fi
                                         file_type=file_type)
     if not paths:
         df.loc[:, f"{data_source}_path"] = ""
-        logger.debug(f"\n Not existing any '{data_source}' path for {station.location} station, at {day_date.strftime('%Y-%m-%d')}")
+        logger.debug(
+            f"\n Not existing any '{data_source}' path for {station.location} station, at {day_date.strftime('%Y-%m-%d')}")
 
     elif len(paths) != 1:
         raise Exception(
@@ -295,14 +299,15 @@ def split_save_train_test_ds(csv_path='', train_size=0.8, df=None):
 def get_generated_X_path(station, parent_folder, day_date, data_source, wavelength, file_type=None, time_slice=None):
     month_folder = prep_utils.get_month_folder_name(parent_folder=parent_folder, day_date=day_date)
     nc_name = gen_utils.get_gen_dataset_file_name(station, day_date, data_source=data_source, wavelength=wavelength,
-                                        file_type=file_type, time_slice=time_slice)
+                                                  file_type=file_type, time_slice=time_slice)
     nc_path = os.path.join(month_folder, nc_name)
     return nc_path
 
+
 def get_prep_X_path(station, parent_folder, day_date, data_source, wavelength, file_type=None, time_slice=None):
     month_folder = prep_utils.get_month_folder_name(parent_folder=parent_folder, day_date=day_date)
-    nc_name = prep.get_prep_dataset_file_name(station, day_date, data_source=data_source, lambda_nm =wavelength,
-                                        file_type=file_type, time_slice=time_slice)
+    nc_name = prep.get_prep_dataset_file_name(station, day_date, data_source=data_source, lambda_nm=wavelength,
+                                              file_type=file_type, time_slice=time_slice)
     data_path = os.path.join(month_folder, nc_name)
     return data_path
 
