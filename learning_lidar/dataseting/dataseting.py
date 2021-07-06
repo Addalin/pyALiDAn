@@ -5,6 +5,7 @@ from IPython.display import display
 import logging
 from tqdm import tqdm
 from pytictoc import TicToc
+import argparse
 
 from itertools import repeat
 from multiprocessing import Pool, cpu_count
@@ -36,25 +37,17 @@ class EmptyDataFrameError(Error):
     pass
 
 
-def dataseting_main(station_name, start_date, end_date, log_level=logging.DEBUG):
+def dataseting_main(args, log_level=logging.DEBUG):
     logging.getLogger('matplotlib').setLevel(logging.ERROR)  # Fix annoying matplotlib logs
     logging.getLogger('PIL').setLevel(logging.ERROR)  # Fix annoying PIL logs
     logger = create_and_configer_logger(f"{os.path.basename(__file__)}.log", level=log_level)
-
-    # set operating mode
-    DO_DATASET = True
-    EXTEND_DATASET = False
-    DO_CALIB_DATASET = False
-    USE_KM_UNITS = True
-    DO_GENERATED_DATASET = False
-    SPLIT_DATASET = False
-    SPLIT_GENERATED_DATASET = False
-    CALC_GENERATED_STATS = False
-    CREATE_SAMPLES = False
+    logger.info(args)
+    station_name = args.station_name
+    start_date = args.start_date
+    end_date = args.end_date
 
     # Load data of station
     station = gs.Station(station_name=station_name)
-    logger.info(f"Loading {station.location} station")
 
     # Set new paths
     data_folder = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))), 'data')
@@ -68,7 +61,7 @@ def dataseting_main(station_name, start_date, end_date, log_level=logging.DEBUG)
     csv_gen_path = os.path.join(data_folder, f"dataset_gen_{station_name}_"
                                              f"{start_date.strftime('%Y-%m-%d')}_{end_date.strftime('%Y-%m-%d')}.csv")
 
-    if DO_DATASET:
+    if args.DO_DATASET:
         logger.info(
             f"\nStart generating dataset for period: [{start_date.strftime('%Y-%m-%d')},{end_date.strftime('%Y-%m-%d')}]")
         # Generate dataset for learning
@@ -77,7 +70,7 @@ def dataseting_main(station_name, start_date, end_date, log_level=logging.DEBUG)
                             end_date=end_date, sample_size=sample_size)
 
         # Convert m to km
-        if USE_KM_UNITS:
+        if args.USE_KM_UNITS:
             df = convert_Y_features_units(df)
 
         df.to_csv(csv_path, index=False)
@@ -85,7 +78,7 @@ def dataseting_main(station_name, start_date, end_date, log_level=logging.DEBUG)
         # TODO: add creation of dataset statistics following its creation.
         #         adapt calc_data_statistics(station, start_date, end_date)
 
-    if SPLIT_DATASET:
+    if args.SPLIT_DATASET:
         logger.info(
             f"Splitting to train-test the dataset for period: [{start_date.strftime('%Y-%m-%d')},"
             f"{end_date.strftime('%Y-%m-%d')}]")
@@ -93,7 +86,7 @@ def dataseting_main(station_name, start_date, end_date, log_level=logging.DEBUG)
         logger.info(f"Done splitting train-test dataset for {csv_path}")
 
     # Create extended dataset and save to csv - recalculation of Lidar Constant (currently this is a naive calculation)
-    if EXTEND_DATASET:
+    if args.EXTEND_DATASET:
         logger.info(
             f"Start extending dataset for period: [{start_date.strftime('%Y-%m-%d')},{end_date.strftime('%Y-%m-%d')}]")
         if 'df' not in globals():
@@ -105,7 +98,7 @@ def dataseting_main(station_name, start_date, end_date, log_level=logging.DEBUG)
 
     # Create calibration dataset from the extended df (or csv) = by splitting df to A dataset according to wavelengths
     # and time coordinates.
-    if DO_CALIB_DATASET:
+    if args.DO_CALIB_DATASET:
         logger.info(
             f"Start creating calibration dataset for period: [{start_date.strftime('%Y-%m-%d')},"
             f"{end_date.strftime('%Y-%m-%d')}]")
@@ -117,7 +110,7 @@ def dataseting_main(station_name, start_date, end_date, log_level=logging.DEBUG)
         prep.save_dataset(ds_calibration, os.path.curdir, ds_path_extended)
         logger.info(f"The calibration dataset saved to :{ds_path_extended}")
 
-    if DO_GENERATED_DATASET:
+    if args.DO_GENERATED_DATASET:
         logger.info(
             f"\nStart creating generated dataset for period:"
             f" [{start_date.strftime('%Y-%m-%d')},{end_date.strftime('%Y-%m-%d')}]")
@@ -125,19 +118,19 @@ def dataseting_main(station_name, start_date, end_date, log_level=logging.DEBUG)
         generated_df.to_csv(csv_gen_path, index=False)
         logger.info(f"\nDone generated database creation, saving to: {csv_gen_path}")
 
-    if CALC_GENERATED_STATS:
+    if args.CALC_GENERATED_STATS:
         logger.info(f"\nStart calculating dataset statistics")
         _, csv_stats_path = calc_data_statistics(station, start_date, end_date)
         logger.info(f"\nDone calculating dataset statistics. saved to:{csv_stats_path}")
 
-    if SPLIT_GENERATED_DATASET:
+    if args.SPLIT_GENERATED_DATASET:
         logger.info(
             f"\nSplitting to train-test the dataset for period: [{start_date.strftime('%Y-%m-%d')},"
             f"{end_date.strftime('%Y-%m-%d')}]")
         split_save_train_test_ds(csv_path=csv_gen_path)
         logger.info(f"\nDone splitting train-test dataset for {csv_gen_path}")
 
-    if CREATE_SAMPLES:
+    if args.CREATE_SAMPLES:
         prepare_generated_samples(station, start_date, end_date, top_height=15.3)
 
 
@@ -206,7 +199,6 @@ def create_dataset(station_name='haifa', start_date=datetime(2017, 9, 1),
                 df['date'] = day_date.strftime('%Y-%m-%d')
 
                 df = add_profiles_values(df, station, day_date, file_type='profiles')
-
 
                 df = df.rename(
                     {'liconst': 'LC', 'uncertainty_liconst': 'LC_std', 'matched_nc_profile': 'profile_path'},
@@ -629,9 +621,42 @@ def prepare_generated_samples(station, start_date, end_date, top_height=15.3):
                                     sample_size=sample_size, mod_source=mode)
 
 
+def get_base_arguments(parser):
+    parser.add_argument('-n', '--station_name', type=str, default='haifa',
+                        help='The station name')
+    parser.add_argument('--start_date', type=datetime.fromisoformat,
+                        default='2017-09-01',
+                        help='The start date to use')
+    parser.add_argument('--end_date', type=datetime.fromisoformat,
+                        default='2017-10-31',
+                        help='The end date to use')
+
+    return parser
+
+
 if __name__ == '__main__':
-    station_name = 'haifa_shubi'
-    start_date = datetime(2017, 9, 1)
-    end_date = datetime(2017, 9, 1)
-    log_level = logging.DEBUG
-    dataseting_main(station_name, start_date, end_date, log_level)
+
+    parser = argparse.ArgumentParser()
+    parser = get_base_arguments(parser)
+    parser.add_argument('--DO_DATASET', action='store_true',
+                        help='Whether to create a dataset')
+    parser.add_argument('--EXTEND_DATASET', action='store_true',
+                        help='Whether to EXTEND_DATASET')
+    parser.add_argument('--DO_CALIB_DATASET', action='store_true',
+                        help='Whether to DO_CALIB_DATASET')
+    parser.add_argument('--USE_KM_UNITS', action='store_true',
+                        help='Whether to USE_KM_UNITS')
+    parser.add_argument('--DO_GENERATED_DATASET', action='store_true',
+                        help='Whether to create DO_GENERATED_DATASET')
+    parser.add_argument('--SPLIT_DATASET', action='store_true',
+                        help='Whether to create SPLIT_DATASET')
+    parser.add_argument('--SPLIT_GENERATED_DATASET', action='store_true',
+                        help='Whether to create SPLIT_GENERATED_DATASET')
+    parser.add_argument('--CALC_GENERATED_STATS', action='store_true',
+                        help='Whether to CALC_GENERATED_STATS')
+    parser.add_argument('--CREATE_SAMPLES', action='store_true',
+                        help='Whether to CREATE_SAMPLES')
+
+    args = parser.parse_args()
+
+    dataseting_main(args, log_level=logging.DEBUG)
