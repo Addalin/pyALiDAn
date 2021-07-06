@@ -1,11 +1,18 @@
+from pathlib import Path
+
+import numpy as np
 from matplotlib import pyplot as plt
-import learning_lidar.preprocessing.preprocessing as prep
+from scipy.ndimage import gaussian_filter1d
+from tqdm import tqdm
+
 from datetime import datetime, timedelta
 import os
 import calendar
-from learning_lidar.utils.global_settings import TIMEFORMAT
-from tqdm import tqdm
-import pandas as pd
+
+import learning_lidar.preprocessing.preprocessing as prep
+import learning_lidar.preprocessing.preprocessing_utils as prep_utils
+from learning_lidar.generation.generate_density_utils import PLOT_RESULTS
+
 
 def get_gen_dataset_file_name(station, day_date, wavelength='*',
                               data_source='lidar', file_type='range_corr',
@@ -20,6 +27,7 @@ def get_gen_dataset_file_name(station, day_date, wavelength='*',
     :param data_source: string object: 'aerosol' or 'lidar'
     :param file_type: string object: e.g., 'range_corr'/'lidar_power' for separated files per wavelength
     (355,532, or 1064) or 'lidar'/'aerosol' for all wavelengths
+    :param time_slice:
 
     :return: dataset file name (netcdf) file of the data_type required per given day, wavelength, data_source and file_type
     """
@@ -39,6 +47,7 @@ def save_generated_dataset(station, dataset, data_source='lidar', save_mode='bot
     """
     Save the input dataset to netcdf file
     If this name is not provided, then the first profile is automatically selected
+    :param time_slices: list of time slices slice(start_time, end_time), times are of datetime.datime() object
     :param station: station: gs.station() object of the lidar station
     :param dataset: xarray.Dataset() a daily generated lidar signal, holding 5 data variables:
              4 daily dataset, with dimensions of : Height, Time, Wavelength.
@@ -52,7 +61,7 @@ def save_generated_dataset(station, dataset, data_source='lidar', save_mode='bot
     :param profiles: The name of profile desired to be saved separately.
     :return: ncpaths - the paths of the saved dataset/s . None - for failure.
     """
-    date_datetime = prep.get_daily_ds_date(dataset)
+    date_datetime = prep_utils.get_daily_ds_date(dataset)
     if data_source == 'lidar':
         base_folder = station.gen_lidar_dataset
     elif data_source == 'signal':
@@ -63,9 +72,9 @@ def save_generated_dataset(station, dataset, data_source='lidar', save_mode='bot
         base_folder = station.gen_density_dataset
     elif data_source == 'bg':
         base_folder = station.gen_bg_dataset
-    month_folder = prep.get_month_folder_name(base_folder, date_datetime)
+    month_folder = prep_utils.get_month_folder_name(base_folder, date_datetime)
 
-    prep.get_daily_ds_date(dataset)
+    prep_utils.get_daily_ds_date(dataset)
     '''save the dataset to separated netcdf files: per profile per wavelength'''
     ncpaths = []
 
@@ -122,7 +131,7 @@ def get_month_gen_params_path(station, day_date, type='density_params'):
     nc_name = f"generated_{type}_{station.location}_{month_start_day.strftime('%Y-%m-%d')}_" \
               f"{month_end_day.strftime('%Y-%m-%d')}.nc"
 
-    folder_name = prep.get_month_folder_name(station.generation_folder, day_date)
+    folder_name = prep_utils.get_month_folder_name(station.generation_folder, day_date)
 
     gen_source_path = os.path.join(folder_name, nc_name)
     return gen_source_path
@@ -181,51 +190,82 @@ def dt2binscale(dt_time, res_sec=30):
     return tind
 
 
-def plot_daily_profile(profile_ds, height_slice=None, figsize=(16, 6)):
-    # TODO : move to vis_utils.py
-    # TODO: add scintific ticks on colorbar
-    wavelengths = profile_ds.Wavelength.values
-    if height_slice is None:
-        height_slice = slice(profile_ds.Height[0].values, profile_ds.Height[-1].values)
-    str_date = profile_ds.Time[0].dt.strftime("%Y-%m-%d").values.tolist()
-    ncols = wavelengths.size
-    fig, axes = plt.subplots(nrows=1, ncols=ncols, figsize=figsize, sharey=True)
-    if ncols > 1:
-        for wavelength, ax in zip(wavelengths, axes.ravel()):
-            profile_ds.sel(Height=height_slice, Wavelength=wavelength).plot(cmap='turbo', ax=ax)
-            ax.xaxis.set_major_formatter(TIMEFORMAT)
-            ax.xaxis.set_tick_params(rotation=0)
-    else:
-        ax = axes
-        profile_ds.sel(Height=height_slice).plot(cmap='turbo', ax=ax)
-        ax.xaxis.set_major_formatter(TIMEFORMAT)
-        ax.xaxis.set_tick_params(rotation=0)
-    plt.suptitle(f"{profile_ds.info} - {str_date}")
-    plt.ticklabel_format(axis="y", style="sci", scilimits=(0, 0))
-    plt.tight_layout()
-    plt.show()
+def create_ratio(total_bins, mode='ones', start_height=0.3, ref_height=2.5, ref_height_bin=300):
+    """
+    Generating ratio, mainly for applying different endings on the daily profile, or overlap function.
+    Currently the ratio is "1" for all bins.
+    Change this function to produce more options of generated aerosol densities.
+    :param total_bins: Total bins in one column of measurements (through height)
+    :param start_height: Start measuring height ( the height of 1st bin) in km
+    :param mode: The mode of the generated ratio:
+        1. "ones" - all bins are equal
+        2. "end" - apply different ratio on the endings of the aerosols density
+        3. "overlap" - generate some overlap function on the lidar measurement, the varying ratio is on lower heights.
+    :param ref_height: Reference height in km
+    :param ref_height_bin: The bin number of reference height
+    :return: Ratio 0-1 throughout height , that affect on the aerosols density or the lidar measurement.
+    """
+    t_interp = np.arange(start=1, stop=total_bins + 1, step=1)
+    if mode == "end":
+        t_start = start_height / ref_height
+        t_ending = np.array(
+            [0, 0.125 * t_start, 0.25 * t_start, .5 * t_start, t_start, 0.05, 0.1, .3, .4, .5, .6, .7, .8, .9,
+             1.0]) * np.float(ref_height_bin)
+        ratios = np.array([1, 1, 1, 1, 1, 1.0, 1, 1, 1, 1, 0.95, 0.85, 0.4, .3, 0.2])
+        ratio_interp = np.interp(t_interp, t_ending, ratios)
+        smooth_ratio = gaussian_filter1d(ratio_interp, sigma=40)
+    elif mode == "overlap":
+        # the overlap function is relevant to heights up 600-700 meter. setting to 95 means 90*7.5 =675 [m]
+        t_start = 95 / total_bins
+        r_start = 1
+        t_overlap = np.array(
+            [0.0, 0.2 * t_start, 0.5 * t_start, .75 * t_start, t_start, 0.05, 0.1, .3, .4, .5, .6, .7, .8, .9,
+             1.0]) * np.float(ref_height_bin)
+        ratios = np.array([.0, 0.2 * r_start, 0.5 * r_start, 0.75 * r_start, r_start, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1])
+        ratio_interp = np.interp(t_interp, t_overlap, ratios)
+        smooth_ratio = gaussian_filter1d(ratio_interp, sigma=40)
+    elif mode == "ones":
+        y = np.arange(total_bins)
+        smooth_ratio = np.ones_like(y)
+
+    if PLOT_RESULTS:
+        plt.figure(figsize=(3, 3))
+        plt.plot(smooth_ratio, t_interp, label=mode)
+        plt.ylabel('Height bins')
+        plt.xlabel('ratio')
+        plt.show()
+
+    return smooth_ratio
 
 
-def plot_hourly_profile(profile_ds, height_slice=None, figsize=(10, 6), times=None):
-    # TODO : move to vis_utils.py
-    # TODO: add scintific ticks on colorbar
-    day_date = prep.dt64_2_datetime(profile_ds.Time[0].values)
-    str_date = day_date.strftime("%Y-%m-%d")
-    if times == None:
-        times = [day_date + timedelta(hours=8),
-                 day_date + timedelta(hours=12),
-                 day_date + timedelta(hours=18)]
-    if height_slice is None:
-        height_slice = slice(profile_ds.Height[0].values, profile_ds.Height[-1].values)
+def convert_to32(base_path, paths, exclude_paths):
+    """
+    Loads and saves all nc files in paths, excluding exclude_paths from base_path.
+    Can be used to convert to nc fiels previously saved as float64 as float32 (current default)
 
-    ncols = len(times)
-    fig, axes = plt.subplots(nrows=1, ncols=ncols, figsize=figsize, sharey=True)
-    for t, ax in zip(times,
-                     axes.ravel()):
-        profile_ds.sel(Time=t, Height=height_slice).plot.line(ax=ax, y='Height', hue='Wavelength')
-        ax.set_title(pd.to_datetime(str(t)).strftime('%H:%M:%S'))
-    plt.tight_layout()
-    plt.suptitle(f"{profile_ds.info} - {str_date}")
-    plt.ticklabel_format(axis="y", style="sci", scilimits=(0, 0))
-    plt.tight_layout()
-    plt.show()
+    Example:
+        base_path = r"D:"
+        paths = [r"\data_haifa\GENERATION",
+                 r"\data_haifa\DATA FROM TROPOS\molecular_dataset",
+                 r"\data_haifa\DATA FROM TROPOS\lidar_dataset"]
+
+        exclude_paths = [r"D:\data_haifa\GENERATION\density_dataset\2017\04",
+                         r"D:\data_haifa\GENERATION\density_dataset\2017\05"]
+
+    :return: None
+    """
+
+    exclude_files = []
+    for exclude_path in exclude_paths:
+        exclude_files.extend(list(Path(exclude_path).glob("**/*.nc")))
+    exclude_files = [str(x) for x in exclude_files]
+    exclude_files = set(exclude_files)
+
+    for path in paths:
+        full_paths = Path(base_path + path)
+        file_list = set([str(pp) for pp in full_paths.glob("**/*.nc")])
+        file_list = file_list - exclude_files
+        print(f"found {len(file_list)} nc files in path {base_path + path}")
+        for nc_path in tqdm(file_list):
+            ds = prep.load_dataset(str(nc_path))
+            prep.save_dataset(ds, nc_path=str(nc_path))

@@ -1,17 +1,22 @@
 import os
 from datetime import datetime, timedelta, date
+
 import matplotlib.pyplot as plt
+import numpy as np
 import pandas as pd
 import xarray as xr
-import learning_lidar.utils.global_settings as gs
-import numpy as np
+
 import learning_lidar.preprocessing.preprocessing as prep
-gs.set_visualization_settings()
+import learning_lidar.utils.global_settings as gs
+import learning_lidar.utils.vis_utils as vis_utils
+
+vis_utils.set_visualization_settings()
 
 # TODO
 #  1. Add a section of AERONET dataset preparation to preprocessing.py
 #  2. Apply this notebook on any month measured during the year.
 #  3. Add the calibration info to ds_day in synthisize_lidar_measurments.ipynb
+#  4. Organize main() to functions & comments
 
 
 # TODO NAN values in ds_aod.aod??

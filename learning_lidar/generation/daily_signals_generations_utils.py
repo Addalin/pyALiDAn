@@ -9,23 +9,22 @@ import pandas as pd
 import xarray as xr
 from scipy.ndimage import gaussian_filter1d
 import logging
+
+import learning_lidar.preprocessing.preprocessing_utils as prep_utils
+import learning_lidar.utils.vis_utils as vis_utils
 from learning_lidar.utils.utils import create_and_configer_logger
 import learning_lidar.utils.global_settings as gs
 import learning_lidar.generation.generation_utils as gen_utils
 from learning_lidar.preprocessing import preprocessing as prep
 from learning_lidar.utils.misc_lidar import calc_tau, generate_poisson_signal_STEP
-from learning_lidar.utils.global_settings import TIMEFORMAT
-# %%
+from learning_lidar.utils.vis_utils import TIMEFORMAT
+
 logger = create_and_configer_logger(f"{os.path.basename(__file__)}.log", level=logging.INFO)
-gs.set_visualization_settings()
+vis_utils.set_visualization_settings()
 wavelengths = gs.LAMBDA_nm().get_elastic()
-PLOT_RESULTS = True
+PLOT_RESULTS = False
 
 
-# %% Helper functions
-
-
-# %%
 def calc_total_optical_density(station, day_date):
     """
     Generate total backscatter and extinction profiles
@@ -38,25 +37,25 @@ def calc_total_optical_density(station, day_date):
         The datasets' variable, share 3 dimensions : 'Wavelength', 'Height', 'Time'
     """
     # %% 1. Load generated aerosol profiles
-    month_folder = prep.get_month_folder_name(station.gen_aerosol_dataset, day_date)
+    month_folder = prep_utils.get_month_folder_name(station.gen_aerosol_dataset, day_date)
     nc_aer = gen_utils.get_gen_dataset_file_name(station, day_date, data_source='aerosol')
-    ds_aer = prep.load_dataset(os.path.join(month_folder, nc_aer))
+    aer_ds = prep.load_dataset(os.path.join(month_folder, nc_aer))
 
     if PLOT_RESULTS:
         height_slice = slice(0.0, 15)
-        gen_utils.plot_daily_profile(profile_ds=ds_aer.sigma, height_slice=height_slice)
-        gen_utils.plot_daily_profile(profile_ds=ds_aer.beta, height_slice=height_slice)
+        vis_utils.plot_daily_profile(profile_ds=aer_ds.sigma, height_slice=height_slice)
+        vis_utils.plot_daily_profile(profile_ds=aer_ds.beta, height_slice=height_slice)
 
     # %% 2. Load molecular profiles
-    month_folder = prep.get_month_folder_name(station.molecular_dataset, day_date)
+    month_folder = prep_utils.get_month_folder_name(station.molecular_dataset, day_date)
     nc_name = prep.get_prep_dataset_file_name(station, day_date, data_source='molecular', lambda_nm='all')
     ds_mol = prep.load_dataset(os.path.join(month_folder, nc_name))
 
     # %% 3. Calculate total densities
-    total_sigma = (ds_aer.sigma + ds_mol.sigma).assign_attrs({'info': "Daily total extinction coefficient",
+    total_sigma = (aer_ds.sigma + ds_mol.sigma).assign_attrs({'info': "Daily total extinction coefficient",
                                                               'long_name': r'$\sigma$', 'units': r'$1/km$',
                                                               'name': 'sigma'})
-    total_beta = (ds_aer.beta + ds_mol.beta).assign_attrs({'info': "Daily total backscatter coefficient",
+    total_beta = (aer_ds.beta + ds_mol.beta).assign_attrs({'info': "Daily total backscatter coefficient",
                                                            'long_name': r'$\beta$', 'units': r'$1/km$',
                                                            'name': 'beta'})
 
@@ -70,8 +69,8 @@ def calc_total_optical_density(station, day_date):
     total_ds['date'] = day_date
 
     if PLOT_RESULTS:
-        gen_utils.plot_daily_profile(profile_ds=total_ds.sigma)
-        gen_utils.plot_daily_profile(profile_ds=total_ds.beta)
+        vis_utils.plot_daily_profile(profile_ds=total_ds.sigma)
+        vis_utils.plot_daily_profile(profile_ds=total_ds.beta)
 
     return total_ds
 
@@ -113,7 +112,7 @@ def calc_attbsc_ds(station, day_date, total_ds):
     attbsc_ds['date'] = day_date
 
     if PLOT_RESULTS:
-        gen_utils.plot_daily_profile(profile_ds=attbsc_ds, figsize=(16, 8))
+        vis_utils.plot_daily_profile(profile_ds=attbsc_ds, figsize=(16, 8))
 
     return attbsc_ds
 
@@ -200,7 +199,7 @@ def calc_range_corr_signal_ds(station, day_date, attbsc_ds, lc_ds):
     attbsc_ds.Wavelength.attrs = {'units': r'$\lambda$', 'units': r'$nm$'}
     attbsc_ds['date'] = day_date
     if PLOT_RESULTS:
-        gen_utils.plot_daily_profile(profile_ds=pr2_ds, figsize=(16, 8))
+        vis_utils.plot_daily_profile(profile_ds=pr2_ds, figsize=(16, 8))
 
     return pr2_ds
 
@@ -233,34 +232,8 @@ def calc_lidar_signal_ds(station, day_date, r2_ds, pr2_ds):
         raise ValueError(msg)
 
     if PLOT_RESULTS:
-        gen_utils.plot_daily_profile(profile_ds=p_ds, height_slice=slice(0, 5), figsize=(16, 8))
+        vis_utils.plot_daily_profile(profile_ds=p_ds, height_slice=slice(0, 5), figsize=(16, 8))
     return p_ds
-
-
-def calc_r2_ds(station, day_date):
-    """
-    calc r^2 (as 2D image)
-    :param station: gs.station() object of the lidar station
-    :param day_date: datetime.date object of the required date
-    :return: xr.Dataset(). A a daily r^2 dataset
-    """
-    height_bins = station.get_height_bins_values()
-    wavelengths = gs.LAMBDA_nm().get_elastic()
-    r_im = np.tile(height_bins.reshape(height_bins.size, 1), (len(wavelengths), 1, station.total_time_bins))
-    rr_im = r_im ** 2
-    r2_ds = xr.Dataset(data_vars={'r': (['Wavelength', 'Height', 'Time'], r_im,
-                                        {'info': 'The heights bins',
-                                         'name': 'r', 'long_name': r'$r$',
-                                         'units': r'$km$'}),
-                                  'r2': (['Wavelength', 'Height', 'Time'], rr_im,
-                                         {'info': 'The heights bins squared',
-                                          'name': 'r2', 'long_name': r'$r^2$',
-                                          'units': r'$km^2$'})},
-                       coords={'Wavelength': wavelengths,
-                               'Height': station.calc_height_index(),
-                               'Time': station.calc_daily_time_index(day_date).values})
-    r2_ds = r2_ds.transpose('Wavelength', 'Height', 'Time')
-    return r2_ds.r2
 
 
 def calc_lidar_signal(station, day_date, total_ds):
@@ -275,10 +248,9 @@ def calc_lidar_signal(station, day_date, total_ds):
     attbsc_ds = calc_attbsc_ds(station, day_date, total_ds)  # attbsc = beta*exp(-2*tau)
     lc_ds = get_daily_LC(station, day_date)  # LC
     pr2_ds = calc_range_corr_signal_ds(station, day_date, attbsc_ds, lc_ds)  # pr2 = LC * attbsc
-    r2_ds = calc_r2_ds(station, day_date)  # r^2
+    r2_ds = prep_utils.calc_r2_ds(station, day_date)  # r^2
     p_ds = calc_lidar_signal_ds(station, day_date, r2_ds, pr2_ds)  # p = pr2 / r^2
-
-    pn_ds = calc_poiss_measurement(station, day_date, p_ds)  # lidar measurement: pn ~Poiss(mu_p)
+    pn_ds = calc_poiss_measurement(station, day_date, p_ds)  # lidar measurement: pn ~Poiss(p), w.o background
     pr2n_ds = calc_range_corr_measurement(station, day_date, pn_ds,
                                           r2_ds)  # range corrected measurement: pr2n = pn * r^2
     pr2n_ds.attrs['info'] += ' - w.o. background'
@@ -311,7 +283,7 @@ def calc_mean_measurement(station, day_date, signal_ds, bg_ds):
     p_mean.Wavelength.attrs = {'units': r'$\lambda$', 'units': r'$nm$'}
     p_mean['date'] = day_date
     if PLOT_RESULTS:
-        gen_utils.plot_daily_profile(p_mean.where(p_mean < 20), height_slice=slice(0, 10))
+        vis_utils.plot_daily_profile(p_mean.where(p_mean < 20), height_slice=slice(0, 10))
     return p_mean
 
 
@@ -408,10 +380,21 @@ def calc_daily_measurement(station, day_date, signal_ds):
     bg_ds = p_bg.broadcast_like(signal_ds.range_corr)
 
     p_mean = calc_mean_measurement(station, day_date, signal_ds, bg_ds)  # mean lidar signal: mu_p = p_bg + p
+    # Apply Overlap function
+    Height_indx = p_mean.Height
+    # TODO : this is a dummy function --> need to adapt with more info from TROPOS
+    overlap = gen_utils.create_ratio(total_bins=Height_indx.size, mode='overlap')
+    overlap_ds = xr.Dataset(data_vars={'overlap': ('Height', overlap)},
+                            coords={'Height': Height_indx.values},
+                            attrs={'name': 'Overlap Function'})
+    p_mean = xr.apply_ufunc(lambda x, r: (x * r),
+                            p_mean, overlap_ds.overlap,
+                            keep_attrs=True).assign_attrs({'info': p_mean.info+' with applied overlap'})
+
     pn_ds = calc_poiss_measurement(station, day_date, p_mean)  # lidar measurement: pn ~Poiss(mu_p)
     pr2n_ds = calc_range_corr_measurement(station, day_date, pn_ds,
                                           signal_ds.r2)  # range corrected measurement: pr2n = pn * r^2
-    measure_ds = xr.Dataset().assign(p=pn_ds, range_corr=pr2n_ds, p_mean=p_mean, p_bg=bg_ds)
+    measure_ds = xr.Dataset().assign(p=pn_ds, range_corr=pr2n_ds, p_mean=p_mean, p_bg=bg_ds, overlap= overlap_ds)
     measure_ds['date'] = day_date
     measure_ds.attrs = {'location': station.location,
                         'info': 'Daily generated lidar signals measurement.',

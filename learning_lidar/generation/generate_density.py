@@ -2,12 +2,11 @@ import logging
 from datetime import datetime
 from itertools import repeat
 import os
-import matplotlib.pyplot as plt
+
 import pandas as pd
-import seaborn as sns
 import learning_lidar.utils.global_settings as gs
 import learning_lidar.generation.generation_utils as gen_utils
-from learning_lidar.generation.generate_density_utils import generate_density, generate_aerosol, explore_gen_day
+import learning_lidar.utils.vis_utils as vis_utils
 from multiprocessing import Pool, cpu_count
 import learning_lidar.generation.generate_density_utils as gen_den_utils
 from learning_lidar.utils.utils import create_and_configer_logger
@@ -26,10 +25,10 @@ def generate_daily_aerosol_density(station, day_date, SAVE_DS=True):
     ds_day_params = gen_utils.get_daily_gen_param_ds(station=station, day_date=day_date, type='density_params')
 
     # Generate Daily Aerosols' Density
-    density_ds = generate_density(station=station, day_date=day_date, day_params_ds=ds_day_params)
+    density_ds = gen_den_utils.generate_density(station=station, day_date=day_date, day_params_ds=ds_day_params)
 
     # Generate Daily Aerosols' Optical Density
-    aer_ds = generate_aerosol(station=station, day_date=day_date, day_params_ds=ds_day_params,
+    aer_ds = gen_den_utils.generate_aerosol(station=station, day_date=day_date, day_params_ds=ds_day_params,
                               density_ds=density_ds)
 
     # TODO: add שמ option of 'size_optim' to optimize size from float64 to float32.
@@ -44,7 +43,7 @@ def generate_daily_aerosol_density(station, day_date, SAVE_DS=True):
 
 
 def generate_density_main(station_name='haifa', start_date=datetime(2017, 9, 1), end_date=datetime(2017, 9, 2)):
-    gs.set_visualization_settings()
+    vis_utils.set_visualization_settings()
     gen_den_utils.PLOT_RESULTS = False  # Toggle True for debug. False for run.
     logging.getLogger('PIL').setLevel(logging.ERROR)  # Fix annoying PIL logs
     logging.getLogger('matplotlib').setLevel(logging.ERROR)  # Fix annoying matplotlib logs
@@ -63,7 +62,7 @@ def generate_density_main(station_name='haifa', start_date=datetime(2017, 9, 1),
     # TODO: move the folowing part to a notebook in Analysis
     # EXPLORE_GEN_DAY = False
     # if EXPLORE_GEN_DAY:
-    #    explore_gen_day(station, cur_day, aer_ds, density_ds)
+    #    gen_den_utils.explore_gen_day(station, cur_day, aer_ds, density_ds)
 
 
 if __name__ == '__main__':

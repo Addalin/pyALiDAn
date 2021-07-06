@@ -1,28 +1,26 @@
+import calendar
 import os
 from datetime import datetime, timedelta
-import matplotlib.pyplot as plt
 
-# Scientific and data
+import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
+import seaborn as sns
+import torch.utils.data
 import xarray as xr
 
-# pytorch
-import torch.utils.data
-
-# Local modules
-import learning_lidar.utils.global_settings as gs
-import learning_lidar.preprocessing.preprocessing as prep
-from learning_lidar.utils.proc_utils import Bezier
-# %% Plotting Settings
 import learning_lidar.generation.generation_utils as gen_utils
-import calendar
-import seaborn as sns
+import learning_lidar.preprocessing.preprocessing as prep
+import learning_lidar.preprocessing.preprocessing_utils as prep_utils
+import learning_lidar.utils.global_settings as gs
+import learning_lidar.utils.vis_utils as vis_utils
+from learning_lidar.utils.proc_utils import Bezier
 
 eps = np.finfo(np.float).eps
 torch.manual_seed(8318)
 
 # TODO:  add 2 flags - Debug and save figure.
+# TODO : organize main() to functions & comments
 # %% Helper Functions
 def decay_p(t, t0, p0, days_decay):
     return p0 * (np.exp(-(t - t0) / days_decay))
@@ -33,7 +31,7 @@ def var_p(p, maxv, minv, val):
 
 
 sns.set_theme()
-gs.set_visualization_settings()
+vis_utils.set_visualization_settings()
 
 
 def main(station_name, start_date, end_date):
@@ -137,7 +135,7 @@ def main(station_name, start_date, end_date):
 
     fig, ax = plt.subplots(ncols=1, nrows=1, figsize=(7, 5))
     ds_gen_p.p.plot(ax=ax, hue='Wavelength', linewidth=0.5)
-    for wavelength, c in zip(wavelengths, gs.COLORS):
+    for wavelength, c in zip(wavelengths, vis_utils.COLORS):
         ax.fill_between(ds_gen_p.Time.values,
                         ds_gen_p.p_lbound.sel(Wavelength=wavelength).values,
                         ds_gen_p.p_ubound.sel(Wavelength=wavelength).values,
@@ -150,7 +148,7 @@ def main(station_name, start_date, end_date):
     fig, ax = plt.subplots(ncols=1, nrows=1, figsize=(7, 5))
     ds_gen_p.p.plot(ax=ax, hue='Wavelength', linewidth=0.5)
     ds_gen_p.plot.scatter(ax=ax, y='p_new', x='Time', hue='Wavelength', s=8, hue_style='discrete', edgecolor='w')
-    for wavelength, c in zip(wavelengths, gs.COLORS):
+    for wavelength, c in zip(wavelengths, vis_utils.COLORS):
         ax.fill_between(ds_gen_p.Time.values,
                         ds_gen_p.p_lbound.sel(Wavelength=wavelength).values,
                         ds_gen_p.p_ubound.sel(Wavelength=wavelength).values,
@@ -177,8 +175,8 @@ def main(station_name, start_date, end_date):
     n_pts = p_slice.Time.size
     t0 = p_slice.Time[0].values
     t1 = p_slice.Time[-1].values
-    dt0 = prep.dt64_2_datetime(t0)
-    dt1 = prep.dt64_2_datetime(t1)
+    dt0 = prep_utils.dt64_2_datetime(t0)
+    dt1 = prep_utils.dt64_2_datetime(t1)
     difft = (dt1 - dt0)
 
     n_total = difft.days * station.total_time_bins + difft.seconds / station.freq
@@ -206,7 +204,7 @@ def main(station_name, start_date, end_date):
     new_p.Wavelength.attrs = {'long_name': r'$\lambda$', 'units': r'$nm$'}
 
     fig, ax = plt.subplots(ncols=1, nrows=1, figsize=(10, 5))
-    for wavelength, c in zip(wavelengths, gs.COLORS):
+    for wavelength, c in zip(wavelengths, vis_utils.COLORS):
         ax.fill_between(ds_gen_p.Time.values,
                         ds_gen_p.p_lbound.sel(Wavelength=wavelength).values,
                         ds_gen_p.p_ubound.sel(Wavelength=wavelength).values,

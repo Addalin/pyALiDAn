@@ -15,6 +15,7 @@ import pandas as pd
 import xarray as xr
 
 # %% Local modules imports
+import learning_lidar.preprocessing.preprocessing_utils as prep_utils
 import learning_lidar.utils.global_settings as gs
 from learning_lidar.dataseting.dataseting_utils import get_query, query_database, add_profiles_values, add_X_path, \
     get_time_slots_expanded, convert_Y_features_units, recalc_LC, split_save_train_test_ds, get_generated_X_path, \
@@ -195,7 +196,7 @@ def create_dataset(station_name='haifa', start_date=datetime(2017, 9, 1),
                 df['date'] = day_date.strftime('%Y-%m-%d')
 
                 df = add_profiles_values(df, station, day_date, file_type='profiles')
-
+                # TODO: use get_prep_X_path for : 'lidar':'range_corr' ; 'molecular':'attbsc' ; 'bg': 'p_bg'
                 df = add_X_path(df, station, day_date, lambda_nm=wavelength, data_source='lidar',
                                 file_type='range_corr')
                 df = add_X_path(df, station, day_date, lambda_nm=wavelength, data_source='molecular',
@@ -478,9 +479,9 @@ def calc_day_statistics(station, day_date, top_height=15.3):
     df_stats = pd.DataFrame(index=pd.Index(wavelengths, name='wavelength'))
     logger.debug(f'\nCalculating stats for {day_date}')
     # folder names
-    mol_folder = prep.get_month_folder_name(station.molecular_dataset, day_date)
-    signal_folder = prep.get_month_folder_name(station.gen_signal_dataset, day_date)
-    lidar_folder = prep.get_month_folder_name(station.gen_lidar_dataset, day_date)
+    mol_folder = prep_utils.get_month_folder_name(station.molecular_dataset, day_date)
+    signal_folder = prep_utils.get_month_folder_name(station.gen_signal_dataset, day_date)
+    lidar_folder = prep_utils.get_month_folder_name(station.gen_lidar_dataset, day_date)
 
     # File names
     signal_nc_name = os.path.join(signal_folder,
@@ -540,7 +541,7 @@ def save_dataset2timesplits(station, dataset, data_source='lidar', mod_source='g
     :param time_slices:
     :return:
     """
-    day_date = prep.get_daily_ds_date(dataset)
+    day_date = prep_utils.get_daily_ds_date(dataset)
     if time_slices is None:
         time_slices = get_time_splits(station, start_date=day_date, end_date=day_date, sample_size=sample_size)
     if mod_source == 'gen':
@@ -559,6 +560,8 @@ def save_dataset2timesplits(station, dataset, data_source='lidar', mod_source='g
 def prepare_generated_samples(station, start_date, end_date, top_height=15.3):
     # TODO: Adapt this func to get a list of time slices, and group on days to seperate the signal (in case the
     #  times slots are not consecutive)
+    #  TODO: prepare_raw_samples()
+
     logger = logging.getLogger()
     dates = pd.date_range(start_date, end_date, freq='D')
     sample_size = '30min'
@@ -584,7 +587,7 @@ def prepare_generated_samples(station, start_date, end_date, top_height=15.3):
                 nc_name = prep.get_prep_dataset_file_name(station, day_date, data_source=load_source, lambda_nm='all')
             else:
                 nc_name = gen_utils.get_gen_dataset_file_name(station, day_date, data_source=load_source)
-            month_folder = prep.get_month_folder_name(base_folder, day_date)
+            month_folder = prep_utils.get_month_folder_name(base_folder, day_date)
             nc_path = os.path.join(month_folder, nc_name)
             dataset = prep.load_dataset(ncpath=nc_path)
             height_slice = slice(dataset.Height.min().values.tolist(),
