@@ -413,7 +413,8 @@ def get_raw_lidar_signal(station: gs.Station, day_date: datetime, height_slice: 
     return ds
 
 
-def get_daily_measurements(station: gs.Station, day_date: Union[datetime.date, datetime], use_km_units: bool = True) -> xr.Dataset:
+def get_daily_measurements(station: gs.Station, day_date: Union[datetime.date, datetime], use_km_units: bool = True) \
+        -> xr.Dataset:
     """
     Retrieving daily range corrected lidar signal (pr^2), background and raw lidar signal
      from attenuated_backscatter signals in three channels (355,532,1064).
@@ -460,8 +461,9 @@ def get_daily_measurements(station: gs.Station, day_date: Union[datetime.date, d
     pr2n = (pn_ds.p.copy(deep=True) * r2_ds)  # calc_range_corr_measurement #
     # TODO add assert np.sum(r2_ds.Height.values- pn_ds.p.Height.values)==0
     #  assert np.sum(r2_ds.Time.values- pn_ds.p.Time.values) == np.timedelta64(0,'ns')
-    # TODO: The multiplication above returns empty array if indeces are not the same!
-    #  The Height index was (of pr2n_ds) for some reason in meters where for r2_ds it was in km . so when doing so this should be chaeck before and stop if there is not consistency .
+    # TODO: The multiplication above returns empty array if indices are not the same!
+    #  The Height index was (of pr2n_ds) for some reason in meters where for r2_ds it was in km .
+    #  so when doing so this should be check before and stop if there is no consistency.
 
     pr2n.attrs = {'info': 'Raw Range Corrected Lidar Signal',
                      'long_name': r'$\rm p$' + r'$\cdot r^2$', 'name': 'range_corr',
@@ -483,14 +485,19 @@ def get_daily_measurements(station: gs.Station, day_date: Union[datetime.date, d
 def get_prep_dataset_file_name(station, day_date, data_source='molecular',
                                lambda_nm='*', file_type='*', time_slice=None):
     """
-     Retrieves file pattern name of preprocessed dataset according to date, station, wavelength dataset source, and profile type.
+     Retrieves file pattern name of preprocessed dataset according to
+     date, station, wavelength dataset source, and profile type.
+
     :param station: gs.station() object of the lidar station
     :param day_date: datetime.datetime object of the measuring date
-    :param lambda_nm: wavelength [nm] e.g., for the green channel 532 [nm] or all (meaning the dataset contains all elastic wavelengths)
+    :param lambda_nm: wavelength [nm] e.g., for the green channel 532 [nm] or
+    all (meaning the dataset contains all elastic wavelengths)
     :param data_source: string object: 'molecular' or 'lidar'
-    :param file_type: string object: e.g., 'attbsc' for molecular_dataset or 'range_corr' for a lidar_dataset, or 'all' (meaning the dataset contains several profile types)
+    :param file_type: string object: e.g., 'attbsc' for molecular_dataset or 'range_corr' for a lidar_dataset, or
+    'all' (meaning the dataset contains several profile types)
 
-    :return: dataset file name (netcdf) file of the data_type required per given day and wavelength, data_source and file_type
+    :return: dataset file name (netcdf) file of the data_type required per
+    given day and wavelength, data_source and file_type
     """
     dt_str = day_date.strftime('%Y_%m_%d')
     if time_slice:
@@ -509,12 +516,16 @@ def get_prep_dataset_file_name(station, day_date, data_source='molecular',
 
 def get_prep_dataset_paths(station, day_date, data_source='molecular', lambda_nm='*', file_type='*'):
     """
-     Retrieves file paths of preprocessed datasets according to date, station, wavelength dataset source, and profile type.
+     Retrieves file paths of preprocessed datasets according to
+     date, station, wavelength dataset source, and profile type.
+
     :param station: gs.station() object of the lidar station
     :param day_date: datetime.datetime object of the measuring date
-    :param lambda_nm: wavelength [nm] e.g., for the green channel 532 [nm], or 'all' (meaning the dataset contains several profile types)
+    :param lambda_nm: wavelength [nm] e.g., for the green channel 532 [nm], or
+    'all' (meaning the dataset contains several profile types)
     :param data_source: string object: 'molecular' or 'lidar'
-    :param file_type: string object: e.g., 'attbsc' for molecular_dataset or 'range_corr' for a lidar_dataset, or 'all' (meaning the dataset contains several profile types)
+    :param file_type: string object: e.g., 'attbsc' for molecular_dataset or 'range_corr' for a lidar_dataset, or
+    'all' (meaning the dataset contains several profile types)
 
     :return: paths to all datasets netcdf files of the data_type required per given day and wavelength
     """
@@ -537,7 +548,7 @@ def get_prep_dataset_paths(station, day_date, data_source='molecular', lambda_nm
 def gen_daily_molecular_ds(day_date):
     """
     Generating and saving a daily molecular profile.
-    The profile is of type xr.Datatset().
+    The profile is of type xr.Dataset().
     Having 3 variables: sigma (extinction) ,beta(backscatter) and attbsc(beta*exp(-2tau).
     Each profile have dimensions of: Wavelength, Height, Time.
     :param day_date: datetime.date object of the required day
