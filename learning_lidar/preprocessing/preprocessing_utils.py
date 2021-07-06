@@ -372,7 +372,7 @@ def get_TROPOS_dataset_file_name(start_time=None, end_time=None, file_type='prof
     return pattern
 
 
-def get_TROPOS_dataset_paths(station, day_date, start_time=None, end_time=None, file_type='profiles'):
+def get_TROPOS_dataset_paths(station, day_date, start_time=None, end_time=None, file_type='profiles', level='level0'):
     """
     Retrieves netcdf (.nc) files from TROPOS for a given station and day_date, and type.
 
@@ -385,7 +385,11 @@ def get_TROPOS_dataset_paths(station, day_date, start_time=None, end_time=None, 
           for daily attenuation backscatter profile "*<att_bsc>.nc" ( or  "*<start_time>_<file_type>.nc" if start_time is given)
     :return: paths: paths to all *<file_type>.nc for a given station and day_date
     """
-    lidar_day_folder = get_TROPOS_day_folder_name(station.lidar_src_folder, day_date)
+    if level == 'level0':
+        parent_folder = station.lidar_src_folder
+    elif level == 'level1a':
+        parent_folder = station.lidar_src_calib_folder
+    lidar_day_folder = get_TROPOS_day_folder_name(parent_folder=parent_folder, day_date=day_date)
     file_name = get_TROPOS_dataset_file_name(start_time, end_time, file_type)
     paths_pattern = os.path.join(lidar_day_folder, file_name)
 
@@ -578,6 +582,7 @@ def calc_r2_ds(station, day_date):
     :param day_date: datetime.date object of the required date
     :return: xr.Dataset(). A a daily r^2 dataset
     """
+    # TODO add USE_KM_UNITS flag and units is km if  USE_KM_UNITS else m
     height_bins = station.get_height_bins_values()
     wavelengths = gs.LAMBDA_nm().get_elastic()
     r_im = np.tile(height_bins.reshape(height_bins.size, 1), (len(wavelengths), 1, station.total_time_bins))

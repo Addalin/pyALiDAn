@@ -78,7 +78,8 @@ def add_profiles_values(df, station, day_date, file_type='profiles'):
         df['matched_nc_profile'] = df.apply(lambda row: prep_utils.get_TROPOS_dataset_paths(station, day_date,
                                                                                             start_time=row.cali_start_time,
                                                                                             end_time=row.cali_stop_time,
-                                                                                                                                  file_type=file_type)[0],
+                                                                                            file_type=file_type,
+                                                                                            level='level1a')[0],
                                             axis=1, result_type='expand')
     except Exception:
         logger.exception(

@@ -1,7 +1,10 @@
+import argparse
 import csv
 import logging
 # %% testing multiproccesing from: https://gist.github.com/morkrispil/3944242494e08de4643fd42a76cb37ee
 # import multiprocessing as mp
+from datetime import datetime
+
 import multiprocess as mp
 from functools import partial
 import pandas as pd
@@ -151,3 +154,18 @@ def visCurve(lData, rData, stitle=""):
     fig.set_constrained_layout = True
 
     return [fig, axes]
+
+
+def get_base_arguments(parser=None):
+    if not parser:
+        parser = argparse.ArgumentParser()
+    parser.add_argument('-n', '--station_name', type=str, default='haifa',
+                        help='The station name')
+    parser.add_argument('--start_date', type=datetime.fromisoformat,
+                        default='2017-09-01',
+                        help='The start date to use')
+    parser.add_argument('--end_date', type=datetime.fromisoformat,
+                        default='2017-10-31',
+                        help='The end date to use')
+
+    return parser

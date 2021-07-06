@@ -4,7 +4,6 @@ from datetime import datetime, timedelta
 from IPython.display import display
 import logging
 from tqdm import tqdm
-from pytictoc import TicToc
 import argparse
 
 from itertools import repeat
@@ -18,12 +17,12 @@ import xarray as xr
 # %% Local modules imports
 import learning_lidar.preprocessing.preprocessing_utils as prep_utils
 import learning_lidar.utils.global_settings as gs
-from learning_lidar.dataseting.dataseting_utils import get_query, query_database, add_profiles_values, add_X_path, \
+from learning_lidar.dataseting.dataseting_utils import get_query, query_database, add_profiles_values, \
     get_time_slots_expanded, convert_Y_features_units, recalc_LC, split_save_train_test_ds, get_generated_X_path, \
     get_mean_lc, get_prep_X_path
 from learning_lidar.generation.daily_signals_generations_utils import get_daily_bg
 from learning_lidar.preprocessing import preprocessing as prep
-from learning_lidar.utils.utils import create_and_configer_logger
+from learning_lidar.utils.utils import create_and_configer_logger, get_base_arguments
 import learning_lidar.generation.generation_utils as gen_utils
 
 
@@ -130,8 +129,10 @@ def dataseting_main(args, log_level=logging.DEBUG):
         split_save_train_test_ds(csv_path=csv_gen_path)
         logger.info(f"\nDone splitting train-test dataset for {csv_gen_path}")
 
+    if args.CREATE_GENERATED_SAMPLES:
+        prepare_samples(station, start_date, end_date, top_height=15.3, generated=True)
     if args.CREATE_SAMPLES:
-        prepare_generated_samples(station, start_date, end_date, top_height=15.3)
+        prepare_samples(station, start_date, end_date, top_height=15.3, generated=False)
 
 
 # %% Dataset creating helper functions
@@ -159,7 +160,7 @@ def create_dataset(station_name='haifa', start_date=datetime(2017, 9, 1),
     delta_r (r1-r0) DONE
 
     X:
-    lidar_path (station.lidar_src_folder/<%Y/%M/%d> +nc_zip_file+'att_bsc.nc'
+    lidar_path (station.lidar_src_calib_folder/<%Y/%M/%d> +nc_zip_file+'att_bsc.nc'
     molecular_path ( station .molecular_src_folder/<%Y/%M><day_mol.nc>
     Dataset of calibrated samples for learning calibration method.
 
@@ -444,6 +445,19 @@ def calc_data_statistics(station, start_date, end_date, top_height=15.3):
     :return: df_stats: pd.Dataframe, containing statistics of mean and std values for generation signals during
      the desired period [start_date, end_date]. Note: one should previously save the generated dataset for this period.
     """
+    """
+        TODO
+        Changes for non generated data:
+            change dataset path (without gen)
+            profiles_sources = [('range_corr', 'lidar'),  # Pois measurement signal - p_n
+                                ('attbsc', 'molecular'),  # molecular signal - attbsc
+                                ('p_bg', 'bg')] 
+            iterate over df rows and for each run calc_day(sample)_statistics
+            change calc_day(sample)_statistics()
+            Mean std min max LC from csv, per wavelength, instead of second for loop in calc_day_statistics
+            
+            change save path
+    """
     data_folder = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))), 'data')
     csv_gen_fname = f"dataset_gen_{station.name}_{start_date.strftime('%Y-%m-%d')}_{end_date.strftime('%Y-%m-%d')}.csv"
     csv_gen_path = os.path.join(data_folder, csv_gen_fname)
@@ -474,6 +488,7 @@ def calc_data_statistics(station, start_date, end_date, top_height=15.3):
     for result in results:
         df_stats += result
 
+
     norm_scale = 1 / len(days_list)
     df_stats *= norm_scale  # normalize by number of days
 
@@ -493,6 +508,11 @@ def calc_day_statistics(station, day_date, top_height=15.3):
     :param top_height: np.float(). The Height[km] **above** ground (Lidar) level - up to which slice the samples.
     Note: default is 15.3 [km]. IF ONE CHANGES IT - THAN THIS WILL AFFECT THE INPUT DIMENSIONS AND STATISTICS !!!
     :return: dataframe, each row corresponds to a wavelength
+    """
+    """
+        TODO
+        from row (in csv format) lidar_nc_name (lidar_path), mol_nc_name (molecular_path), bg_ds (bg_path), 
+        datasets_with_names_time_height without signal, move (p_bg, f'p_bg_bg') to first call
     """
     logger = logging.getLogger()
     wavelengths = gs.LAMBDA_nm().get_elastic()
@@ -581,7 +601,7 @@ def save_dataset2timesplits(station, dataset, data_source='lidar', mod_source='g
     return ncpaths
 
 
-def prepare_generated_samples(station, start_date, end_date, top_height=15.3):
+def prepare_samples(station, start_date, end_date, top_height=15.3, generated=False):
     # TODO: Adapt this func to get a list of time slices, and group on days to seperate the signal (in case the
     #  times slots are not consecutive)
     #  TODO: prepare_raw_samples()
@@ -589,11 +609,16 @@ def prepare_generated_samples(station, start_date, end_date, top_height=15.3):
     logger = logging.getLogger()
     dates = pd.date_range(start_date, end_date, freq='D')
     sample_size = '30min'
-    source_profile_path_mode = [('signal_p', 'range_corr_p', station.gen_signal_dataset, 'gen'),
-                                ('signal', 'range_corr', station.gen_signal_dataset, 'gen'),
-                                ('lidar', 'range_corr', station.gen_lidar_dataset, 'gen'),
-                                ('bg', 'p_bg', station.gen_lidar_dataset, 'gen'),
-                                ('molecular', 'attbsc', station.molecular_dataset, 'prep')]
+    if generated:
+        source_profile_path_mode = [('signal_p', 'range_corr_p', station.gen_signal_dataset, 'gen'),
+                                    ('signal', 'range_corr', station.gen_signal_dataset, 'gen'),
+                                    ('lidar', 'range_corr', station.gen_lidar_dataset, 'gen'),
+                                    ('bg', 'p_bg', station.gen_lidar_dataset, 'gen'),
+                                    ('molecular', 'attbsc', station.molecular_dataset, 'prep')]
+    else:
+        source_profile_path_mode = [('lidar', 'range_corr', station.lidar_dataset, 'prep'),
+                                    ('bg', 'p_bg', station.lidar_dataset, 'prep'),
+                                    ('molecular', 'attbsc', station.molecular_dataset, 'prep')]
 
     for day_date in dates:
         logger.info(f"Load and split datasets for {day_date.strftime('%Y-%m-%d')}")
@@ -621,23 +646,12 @@ def prepare_generated_samples(station, start_date, end_date, top_height=15.3):
                                     sample_size=sample_size, mod_source=mode)
 
 
-def get_base_arguments(parser):
-    parser.add_argument('-n', '--station_name', type=str, default='haifa',
-                        help='The station name')
-    parser.add_argument('--start_date', type=datetime.fromisoformat,
-                        default='2017-09-01',
-                        help='The start date to use')
-    parser.add_argument('--end_date', type=datetime.fromisoformat,
-                        default='2017-10-31',
-                        help='The end date to use')
-
-    return parser
-
-
 if __name__ == '__main__':
 
-    parser = argparse.ArgumentParser()
-    parser = get_base_arguments(parser)
+    parser = get_base_arguments()
+
+    # TODO change modes to options instead of true\false?
+    #  or generation true\false then only one do and split?
     parser.add_argument('--DO_DATASET', action='store_true',
                         help='Whether to create a dataset')
     parser.add_argument('--EXTEND_DATASET', action='store_true',
@@ -649,12 +663,14 @@ if __name__ == '__main__':
     parser.add_argument('--DO_GENERATED_DATASET', action='store_true',
                         help='Whether to create DO_GENERATED_DATASET')
     parser.add_argument('--SPLIT_DATASET', action='store_true',
-                        help='Whether to create SPLIT_DATASET')
+                        help='Whether to create SPLIT_DATASET') # TODO rename to train test split
     parser.add_argument('--SPLIT_GENERATED_DATASET', action='store_true',
                         help='Whether to create SPLIT_GENERATED_DATASET')
     parser.add_argument('--CALC_GENERATED_STATS', action='store_true',
                         help='Whether to CALC_GENERATED_STATS')
-    parser.add_argument('--CREATE_SAMPLES', action='store_true',
+    parser.add_argument('--CREATE_GENERATED_SAMPLES', action='store_true',
+                        help='Whether to CREATE_GENERATED_SAMPLES')
+    parser.add_argument('--CREATE_SAMPLES', action='store_true', # TODO rename to  time based split
                         help='Whether to CREATE_SAMPLES')
 
     args = parser.parse_args()

@@ -25,7 +25,7 @@ Modules for physical and pollyXT constants.
 import pandas as pd
 from dataclasses import dataclass
 import os
-from datetime import timedelta
+from datetime import timedelta, datetime, date, time
 import numpy as np
 # %% Basic physics constants
 
@@ -79,9 +79,11 @@ class Station:
         self.pt_bin = station_df['pt_bin']  # number of pre trigger bins
         self.gdas1_folder = station_df['gdas1_folder']
         self.gdastxt_folder = station_df['gdastxt_folder']
+        self.lidar_src_calib_folder = station_df['lidar_src_calib_folder']
         self.lidar_src_folder = station_df['lidar_src_folder']
         self.molecular_dataset = station_df['molecular_dataset']
         self.lidar_dataset = station_df['lidar_dataset']
+        self.bg_dataset = station_df['bg_dataset']
         self.lidar_dataset_calib = station_df['lidar_dataset_calib']
         self.db_file = station_df['db_file']
         self.aeronet_folder = station_df['aeronet_folder']
@@ -134,8 +136,11 @@ class Station:
         return heights
 
     def calc_daily_time_index(self, day_date):
-        end_t = day_date + timedelta(hours=24) - timedelta(seconds=self.freq)
-        time_index = pd.date_range(start=day_date, end=end_t, freq=f'{self.freq}S')
+        # TODO: day_date should be of type datetime (not datetime.date) . The error was fixed .
+        #  but we need to clarify it, since up until now daye_date was datetime ..
+        start_dt = datetime.combine(day_date, time(0)) if type(day_date) == date else day_date
+        end_dt = start_dt + timedelta(hours=24) - timedelta(seconds=self.freq)
+        time_index = pd.date_range(start=start_dt, end=end_dt, freq=f'{self.freq}S')
         assert self.total_time_bins == len(time_index)
         return time_index
 
