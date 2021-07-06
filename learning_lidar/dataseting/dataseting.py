@@ -4,7 +4,6 @@ from datetime import datetime, timedelta
 from IPython.display import display
 import logging
 from tqdm import tqdm
-import argparse
 
 from itertools import repeat
 from multiprocessing import Pool, cpu_count
@@ -17,23 +16,11 @@ import xarray as xr
 # %% Local modules imports
 import learning_lidar.preprocessing.preprocessing_utils as prep_utils
 import learning_lidar.utils.global_settings as gs
-from learning_lidar.dataseting.dataseting_utils import get_query, query_database, add_profiles_values, \
-    get_time_slots_expanded, convert_Y_features_units, recalc_LC, split_save_train_test_ds, get_generated_X_path, \
-    get_mean_lc, get_prep_X_path
+import learning_lidar.dataseting.dataseting_utils as ds_utils
 from learning_lidar.generation.daily_signals_generations_utils import get_daily_bg
 from learning_lidar.preprocessing import preprocessing as prep
 from learning_lidar.utils.utils import create_and_configer_logger, get_base_arguments
 import learning_lidar.generation.generation_utils as gen_utils
-
-
-class Error(Exception):
-    """Base class for other exceptions"""
-    pass
-
-
-class EmptyDataFrameError(Error):
-    """Raised when the data frame is empty and should not have been"""
-    pass
 
 
 def dataseting_main(args, log_level=logging.DEBUG):
@@ -53,16 +40,19 @@ def dataseting_main(args, log_level=logging.DEBUG):
     csv_path = os.path.join(data_folder, f"dataset_{station_name}_"
                                          f"{start_date.strftime('%Y-%m-%d')}_{end_date.strftime('%Y-%m-%d')}.csv")
     csv_path_extended = os.path.join(data_folder, f"dataset_{station_name}_"
-                                                  f"{start_date.strftime('%Y-%m-%d')}_{end_date.strftime('%Y-%m-%d')}_extended.csv")
+                                                  f"{start_date.strftime('%Y-%m-%d')}_"
+                                                  f"{end_date.strftime('%Y-%m-%d')}_extended.csv")
     ds_path_extended = os.path.join(data_folder, f"dataset_{station_name}_"
-                                                 f"{start_date.strftime('%Y-%m-%d')}_{end_date.strftime('%Y-%m-%d')}_extended.nc")
+                                                 f"{start_date.strftime('%Y-%m-%d')}_"
+                                                 f"{end_date.strftime('%Y-%m-%d')}_extended.nc")
 
     csv_gen_path = os.path.join(data_folder, f"dataset_gen_{station_name}_"
                                              f"{start_date.strftime('%Y-%m-%d')}_{end_date.strftime('%Y-%m-%d')}.csv")
 
     if args.DO_DATASET:
         logger.info(
-            f"\nStart generating dataset for period: [{start_date.strftime('%Y-%m-%d')},{end_date.strftime('%Y-%m-%d')}]")
+            f"\nStart generating dataset for period: "
+            f"[{start_date.strftime('%Y-%m-%d')},{end_date.strftime('%Y-%m-%d')}]")
         # Generate dataset for learning
         sample_size = '29.5min'
         df = create_dataset(station_name=station_name, start_date=start_date,
@@ -70,18 +60,18 @@ def dataseting_main(args, log_level=logging.DEBUG):
 
         # Convert m to km
         if args.USE_KM_UNITS:
-            df = convert_Y_features_units(df)
+            df = ds_utils.convert_Y_features_units(df)
 
         df.to_csv(csv_path, index=False)
         logger.info(f"\nDone database creation, saving to: {csv_path}")
         # TODO: add creation of dataset statistics following its creation.
         #         adapt calc_data_statistics(station, start_date, end_date)
 
-    if args.SPLIT_DATASET:
+    if args.create_train_test_splits:
         logger.info(
             f"Splitting to train-test the dataset for period: [{start_date.strftime('%Y-%m-%d')},"
             f"{end_date.strftime('%Y-%m-%d')}]")
-        split_save_train_test_ds(csv_path=csv_path)
+        ds_utils.split_save_train_test_ds(csv_path=csv_path)
         logger.info(f"Done splitting train-test dataset for {csv_path}")
 
     # Create extended dataset and save to csv - recalculation of Lidar Constant (currently this is a naive calculation)
@@ -97,7 +87,7 @@ def dataseting_main(args, log_level=logging.DEBUG):
 
     # Create calibration dataset from the extended df (or csv) = by splitting df to A dataset according to wavelengths
     # and time coordinates.
-    if args.DO_CALIB_DATASET:
+    if args.do_calibration_dataset:
         logger.info(
             f"Start creating calibration dataset for period: [{start_date.strftime('%Y-%m-%d')},"
             f"{end_date.strftime('%Y-%m-%d')}]")
@@ -109,11 +99,11 @@ def dataseting_main(args, log_level=logging.DEBUG):
         prep.save_dataset(ds_calibration, os.path.curdir, ds_path_extended)
         logger.info(f"The calibration dataset saved to :{ds_path_extended}")
 
-    if args.DO_GENERATED_DATASET:
+    if args.do_generated_dataset:
         logger.info(
             f"\nStart creating generated dataset for period:"
             f" [{start_date.strftime('%Y-%m-%d')},{end_date.strftime('%Y-%m-%d')}]")
-        generated_df = create_generated_dataset(station, start_date, end_date)
+        generated_df = create_generated_dataset(station=station, start_date=start_date, end_date=end_date)
         generated_df.to_csv(csv_gen_path, index=False)
         logger.info(f"\nDone generated database creation, saving to: {csv_gen_path}")
 
@@ -126,12 +116,12 @@ def dataseting_main(args, log_level=logging.DEBUG):
         logger.info(
             f"\nSplitting to train-test the dataset for period: [{start_date.strftime('%Y-%m-%d')},"
             f"{end_date.strftime('%Y-%m-%d')}]")
-        split_save_train_test_ds(csv_path=csv_gen_path)
+        ds_utils.split_save_train_test_ds(csv_path=csv_gen_path)
         logger.info(f"\nDone splitting train-test dataset for {csv_gen_path}")
 
     if args.CREATE_GENERATED_SAMPLES:
         prepare_samples(station, start_date, end_date, top_height=15.3, generated=True)
-    if args.CREATE_SAMPLES:
+    if args.create_time_split_samples:
         prepare_samples(station, start_date, end_date, top_height=15.3, generated=False)
 
 
@@ -142,7 +132,10 @@ def create_dataset(station_name='haifa', start_date=datetime(2017, 9, 1),
     CHOOSE: telescope: far_range , METHOD: Klett_Method
     each sample will have 60 bins (aka 30 mins length)
     path to db:  stationdb_file
-
+    TODO update usage
+    :param list_dates:
+    :param sample_size:
+    :param station_name:
     :param start_date:
     :param end_date:
     :key
@@ -188,57 +181,60 @@ def create_dataset(station_name='haifa', start_date=datetime(2017, 9, 1),
 
     full_df = pd.DataFrame()
     for wavelength in tqdm(wavelengths):
-        for day_date in dates:  # tqdm(dates)
+        for day_date in dates:
 
             # Query the db for a specific day, wavelength and calibration method
             try:
-                query = get_query(wavelength, cali_method, day_date)
-                df = query_database(query=query, database_path=db_path)
+                query = ds_utils.get_query(wavelength, cali_method, day_date)
+                df = ds_utils.query_database(query=query, database_path=db_path)
                 if df.empty:
-                    raise EmptyDataFrameError(
+                    raise ds_utils.EmptyDataFrameError(
                         f"\n Not existing data for {station.location} station, during {day_date.strftime('%Y-%m-%d')} in '{db_path}'")
                 df['date'] = day_date.strftime('%Y-%m-%d')
 
-                df = add_profiles_values(df, station, day_date, file_type='profiles')
+                df = ds_utils.add_profiles_values(df, station, day_date, file_type='profiles')
 
                 df = df.rename(
                     {'liconst': 'LC', 'uncertainty_liconst': 'LC_std', 'matched_nc_profile': 'profile_path'},
                     axis='columns')
 
-                expanded_df = get_time_slots_expanded(df, sample_size)
+                expanded_df = ds_utils.get_time_slots_expanded(df, sample_size)
 
                 # Add molecular path
                 expanded_df['molecular_path'] = expanded_df.apply(
-                    lambda row: get_prep_X_path(station=station, parent_folder=station.molecular_dataset,
-                                                day_date=row['start_time_period'], data_source='molecular',
-                                                wavelength=wavelength, file_type='attbsc',
-                                                time_slice=slice(row['start_time_period'], row['end_time_period'])),
+                    lambda row: ds_utils.get_prep_X_path(station=station, parent_folder=station.molecular_dataset,
+                                                         day_date=row['start_time_period'], data_source='molecular',
+                                                         wavelength=wavelength, file_type='attbsc',
+                                                         time_slice=slice(row['start_time_period'],
+                                                                          row['end_time_period'])),
                     axis=1, result_type='expand')
 
                 # Add bg path
                 expanded_df['bg_path'] = expanded_df.apply(
-                    lambda row: get_prep_X_path(station=station, parent_folder=station.molecular_dataset,
-                                                day_date=row['start_time_period'], data_source='bg',
-                                                wavelength=wavelength, file_type='p_bg',
-                                                time_slice=slice(row['start_time_period'], row['end_time_period'])),
+                    lambda row: ds_utils.get_prep_X_path(station=station, parent_folder=station.molecular_dataset,
+                                                         day_date=row['start_time_period'], data_source='bg',
+                                                         wavelength=wavelength, file_type='p_bg',
+                                                         time_slice=slice(row['start_time_period'],
+                                                                          row['end_time_period'])),
                     axis=1, result_type='expand')
 
                 # Add lidar path
                 expanded_df['lidar_path'] = expanded_df.apply(
-                    lambda row: get_prep_X_path(station=station, parent_folder=station.molecular_dataset,
-                                                day_date=row['start_time_period'], data_source='lidar',
-                                                wavelength=wavelength, file_type='range_corr',
-                                                time_slice=slice(row['start_time_period'], row['end_time_period'])),
+                    lambda row: ds_utils.get_prep_X_path(station=station, parent_folder=station.molecular_dataset,
+                                                         day_date=row['start_time_period'], data_source='lidar',
+                                                         wavelength=wavelength, file_type='range_corr',
+                                                         time_slice=slice(row['start_time_period'],
+                                                                          row['end_time_period'])),
                     axis=1, result_type='expand')
 
                 # reorder the columns
                 key = ['date', 'wavelength', 'cali_method', 'telescope', 'cali_start_time', 'cali_stop_time',
                        'start_time_period', 'end_time_period', 'profile_path']
-                Y_features = ['LC', 'LC_std', 'r0', 'r1', 'dr', 'bin_r0', 'bin_r1']
-                X_features = ['lidar_path', 'molecular_path', 'bg_path']
-                expanded_df = expanded_df[key + X_features + Y_features]
+                y_features = ['LC', 'LC_std', 'r0', 'r1', 'dr', 'bin_r0', 'bin_r1']
+                x_features = ['lidar_path', 'molecular_path', 'bg_path']
+                expanded_df = expanded_df[key + x_features + y_features]
                 full_df = full_df.append(expanded_df)
-            except EmptyDataFrameError as e:
+            except ds_utils.EmptyDataFrameError as e:
                 logger.exception(f"{e}, skipping to next day.")
                 continue
     if full_df.empty:
@@ -279,9 +275,9 @@ def extend_calibration_info(df):
     tqdm.pandas()
     logger.info(f"\nStart LC calculations")
     try:
-        df[['LC_recalc', 'LCp_recalc']] = df.progress_apply(recalc_LC, axis=1, result_type='expand')
+        df[['LC_recalc', 'LCp_recalc']] = df.progress_apply(ds_utils.recalc_LC, axis=1, result_type='expand')
     except ValueError:
-        logger.debug("Issue with recalc_LC. Possibly due to missing lidar/molecular paths. Inserting NaNs")
+        logger.debug("Issue with ds_utils.recalc_LC. Possibly due to missing lidar/molecular paths. Inserting NaNs")
         df[['LC_recalc', 'LCp_recalc']] = None
     logger.info(f"Start mid-reference range calculations")
     df['bin_rm'] = df[['bin_r0', 'bin_r1']].progress_apply(np.mean, axis=1,
@@ -295,7 +291,9 @@ def extend_calibration_info(df):
 
 def create_calibration_ds(df, station, source_file):
     """
-    Create calibration dataset from the input df, by splitting it to a dataset according to wavelengths and time (as coordinates).
+    Create calibration dataset from the input df,
+    by splitting it to a dataset according to wavelengths and time (as coordinates).
+
     :param df: extended dataset of calibrated samples
     :param station: gs.station() object of the lidar station
     :param source_file: string, the name of the extended dataset
@@ -334,9 +332,9 @@ def create_calibration_ds(df, station, source_file):
 
     ds_calibration = xr.concat(ds_chan, dim='Wavelength')
     # After concatenating, making sure the 'bin' values are integers.
-    for bin in tqdm(['bin_r0', 'bin_r1', 'bin_rm']):
-        ds_calibration[bin] = ds_calibration[bin].astype(np.uint16)
-        ds_calibration[bin].attrs = {'long_name': fr'${bin}$'}
+    for bin_ in tqdm(['bin_r0', 'bin_r1', 'bin_rm']):
+        ds_calibration[bin_] = ds_calibration[bin_].astype(np.uint16)
+        ds_calibration[bin_].attrs = {'long_name': fr'${bin_}$'}
 
     # Global info
     ds_calibration.attrs = {'info': 'Periodic pollyXT calibration info',
@@ -349,10 +347,11 @@ def create_calibration_ds(df, station, source_file):
     return ds_calibration
 
 
-def create_generated_dataset(station, start_date, end_date, sample_size='30min'):
+def create_generated_dataset(station, start_date, end_date, sample_size='30min', calc_mean_lc=True):
     """
     Creates a dataframe consisting of:
         date | wavelength | start_time | end_time | lidar_path | bg_path | molecular_path | signal_path |  LC
+    :param calc_mean_lc: bool, whether to calculate the mean LC
     :param station: gs.station() object of the lidar station
     :param start_date: datetime.date object of the initial period date
     :param end_date: datetime.date object of the end period date
@@ -376,56 +375,60 @@ def create_generated_dataset(station, start_date, end_date, sample_size='30min')
 
             # add bg path
             df['bg_path'] = df.apply(
-                lambda row: get_generated_X_path(station=station, parent_folder=station.gen_bg_dataset,
-                                                 day_date=row['start_time_period'], data_source='bg',
-                                                 wavelength=wavelength, file_type='p_bg',
-                                                 time_slice=slice(row['start_time_period'], row['end_time_period'])),
+                lambda row: ds_utils.get_generated_X_path(station=station, parent_folder=station.gen_bg_dataset,
+                                                          day_date=row['start_time_period'], data_source='bg',
+                                                          wavelength=wavelength, file_type='p_bg',
+                                                          time_slice=slice(row['start_time_period'],
+                                                                           row['end_time_period'])),
                 axis=1, result_type='expand')
 
             # add lidar path
             df['lidar_path'] = df.apply(
-                lambda row: get_generated_X_path(station=station, parent_folder=station.gen_lidar_dataset,
-                                                 day_date=row['start_time_period'], data_source='lidar',
-                                                 wavelength=wavelength, file_type='range_corr',
-                                                 time_slice=slice(row['start_time_period'], row['end_time_period'])),
+                lambda row: ds_utils.get_generated_X_path(station=station, parent_folder=station.gen_lidar_dataset,
+                                                          day_date=row['start_time_period'], data_source='lidar',
+                                                          wavelength=wavelength, file_type='range_corr',
+                                                          time_slice=slice(row['start_time_period'],
+                                                                           row['end_time_period'])),
                 axis=1, result_type='expand')
 
             # add signal path
             df['signal_path'] = df.apply(
-                lambda row: get_generated_X_path(station=station, parent_folder=station.gen_signal_dataset,
-                                                 day_date=row['start_time_period'], data_source='signal',
-                                                 wavelength=wavelength, file_type='range_corr',
-                                                 time_slice=slice(row['start_time_period'], row['end_time_period'])),
+                lambda row: ds_utils.get_generated_X_path(station=station, parent_folder=station.gen_signal_dataset,
+                                                          day_date=row['start_time_period'], data_source='signal',
+                                                          wavelength=wavelength, file_type='range_corr',
+                                                          time_slice=slice(row['start_time_period'],
+                                                                           row['end_time_period'])),
                 axis=1, result_type='expand')
 
             # add signal path - poisson without bg
             df['signal_p_path'] = df.apply(
-                lambda row: get_generated_X_path(station=station, parent_folder=station.gen_signal_dataset,
-                                                 day_date=row['start_time_period'], data_source='signal',
-                                                 wavelength=wavelength, file_type='range_corr_p',
-                                                 time_slice=slice(row['start_time_period'], row['end_time_period'])),
+                lambda row: ds_utils.get_generated_X_path(station=station, parent_folder=station.gen_signal_dataset,
+                                                          day_date=row['start_time_period'], data_source='signal',
+                                                          wavelength=wavelength, file_type='range_corr_p',
+                                                          time_slice=slice(row['start_time_period'],
+                                                                           row['end_time_period'])),
                 axis=1, result_type='expand')
 
             # Add molecular path
             df['molecular_path'] = df.apply(
-                lambda row: get_prep_X_path(station=station, parent_folder=station.molecular_dataset,
-                                            day_date=row['start_time_period'], data_source='molecular',
-                                            wavelength=wavelength, file_type='attbsc',
-                                            time_slice=slice(row['start_time_period'], row['end_time_period'])),
+                lambda row: ds_utils.get_prep_X_path(station=station, parent_folder=station.molecular_dataset,
+                                                     day_date=row['start_time_period'], data_source='molecular',
+                                                     wavelength=wavelength, file_type='attbsc',
+                                                     time_slice=slice(row['start_time_period'],
+                                                                      row['end_time_period'])),
                 axis=1, result_type='expand')
 
-            CALC_MEAN_LC = True
-            if CALC_MEAN_LC:
+            if calc_mean_lc:
                 # get the mean LC from signal_paths, one day at a time
-                # TODO: adapt this part and get_mean_lc() to retrieve mean LC for 3 wavelength at once
-                #  (should be faster then reading the file 3 times per wavelength)
+                # TODO: adapt this part and ds_utils.get_mean_lc() to retrieve mean LC for 3 wavelength at once
+                #  (should be faster than reading the file 3 times per wavelength)
                 days_groups = df.groupby('date').groups
                 days_list = days_groups.keys()
                 inds_subsets = [days_groups[key] for key in days_list]
                 df_subsets = [df.iloc[inds] for inds in inds_subsets]
                 num_processes = min((cpu_count() - 1, len(days_list)))
                 with Pool(num_processes) as p:
-                    results = p.starmap(get_mean_lc, zip(df_subsets, repeat(station), days_list))
+                    results = p.starmap(ds_utils.get_mean_lc, zip(df_subsets, repeat(station), days_list))
                 df = pd.concat([subset for subset in results]).sort_values('start_time_period')
 
             gen_df = gen_df.append(df)
@@ -487,7 +490,6 @@ def calc_data_statistics(station, start_date, end_date, top_height=15.3):
         results = p.starmap(calc_day_statistics, zip(repeat(station), days_list, repeat(top_height)))
     for result in results:
         df_stats += result
-
 
     norm_scale = 1 / len(days_list)
     df_stats *= norm_scale  # normalize by number of days
@@ -628,7 +630,7 @@ def prepare_samples(station, start_date, end_date, top_height=15.3, generated=Fa
             # E.g. The 'lidar' dataset contains 'range_corr' and 'p_bg' as well
             # The 'signal' dataset contains 'range_corr' and 'range_corr_p' as well
             # load_source - is from where to upload the datasets. data_source - is in what folder to save
-            # TODO: Fix this 'source_folder', and 'profile' such that it want require hard coded sollutions in the modules.
+            # TODO: Fix this 'source_folder' & 'profile' such that it want require hard coded solutions in the modules.
             data_source = 'signal' if data_source == 'signal_p' else data_source
             load_source = 'lidar' if data_source == 'bg' else data_source
 
@@ -647,7 +649,6 @@ def prepare_samples(station, start_date, end_date, top_height=15.3, generated=Fa
 
 
 if __name__ == '__main__':
-
     parser = get_base_arguments()
 
     # TODO change modes to options instead of true\false?
@@ -656,22 +657,22 @@ if __name__ == '__main__':
                         help='Whether to create a dataset')
     parser.add_argument('--EXTEND_DATASET', action='store_true',
                         help='Whether to EXTEND_DATASET')
-    parser.add_argument('--DO_CALIB_DATASET', action='store_true',
-                        help='Whether to DO_CALIB_DATASET')
+    parser.add_argument('--do_calibration_dataset', action='store_true',
+                        help='Whether to do_calibration_dataset')
     parser.add_argument('--USE_KM_UNITS', action='store_true',
                         help='Whether to USE_KM_UNITS')
-    parser.add_argument('--DO_GENERATED_DATASET', action='store_true',
-                        help='Whether to create DO_GENERATED_DATASET')
-    parser.add_argument('--SPLIT_DATASET', action='store_true',
-                        help='Whether to create SPLIT_DATASET') # TODO rename to train test split
+    parser.add_argument('--do_generated_dataset', action='store_true',
+                        help='Whether to create do_generated_dataset')
+    parser.add_argument('--create_train_test_splits', action='store_true',
+                        help='Whether to create train test splits')
     parser.add_argument('--SPLIT_GENERATED_DATASET', action='store_true',
                         help='Whether to create SPLIT_GENERATED_DATASET')
     parser.add_argument('--CALC_GENERATED_STATS', action='store_true',
                         help='Whether to CALC_GENERATED_STATS')
     parser.add_argument('--CREATE_GENERATED_SAMPLES', action='store_true',
                         help='Whether to CREATE_GENERATED_SAMPLES')
-    parser.add_argument('--CREATE_SAMPLES', action='store_true', # TODO rename to  time based split
-                        help='Whether to CREATE_SAMPLES')
+    parser.add_argument('--create_time_split_samples', action='store_true',
+                        help='Whether to create time split samples')
 
     args = parser.parse_args()
 

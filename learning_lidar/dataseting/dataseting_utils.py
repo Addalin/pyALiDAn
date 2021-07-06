@@ -336,3 +336,13 @@ def get_mean_lc(df, station, day_date):
               .mean(dim='Time').sel(Wavelength=row['wavelength']).values,
               axis=1, result_type='expand')
     return df
+
+
+class Error(Exception):
+    """Base class for other exceptions"""
+    pass
+
+
+class EmptyDataFrameError(Error):
+    """Raised when the data frame is empty and should not have been"""
+    pass
