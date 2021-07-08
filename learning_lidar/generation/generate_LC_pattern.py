@@ -229,7 +229,7 @@ def main(station_name, start_date, end_date):
         plt.tight_layout()
         plt.show()
 
-    # %% Save monthly bg dataset
+    # %% Save monthly LC dataset
     year = start_date.year
     for month in range(start_date.month, end_date.month + 1):
         _, monthdays = calendar.monthrange(year, month)

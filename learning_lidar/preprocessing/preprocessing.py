@@ -570,6 +570,7 @@ def save_prep_dataset(station, dataset, data_source='lidar', save_mode='both',
                     'both' - saving both options
     :return: ncpaths - the paths of the saved dataset/s . None - for failure.
     """
+    # TODO: merge save_prep_dataset &  generation_utils.py-->save_generated_dataset() with a flag of 'gen' or 'prep'
     date_datetime = prep_utils.get_daily_ds_date(dataset)
     if data_source == 'lidar':
         base_folder = station.lidar_dataset
