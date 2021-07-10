@@ -24,7 +24,7 @@ Separate/merge and organize the following modules:
       - TODOS - ***OPEN***
       - Explore dynamic range of range corrected signal - ***DONE***
 
-   2. mic_lidar:
+   2. misc_lidar:
       - cleanup- ***DONE***
       - cleanup duplicated code - make sure only micLidar.py are used , and move `generate_atmosphere.py` to  `legacy code` ***DONE*** 
       - TODOS - not urgent - ***OPEN***
@@ -46,7 +46,7 @@ Separate/merge and organize the following modules:
 8. Generate a similar train/test dataset - from the generation procedure - ***DONE***
 9. Calculate stats of the dataset :
     - Generating statistics for generated datasets ***DONE***
-    - Generating statistics for TROPOS datasets ***OPEN***
+    - Generating statistics for TROPOS datasets ***ON GOING***
 10. Extended calibration dataset:
    - Incorporate beta max info per signal retrieval per a wavelength, from: `KDE_estimation_sample.ipynb` to: `dataseting.py` - in `extend_calibration_info()` - ***OPEN***
    - Update the `data_vars` in `create_calibration_ds()` similar to other parameters - ***OPEN***
@@ -106,7 +106,7 @@ Each sample contains the followings:
             - NC file name: `generated_bg_haifa_2017-01-01_2017-01-31.nc`
        - TODOS: 
             - clean and update imports ***DONE***
-            - create module `generate_bg_signals.py` ***OPEN***
+            - create module `generate_bg_signals.py` (based on `generate_bg_signals.ipynb`) ***OPEN***
     2. **Daily Angstrom Exponent and Optical Depth**
        - Download aeronet from [NASA](https://aeronet.gsfc.nasa.gov/cgi-bin/webtool_aod_v3?stage=3&region=Middle_East&state=Israel&site=Technion_Haifa_IL&place_code=10&if_polarized=0)
        - Notebook: `read_AERONET_data.ipynb`
@@ -115,8 +115,8 @@ Each sample contains the followings:
        - Outputs:  `D:\data_haifa\AERONET\20170901_20170930_haifa_ang.nc`, `D:\data_haifa\AERONET\20170901_20170930_haifa_aod.nc`
        - TODOS:
          - Adapt to run more month (at least October). Requires the download from AERONET site ( Look in `cameraNetwork` to see how this is done)
-         - Create a python module - ***OPEN***
-         - Run on two more months ***OPEN***
+         - Create a python module - ***ALMOST DONE*** --> organise the generation modules 
+         - Run on two more months ***DONE***
         
     3. **Initial parameters for density generation**
        - Notebook: `KDE_estimation_sample.ipynb`
@@ -139,7 +139,7 @@ Each sample contains the followings:
       - Output:  `D:\data_haifa\GENERATION\generated_LC_haifa_2017-09-01_2017-10-31.nc`
       - TODOs: 
         - Generate data for a full year, use similar power pattern, but with some varying parameters as days (sample uniform day : 70-90 days), and power ( ssmple from a segment of values per wavelength) ***OPEN***
-        - Split output nc files , per month  ***OPEN***
+        - Split output nc files , per month  ***DONE***
        
    5. **Density Generation:**
       - Notebook: `generate_density.ipynb`  
@@ -150,7 +150,7 @@ Each sample contains the followings:
         - Create a python module - ***DONE***
         - Adapt the code to run automatically for a required period:
           * For sep-oct 2017 ***DONE*** 
-          * For other times ***OPEN** - This is dependent on finishing the above stages.  
+          * For other times ***DONE** - This is dependent on finishing the above stages.  
         - Signals' variability enrichment (TBD - These are writen in my real notebook:) - not urgent as the above. This is a topic to handle after first run of the CNN with new signals. ***OPEN***
         - Open TODOS in: `generate_density_utils.py`,`generate_density.py` - ***OPEN*** 
 2. **Lidar Signal generation**:
@@ -174,9 +174,9 @@ Each sample contains the followings:
   3. Save NC of including the range corrected signal X (pr^2, mean_pbg), Y (LC) and p.  ***DONE***
   4. Adapt for running automatically on each day in a given period:
     * For sep-oct 2017 ***DONE*** 
-    * For other times ***OPEN** - This is dependent on finishing the above stages of density creation. 
+    * For other times ***DONE** - This is dependent on finishing the above stages of density creation. 
   5. Create a python module - ***DONE***
-  6. Save range_corre after poisson procedure (without bg)  ***OPEN***
+  6. Save range_corre after poisson procedure (without bg)  ***DONE***
     
 ## Issues:
    1. Debug propagation of PLOT_RESULTS flag in `generate_density_utils.py` & `daily_signals_generations_utils.py`
@@ -199,21 +199,21 @@ Each sample contains the followings:
 5. Filter the dataset - to train on a specific populations - ***DONE*** 
     - currently, works for features written in the dataset file
 6. Use the calculated statistics of the database (mean , std) for Normalization - ***DONE***
-7. LC Net Architecture - ***ON GOING***
+7. LC Net Architecture - ***DONE***
    
     a. runs of hiden_sizes,fc_size
     
     * hiden_sizes : [2,2,2,2] , [3,3,3,3] , fc_size: [4,32,16] ***DONE***
     * hiden_sizes : [1,1,1,1] , [4,4,4,4] , fc_size: [4,32,16] ***DONE*** 
-    * With Normaliztion - hiden_sizes : [1,1,1,1] ,[2,2,2,2], [3,3,3,3], [4,4,4,4] fc_size: [4,32,16], lr: 1e-3 ***OPEN***
+    * With Normaliztion - hiden_sizes : [1,1,1,1] ,[2,2,2,2], [3,3,3,3], [4,4,4,4] fc_size: [4,32,16], lr: 1e-3 ***DONE***
     * poisson signal With Normaliztion - hiden_sizes : [1,1,1,1] ,[2,2,2,2], [3,3,3,3], [4,4,4,4] fc_size: [4,32,16], lr: 1e-3 ***ON Going***
     
     b. runs for testing inputs:
-    * range corrected of `signal` and `lidar` - ***ON GOING*** 
-    * range_corrected of `signal` after poisson noise ***OPEN***
-    * Adding bg ***OPEN***
+    * range corrected of `signal` and `lidar` - ***DONE*** 
+    * range_corrected of `signal` after poisson noise ***DONE***
+    * Adding bg ***DONE***
     
-    c. Run LC net data on 2 more months (Jun & April 2017) - this requires creation of signals before. ***OPEN***
+    c. Run LC net data on 2 more months (Jun & April 2017) - this requires creation of signals before. ***DONE***
     
     d. Create summery of the runs in csv for each run include also : 
         number of parameters, run time.
@@ -222,7 +222,7 @@ Each sample contains the followings:
 
 8. Load checkpoint - for more train epochs ***OPEN***
 9. Run checkpoint on test dataset ***OPEN***
-10. change results folder (D is better)  ***OPEN***
+10. change results folder (D is better)  ***DONE***
 11. Resolve Errors & warnings during training ***OPEN***: 
     - [issue1](https://github.com/Addalin/learning_lidar/issues/28#issue-881010672) 
     - [issue2](https://github.com/Addalin/learning_lidar/issues/27#issue-881005719)
@@ -256,8 +256,14 @@ Each sample contains the followings:
       1. `misc_lidar.py` - lidar formulas (prev: miscLidar) ***DONE***
       2. `proc_utils.py` - processing and math utils (bezier, smooth, normalize & make_interpolated_image - from generate_density_utils)***DONE***
       3. `utils.py`- General system and run utils (what is currently utils.py)  ***DONE***
-      4. `global_settings.py` ***ALMOST DONE*** required some clearness to vis_utils.py) 
-      5. `vis_utils.py` - All visualizations styling and plot figures of xarray in 2D or 1D or 3D (surf) ***OPEN***
+      4. `global_settings.py` ***DONE*** required some clearness to vis_utils.py) 
+      5. `vis_utils.py` - All visualizations styling and plot figures of xarray in 2D or 1D or 3D (surf) ***DONE***
+      6. `xr_utils` - module that serves all general functions that are handling xarray function as: 
+         - load_dataset(), save_dataset() (from preprocessing.py)  ***OPEN***
+         - merge save_prep_dataset() &  save_generated_dataset() --> save_daily_dataset() with a flag of 'gen' or 'prep' ***OPEN***
+         - convert_to32() from gen_utils ***OPEN***
+         - get_daily_ds_date() from pre_utils ***OPEN***
+      7. Validate refactoring of all changes above (mainly notebooks) ***OPEN***
 4. Dataset Folder:
    - data_<station_name>
         - AERONET (Requires arrangement according to years)
