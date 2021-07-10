@@ -17,6 +17,7 @@ import learning_lidar.utils.global_settings as gs
 import learning_lidar.utils.misc_lidar as misc_lidar
 import learning_lidar.utils.vis_utils as vis_utils
 from learning_lidar.preprocessing import preprocessing as prep
+from learning_lidar.utils import utils
 from learning_lidar.utils.proc_utils import make_interpolated_image, normalize
 from learning_lidar.utils.vis_utils import TIMEFORMAT
 
@@ -587,7 +588,7 @@ def get_LR_ds(station, day_date, day_params_ds):
     LRs = day_params_ds.LR.values
 
     # 2. Setting the time parameter of the curve - tbins
-    tbins = np.round([int(gen_utils.dt2binscale(prep_utils.dt64_2_datetime(dt))) for
+    tbins = np.round([int(gen_utils.dt2binscale(utils.dt64_2_datetime(dt))) for
                       dt in day_params_ds.ang355532.Time.values])
 
     # The last bin is added or updated to 2880 artificially.
@@ -652,7 +653,7 @@ def get_angstrom_ds(station, day_date, day_params_ds):
     ang5321064s = day_params_ds.ang5321064.values
 
     # 2. Setting the time parameter of the curve - tbins
-    tbins = np.round([int(gen_utils.dt2binscale(prep_utils.dt64_2_datetime(dt))) for
+    tbins = np.round([int(gen_utils.dt2binscale(utils.dt64_2_datetime(dt))) for
                       dt in day_params_ds.ang355532.Time.values])
 
     # The last bin is added or updated to 2880 artificially. If it was zero, it represents the time 00:00 of the next

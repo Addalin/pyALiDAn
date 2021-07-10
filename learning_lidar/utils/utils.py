@@ -2,6 +2,7 @@ import csv
 import logging
 # %% testing multiproccesing from: https://gist.github.com/morkrispil/3944242494e08de4643fd42a76cb37ee
 # import multiprocessing as mp
+from datetime import datetime
 import multiprocess as mp
 from functools import partial
 import pandas as pd
@@ -97,11 +98,6 @@ def write_row_to_csv(csv_path, msg):
     logger.debug(f"Wrote to tracker{csv_path} message - {msg}")
 
 
-def get_time_slice_dataset(dataset, start_time, end_time):
-    sub_ds = dataset.sel(Time=slice(start_time, end_time))
-    return sub_ds
-
-
 def humanbytes(B):
     'Return the given bytes as a human friendly KB, MB, GB, or TB string'
     B = float(B)
@@ -151,3 +147,8 @@ def visCurve(lData, rData, stitle=""):
     fig.set_constrained_layout = True
 
     return [fig, axes]
+
+
+def dt64_2_datetime(dt_64):
+    date_datetime = datetime.utcfromtimestamp(dt_64.tolist() / 1e9)
+    return date_datetime

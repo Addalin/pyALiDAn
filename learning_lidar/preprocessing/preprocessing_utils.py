@@ -12,7 +12,7 @@ from molecular import rayleigh_scattering
 from pandas.core.dtypes.common import is_numeric_dtype
 
 import learning_lidar.utils.vis_utils as vis_utils
-from learning_lidar.utils import misc_lidar as mscLid, global_settings as gs
+from learning_lidar.utils import misc_lidar as mscLid, global_settings as gs, utils
 from learning_lidar.utils.misc_lidar import RadiosondeProfile
 from learning_lidar.utils.utils import write_row_to_csv
 
@@ -260,11 +260,6 @@ def convert_daily_gdas(station, day_date):
     return converted_paths
 
 
-def dt64_2_datetime(dt_64):
-    date_datetime = datetime.utcfromtimestamp(dt_64.tolist() / 1e9)
-    return date_datetime
-
-
 def get_daily_ds_date(dataset):
     logger = logging.getLogger()
     try:
@@ -272,7 +267,7 @@ def get_daily_ds_date(dataset):
     except ValueError:
         logger.exception("\nThe dataset does not contain a data variable named 'date'")
         return None
-    date_datetime = dt64_2_datetime(date_64)
+    date_datetime = utils.dt64_2_datetime(date_64)
     return date_datetime
 
 
