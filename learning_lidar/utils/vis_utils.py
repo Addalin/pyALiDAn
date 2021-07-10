@@ -14,6 +14,7 @@ TITLE_FONT_SIZE = 18
 SUPTITLE_FONT_SIZE = 20
 TIMEFORMAT = mdates.DateFormatter('%H:%M')
 MONTHFORMAT = mdates.DateFormatter('%Y-%m')
+DAYFORMAT = mdates.DateFormatter('%Y-%m-%d')
 COLORS = ["darkblue", "darkgreen", "darkred"]
 
 
