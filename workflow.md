@@ -256,14 +256,18 @@ Each sample contains the followings:
       1. `misc_lidar.py` - lidar formulas (prev: miscLidar) ***DONE***
       2. `proc_utils.py` - processing and math utils (bezier, smooth, normalize & make_interpolated_image - from generate_density_utils)***DONE***
       3. `utils.py`- General system and run utils (what is currently utils.py)  ***DONE***
-      4. `global_settings.py` ***DONE*** required some clearness to vis_utils.py) 
+      4. `global_settings.py` 
+         - split relevant function to vis_utils ***DONE*** 
+         - Update path calls, relevant to station object according to Paths_lidar_learning.pptx
+           include also: get_month_folder_name() ***OPEN***
       5. `vis_utils.py` - All visualizations styling and plot figures of xarray in 2D or 1D or 3D (surf) ***DONE***
       6. `xr_utils` - module that serves all general functions that are handling xarray function as: 
          - load_dataset(), save_dataset() (from preprocessing.py)  ***OPEN***
          - merge save_prep_dataset() &  save_generated_dataset() --> save_daily_dataset() with a flag of 'gen' or 'prep' ***OPEN***
          - convert_to32() from gen_utils ***OPEN***
          - get_daily_ds_date() from pre_utils ***OPEN***
-      7. Validate refactoring of all changes above (mainly notebooks) ***OPEN***
+      7. `prep_utils` - move all functions (except main) from preprocessing.py ***OPEN***
+      8. Validate refactoring of all changes above (mainly notebooks) ***OPEN***
 4. Dataset Folder:
    - data_<station_name>
         - AERONET (Requires arrangement according to years)

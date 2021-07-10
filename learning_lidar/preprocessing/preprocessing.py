@@ -617,7 +617,7 @@ def save_prep_dataset(station, dataset, data_source='lidar', save_mode='both',
 
 
 if __name__ == '__main__':
-    station_name = 'haifa_shubi'
+    station_name = 'haifa'
     start_date = datetime(2017, 9, 1)
     end_date = datetime(2017, 9, 1)
     preprocessing_main(station_name, start_date, end_date)
