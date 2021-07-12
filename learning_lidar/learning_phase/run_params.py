@@ -24,6 +24,7 @@ def get_paths(station_name, start_date, end_date):
 train_csv_path, test_csv_path, stats_csv_path, RESULTS_PATH = get_paths(station_name='haifa',
                                                                         start_date=datetime(2017, 4, 1),
                                                                         end_date=datetime(2017, 10, 31))
+# TODO - update dates to change between datasets
 
 
 def update_params(config, consts):

@@ -383,7 +383,7 @@ def calc_daily_measurement(station, day_date, signal_ds):
     # Apply Overlap function
     Height_indx = p_mean.Height
     # TODO : this is a dummy function --> need to adapt with more info from TROPOS
-    overlap = gen_utils.create_ratio(total_bins=Height_indx.size, mode='overlap')
+    overlap = gen_utils.create_ratio(total_bins=Height_indx.size, mode='overlap') # TO REPLACE from overlpap.npyib sig = sigmoid(heigths,*p)
     overlap_ds = xr.Dataset(data_vars={'overlap': ('Height', overlap)},
                             coords={'Height': Height_indx.values},
                             attrs={'name': 'Overlap Function'})
