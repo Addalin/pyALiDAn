@@ -248,6 +248,6 @@ def main(station_name, start_date, end_date):
 
 if __name__ == '__main__':
     station_name = 'haifa'
-    start_date = datetime(2017, 4, 1)
-    end_date = datetime(2017, 5, 31, 23, 59, 30)
+    start_date = datetime(2017, 9, 1)
+    end_date = datetime(2017, 10, 31, 23, 59, 30)
     main(station_name, start_date, end_date)
