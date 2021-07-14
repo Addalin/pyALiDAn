@@ -14,6 +14,7 @@ import learning_lidar.preprocessing.preprocessing as prep
 import learning_lidar.preprocessing.preprocessing_utils as prep_utils
 import learning_lidar.utils.global_settings as gs
 import learning_lidar.utils.vis_utils as vis_utils
+from learning_lidar.utils import utils
 from learning_lidar.utils.proc_utils import Bezier
 
 vis_utils.set_visualization_settings()
@@ -421,8 +422,8 @@ def main(station, month, year, start_date, end_date, DATA_DIR):
         n_pts = p_slice.Time.size
         t0 = p_slice.Time[0].values
         t1 = p_slice.Time[-1].values
-        dt0 = prep_utils.dt64_2_datetime(t0)
-        dt1 = prep_utils.dt64_2_datetime(t1)
+        dt0 = utils.dt64_2_datetime(t0)
+        dt1 = utils.dt64_2_datetime(t1)
         difft = (end_time - start_time)
 
         n_total = difft.days * station.total_time_bins + difft.seconds / station.freq

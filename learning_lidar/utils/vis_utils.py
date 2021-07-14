@@ -3,7 +3,7 @@ from datetime import timedelta
 import pandas as pd
 import seaborn as sns
 from matplotlib import dates as mdates, pyplot as plt
-from datetime import datetime
+import learning_lidar.utils.utils as utils
 
 FIGURE_DPI = 300
 SAVEFIG_DPI = 300
@@ -14,6 +14,7 @@ TITLE_FONT_SIZE = 18
 SUPTITLE_FONT_SIZE = 20
 TIMEFORMAT = mdates.DateFormatter('%H:%M')
 MONTHFORMAT = mdates.DateFormatter('%Y-%m')
+DAYFORMAT = mdates.DateFormatter('%Y-%m-%d')
 COLORS = ["darkblue", "darkgreen", "darkred"]
 
 
@@ -62,7 +63,7 @@ def plot_daily_profile(profile_ds, height_slice=None, figsize=(16, 6)):
 
 def plot_hourly_profile(profile_ds, height_slice=None, figsize=(10, 6), times=None):
     # TODO: add scientific ticks on color-bar
-    day_date = dt64_2_datetime(profile_ds.Time[0].values)
+    day_date = utils.dt64_2_datetime(profile_ds.Time[0].values)
     str_date = day_date.strftime("%Y-%m-%d")
     if times == None:
         times = [day_date + timedelta(hours=8),
@@ -83,6 +84,3 @@ def plot_hourly_profile(profile_ds, height_slice=None, figsize=(10, 6), times=No
     plt.tight_layout()
     plt.show()
 
-def dt64_2_datetime(dt_64):
-    date_datetime = datetime.utcfromtimestamp(dt_64.tolist() / 1e9)
-    return date_datetime

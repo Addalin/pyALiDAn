@@ -14,6 +14,7 @@ import learning_lidar.preprocessing.preprocessing as prep
 import learning_lidar.preprocessing.preprocessing_utils as prep_utils
 import learning_lidar.utils.global_settings as gs
 import learning_lidar.utils.vis_utils as vis_utils
+from learning_lidar.utils import utils
 from learning_lidar.utils.proc_utils import Bezier
 
 eps = np.finfo(np.float).eps
@@ -175,8 +176,8 @@ def main(station_name, start_date, end_date):
     n_pts = p_slice.Time.size
     t0 = p_slice.Time[0].values
     t1 = p_slice.Time[-1].values
-    dt0 = prep_utils.dt64_2_datetime(t0)
-    dt1 = prep_utils.dt64_2_datetime(t1)
+    dt0 = utils.dt64_2_datetime(t0)
+    dt1 = utils.dt64_2_datetime(t1)
     difft = (dt1 - dt0)
 
     n_total = difft.days * station.total_time_bins + difft.seconds / station.freq
@@ -229,7 +230,7 @@ def main(station_name, start_date, end_date):
         plt.tight_layout()
         plt.show()
 
-    # %% Save monthly bg dataset
+    # %% Save monthly LC dataset
     year = start_date.year
     for month in range(start_date.month, end_date.month + 1):
         _, monthdays = calendar.monthrange(year, month)
@@ -247,6 +248,6 @@ def main(station_name, start_date, end_date):
 
 if __name__ == '__main__':
     station_name = 'haifa'
-    start_date = datetime(2017, 4, 1)
-    end_date = datetime(2017, 5, 31, 23, 59, 30)
+    start_date = datetime(2017, 9, 1)
+    end_date = datetime(2017, 10, 31, 23, 59, 30)
     main(station_name, start_date, end_date)

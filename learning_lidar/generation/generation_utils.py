@@ -61,6 +61,7 @@ def save_generated_dataset(station, dataset, data_source='lidar', save_mode='bot
     :param profiles: The name of profile desired to be saved separately.
     :return: ncpaths - the paths of the saved dataset/s . None - for failure.
     """
+    # TODO: merge save_prep_dataset() &  save_generated_dataset() --> save_daily_dataset() with a flag of 'gen' or 'prep'
     date_datetime = prep_utils.get_daily_ds_date(dataset)
     if data_source == 'lidar':
         base_folder = station.gen_lidar_dataset
