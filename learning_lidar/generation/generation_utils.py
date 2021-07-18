@@ -1,7 +1,6 @@
 import calendar
 import os
 from datetime import datetime, timedelta
-from pathlib import Path
 
 import numpy as np
 from matplotlib import pyplot as plt
@@ -62,7 +61,7 @@ def save_generated_dataset(station, dataset, data_source='lidar', save_mode='bot
     :return: ncpaths - the paths of the saved dataset/s . None - for failure.
     """
     # TODO: merge save_prep_dataset() &  save_generated_dataset() --> save_daily_dataset() with a flag of 'gen' or 'prep'
-    date_datetime = prep_utils.get_daily_ds_date(dataset)
+    date_datetime = xr_utils.get_daily_ds_date(dataset)
     if data_source == 'lidar':
         base_folder = station.gen_lidar_dataset
     elif data_source == 'signal':
@@ -75,7 +74,7 @@ def save_generated_dataset(station, dataset, data_source='lidar', save_mode='bot
         base_folder = station.gen_bg_dataset
     month_folder = prep_utils.get_month_folder_name(base_folder, date_datetime)
 
-    prep_utils.get_daily_ds_date(dataset)
+    xr_utils.get_daily_ds_date(dataset)
     '''save the dataset to separated netcdf files: per profile per wavelength'''
     ncpaths = []
 
@@ -237,39 +236,6 @@ def create_ratio(total_bins, mode='ones', start_height=0.3, ref_height=2.5, ref_
         plt.show()
 
     return smooth_ratio
-
-
-def convert_to32(base_path, paths, exclude_paths):
-    """
-    Loads and saves all nc files in paths, excluding exclude_paths from base_path.
-    Can be used to convert to nc fiels previously saved as float64 as float32 (current default)
-
-    Example:
-        base_path = r"D:"
-        paths = [r"\data_haifa\GENERATION",
-                 r"\data_haifa\DATA FROM TROPOS\molecular_dataset",
-                 r"\data_haifa\DATA FROM TROPOS\lidar_dataset"]
-
-        exclude_paths = [r"D:\data_haifa\GENERATION\density_dataset\2017\04",
-                         r"D:\data_haifa\GENERATION\density_dataset\2017\05"]
-
-    :return: None
-    """
-
-    exclude_files = []
-    for exclude_path in exclude_paths:
-        exclude_files.extend(list(Path(exclude_path).glob("**/*.nc")))
-    exclude_files = [str(x) for x in exclude_files]
-    exclude_files = set(exclude_files)
-
-    for path in paths:
-        full_paths = Path(base_path + path)
-        file_list = set([str(pp) for pp in full_paths.glob("**/*.nc")])
-        file_list = file_list - exclude_files
-        print(f"found {len(file_list)} nc files in path {base_path + path}")
-        for nc_path in tqdm(file_list):
-            ds = xr_utils.load_dataset(str(nc_path))
-            xr_utils.save_dataset(ds, nc_path=str(nc_path))
 
 
 def sigmoid(x, x0=0,A = 0 , K = 1,B=1, v=0.4,C=1,Q=1):

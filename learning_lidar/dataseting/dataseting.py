@@ -641,7 +641,7 @@ def save_dataset2timesplits(station, dataset, data_source='lidar', mod_source='g
     :param time_slices:
     :return:
     """
-    day_date = prep_utils.get_daily_ds_date(dataset)
+    day_date = xr_utils.get_daily_ds_date(dataset)
     if time_slices is None:
         time_slices = get_time_splits(station, start_date=day_date, end_date=day_date, sample_size=sample_size)
     if mod_source == 'gen':

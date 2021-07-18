@@ -13,10 +13,10 @@ from molecular import rayleigh_scattering
 from pandas.core.dtypes.common import is_numeric_dtype
 
 import learning_lidar.utils.vis_utils as vis_utils
-from learning_lidar.utils import misc_lidar as mscLid, global_settings as gs, utils
+from learning_lidar.utils import misc_lidar as mscLid, global_settings as gs
 from learning_lidar.utils.misc_lidar import RadiosondeProfile
 from learning_lidar.utils.utils import write_row_to_csv
-from learning_lidar.utils.xr_utils import load_dataset, save_prep_dataset
+from learning_lidar.utils.xr_utils import load_dataset, save_prep_dataset, get_daily_ds_date
 
 
 def convert_profiles_units(dataset, units=[r'$1/m$', r'$1/km$'], scale=1e+3):
@@ -260,17 +260,6 @@ def convert_daily_gdas(station, day_date):
             converted_paths.append(converted)
 
     return converted_paths
-
-
-def get_daily_ds_date(dataset):
-    logger = logging.getLogger()
-    try:
-        date_64 = dataset.date.values
-    except ValueError:
-        logger.exception("\nThe dataset does not contain a data variable named 'date'")
-        return None
-    date_datetime = utils.dt64_2_datetime(date_64)
-    return date_datetime
 
 
 def visualize_ds_profile_chan(dataset, lambda_nm=532, profile_type='range_corr', USE_RANGE=None,

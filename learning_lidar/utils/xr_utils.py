@@ -1,12 +1,14 @@
 import glob
 import logging
 import os
+from pathlib import Path
 
 import numpy as np
 import xarray as xr
 from tqdm import tqdm
 
 from learning_lidar.preprocessing import preprocessing_utils as prep_utils
+from learning_lidar.utils import utils
 
 
 def save_dataset(dataset, folder_name='', nc_name='', nc_path=None, optim_size=True):
@@ -162,7 +164,7 @@ def save_prep_dataset(station, dataset, data_source='lidar', save_mode='both',
     :return: ncpaths - the paths of the saved dataset/s . None - for failure.
     """
     # TODO: merge save_prep_dataset() &  save_generated_dataset() --> save_daily_dataset() with a flag of 'gen' or 'prep'
-    date_datetime = prep_utils.get_daily_ds_date(dataset)
+    date_datetime = get_daily_ds_date(dataset)
     if data_source == 'lidar':
         base_folder = station.lidar_dataset
     elif data_source == 'bg':
@@ -171,7 +173,7 @@ def save_prep_dataset(station, dataset, data_source='lidar', save_mode='both',
         base_folder = station.molecular_dataset
     month_folder = prep_utils.get_month_folder_name(base_folder, date_datetime)
 
-    prep_utils.get_daily_ds_date(dataset)
+    get_daily_ds_date(dataset)
     '''save the dataset to separated netcdf files: per profile per wavelength'''
     ncpaths = []
 
@@ -207,3 +209,42 @@ def save_prep_dataset(station, dataset, data_source='lidar', save_mode='both',
         if ncpath:
             ncpaths.append(ncpath)
     return ncpaths
+
+
+def load_and_save_all_datasets_in_paths(base_path, paths, exclude_paths):
+    """
+    Was convert_To32
+    \data_haifa\DATA FROM TROPOS\molecular_dataset",
+                 r"\data_haifa\DATA FROM TROPOS\lidar_dataset"]
+
+        exclude_paths = [r"D:\data_haifa\GENERATION\density_dataset\2017\04",
+                         r"D:\data_haifa\GENERATION\density_dataset\2017\05"]
+
+    :return: None
+    """
+
+    exclude_files = []
+    for exclude_path in exclude_paths:
+        exclude_files.extend(list(Path(exclude_path).glob("**/*.nc")))
+    exclude_files = [str(x) for x in exclude_files]
+    exclude_files = set(exclude_files)
+
+    for path in paths:
+        full_paths = Path(base_path + path)
+        file_list = set([str(pp) for pp in full_paths.glob("**/*.nc")])
+        file_list = file_list - exclude_files
+        print(f"found {len(file_list)} nc files in path {base_path + path}")
+        for nc_path in tqdm(file_list):
+            ds = load_dataset(str(nc_path))
+            save_dataset(ds, nc_path=str(nc_path))
+
+
+def get_daily_ds_date(dataset):
+    logger = logging.getLogger()
+    try:
+        date_64 = dataset.date.values
+    except ValueError:
+        logger.exception("\nThe dataset does not contain a data variable named 'date'")
+        return None
+    date_datetime = utils.dt64_2_datetime(date_64)
+    return date_datetime
