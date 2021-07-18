@@ -22,11 +22,14 @@
 """
 Miscellaneous operations for lidar analysis and calculations.
 """
+from datetime import timedelta
+
 import numpy as np
 import pandas as pd
 import scipy.sparse as sprs
-from datetime import timedelta
+
 from learning_lidar.utils.global_settings import eps
+
 
 # %%
 

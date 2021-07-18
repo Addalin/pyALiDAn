@@ -4,10 +4,11 @@ import logging
 # %% testing multiproccesing from: https://gist.github.com/morkrispil/3944242494e08de4643fd42a76cb37ee
 # import multiprocessing as mp
 from datetime import datetime
-import multiprocess as mp
 from functools import partial
-import pandas as pd
+
+import multiprocess as mp
 import numpy as np
+import pandas as pd
 from matplotlib import pyplot as plt
 from matplotlib import rc
 

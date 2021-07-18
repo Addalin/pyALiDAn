@@ -35,6 +35,23 @@ def generate_daily_lidar_measurement(station, day_date, SAVE_DS=True):
 
     return measure_ds, signal_ds
 
+def generate_daily_lidar_measurement2(station, day_date, SAVE_DS=True):
+
+    measure_ds = gen_sig_utils.calc_daily_measurement_withoverlap(station, day_date, nc_path="")
+
+    if SAVE_DS:
+        # TODO: check that the range_corr_p is added to measure_ds, and that the LCNET is uploading the new paths
+        #  (especially if range_corr_p )  . and if so, save only 2 single files of measure_ds, and signal_ds to save
+        #  time and space
+        # NOTE: saving to separated datasets (for the use of the learning phase),
+        # is done in dataseting.prepare_generated_samples()
+        gen_utils.save_generated_dataset(station, measure_ds,
+                                         data_source='lidar',
+                                         save_mode='single')
+
+
+    return measure_ds
+
 
 def daily_signals_generation_main(station_name='haifa', start_date=datetime(2017, 9, 1), end_date=datetime(2017, 9, 2)):
     vis_utils.set_visualization_settings()
@@ -50,15 +67,17 @@ def daily_signals_generation_main(station_name='haifa', start_date=datetime(2017
     days_list = pd.date_range(start=start_date, end=end_date).to_pydatetime().tolist()
     num_days = len(days_list)
     num_processes = 1 if gen_sig_utils.PLOT_RESULTS else min((cpu_count() - 1, num_days))
-    with Pool(num_processes) as p:
-        p.starmap(generate_daily_lidar_measurement, zip(repeat(station), days_list, repeat(False)))
+    save_ds = True
+    generate_daily_lidar_measurement2(station, days_list[0], save_ds)
+    # with Pool(num_processes) as p:
+    #     p.starmap(generate_daily_lidar_measurement2, zip(repeat(station), days_list, repeat(save_ds)))
 
     logger.info(f"\nDone generating lidar signals & measurements "
                 f"for period: [{start_date.strftime('%Y-%m-%d')},{end_date.strftime('%Y-%m-%d')}]")
 
 
 if __name__ == '__main__':
-    station_name = 'haifa'
-    start_date = datetime(2017, 4, 1)
-    end_date = datetime(2017, 4, 2)
+    station_name = 'haifa_shubi'
+    start_date = datetime(2017, 9, 1)
+    end_date = datetime(2017, 9, 2)
     daily_signals_generation_main(station_name, start_date, end_date)

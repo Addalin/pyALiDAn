@@ -1,11 +1,10 @@
+import csv
+import logging
 import os
+from datetime import datetime
 from time import sleep
 
 import ARLreader as Ar
-from datetime import datetime
-import logging
-import csv
-
 from learning_lidar.utils.utils import create_and_configer_logger
 
 

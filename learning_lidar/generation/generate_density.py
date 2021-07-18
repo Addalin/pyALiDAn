@@ -1,15 +1,17 @@
 import logging
+import os
 from datetime import datetime
 from itertools import repeat
-import os
+from multiprocessing import Pool, cpu_count
 
 import pandas as pd
-import learning_lidar.utils.global_settings as gs
-import learning_lidar.generation.generation_utils as gen_utils
-import learning_lidar.utils.vis_utils as vis_utils
-from multiprocessing import Pool, cpu_count
+
 import learning_lidar.generation.generate_density_utils as gen_den_utils
+import learning_lidar.generation.generation_utils as gen_utils
+import learning_lidar.utils.global_settings as gs
+import learning_lidar.utils.vis_utils as vis_utils
 from learning_lidar.utils.utils import create_and_configer_logger
+
 
 # TODO:  add 2 flags - Debug and save figure.
 def generate_daily_aerosol_density(station, day_date, SAVE_DS=True):

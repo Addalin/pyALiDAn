@@ -1,22 +1,23 @@
+import logging
 import os
 from datetime import timedelta
-import matplotlib.pyplot as plt
-from pytictoc import TicToc
 
+import matplotlib.pyplot as plt
 import numpy as np
-from tqdm import tqdm
 import pandas as pd
 import xarray as xr
+from pytictoc import TicToc
 from scipy.ndimage import gaussian_filter1d
-import logging
+from tqdm import tqdm
 
+import learning_lidar.generation.generation_utils as gen_utils
 import learning_lidar.preprocessing.preprocessing_utils as prep_utils
+import learning_lidar.utils.global_settings as gs
 import learning_lidar.utils.vis_utils as vis_utils
 import learning_lidar.utils.xr_utils as xr_utils
-from learning_lidar.utils.utils import create_and_configer_logger
-import learning_lidar.utils.global_settings as gs
-import learning_lidar.generation.generation_utils as gen_utils
+from learning_lidar.generation.generation_utils import sigmoid
 from learning_lidar.utils.misc_lidar import calc_tau, generate_poisson_signal_STEP
+from learning_lidar.utils.utils import create_and_configer_logger
 from learning_lidar.utils.vis_utils import TIMEFORMAT
 
 logger = create_and_configer_logger(f"{os.path.basename(__file__)}.log", level=logging.INFO)
@@ -402,6 +403,42 @@ def calc_daily_measurement(station, day_date, signal_ds):
     # TODO: Add plots of bg_ds, p_mean, pr2n_ds,pn_ds
     # gen_utils.plot_daily_profile(measure_ds.p_bg)
     # gen_utils.plot_daily_profile(measure_ds.range_corr.where(measure_ds.range_corr>=3))
+    return measure_ds
+
+def calc_daily_measurement_withoverlap(station, day_date, nc_path):
+    """
+    Generate Lidar measurement, by combining background signal and the lidar signal,
+    and then creating Poisson signal, which is the measurement of the mean lidar signal.
+    :param station: gs.station() object of the lidar station
+    :param day_date: datetime.date object of the required date
+    :param signal_ds: xr.Dataset(), containing the daily lidar signal (clean)
+    :return: measure_ds: xr.Dataset(), containing the daily lidar measurement (with background and applied photon noise)
+    """
+    nc_path = '/home/shubi/PycharmProjects/learning_lidar/data/GENERATION/lidar_dataset/2017/09/2017_09_01_Haifa_generated_lidar.nc'
+    measure_ds = xr_utils.load_dataset(nc_path)
+    overlap_params = pd.read_csv("/home/shubi/PycharmProjects/learning_lidar/learning_lidar/generation/overlap_params.csv",
+                                 index_col=0)
+    p_mean = measure_ds.p_mean
+    Height_indx = p_mean.Height
+    # Apply Overlap function
+    overlap = sigmoid(Height_indx, *overlap_params.loc[0,:].values)
+    overlap_ds = xr.Dataset(data_vars={'overlap': ('Height', overlap)},
+                            coords={'Height': Height_indx.values},
+                            attrs={'name': 'Overlap Function'})
+    p_mean = xr.apply_ufunc(lambda x, r: (x * r),
+                            p_mean, overlap_ds.overlap,
+                            keep_attrs=True).assign_attrs({'info': p_mean.info+' with applied overlap'})
+    pn_ds = calc_poiss_measurement(station, day_date, p_mean)  # lidar measurement: pn ~Poiss(mu_p)
+    r2_ds = prep_utils.calc_r2_ds(station, day_date)
+
+    pr2n_ds = calc_range_corr_measurement(station, day_date, pn_ds, r2_ds)  # range corrected measurement: pr2n = pn * r^2
+    measure_ds = xr.Dataset().assign(p=pn_ds, range_corr=pr2n_ds, p_mean=p_mean,
+                                     p_bg=measure_ds.p_bg, overlap=overlap_ds.overlap)
+    measure_ds['date'] = day_date
+    measure_ds.attrs = {'location': station.location,
+                        'info': 'Daily generated lidar signals measurement.',
+                        'source_file': os.path.basename(__file__)}
+
     return measure_ds
 
 

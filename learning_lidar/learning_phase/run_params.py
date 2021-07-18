@@ -1,9 +1,9 @@
+import json
 import os
 from datetime import datetime
 
 import torch
 from ray import tune
-import json
 
 NUM_AVAILABLE_GPU = torch.cuda.device_count()
 

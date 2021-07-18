@@ -1,3 +1,6 @@
+import calendar
+import os
+from datetime import datetime, timedelta
 from pathlib import Path
 
 import numpy as np
@@ -5,13 +8,10 @@ from matplotlib import pyplot as plt
 from scipy.ndimage import gaussian_filter1d
 from tqdm import tqdm
 
-from datetime import datetime, timedelta
-import os
-import calendar
-
 import learning_lidar.preprocessing.preprocessing_utils as prep_utils
 import learning_lidar.utils.xr_utils as xr_utils
 from learning_lidar.generation.generate_density_utils import PLOT_RESULTS
+from learning_lidar.utils.global_settings import eps
 
 
 def get_gen_dataset_file_name(station, day_date, wavelength='*',
@@ -270,3 +270,8 @@ def convert_to32(base_path, paths, exclude_paths):
         for nc_path in tqdm(file_list):
             ds = xr_utils.load_dataset(str(nc_path))
             xr_utils.save_dataset(ds, nc_path=str(nc_path))
+
+
+def sigmoid(x, x0=0,A = 0 , K = 1,B=1, v=0.4,C=1,Q=1):
+    y =A+(K-A)/(eps+(C + Q*np.exp(-B*(x-x0)))**(v))
+    return (y)

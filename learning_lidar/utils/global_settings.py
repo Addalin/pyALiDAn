@@ -22,11 +22,13 @@
 """
 Modules for physical and pollyXT constants.
 """
-import pandas as pd
-from dataclasses import dataclass
 import os
+from dataclasses import dataclass
 from datetime import timedelta, datetime, date, time
+
 import numpy as np
+import pandas as pd
+
 # %% Basic physics constants
 
 eps = np.finfo(float).eps
