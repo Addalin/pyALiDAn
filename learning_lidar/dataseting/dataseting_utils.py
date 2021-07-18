@@ -14,7 +14,7 @@ from sklearn.model_selection import train_test_split
 
 import learning_lidar.generation.generation_utils as gen_utils
 import learning_lidar.preprocessing.preprocessing_utils as prep_utils
-from learning_lidar.preprocessing import preprocessing as prep
+import learning_lidar.utils.xr_utils as xr_utils
 from learning_lidar.utils.global_settings import eps
 
 
@@ -92,7 +92,7 @@ def add_profiles_values(df, station, day_date, file_type='profiles'):
         :param row:
         :return:
         """
-        data = prep.load_dataset(row['matched_nc_profile'])
+        data = xr_utils.load_dataset(row['matched_nc_profile'])
         wavelen = row.wavelength
         # get altitude to rebase the reference heights according to sea-level-height
         altitude = data.altitude.item()
@@ -118,11 +118,11 @@ def add_X_path(df, station, day_date, lambda_nm=532, data_source='molecular', fi
     :return: ds with the added collum of the relevant raw
     """
     logger = logging.getLogger()
-    paths = prep.get_prep_dataset_paths(station=station,
-                                        day_date=day_date,
-                                        data_source=data_source,
-                                        lambda_nm=lambda_nm,
-                                        file_type=file_type)
+    paths = xr_utils.get_prep_dataset_paths(station=station,
+                                                                 day_date=day_date,
+                                                                 data_source=data_source,
+                                                                 lambda_nm=lambda_nm,
+                                                                 file_type=file_type)
     if not paths:
         df.loc[:, f"{data_source}_path"] = ""
         logger.debug(
@@ -211,7 +211,7 @@ def get_sample_ds(row):
     bin_r1 = row.bin_r1
     t0 = row.start_time_period
     t1 = row.end_time_period
-    full_ds = [prep.load_dataset(path) for path in [lidar_path, mol_path]]
+    full_ds = [xr_utils.load_dataset(path) for path in [lidar_path, mol_path]]
     tslice = slice(t0, t1)
     profiles = ['range_corr', 'attbsc']
     sliced_ds = [ds_i.sel(Time=tslice,
@@ -222,7 +222,7 @@ def get_sample_ds(row):
 
 
 def get_aerBsc_profile_ds(path, profile_df):
-    cur_profile = prep.load_dataset(path)
+    cur_profile = xr_utils.load_dataset(path)
     height_units = 'km'
     height_scale = 1e-3  # converting [m] to [km]
     bsc_scale = 1e+3  # converting [1/m sr] to to [1/km sr]
@@ -307,8 +307,8 @@ def get_generated_X_path(station, parent_folder, day_date, data_source, waveleng
 
 def get_prep_X_path(station, parent_folder, day_date, data_source, wavelength, file_type=None, time_slice=None):
     month_folder = prep_utils.get_month_folder_name(parent_folder=parent_folder, day_date=day_date)
-    nc_name = prep.get_prep_dataset_file_name(station, day_date, data_source=data_source, lambda_nm=wavelength,
-                                              file_type=file_type, time_slice=time_slice)
+    nc_name = xr_utils.get_prep_dataset_file_name(station, day_date, data_source=data_source, lambda_nm=wavelength,
+                                                                       file_type=file_type, time_slice=time_slice)
     data_path = os.path.join(month_folder, nc_name)
     return data_path
 
@@ -328,7 +328,7 @@ def get_mean_lc(df, station, day_date):
                                    data_source='signal', wavelength='*')
 
     # Load the LC of current day
-    LC_day = prep.load_dataset(nc_path).LC
+    LC_day = xr_utils.load_dataset(nc_path).LC
 
     # Add mean LC values for each time slice
     df.loc[day_indices, ['LC']] = df.loc[day_indices]. \

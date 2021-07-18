@@ -16,7 +16,7 @@ import learning_lidar.preprocessing.preprocessing_utils as prep_utils
 import learning_lidar.utils.global_settings as gs
 import learning_lidar.utils.misc_lidar as misc_lidar
 import learning_lidar.utils.vis_utils as vis_utils
-from learning_lidar.preprocessing import preprocessing as prep
+import learning_lidar.utils.xr_utils as xr_utils
 from learning_lidar.utils import utils
 from learning_lidar.utils.proc_utils import make_interpolated_image, normalize
 from learning_lidar.utils.vis_utils import TIMEFORMAT
@@ -886,7 +886,7 @@ def explore_gen_day(station, day_date, aer_ds, density_ds):
 
     mol_month_folder = prep_utils.get_month_folder_name(station.molecular_dataset, day_date)
     nc_mol = fr"{day_date.strftime('%Y_%m_%d')}_{station.location}_molecular.nc"
-    mol_ds = prep.load_dataset(os.path.join(mol_month_folder, nc_mol))
+    mol_ds = xr_utils.load_dataset(os.path.join(mol_month_folder, nc_mol))
     ratio_beta = aer_ds.beta / (mol_ds.beta + aer_ds.beta)
     ratio_beta.where(ratio_beta < 0.1).plot(x='Time', y='Height', row='Wavelength',
                                             cmap='turbo_r', figsize=(10, 10), sharex=True)

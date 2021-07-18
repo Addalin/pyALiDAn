@@ -5,7 +5,7 @@ import torchvision
 from pytorch_lightning import LightningDataModule
 from torch.utils.data import DataLoader, random_split
 
-from learning_lidar.preprocessing import preprocessing as prep
+import learning_lidar.utils.xr_utils as xr_utils
 from learning_lidar.learning_phase.utils_.custom_operations import PowTransform, SampleXR2Tensor
 
 
@@ -88,7 +88,7 @@ class LidarDataSet(torch.utils.data.Dataset):
 
         # Load X datasets
         X_paths = row[self.X_features]
-        datasets = [prep.load_dataset(path) for path in X_paths]
+        datasets = [xr_utils.load_dataset(path) for path in X_paths]
 
         # Calc sample height and time slices
         hslices = [

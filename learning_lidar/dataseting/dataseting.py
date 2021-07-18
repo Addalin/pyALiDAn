@@ -17,8 +17,8 @@ import xarray as xr
 import learning_lidar.preprocessing.preprocessing_utils as prep_utils
 import learning_lidar.utils.global_settings as gs
 import learning_lidar.dataseting.dataseting_utils as ds_utils
+import learning_lidar.utils.xr_utils as xr_utils
 from learning_lidar.generation.daily_signals_generations_utils import get_daily_bg
-from learning_lidar.preprocessing import preprocessing as prep
 from learning_lidar.utils.utils import create_and_configer_logger, get_base_arguments
 import learning_lidar.generation.generation_utils as gen_utils
 
@@ -96,7 +96,7 @@ def dataseting_main(args, log_level=logging.DEBUG):
             df = pd.read_csv(csv_path_extended)
         ds_calibration = create_calibration_ds(df, station, source_file=csv_path_extended)
         # Save the calibration dataset
-        prep.save_dataset(ds_calibration, os.path.curdir, ds_path_extended)
+        xr_utils.save_dataset(ds_calibration, os.path.curdir, ds_path_extended)
         logger.info(f"The calibration dataset saved to :{ds_path_extended}")
 
     if args.do_generated_dataset:
@@ -116,7 +116,7 @@ def dataseting_main(args, log_level=logging.DEBUG):
 
     if args.create_generated_time_split_samples:
         prepare_samples(station, start_date, end_date, top_height=15.3, generated=True)
-        
+
     if args.create_time_split_samples:
         prepare_samples(station, start_date, end_date, top_height=15.3, generated=False)
 
@@ -542,13 +542,13 @@ def calc_day_statistics(station, day_date, top_height=15.3):
                                   gen_utils.get_gen_dataset_file_name(station, day_date, data_source=sigsource))
     lidar_nc_name = os.path.join(lidar_folder,
                                  gen_utils.get_gen_dataset_file_name(station, day_date, data_source=lidsource))
-    mol_nc_name = os.path.join(mol_folder, prep.get_prep_dataset_file_name(station, day_date, data_source=molsource,
-                                                                           lambda_nm='all'))
+    mol_nc_name = os.path.join(mol_folder, xr_utils.get_prep_dataset_file_name(station, day_date, data_source=molsource,
+                                                                               lambda_nm='all'))
 
     # Load datasets
-    mol_ds = prep.load_dataset(mol_nc_name)
-    signal_ds = prep.load_dataset(signal_nc_name)
-    lidar_ds = prep.load_dataset(lidar_nc_name)
+    mol_ds = xr_utils.load_dataset(mol_nc_name)
+    signal_ds = xr_utils.load_dataset(signal_nc_name)
+    lidar_ds = xr_utils.load_dataset(lidar_nc_name)
     p_bg = get_daily_bg(station, day_date)  # daily background: p_bg
 
     # update daily profiles stats
@@ -593,9 +593,9 @@ def calc_row_statistics(row, top_height=15.3):
     """
     row_index, row_data = row
     # Load datasets
-    mol_ds = prep.load_dataset(row_data['molecular_path'])
-    lidar_ds = prep.load_dataset(row_data['lidar_path'])
-    p_bg = prep.load_dataset(row_data['bg_path'])
+    mol_ds = xr_utils.load_dataset(row_data['molecular_path'])
+    lidar_ds = xr_utils.load_dataset(row_data['lidar_path'])
+    p_bg = xr_utils.load_dataset(row_data['bg_path'])
 
     datasets_with_names_time_height = [(lidar_ds.p, f'p_lidar'),
                                        (lidar_ds.range_corr, f'range_corr_lidar'),
@@ -650,10 +650,10 @@ def save_dataset2timesplits(station, dataset, data_source='lidar', mod_source='g
                                                    data_source=data_source, save_mode=save_mode,
                                                    profiles=profiles, time_slices=time_slices)
     else:
-        ncpaths = prep.save_prep_dataset(station,
-                                         dataset=dataset,
-                                         data_source=data_source, save_mode=save_mode,
-                                         profiles=profiles, time_slices=time_slices)
+        ncpaths = xr_utils.save_prep_dataset(station,
+                                             dataset=dataset,
+                                             data_source=data_source, save_mode=save_mode,
+                                             profiles=profiles, time_slices=time_slices)
     return ncpaths
 
 
@@ -689,12 +689,13 @@ def prepare_samples(station, start_date, end_date, top_height=15.3, generated=Fa
             load_source = 'lidar' if data_source == 'bg' else data_source
 
             if mode == 'prep':
-                nc_name = prep.get_prep_dataset_file_name(station, day_date, data_source=load_source, lambda_nm='all')
+                nc_name = xr_utils.get_prep_dataset_file_name(station, day_date, data_source=load_source,
+                                                              lambda_nm='all')
             else:
                 nc_name = gen_utils.get_gen_dataset_file_name(station, day_date, data_source=load_source)
             month_folder = prep_utils.get_month_folder_name(base_folder, day_date)
             nc_path = os.path.join(month_folder, nc_name)
-            dataset = prep.load_dataset(ncpath=nc_path)
+            dataset = xr_utils.load_dataset(ncpath=nc_path)
             height_slice = slice(dataset.Height.min().values.tolist(),
                                  dataset.Height.min().values.tolist() + top_height)
             save_dataset2timesplits(station, dataset.sel(Height=height_slice),

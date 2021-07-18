@@ -9,8 +9,8 @@ from datetime import datetime, timedelta
 import os
 import calendar
 
-import learning_lidar.preprocessing.preprocessing as prep
 import learning_lidar.preprocessing.preprocessing_utils as prep_utils
+import learning_lidar.utils.xr_utils as xr_utils
 from learning_lidar.generation.generate_density_utils import PLOT_RESULTS
 
 
@@ -93,13 +93,13 @@ def save_generated_dataset(station, dataset, data_source='lidar', save_mode='bot
                                                               wavelength=wavelength, file_type=profile,
                                                               time_slice=time_slice)
                         ds_slice = ds_profile.sel(Time=time_slice)
-                        ncpath = prep.save_dataset(ds_slice, month_folder, file_name)
+                        ncpath = xr_utils.save_dataset(ds_slice, month_folder, file_name)
                         if ncpath:
                             ncpaths.append(ncpath)
                 else:
                     file_name = get_gen_dataset_file_name(station, date_datetime, data_source=data_source,
                                                           wavelength=wavelength, file_type=profile)
-                    ncpath = prep.save_dataset(ds_profile, month_folder, file_name)
+                    ncpath = xr_utils.save_dataset(ds_profile, month_folder, file_name)
                     if ncpath:
                         ncpaths.append(ncpath)
 
@@ -107,7 +107,7 @@ def save_generated_dataset(station, dataset, data_source='lidar', save_mode='bot
     if save_mode in ['both', 'single']:
         file_name = get_gen_dataset_file_name(station, date_datetime, data_source=data_source,
                                               wavelength='*')
-        ncpath = prep.save_dataset(dataset, month_folder, file_name)
+        ncpath = xr_utils.save_dataset(dataset, month_folder, file_name)
         if ncpath:
             ncpaths.append(ncpath)
     return ncpaths
@@ -151,7 +151,7 @@ def get_month_gen_params_ds(station, day_date, type='density_params'):
     """
 
     gen_source_path = get_month_gen_params_path(station, day_date, type)
-    month_params_ds = prep.load_dataset(gen_source_path)
+    month_params_ds = xr_utils.load_dataset(gen_source_path)
     return month_params_ds
 
 
@@ -268,5 +268,5 @@ def convert_to32(base_path, paths, exclude_paths):
         file_list = file_list - exclude_files
         print(f"found {len(file_list)} nc files in path {base_path + path}")
         for nc_path in tqdm(file_list):
-            ds = prep.load_dataset(str(nc_path))
-            prep.save_dataset(ds, nc_path=str(nc_path))
+            ds = xr_utils.load_dataset(str(nc_path))
+            xr_utils.save_dataset(ds, nc_path=str(nc_path))

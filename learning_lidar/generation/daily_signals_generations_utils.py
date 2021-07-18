@@ -12,10 +12,10 @@ import logging
 
 import learning_lidar.preprocessing.preprocessing_utils as prep_utils
 import learning_lidar.utils.vis_utils as vis_utils
+import learning_lidar.utils.xr_utils as xr_utils
 from learning_lidar.utils.utils import create_and_configer_logger
 import learning_lidar.utils.global_settings as gs
 import learning_lidar.generation.generation_utils as gen_utils
-from learning_lidar.preprocessing import preprocessing as prep
 from learning_lidar.utils.misc_lidar import calc_tau, generate_poisson_signal_STEP
 from learning_lidar.utils.vis_utils import TIMEFORMAT
 
@@ -39,7 +39,7 @@ def calc_total_optical_density(station, day_date):
     # %% 1. Load generated aerosol profiles
     month_folder = prep_utils.get_month_folder_name(station.gen_aerosol_dataset, day_date)
     nc_aer = gen_utils.get_gen_dataset_file_name(station, day_date, data_source='aerosol')
-    aer_ds = prep.load_dataset(os.path.join(month_folder, nc_aer))
+    aer_ds = xr_utils.load_dataset(os.path.join(month_folder, nc_aer))
 
     if PLOT_RESULTS:
         height_slice = slice(0.0, 15)
@@ -48,8 +48,8 @@ def calc_total_optical_density(station, day_date):
 
     # %% 2. Load molecular profiles
     month_folder = prep_utils.get_month_folder_name(station.molecular_dataset, day_date)
-    nc_name = prep.get_prep_dataset_file_name(station, day_date, data_source='molecular', lambda_nm='all')
-    ds_mol = prep.load_dataset(os.path.join(month_folder, nc_name))
+    nc_name = xr_utils.get_prep_dataset_file_name(station, day_date, data_source='molecular', lambda_nm='all')
+    ds_mol = xr_utils.load_dataset(os.path.join(month_folder, nc_name))
 
     # %% 3. Calculate total densities
     total_sigma = (aer_ds.sigma + ds_mol.sigma).assign_attrs({'info': "Daily total extinction coefficient",
@@ -415,7 +415,7 @@ def explore_orig_day(main_folder, station_name, start_date, end_date, day_date, 
     csv_path_extended = os.path.join(main_folder, 'data',
                                      f"dataset_{station_name}_{start_date.strftime('%Y-%m-%d')}_{end_date.strftime('%Y-%m-%d')}_extended.csv")
     df = pd.read_csv(csv_path_extended)
-    ds_extended = prep.load_dataset(ds_path_extended)
+    ds_extended = xr_utils.load_dataset(ds_path_extended)
 
     # %%
     day_slice = slice(day_date, day_date.date() + timedelta(days=1))

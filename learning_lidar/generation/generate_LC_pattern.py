@@ -10,10 +10,9 @@ import torch.utils.data
 import xarray as xr
 
 import learning_lidar.generation.generation_utils as gen_utils
-import learning_lidar.preprocessing.preprocessing as prep
-import learning_lidar.preprocessing.preprocessing_utils as prep_utils
 import learning_lidar.utils.global_settings as gs
 import learning_lidar.utils.vis_utils as vis_utils
+import learning_lidar.utils.xr_utils as xr_utils
 from learning_lidar.utils import utils
 from learning_lidar.utils.proc_utils import Bezier
 
@@ -44,7 +43,7 @@ def main(station_name, start_date, end_date):
 
     ds_extended_name = f"dataset_{station_name}_{start_date.strftime('%Y-%m-%d')}_{end_date.strftime('%Y-%m-%d')}_extended.nc"
     ds_path_extended = os.path.join(data_folder, ds_extended_name)
-    ds_extended = prep.load_dataset(ds_path_extended)
+    ds_extended = xr_utils.load_dataset(ds_path_extended)
 
     csv_extended_name = f"dataset_{station_name}_{start_date.strftime('%Y-%m-%d')}_{end_date.strftime('%Y-%m-%d')}_extended.csv"
     csv_path_extended = os.path.join(data_folder, csv_extended_name)
@@ -238,12 +237,12 @@ def main(station_name, start_date, end_date):
         end_dt = datetime(year, month, monthdays) + timedelta(days=1) - timedelta(seconds=station.freq)
         gen_source_path = gen_utils.get_month_gen_params_path(station, start_dt, type='LC')
         month_slice = slice(start_dt, end_dt)
-        prep.save_dataset(dataset=new_p.sel(Time=month_slice), nc_path=gen_source_path)
+        xr_utils.save_dataset(dataset=new_p.sel(Time=month_slice), nc_path=gen_source_path)
         print(gen_source_path)  # TODO:  log
 
     folder_name = station.generation_folder
     nc_name = f"generated_LC_{station.name}_{start_date.strftime('%Y-%m-%d')}_{end_date.strftime('%Y-%m-%d')}.nc"
-    prep.save_dataset(new_p, folder_name, nc_name)
+    xr_utils.save_dataset(new_p, folder_name, nc_name)
 
 
 if __name__ == '__main__':
