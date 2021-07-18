@@ -7,7 +7,6 @@ import numpy as np
 import xarray as xr
 from tqdm import tqdm
 
-from learning_lidar.preprocessing import preprocessing_utils as prep_utils
 from learning_lidar.utils import utils
 
 
@@ -135,7 +134,7 @@ def get_prep_dataset_paths(station, day_date, data_source='molecular', lambda_nm
     elif data_source == 'lidar':
         parent_folder = station.lidar_dataset
 
-    month_folder = prep_utils.get_month_folder_name(parent_folder, day_date)
+    month_folder = get_month_folder_name(parent_folder, day_date)
     file_name = get_prep_dataset_file_name(station, day_date, data_source, lambda_nm, file_type)
 
     # print(os.listdir(month_folder))
@@ -171,7 +170,7 @@ def save_prep_dataset(station, dataset, data_source='lidar', save_mode='both',
         base_folder = station.bg_dataset
     elif data_source == 'molecular':
         base_folder = station.molecular_dataset
-    month_folder = prep_utils.get_month_folder_name(base_folder, date_datetime)
+    month_folder = get_month_folder_name(base_folder, date_datetime)
 
     get_daily_ds_date(dataset)
     '''save the dataset to separated netcdf files: per profile per wavelength'''
@@ -248,3 +247,9 @@ def get_daily_ds_date(dataset):
         return None
     date_datetime = utils.dt64_2_datetime(date_64)
     return date_datetime
+
+
+# TODO cannot be in preprocessing utils but also not really meant to be here. Where to put?
+def get_month_folder_name(parent_folder, day_date):
+    month_folder = os.path.join(parent_folder, day_date.strftime("%Y"), day_date.strftime("%m"))
+    return month_folder

@@ -9,7 +9,7 @@ import learning_lidar.utils.global_settings as gs
 import learning_lidar.generation.generation_utils as gen_utils
 import learning_lidar.utils.vis_utils as vis_utils
 import learning_lidar.generation.daily_signals_generations_utils as gen_sig_utils
-from learning_lidar.utils.utils import create_and_configer_logger
+from learning_lidar.utils.utils import create_and_configer_logger, get_base_arguments
 
 
 # TODO:  add 2 flags - Debug and save figure.
@@ -40,9 +40,9 @@ def generate_daily_lidar_measurement2(station, day_date, SAVE_DS=True):
     nc_path = os.path.join(station.gen_lidar_dataset, str(day_date.year), f"{day_date.strftime('%m')}", f"{day_date.strftime('%Y_%m_%d')}_Haifa_generated_lidar.nc")
     overlap_params = pd.read_csv("../../data/overlap_params.csv", index_col=0)
     overlap_params_index = {4: 0, 5: 1, 9: 2, 10: 3}[day_date.month]
+    overlap_param = overlap_params.loc[overlap_params_index, :].values
     measure_ds = gen_sig_utils.calc_daily_measurement_withoverlap(station, day_date,
-                                                                  overlap_params=overlap_params.loc[
-                                                                                 overlap_params_index, :].values,
+                                                                  overlap_params=overlap_param,
                                                                   signal_ds=None, nc_path=nc_path)
 
     if SAVE_DS:
@@ -58,14 +58,17 @@ def generate_daily_lidar_measurement2(station, day_date, SAVE_DS=True):
     return measure_ds
 
 
-def daily_signals_generation_main(station_name='haifa', start_date=datetime(2017, 9, 1), end_date=datetime(2017, 9, 2)):
+def daily_signals_generation_main(args):
+    start_date = args.start_date
+    end_date = args.end_date
+
     vis_utils.set_visualization_settings()
-    gen_sig_utils.PLOT_RESULTS = True  # Toggle True for debug. False for run.
-    # TODO: Toggle PLOT_RESULTS to True - doesn't seem to work
+    gen_sig_utils.PLOT_RESULTS = False  # Toggle True for debug. False for run.
+    # TODO: Toggle PLOT_RESULTS to True - doesn't seem to work. Shubi - works for me. Adi please check again..
     logging.getLogger('PIL').setLevel(logging.ERROR)  # Fix annoying PIL logs
     logging.getLogger('matplotlib').setLevel(logging.ERROR)  # Fix annoying matplotlib logs
     logger = create_and_configer_logger(f"{os.path.basename(__file__)}.log", level=logging.INFO)
-    station = gs.Station(station_name=station_name)
+    station = gs.Station(station_name=args.station_name)
 
     logger.info(f"\nStation name:{station.location}\nStart generating lidar signals & measurements "
                 f"for period: [{start_date.strftime('%Y-%m-%d')},{end_date.strftime('%Y-%m-%d')}]")
@@ -73,8 +76,8 @@ def daily_signals_generation_main(station_name='haifa', start_date=datetime(2017
     num_days = len(days_list)
     num_processes = 1 if gen_sig_utils.PLOT_RESULTS else min((cpu_count() - 1, num_days))
     save_ds = True
-    generate_daily_lidar_measurement2(station, days_list[0], save_ds)
     # TODO merge generate_daily_lidar_measurement with generate_daily_lidar_measurement2
+    #  Both lidar and signal, with overlap
     with Pool(num_processes) as p:
         p.starmap(generate_daily_lidar_measurement2, zip(repeat(station), days_list, repeat(save_ds)))
 
@@ -83,7 +86,7 @@ def daily_signals_generation_main(station_name='haifa', start_date=datetime(2017
 
 
 if __name__ == '__main__':
-    station_name = 'haifa_shubi'
-    start_date = datetime(2017, 9, 1)
-    end_date = datetime(2017, 9, 2)
-    daily_signals_generation_main(station_name, start_date, end_date)
+    parser = get_base_arguments()
+    args = parser.parse_args()
+
+    daily_signals_generation_main(args)
