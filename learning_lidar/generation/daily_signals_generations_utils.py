@@ -405,7 +405,7 @@ def calc_daily_measurement(station, day_date, signal_ds):
     # gen_utils.plot_daily_profile(measure_ds.range_corr.where(measure_ds.range_corr>=3))
     return measure_ds
 
-def calc_daily_measurement_withoverlap(station, day_date, nc_path):
+def calc_daily_measurement_withoverlap(station, day_date, overlap_params, signal_ds, nc_path):
     """
     Generate Lidar measurement, by combining background signal and the lidar signal,
     and then creating Poisson signal, which is the measurement of the mean lidar signal.
@@ -414,14 +414,24 @@ def calc_daily_measurement_withoverlap(station, day_date, nc_path):
     :param signal_ds: xr.Dataset(), containing the daily lidar signal (clean)
     :return: measure_ds: xr.Dataset(), containing the daily lidar measurement (with background and applied photon noise)
     """
-    nc_path = '/home/shubi/PycharmProjects/learning_lidar/data/GENERATION/lidar_dataset/2017/09/2017_09_01_Haifa_generated_lidar.nc'
-    measure_ds = xr_utils.load_dataset(nc_path)
-    overlap_params = pd.read_csv("/home/shubi/PycharmProjects/learning_lidar/learning_lidar/generation/overlap_params.csv",
-                                 index_col=0)
-    p_mean = measure_ds.p_mean
+    # TODO after conversion -
+    #  Delete load_existing option
+    #  delete nc_path parameter
+    load_existing = True
+    if load_existing:
+        measure_ds = xr_utils.load_dataset(nc_path)
+        p_mean = measure_ds.p_mean
+        bg_ds = measure_ds.p_bg
+    else:
+        p_bg = get_daily_bg(station, day_date)  # daily background: p_bg
+        # Expand p_bg to coordinates : 'Wavelength','Height', 'Time
+        bg_ds = p_bg.broadcast_like(signal_ds.range_corr)
+        p_mean = calc_mean_measurement(station, day_date, signal_ds, bg_ds)  # me
+
+
     Height_indx = p_mean.Height
     # Apply Overlap function
-    overlap = sigmoid(Height_indx, *overlap_params.loc[0,:].values)
+    overlap = sigmoid(Height_indx, *overlap_params)
     overlap_ds = xr.Dataset(data_vars={'overlap': ('Height', overlap)},
                             coords={'Height': Height_indx.values},
                             attrs={'name': 'Overlap Function'})
@@ -433,7 +443,7 @@ def calc_daily_measurement_withoverlap(station, day_date, nc_path):
 
     pr2n_ds = calc_range_corr_measurement(station, day_date, pn_ds, r2_ds)  # range corrected measurement: pr2n = pn * r^2
     measure_ds = xr.Dataset().assign(p=pn_ds, range_corr=pr2n_ds, p_mean=p_mean,
-                                     p_bg=measure_ds.p_bg, overlap=overlap_ds.overlap)
+                                     p_bg=bg_ds, overlap=overlap_ds.overlap)
     measure_ds['date'] = day_date
     measure_ds.attrs = {'location': station.location,
                         'info': 'Daily generated lidar signals measurement.',

@@ -35,9 +35,15 @@ def generate_daily_lidar_measurement(station, day_date, SAVE_DS=True):
 
     return measure_ds, signal_ds
 
-def generate_daily_lidar_measurement2(station, day_date, SAVE_DS=True):
 
-    measure_ds = gen_sig_utils.calc_daily_measurement_withoverlap(station, day_date, nc_path="")
+def generate_daily_lidar_measurement2(station, day_date, SAVE_DS=True):
+    nc_path = os.path.join(station.gen_lidar_dataset, str(day_date.year), f"{day_date.strftime('%m')}", f"{day_date.strftime('%Y_%m_%d')}_Haifa_generated_lidar.nc")
+    overlap_params = pd.read_csv("../../data/overlap_params.csv", index_col=0)
+    overlap_params_index = {4: 0, 5: 1, 9: 2, 10: 3}[day_date.month]
+    measure_ds = gen_sig_utils.calc_daily_measurement_withoverlap(station, day_date,
+                                                                  overlap_params=overlap_params.loc[
+                                                                                 overlap_params_index, :].values,
+                                                                  signal_ds=None, nc_path=nc_path)
 
     if SAVE_DS:
         # TODO: check that the range_corr_p is added to measure_ds, and that the LCNET is uploading the new paths
@@ -48,7 +54,6 @@ def generate_daily_lidar_measurement2(station, day_date, SAVE_DS=True):
         gen_utils.save_generated_dataset(station, measure_ds,
                                          data_source='lidar',
                                          save_mode='single')
-
 
     return measure_ds
 
@@ -69,8 +74,9 @@ def daily_signals_generation_main(station_name='haifa', start_date=datetime(2017
     num_processes = 1 if gen_sig_utils.PLOT_RESULTS else min((cpu_count() - 1, num_days))
     save_ds = True
     generate_daily_lidar_measurement2(station, days_list[0], save_ds)
-    # with Pool(num_processes) as p:
-    #     p.starmap(generate_daily_lidar_measurement2, zip(repeat(station), days_list, repeat(save_ds)))
+    # TODO merge generate_daily_lidar_measurement with generate_daily_lidar_measurement2
+    with Pool(num_processes) as p:
+        p.starmap(generate_daily_lidar_measurement2, zip(repeat(station), days_list, repeat(save_ds)))
 
     logger.info(f"\nDone generating lidar signals & measurements "
                 f"for period: [{start_date.strftime('%Y-%m-%d')},{end_date.strftime('%Y-%m-%d')}]")
