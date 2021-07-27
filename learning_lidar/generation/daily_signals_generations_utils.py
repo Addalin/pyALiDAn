@@ -239,7 +239,6 @@ def calc_lidar_signal_ds(station, day_date, r2_ds, pr2_ds):
 
 def calc_lidar_signal(station, day_date, total_ds):
     """
-    TODO update usage
     Generate daily lidar signal, using the optical densities and the LC (Lidar Constant)
     :param station: gs.station() object of the lidar station
     :param day_date: datetime.date object of the required date

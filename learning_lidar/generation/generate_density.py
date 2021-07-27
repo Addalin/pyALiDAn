@@ -61,10 +61,6 @@ def generate_density_main(station_name='haifa', start_date=datetime(2017, 9, 1),
 
     logger.info(f"\nDone generating lidar signals & measurements "
                 f"for period: [{start_date.strftime('%Y-%m-%d')},{end_date.strftime('%Y-%m-%d')}]")
-    # TODO: move the folowing part to a notebook in Analysis
-    # EXPLORE_GEN_DAY = False
-    # if EXPLORE_GEN_DAY:
-    #    gen_den_utils.explore_gen_day(station, cur_day, aer_ds, density_ds)
 
 
 if __name__ == '__main__':
