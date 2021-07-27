@@ -138,7 +138,6 @@ def create_dataset(station_name='haifa', start_date=datetime(2017, 9, 1),
     CHOOSE: telescope: far_range , METHOD: Klett_Method
     each sample will have 60 bins (aka 30 mins length)
     path to db:  stationdb_file
-    TODO update usage
     :param list_dates:
     :param sample_size:
     :param station_name:
@@ -426,8 +425,6 @@ def create_generated_dataset(station, start_date, end_date, sample_size='30min',
 
             if calc_mean_lc:
                 # get the mean LC from signal_paths, one day at a time
-                # TODO: adapt this part and ds_utils.get_mean_lc() to retrieve mean LC for 3 wavelength at once
-                #  (should be faster than reading the file 3 times per wavelength)
                 days_groups = df.groupby('date').groups
                 days_list = days_groups.keys()
                 inds_subsets = [days_groups[key] for key in days_list]
@@ -498,7 +495,7 @@ def calc_data_statistics(station, start_date, end_date, top_height=15.3, mode='g
         if mode == 'gen':
             results = p.starmap(calc_day_statistics, zip(repeat(station), days_list, repeat(top_height)))
         else:
-            results = p.starmap(calc_row_statistics, zip(df.iterrows(), repeat(top_height)))
+            results = p.starmap(calc_raw_sample_statistics, zip(df.iterrows(), repeat(top_height)))
     for result in results:
         df_stats += result
 
@@ -572,16 +569,16 @@ def calc_day_statistics(station, day_date, top_height=15.3):
         df_stats[f'{ds_name}_std'] = ds.std(dim={'Time'}).values
         df_stats[f'{ds_name}_min'] = ds.min(dim={'Time'}).values
         df_stats[f'{ds_name}_max'] = ds.max(dim={'Time'}).values
+    #  TODO Mean std min max LC from extended csv, per wavelength, instead of second for loop in calc_day_statistics
 
     return df_stats
 
 
-def calc_row_statistics(row, top_height=15.3):
+def calc_raw_sample_statistics(row, top_height=15.3):
     """
     Calculates mean & std for params in datasets_with_names_time_height and datasets_with_names_time
 
-    :param station: gs.station() object of the lidar station
-    :param day_date: day_date: datetime.date object of the required date
+    :param row: row from raw database table (pandas.Dataframe())
     :param top_height: np.float(). The Height[km] **above** ground (Lidar) level - up to which slice the samples.
     Note: default is 15.3 [km]. IF ONE CHANGES IT - THAN THIS WILL AFFECT THE INPUT DIMENSIONS AND STATISTICS !!!
     :return: dataframe, each row corresponds to a wavelength
@@ -611,13 +608,6 @@ def calc_row_statistics(row, top_height=15.3):
         df_stats[f'{ds_name}_std'] = ds.sel(Height=height_slice).std(dim={'Height', 'Time'}).values
         df_stats[f'{ds_name}_min'] = ds.sel(Height=height_slice).min(dim={'Height', 'Time'}).values
         df_stats[f'{ds_name}_max'] = ds.sel(Height=height_slice).max(dim={'Height', 'Time'}).values
-
-    #  TODO Mean std min max LC from csv, per wavelength, instead of second for loop in calc_day_statistics
-    # for ds, ds_name in datasets_with_names_time:
-    #     df_stats[f'{ds_name}_mean'] = ds.mean(dim={'Time'}).values
-    #     df_stats[f'{ds_name}_std'] = ds.std(dim={'Time'}).values
-    #     df_stats[f'{ds_name}_min'] = ds.min(dim={'Time'}).values
-    #     df_stats[f'{ds_name}_max'] = ds.max(dim={'Time'}).values
 
     return df_stats
 
