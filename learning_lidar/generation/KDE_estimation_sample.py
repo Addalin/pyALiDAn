@@ -10,10 +10,9 @@ from scipy import stats
 from scipy.stats import multivariate_normal
 
 import learning_lidar.generation.generation_utils as gen_utils
-import learning_lidar.preprocessing.preprocessing as prep
-import learning_lidar.preprocessing.preprocessing_utils as prep_utils
 import learning_lidar.utils.global_settings as gs
 import learning_lidar.utils.vis_utils as vis_utils
+import learning_lidar.utils.xr_utils as xr_utils
 from learning_lidar.utils import utils
 from learning_lidar.utils.proc_utils import Bezier
 
@@ -46,7 +45,7 @@ def main(station, month, year, start_date, end_date, DATA_DIR):
     start_day = datetime(year, month, 1, 0, 0)
     end_day = datetime(year, month, monthdays, 0, 0)
     nc_aeronet_name = f"{start_day.strftime('%Y%m%d')}_{end_day.strftime('%Y%m%d')}_{station.name}_ang.nc"
-    ds_ang = prep.load_dataset(os.path.join(folder_name, nc_aeronet_name))
+    ds_ang = xr_utils.load_dataset(os.path.join(folder_name, nc_aeronet_name))
 
     # ## Angstrom Exponent
     # ### $A_{355,532}$ vs. $A_{532,1064 }$ for the current month
@@ -292,7 +291,7 @@ def main(station, month, year, start_date, end_date, DATA_DIR):
     beta_532 = []
     grps_files = df_month.groupby(df_month.profile_path).groups
     for key, v in zip(grps_files.keys(), grps_files.values()):
-        ds_profile = prep.load_dataset(key)
+        ds_profile = xr_utils.load_dataset(key)
         max_beta_532 = ds_profile.aerBsc_klett_532.values.max()
         max_beta_532 *= km_scale  # converting 1/(sr m) to  1/(sr km)
         cur_rm = df_month['rm'].iloc[v.values[0]]
@@ -409,7 +408,7 @@ def main(station, month, year, start_date, end_date, DATA_DIR):
     if SAVE_DS:
         gen_source_path = gen_utils.get_month_gen_params_path(station, start_day, type='density_params')
         print(gen_source_path)
-        prep.save_dataset(ds_month, os.path.dirname(gen_source_path), os.path.basename(gen_source_path))
+        xr_utils.save_dataset(ds_month, os.path.dirname(gen_source_path), os.path.basename(gen_source_path))
 
     EXTEND_SMOOTHING_BEZIER = False
     if EXTEND_SMOOTHING_BEZIER:

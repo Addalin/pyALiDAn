@@ -1,15 +1,17 @@
 import logging
+import os
 from datetime import datetime
 from itertools import repeat
-import os
+from multiprocessing import Pool, cpu_count
 
 import pandas as pd
-import learning_lidar.utils.global_settings as gs
-import learning_lidar.generation.generation_utils as gen_utils
-import learning_lidar.utils.vis_utils as vis_utils
-from multiprocessing import Pool, cpu_count
+
 import learning_lidar.generation.generate_density_utils as gen_den_utils
+import learning_lidar.generation.generation_utils as gen_utils
+import learning_lidar.utils.global_settings as gs
+import learning_lidar.utils.vis_utils as vis_utils
 from learning_lidar.utils.utils import create_and_configer_logger
+
 
 # TODO:  add 2 flags - Debug and save figure.
 def generate_daily_aerosol_density(station, day_date, SAVE_DS=True):
@@ -59,10 +61,6 @@ def generate_density_main(station_name='haifa', start_date=datetime(2017, 9, 1),
 
     logger.info(f"\nDone generating lidar signals & measurements "
                 f"for period: [{start_date.strftime('%Y-%m-%d')},{end_date.strftime('%Y-%m-%d')}]")
-    # TODO: move the folowing part to a notebook in Analysis
-    # EXPLORE_GEN_DAY = False
-    # if EXPLORE_GEN_DAY:
-    #    gen_den_utils.explore_gen_day(station, cur_day, aer_ds, density_ds)
 
 
 if __name__ == '__main__':

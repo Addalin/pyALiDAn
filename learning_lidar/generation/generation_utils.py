@@ -1,17 +1,16 @@
-from pathlib import Path
+import calendar
+import os
+from datetime import datetime, timedelta
 
 import numpy as np
 from matplotlib import pyplot as plt
 from scipy.ndimage import gaussian_filter1d
 from tqdm import tqdm
 
-from datetime import datetime, timedelta
-import os
-import calendar
-
-import learning_lidar.preprocessing.preprocessing as prep
 import learning_lidar.preprocessing.preprocessing_utils as prep_utils
+import learning_lidar.utils.xr_utils as xr_utils
 from learning_lidar.generation.generate_density_utils import PLOT_RESULTS
+from learning_lidar.utils.global_settings import eps
 
 
 def get_gen_dataset_file_name(station, day_date, wavelength='*',
@@ -62,7 +61,7 @@ def save_generated_dataset(station, dataset, data_source='lidar', save_mode='bot
     :return: ncpaths - the paths of the saved dataset/s . None - for failure.
     """
     # TODO: merge save_prep_dataset() &  save_generated_dataset() --> save_daily_dataset() with a flag of 'gen' or 'prep'
-    date_datetime = prep_utils.get_daily_ds_date(dataset)
+    date_datetime = xr_utils.get_daily_ds_date(dataset)
     if data_source == 'lidar':
         base_folder = station.gen_lidar_dataset
     elif data_source == 'signal':
@@ -75,7 +74,7 @@ def save_generated_dataset(station, dataset, data_source='lidar', save_mode='bot
         base_folder = station.gen_bg_dataset
     month_folder = prep_utils.get_month_folder_name(base_folder, date_datetime)
 
-    prep_utils.get_daily_ds_date(dataset)
+    xr_utils.get_daily_ds_date(dataset)
     '''save the dataset to separated netcdf files: per profile per wavelength'''
     ncpaths = []
 
@@ -93,13 +92,13 @@ def save_generated_dataset(station, dataset, data_source='lidar', save_mode='bot
                                                               wavelength=wavelength, file_type=profile,
                                                               time_slice=time_slice)
                         ds_slice = ds_profile.sel(Time=time_slice)
-                        ncpath = prep.save_dataset(ds_slice, month_folder, file_name)
+                        ncpath = xr_utils.save_dataset(ds_slice, month_folder, file_name)
                         if ncpath:
                             ncpaths.append(ncpath)
                 else:
                     file_name = get_gen_dataset_file_name(station, date_datetime, data_source=data_source,
                                                           wavelength=wavelength, file_type=profile)
-                    ncpath = prep.save_dataset(ds_profile, month_folder, file_name)
+                    ncpath = xr_utils.save_dataset(ds_profile, month_folder, file_name)
                     if ncpath:
                         ncpaths.append(ncpath)
 
@@ -107,7 +106,7 @@ def save_generated_dataset(station, dataset, data_source='lidar', save_mode='bot
     if save_mode in ['both', 'single']:
         file_name = get_gen_dataset_file_name(station, date_datetime, data_source=data_source,
                                               wavelength='*')
-        ncpath = prep.save_dataset(dataset, month_folder, file_name)
+        ncpath = xr_utils.save_dataset(dataset, month_folder, file_name)
         if ncpath:
             ncpaths.append(ncpath)
     return ncpaths
@@ -119,6 +118,7 @@ def get_month_gen_params_path(station, day_date, type='density_params'):
         'density_params' - for density sampler generator,
         'bg'- for generated background signal,
         'LC' - for generated Lidar Constant signal
+        # TODO : add 'overlap'
     :param station: gs.station() object of the lidar station
     :param day_date: datetime.date object of the required date
     :return: str. Path to monthly dataset of generation parameters.
@@ -145,13 +145,14 @@ def get_month_gen_params_ds(station, day_date, type='density_params'):
         'density_params' - for density sampler generator,
         'bg'- for generated background signal,
         'LC' - for generated Lidar Constant signal
+        # TODO : add 'overlap'
     :param station: gs.station() object of the lidar station
     :param day_date: datetime.date object of the required date
     :return: day_params_ds: xarray.Dataset(). Monthly dataset of generation parameters.
     """
 
     gen_source_path = get_month_gen_params_path(station, day_date, type)
-    month_params_ds = prep.load_dataset(gen_source_path)
+    month_params_ds = xr_utils.load_dataset(gen_source_path)
     return month_params_ds
 
 
@@ -239,34 +240,6 @@ def create_ratio(total_bins, mode='ones', start_height=0.3, ref_height=2.5, ref_
     return smooth_ratio
 
 
-def convert_to32(base_path, paths, exclude_paths):
-    """
-    Loads and saves all nc files in paths, excluding exclude_paths from base_path.
-    Can be used to convert to nc fiels previously saved as float64 as float32 (current default)
-
-    Example:
-        base_path = r"D:"
-        paths = [r"\data_haifa\GENERATION",
-                 r"\data_haifa\DATA FROM TROPOS\molecular_dataset",
-                 r"\data_haifa\DATA FROM TROPOS\lidar_dataset"]
-
-        exclude_paths = [r"D:\data_haifa\GENERATION\density_dataset\2017\04",
-                         r"D:\data_haifa\GENERATION\density_dataset\2017\05"]
-
-    :return: None
-    """
-
-    exclude_files = []
-    for exclude_path in exclude_paths:
-        exclude_files.extend(list(Path(exclude_path).glob("**/*.nc")))
-    exclude_files = [str(x) for x in exclude_files]
-    exclude_files = set(exclude_files)
-
-    for path in paths:
-        full_paths = Path(base_path + path)
-        file_list = set([str(pp) for pp in full_paths.glob("**/*.nc")])
-        file_list = file_list - exclude_files
-        print(f"found {len(file_list)} nc files in path {base_path + path}")
-        for nc_path in tqdm(file_list):
-            ds = prep.load_dataset(str(nc_path))
-            prep.save_dataset(ds, nc_path=str(nc_path))
+def sigmoid(x, x0=0,A = 0 , K = 1,B=1, v=0.4,C=1,Q=1):
+    y =A+(K-A)/(eps+(C + Q*np.exp(-B*(x-x0)))**(v))
+    return (y)

@@ -1,22 +1,23 @@
+import logging
 import os
 from datetime import timedelta
-import matplotlib.pyplot as plt
-from pytictoc import TicToc
 
+import matplotlib.pyplot as plt
 import numpy as np
-from tqdm import tqdm
 import pandas as pd
 import xarray as xr
+from pytictoc import TicToc
 from scipy.ndimage import gaussian_filter1d
-import logging
+from tqdm import tqdm
 
-import learning_lidar.preprocessing.preprocessing_utils as prep_utils
-import learning_lidar.utils.vis_utils as vis_utils
-from learning_lidar.utils.utils import create_and_configer_logger
-import learning_lidar.utils.global_settings as gs
 import learning_lidar.generation.generation_utils as gen_utils
-from learning_lidar.preprocessing import preprocessing as prep
+import learning_lidar.preprocessing.preprocessing_utils as prep_utils
+import learning_lidar.utils.global_settings as gs
+import learning_lidar.utils.vis_utils as vis_utils
+import learning_lidar.utils.xr_utils as xr_utils
+from learning_lidar.generation.generation_utils import sigmoid
 from learning_lidar.utils.misc_lidar import calc_tau, generate_poisson_signal_STEP
+from learning_lidar.utils.utils import create_and_configer_logger
 from learning_lidar.utils.vis_utils import TIMEFORMAT
 
 logger = create_and_configer_logger(f"{os.path.basename(__file__)}.log", level=logging.INFO)
@@ -39,7 +40,7 @@ def calc_total_optical_density(station, day_date):
     # %% 1. Load generated aerosol profiles
     month_folder = prep_utils.get_month_folder_name(station.gen_aerosol_dataset, day_date)
     nc_aer = gen_utils.get_gen_dataset_file_name(station, day_date, data_source='aerosol')
-    aer_ds = prep.load_dataset(os.path.join(month_folder, nc_aer))
+    aer_ds = xr_utils.load_dataset(os.path.join(month_folder, nc_aer))
 
     if PLOT_RESULTS:
         height_slice = slice(0.0, 15)
@@ -48,8 +49,8 @@ def calc_total_optical_density(station, day_date):
 
     # %% 2. Load molecular profiles
     month_folder = prep_utils.get_month_folder_name(station.molecular_dataset, day_date)
-    nc_name = prep.get_prep_dataset_file_name(station, day_date, data_source='molecular', lambda_nm='all')
-    ds_mol = prep.load_dataset(os.path.join(month_folder, nc_name))
+    nc_name = xr_utils.get_prep_dataset_file_name(station, day_date, data_source='molecular', lambda_nm='all')
+    ds_mol = xr_utils.load_dataset(os.path.join(month_folder, nc_name))
 
     # %% 3. Calculate total densities
     total_sigma = (aer_ds.sigma + ds_mol.sigma).assign_attrs({'info': "Daily total extinction coefficient",
@@ -238,7 +239,6 @@ def calc_lidar_signal_ds(station, day_date, r2_ds, pr2_ds):
 
 def calc_lidar_signal(station, day_date, total_ds):
     """
-    TODO update usage
     Generate daily lidar signal, using the optical densities and the LC (Lidar Constant)
     :param station: gs.station() object of the lidar station
     :param day_date: datetime.date object of the required date
@@ -366,35 +366,59 @@ def calc_range_corr_measurement(station, day_date, pn_ds, r2_ds):
     return pr2n_ds
 
 
-def calc_daily_measurement(station, day_date, signal_ds):
+def calc_daily_measurement(station, day_date, overlap_params, signal_ds, measure_ds_path=None):
     """
     Generate Lidar measurement, by combining background signal and the lidar signal,
     and then creating Poisson signal, which is the measurement of the mean lidar signal.
+
+    If measure_ds_path is given, an existing ds is loaded for the measurement, instead of computed from scratch
+
+    :param overlap_params: list of parameters for overlap sigmoid function
+    :param measure_ds_path: path to existing measure ds
     :param station: gs.station() object of the lidar station
     :param day_date: datetime.date object of the required date
     :param signal_ds: xr.Dataset(), containing the daily lidar signal (clean)
     :return: measure_ds: xr.Dataset(), containing the daily lidar measurement (with background and applied photon noise)
     """
-    p_bg = get_daily_bg(station, day_date)  # daily background: p_bg
-    # Expand p_bg to coordinates : 'Wavelength','Height', 'Time
+    """
+    if update:
+        load measure ds 
+        load signal ds (pass signal_ds=None)
+        p_mean = measure_ds.p_mean
+    p_bg = get_daily_bg(station, day_date)
     bg_ds = p_bg.broadcast_like(signal_ds.range_corr)
+    p_mean = calc_mean_measurement(station, day_date, signal_ds, bg_ds) if not update
+    overlap_ds = get_daily_overlap() (load daily overlap params (similar to load daily measurement) , sigmoid, attr)
+    """
+    # get the inigridients
+    if measure_ds_path:
+        measure_ds = xr_utils.load_dataset(measure_ds_path)
+        bg_ds = measure_ds.p_bg
+        p_mean = measure_ds.p_mean
+    else:
+        p_bg = get_daily_bg(station, day_date)  # daily background: p_bg
+        # Expand p_bg to coordinates : 'Wavelength','Height', 'Time
+        bg_ds = p_bg.broadcast_like(signal_ds.range_corr)
+        p_mean = calc_mean_measurement(station, day_date, signal_ds, bg_ds)  # me
 
-    p_mean = calc_mean_measurement(station, day_date, signal_ds, bg_ds)  # mean lidar signal: mu_p = p_bg + p
-    # Apply Overlap function
     Height_indx = p_mean.Height
-    # TODO : this is a dummy function --> need to adapt with more info from TROPOS
-    overlap = gen_utils.create_ratio(total_bins=Height_indx.size, mode='overlap') # TO REPLACE from overlpap.npyib sig = sigmoid(heigths,*p)
+    # Apply Overlap function
+    # TODO use gen_utils.create_ratio(total_bins=Height_indx.size, mode='overlap')?
+    #  It has additional options.
+    overlap = sigmoid(Height_indx, *overlap_params)
     overlap_ds = xr.Dataset(data_vars={'overlap': ('Height', overlap)},
                             coords={'Height': Height_indx.values},
                             attrs={'name': 'Overlap Function'})
+    # here the calculation stars
     p_mean = xr.apply_ufunc(lambda x, r: (x * r),
                             p_mean, overlap_ds.overlap,
                             keep_attrs=True).assign_attrs({'info': p_mean.info+' with applied overlap'})
-
     pn_ds = calc_poiss_measurement(station, day_date, p_mean)  # lidar measurement: pn ~Poiss(mu_p)
-    pr2n_ds = calc_range_corr_measurement(station, day_date, pn_ds,
-                                          signal_ds.r2)  # range corrected measurement: pr2n = pn * r^2
-    measure_ds = xr.Dataset().assign(p=pn_ds, range_corr=pr2n_ds, p_mean=p_mean, p_bg=bg_ds, overlap= overlap_ds)
+    r2_ds = prep_utils.calc_r2_ds(station, day_date)
+
+    pr2n_ds = calc_range_corr_measurement(station, day_date, pn_ds, r2_ds)  # range corrected measurement: pr2n = pn * r^2
+    measure_ds = xr.Dataset().assign(p=pn_ds, range_corr=pr2n_ds, p_mean=p_mean,
+                                     p_bg=bg_ds, overlap=overlap_ds.overlap)
     measure_ds['date'] = day_date
     measure_ds.attrs = {'location': station.location,
                         'info': 'Daily generated lidar signals measurement.',
@@ -415,7 +439,7 @@ def explore_orig_day(main_folder, station_name, start_date, end_date, day_date, 
     csv_path_extended = os.path.join(main_folder, 'data',
                                      f"dataset_{station_name}_{start_date.strftime('%Y-%m-%d')}_{end_date.strftime('%Y-%m-%d')}_extended.csv")
     df = pd.read_csv(csv_path_extended)
-    ds_extended = prep.load_dataset(ds_path_extended)
+    ds_extended = xr_utils.load_dataset(ds_path_extended)
 
     # %%
     day_slice = slice(day_date, day_date.date() + timedelta(days=1))

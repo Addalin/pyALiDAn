@@ -2,13 +2,12 @@ import logging
 import os.path
 from datetime import datetime
 
-from learning_lidar.learning_phase.run_params import DEBUG_RAY, CONSTS, update_params, MODEL_PARAMS, \
-    PRETRAINED_MODEL_PATH
-
 from pytorch_lightning import Trainer, seed_everything
 
 from learning_lidar.learning_phase.data_modules.lidar_data_module import LidarDataModule
 from learning_lidar.learning_phase.models.defaultCNN import DefaultCNN
+from learning_lidar.learning_phase.run_params import DEBUG_RAY, CONSTS, update_params, MODEL_PARAMS, \
+    PRETRAINED_MODEL_PATH
 from learning_lidar.utils.utils import create_and_configer_logger
 
 seed_everything(8318)  # Note, for full deterministic result add deterministic=True to trainer

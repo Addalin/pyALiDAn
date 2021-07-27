@@ -6,9 +6,9 @@ import numpy as np
 import pandas as pd
 import xarray as xr
 
-import learning_lidar.preprocessing.preprocessing as prep
 import learning_lidar.utils.global_settings as gs
 import learning_lidar.utils.vis_utils as vis_utils
+import learning_lidar.utils.xr_utils as xr_utils
 
 vis_utils.set_visualization_settings()
 
@@ -174,11 +174,11 @@ def main(station, month, year):
 
     print(ds_aod)
     nc_name = f"{start_day.strftime('%Y%m%d')}_{end_day.strftime('%Y%m%d')}_{station.name}_aod.nc"
-    prep.save_dataset(ds_aod, folder_name, nc_name)
+    xr_utils.save_dataset(ds_aod, folder_name, nc_name)
 
     print(ds_ang)
     nc_name = f"{start_day.strftime('%Y%m%d')}_{end_day.strftime('%Y%m%d')}_{station.name}_ang.nc"
-    prep.save_dataset(ds_ang, folder_name, nc_name)
+    xr_utils.save_dataset(ds_ang, folder_name, nc_name)
 
 
 if __name__ == '__main__':

@@ -1,12 +1,13 @@
+import json
 import os
 from datetime import datetime
 
 import torch
 from ray import tune
-import json
 
 NUM_AVAILABLE_GPU = torch.cuda.device_count()
-
+START_DATE = datetime(2017, 9, 1)
+END_DATE = datetime(2017, 10, 31)
 
 def get_paths(station_name, start_date, end_date):
     base_path = os.path.dirname(os.path.dirname(os.path.dirname(__file__)))
@@ -22,8 +23,8 @@ def get_paths(station_name, start_date, end_date):
 
 
 train_csv_path, test_csv_path, stats_csv_path, RESULTS_PATH = get_paths(station_name='haifa',
-                                                                        start_date=datetime(2017, 4, 1),
-                                                                        end_date=datetime(2017, 10, 31))
+                                                                        start_date=START_DATE,
+                                                                        end_date=END_DATE)
 # TODO - update dates to change between datasets
 
 
@@ -57,7 +58,7 @@ def update_params(config, consts):
 
 
 # ######## RESUME EXPERIMENT #########
-RESUME_EXP = False #'ERRORED_ONLY' # #'ERRORED_ONLY' # Can be "LOCAL" to continue experiment when it was disrupted
+RESUME_EXP = False#'ERRORED_ONLY' # #'ERRORED_ONLY' # Can be "LOCAL" to continue experiment when it was disrupted
 # (trials that were completed seem to continue training),
 # or "ERRORED_ONLY" to reset and rerun ERRORED trials (not tested). Otherwise False to start a new experiment.
 # Note: if fail_fast was 'True' in the the folder of 'EXP_NAME', then tune will not be able to load trials that didn't store any folder
@@ -113,18 +114,18 @@ CONSTS = {
 
 # Note, replace tune.choice with grid_search if want all possible combinations
 RAY_HYPER_PARAMS = {
-    "hsizes": tune.grid_search(['[4, 4, 4, 4]', '[5, 5, 5, 5]','[6, 6, 6, 6]']),  # '[3, 3, 3, 3]',
+    "hsizes": tune.grid_search(['[4, 4, 4, 4]', '[5, 5, 5, 5]']),  # '[3, 3, 3, 3]',
     "fc_size": tune.grid_search(['[16]', '[32]']),  # '[4]','[1]'
     "lr": tune.grid_search([1 * 1e-3]),
     "bsize": tune.grid_search([32]),
     "ltype": tune.choice(['MAELoss']),  # , 'MSELoss']),  # ['MARELoss']
-    "use_power": tune.choice([False]) , #tune.grid_search(['([0.5, 1,1 ], [0.5])', '([0.5, 1,0.5 ], [0.5])']),
+    "use_power": tune.grid_search([False, '([0.5, 1, 1], [0.5])', '([0.5, 1, 0.5], [0.5])']),
     # "([0.5, -0.11, 0.5], [0.5])"]),
     # UV : -0.27 , G: -0.263 , IR: -0.11
     "use_bg": tune.grid_search([False, True, 'range_corr']),
     # True - bg is relevant for 'lidar' case # TODO if lidar - bg T\F, if signal - bg F
     "source": tune.grid_search(['lidar']),  # , 'lidar','signal_p'
-    'dfilter': tune.grid_search([('wavelength', [355]), ('wavelength', [532]), ('wavelength', [1064])]),
+    'dfilter': tune.grid_search([None , ('wavelength', [355]), ('wavelength', [532]), ('wavelength', [1064])]),
     'dnorm': tune.grid_search([False]),  # data_norm True - only for the best results achieved.
 }
 

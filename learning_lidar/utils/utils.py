@@ -1,12 +1,15 @@
+import argparse
 import csv
 import logging
 # %% testing multiproccesing from: https://gist.github.com/morkrispil/3944242494e08de4643fd42a76cb37ee
 # import multiprocessing as mp
+import os
 from datetime import datetime
-import multiprocess as mp
 from functools import partial
-import pandas as pd
+
+import multiprocess as mp
 import numpy as np
+import pandas as pd
 from matplotlib import pyplot as plt
 from matplotlib import rc
 
@@ -149,6 +152,26 @@ def visCurve(lData, rData, stitle=""):
     return [fig, axes]
 
 
+def get_base_arguments(parser=None):
+    if not parser:
+        parser = argparse.ArgumentParser()
+    parser.add_argument('-n', '--station_name', type=str, default='haifa',
+                        help='The station name')
+    parser.add_argument('--start_date', type=datetime.fromisoformat,
+                        default='2017-09-01',
+                        help='The start date to use')
+    parser.add_argument('--end_date', type=datetime.fromisoformat,
+                        default='2017-10-31',
+                        help='The end date to use')
+
+    return parser
+
+
 def dt64_2_datetime(dt_64):
     date_datetime = datetime.utcfromtimestamp(dt_64.tolist() / 1e9)
     return date_datetime
+
+
+def get_month_folder_name(parent_folder, day_date):
+    month_folder = os.path.join(parent_folder, day_date.strftime("%Y"), day_date.strftime("%m"))
+    return month_folder
