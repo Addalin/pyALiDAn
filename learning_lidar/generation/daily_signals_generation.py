@@ -6,8 +6,8 @@ import pandas as pd
 
 import learning_lidar.utils.global_settings as gs
 import learning_lidar.generation.generation_utils as gen_utils
+import learning_lidar.utils.utils as utils
 import learning_lidar.utils.vis_utils as vis_utils
-import learning_lidar.utils.xr_utils as xr_utils
 import learning_lidar.generation.daily_signals_generations_utils as gen_sig_utils
 from learning_lidar.utils.utils import create_and_configer_logger, get_base_arguments
 
@@ -25,7 +25,7 @@ def generate_daily_lidar_measurement(station, day_date, save_ds=True, update_ove
         raise KeyError(f"This month is not currently supported in overlap function.")
 
     if update_overlap_only:
-        month_folder = xr_utils.get_month_folder_name(station.gen_lidar_dataset,  day_date)
+        month_folder = utils.get_month_folder_name(station.gen_lidar_dataset, day_date)
         nc_path = os.path.join(month_folder, f"{day_date.strftime('%Y_%m_%d')}_{station.location}_generated_lidar.nc")
 
         measure_ds = gen_sig_utils.calc_daily_measurement(station, day_date, overlap_params=overlap_param,

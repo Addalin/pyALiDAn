@@ -3,6 +3,7 @@ import csv
 import logging
 # %% testing multiproccesing from: https://gist.github.com/morkrispil/3944242494e08de4643fd42a76cb37ee
 # import multiprocessing as mp
+import os
 from datetime import datetime
 from functools import partial
 
@@ -169,3 +170,8 @@ def get_base_arguments(parser=None):
 def dt64_2_datetime(dt_64):
     date_datetime = datetime.utcfromtimestamp(dt_64.tolist() / 1e9)
     return date_datetime
+
+
+def get_month_folder_name(parent_folder, day_date):
+    month_folder = os.path.join(parent_folder, day_date.strftime("%Y"), day_date.strftime("%m"))
+    return month_folder
