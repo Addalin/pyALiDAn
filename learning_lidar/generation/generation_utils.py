@@ -118,6 +118,7 @@ def get_month_gen_params_path(station, day_date, type='density_params'):
         'density_params' - for density sampler generator,
         'bg'- for generated background signal,
         'LC' - for generated Lidar Constant signal
+        # TODO : add 'overlap'
     :param station: gs.station() object of the lidar station
     :param day_date: datetime.date object of the required date
     :return: str. Path to monthly dataset of generation parameters.
@@ -144,6 +145,7 @@ def get_month_gen_params_ds(station, day_date, type='density_params'):
         'density_params' - for density sampler generator,
         'bg'- for generated background signal,
         'LC' - for generated Lidar Constant signal
+        # TODO : add 'overlap'
     :param station: gs.station() object of the lidar station
     :param day_date: datetime.date object of the required date
     :return: day_params_ds: xarray.Dataset(). Monthly dataset of generation parameters.

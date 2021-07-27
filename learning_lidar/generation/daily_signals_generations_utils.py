@@ -380,6 +380,17 @@ def calc_daily_measurement(station, day_date, overlap_params, signal_ds, measure
     :param signal_ds: xr.Dataset(), containing the daily lidar signal (clean)
     :return: measure_ds: xr.Dataset(), containing the daily lidar measurement (with background and applied photon noise)
     """
+    """
+    if update:
+        load measure ds 
+        load signal ds (pass signal_ds=None)
+        p_mean = measure_ds.p_mean
+    p_bg = get_daily_bg(station, day_date)
+    bg_ds = p_bg.broadcast_like(signal_ds.range_corr)
+    p_mean = calc_mean_measurement(station, day_date, signal_ds, bg_ds) if not update
+    overlap_ds = get_daily_overlap() (load daily overlap params (similar to load daily measurement) , sigmoid, attr)
+    """
+    # get the inigridients
     if measure_ds_path:
         measure_ds = xr_utils.load_dataset(measure_ds_path)
         bg_ds = measure_ds.p_bg
@@ -398,6 +409,7 @@ def calc_daily_measurement(station, day_date, overlap_params, signal_ds, measure
     overlap_ds = xr.Dataset(data_vars={'overlap': ('Height', overlap)},
                             coords={'Height': Height_indx.values},
                             attrs={'name': 'Overlap Function'})
+    # here the calculation stars
     p_mean = xr.apply_ufunc(lambda x, r: (x * r),
                             p_mean, overlap_ds.overlap,
                             keep_attrs=True).assign_attrs({'info': p_mean.info+' with applied overlap'})

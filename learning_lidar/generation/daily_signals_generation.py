@@ -25,8 +25,9 @@ def generate_daily_lidar_measurement(station, day_date, save_ds=True, update_ove
         raise KeyError(f"This month is not currently supported in overlap function.")
 
     if update_overlap_only:
-        month_folder = utils.get_month_folder_name(station.gen_lidar_dataset, day_date)
-        nc_path = os.path.join(month_folder, f"{day_date.strftime('%Y_%m_%d')}_{station.location}_generated_lidar.nc")
+        month_folder = utils.get_month_folder_name(station.gen_lidar_dataset, day_date) # drop
+        nc_path = os.path.join(month_folder, f"{day_date.strftime('%Y_%m_%d')}_{station.location}_generated_lidar.nc") # drop
+        # TODO: create get_daily_measure_ds similar to get_daily_gen_param_ds (and move it inside calc_daily_measurement use only a flag UPDATE_measure)
 
         measure_ds = gen_sig_utils.calc_daily_measurement(station, day_date, overlap_params=overlap_param,
                                                           signal_ds=None, measure_ds_path=nc_path)
@@ -37,6 +38,12 @@ def generate_daily_lidar_measurement(station, day_date, save_ds=True, update_ove
             gen_utils.save_generated_dataset(station, measure_ds, data_source='lidar', save_mode='single')
 
         return measure_ds
+
+
+
+
+
+
 
     else:
         ds_total = gen_sig_utils.calc_total_optical_density(station=station, day_date=day_date)
