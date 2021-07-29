@@ -10,41 +10,40 @@ from scipy import stats
 from scipy.stats import multivariate_normal
 
 import learning_lidar.generation.generation_utils as gen_utils
-import learning_lidar.utils.global_settings as gs
-import learning_lidar.utils.vis_utils as vis_utils
-import learning_lidar.utils.xr_utils as xr_utils
-from learning_lidar.utils import utils
+from learning_lidar.utils import utils, xr_utils, vis_utils, global_settings as gs
 from learning_lidar.utils.proc_utils import Bezier
 
 vis_utils.set_visualization_settings()
 
+
 # TODO: add debug and save of figures option
 # TODO : organize main() to functions & comments
+
+
 def valid_box_domain(x, y, bounds_x, bounds_y):
     return bounds_x[0] <= x <= bounds_x[1] and bounds_y[0] <= y <= bounds_y[1]
 
 
-def plot_angstrom_exponent_distribution(x, y, x_label, y_label, date):
+def plot_angstrom_exponent_distribution(x, y, x_label, y_label, date_):
     fig, ax = plt.subplots(nrows=1, ncols=1)
     ax.scatter(x=x, y=y, s=5)
     ax.set_xlabel(x_label)
     ax.set_ylabel(y_label)
-    ax.set_title(f"Angstrom Exponent distribution {date}")
+    ax.set_title(f"Angstrom Exponent distribution {date_}")
     plt.tight_layout()
     plt.show()
 
 
-def main(station, month, year, start_date, end_date, DATA_DIR):
-    #  - Load measurements from AERONET for current month
+def kde_estimation_main(args, month, year, DATA_DIR):
+    #  Load measurements from AERONET for current month
+    station = gs.Station(station_name=args.station_name)
+    start_date, end_date = args.start_date, args.end_date
 
-    wavelengths = gs.LAMBDA_nm().get_elastic()
     folder_name = station.aeronet_folder
-
-
     monthdays = (date(year, month + 1, 1) - date(year, month, 1)).days
     start_day = datetime(year, month, 1, 0, 0)
     end_day = datetime(year, month, monthdays, 0, 0)
-    nc_aeronet_name = f"{start_day.strftime('%Y%m%d')}_{end_day.strftime('%Y%m%d')}_{station.name}_ang.nc"
+    nc_aeronet_name = f"{start_day.strftime('%Y%m%d')}_{end_day.strftime('%Y%m%d')}_{station.location.lower()}_ang.nc"
     ds_ang = xr_utils.load_dataset(os.path.join(folder_name, nc_aeronet_name))
 
     # ## Angstrom Exponent
@@ -53,20 +52,17 @@ def main(station, month, year, start_date, end_date, DATA_DIR):
     t_slice = slice(start_day, end_day + timedelta(days=1) - timedelta(seconds=30))
     couple_0 = f"{355}-{532}"
     couple_1 = f"{532}-{1064}"
-    angstrom_daily = []
 
-    x = ds_ang.angstrom.sel(Wavelengths=couple_0).values
-    y = ds_ang.angstrom.sel(Wavelengths=couple_1).values
+    x, y = ds_ang.angstrom.sel(Wavelengths=couple_0).values, ds_ang.angstrom.sel(Wavelengths=couple_1).values
 
-    plot_angstrom_exponent_distribution(x, y, x_label=couple_0, y_label=couple_1, date=t_slice.start.strftime('%Y-%m'))
+    plot_angstrom_exponent_distribution(x, y, x_label=couple_0, y_label=couple_1, date_=t_slice.start.strftime('%Y-%m'))
 
     # 2. Perform a kernel density estimation on the data
     # 3. Resample the estimated density generate new values for $A_{355,532}$ & $A_{532,1064 }$, per each day
 
     # Remove nan values
     valid_ind = np.where(~np.isnan(x) & ~np.isnan(y))[0]  # or np.where(y==np.nan) # and y~np.nan)
-    x = x[valid_ind]
-    y = y[valid_ind]
+    x, y = x[valid_ind], y[valid_ind]
     values = np.vstack([x, y])
 
     # Estimate kernel
@@ -79,49 +75,50 @@ def main(station, month, year, start_date, end_date, DATA_DIR):
     ang_355_532, ang_532_1064 = x1[max_ind], y1[max_ind]
 
     # Calc 2D function of the density
-    xmin = min(x.min(), x1.min())
-    xmax = max(x.max(), x1.max())
-    ymin = min(y.min(), y1.min())
-    ymax = max(y.max(), y1.max())
+    xmin, xmax = min(x.min(), x1.min()), max(x.max(), x1.max())
+    ymin, ymax = min(y.min(), y1.min()), max(y.max(), y1.max())
     X, Y = np.mgrid[xmin:xmax:100j, ymin:ymax:100j]
     positions = np.vstack([X.ravel(), Y.ravel()])
     Z = np.reshape(kernel(positions).T, X.shape)
 
     # Show density and the new chosen samples
-    fig, ax = plt.subplots(nrows=1, ncols=1, figsize=(8, 5))
-    ax.scatter(x=x, y=y, s=1, c='k', label='AERONET')
-    im = ax.imshow(np.rot90(Z), cmap='turbo',
-                   extent=[xmin, xmax, ymin, ymax])
-    ax.plot(ang_355_532, ang_532_1064, 'k*', markersize=6)
-    ax.plot(ang_355_532, ang_532_1064, 'w*', markersize=4, label='new samples')
-    ax.set_xlabel(couple_0)
-    ax.set_ylabel(couple_1)
-    ax.set_title(f"Sampling from Angstrom Exponent distribution {t_slice.start.strftime('%Y-%m')}")
-    fig.colorbar(im, ax=ax)
-    plt.legend()
-    plt.tight_layout()
-    plt.show()
+    if args.plot_results:
+        fig, ax = plt.subplots(nrows=1, ncols=1, figsize=(8, 5))
+        ax.scatter(x=x, y=y, s=1, c='k', label='AERONET')
+        im = ax.imshow(np.rot90(Z), cmap='turbo',
+                       extent=[xmin, xmax, ymin, ymax])
+        ax.plot(ang_355_532, ang_532_1064, 'k*', markersize=6)
+        ax.plot(ang_355_532, ang_532_1064, 'w*', markersize=4, label='new samples')
+        ax.set_xlabel(couple_0)
+        ax.set_ylabel(couple_1)
+        ax.set_title(f"Sampling from Angstrom Exponent distribution {t_slice.start.strftime('%Y-%m')}")
+        fig.colorbar(im, ax=ax)
+        plt.legend()
+        plt.tight_layout()
+        plt.show()
 
-    # ## Angsrom - Lidar Ratio
+    # ## Angstrom - Lidar Ratio
 
-    folder_name = os.path.join(DATA_DIR, 'Angstrom_LidarRatio', 'plot_data')
+    folder_name = os.path.join(DATA_DIR, 'Angstrom_LidarRatio', 'plot_data')  # TODO adapt this paths to more general
     csv_name = r'data_points_with_error_bars.csv'
-    df_A_LR = pd.read_csv(os.path.join(folder_name, csv_name))
-    fig, ax = plt.subplots(nrows=1, ncols=1, figsize=(8, 5))
-    df_A_LR[df_A_LR['type'] == 'red'].plot.scatter(x='x', y='y',
-                                                   label=df_A_LR[df_A_LR['type'] == 'red']['name'].unique()[0], c='r',
-                                                   ax=ax)
-    df_A_LR[df_A_LR['type'] == 'black'].plot.scatter(x='x', y='y',
-                                                     label=df_A_LR[df_A_LR['type'] == 'black']['name'].unique()[0], c='b',
-                                                     ax=ax)
-    df_A_LR[df_A_LR['type'] == 'green'].plot.scatter(x='x', y='y',
-                                                     label=df_A_LR[df_A_LR['type'] == 'green']['name'].unique()[0], c='g',
-                                                     ax=ax)
-    plt.xlabel(r'$\rm \, LR_{355[nm]}$')
-    plt.ylabel(r'$\rm A$')
-    plt.xlim([25, 125])
-    plt.ylim([0, 4])
-    plt.show()
+    df_a_lr = pd.read_csv(os.path.join(folder_name, csv_name))
+    if args.plot_results:
+        fig, ax = plt.subplots(nrows=1, ncols=1, figsize=(8, 5))
+        df_a_lr[df_a_lr['type'] == 'red'].plot.scatter(x='x', y='y',
+                                                       label=df_a_lr[df_a_lr['type'] == 'red']['name'].unique()[0],
+                                                       c='r',
+                                                       ax=ax)
+        df_a_lr[df_a_lr['type'] == 'black'].plot.scatter(x='x', y='y',
+                                                         label=df_a_lr[df_a_lr['type'] == 'black']['name'].unique()[0],
+                                                         c='b', ax=ax)
+        df_a_lr[df_a_lr['type'] == 'green'].plot.scatter(x='x', y='y',
+                                                         label=df_a_lr[df_a_lr['type'] == 'green']['name'].unique()[0],
+                                                         c='g', ax=ax)
+        plt.xlabel(r'$\rm \, LR_{355[nm]}$')
+        plt.ylabel(r'$\rm A$')
+        plt.xlim([25, 125])
+        plt.ylim([0, 4])
+        plt.show()
 
     # ### Creating joint probability $P(x=LR,y=A)$
     # 1 . Calculating multivariate normal distribution for each type in the dataset
@@ -130,7 +127,7 @@ def main(station, month, year, start_date, end_date, DATA_DIR):
     Z_types = []
     weight_types = []
     for type in ['red', 'black', 'green']:
-        df_type = df_A_LR[df_A_LR['type'] == type]
+        df_type = df_a_lr[df_a_lr['type'] == type]
         LR_type = df_type['x']
         A_type = df_type['y']
         std_x = df_type['dx'] * .5
@@ -164,26 +161,29 @@ def main(station, month, year, start_date, end_date, DATA_DIR):
     xy = np.vstack([X.reshape(X.size), Y.reshape(Y.size)])
     kernel_LR_A = stats.gaussian_kde(xy, weights=normal_Z.reshape(normal_Z.size))
     Z = np.reshape(kernel_LR_A(xy).T, X.shape)
-    fig, ax = plt.subplots(nrows=1, ncols=1)
-    im = ax.imshow(np.rot90(Z), cmap='turbo',
-                   extent=[xmin, xmax, ymin, ymax], aspect="auto")
-    for type in ['red', 'black', 'green']:
-        x_type, y_type, label_type, x_err, y_err = df_A_LR[df_A_LR['type'] == type]['x'], df_A_LR[df_A_LR['type'] == type][
-            'y'], df_A_LR[df_A_LR['type'] == type]['name'].unique()[0], df_A_LR[df_A_LR['type'] == type]['dx'] * .5, \
-                                                   df_A_LR[df_A_LR['type'] == type]['dy'] * .5
-        ax.errorbar(x_type, y_type, xerr=x_err, yerr=y_err, markersize=0, fmt='o', c='k', lw=.5)
-        ax.plot(x_type, y_type, '.k', markersize=8)
-        ax.plot(x_type, y_type, '.' + type[0], markersize=5, label=label_type)
-    ax.grid(color='w', linestyle='--', linewidth=0.5, alpha=0.3)
-    plt.xlabel(r'$\rm \, LR_{355[nm]}$')
-    plt.ylabel(r'$\rm A$')
-    plt.xlim([xmin, xmax])
-    plt.ylim([ymin, ymax])
-    ax.set_title(f"Angstrom Exponent - Lidar Ratio distribution {t_slice.start.strftime('%Y-%m')}")
-    fig.colorbar(im, ax=ax)
-    plt.legend()
-    plt.tight_layout()
-    plt.show()
+    if args.plot_results:
+        fig, ax = plt.subplots(nrows=1, ncols=1)
+        im = ax.imshow(np.rot90(Z), cmap='turbo',
+                       extent=[xmin, xmax, ymin, ymax], aspect="auto")
+        for type in ['red', 'black', 'green']:
+            x_type, y_type, label_type, x_err, y_err = df_a_lr[df_a_lr['type'] == type]['x'], \
+                                                       df_a_lr[df_a_lr['type'] == type]['y'], \
+                                                       df_a_lr[df_a_lr['type'] == type]['name'].unique()[0], \
+                                                       df_a_lr[df_a_lr['type'] == type]['dx'] * .5, \
+                                                       df_a_lr[df_a_lr['type'] == type]['dy'] * .5
+            ax.errorbar(x_type, y_type, xerr=x_err, yerr=y_err, markersize=0, fmt='o', c='k', lw=.5)
+            ax.plot(x_type, y_type, '.k', markersize=8)
+            ax.plot(x_type, y_type, '.' + type[0], markersize=5, label=label_type)
+        ax.grid(color='w', linestyle='--', linewidth=0.5, alpha=0.3)
+        plt.xlabel(r'$\rm \, LR_{355[nm]}$')
+        plt.ylabel(r'$\rm A$')
+        plt.xlim([xmin, xmax])
+        plt.ylim([ymin, ymax])
+        ax.set_title(f"Angstrom Exponent - Lidar Ratio distribution {t_slice.start.strftime('%Y-%m')}")
+        fig.colorbar(im, ax=ax)
+        plt.legend()
+        plt.tight_layout()
+        plt.show()
 
     # Joint distribution weighted in favor of urban industrial and desert dust
     weights = np.array([.05, .75, .20])
@@ -195,26 +195,29 @@ def main(station, month, year, start_date, end_date, DATA_DIR):
     xy = np.vstack([X.reshape(X.size), Y.reshape(Y.size)])
     kernel_LR_A = stats.gaussian_kde(xy, weights=normal_Z.reshape(normal_Z.size))
     Z = np.reshape(kernel_LR_A(xy).T, X.shape)
-    fig, ax = plt.subplots(nrows=1, ncols=1)
-    im = ax.imshow(np.rot90(Z), cmap='turbo',
-                   extent=[xmin, xmax, ymin, ymax], aspect="auto")
-    for type in ['red', 'black', 'green']:
-        x_type, y_type, label_type, x_err, y_err = df_A_LR[df_A_LR['type'] == type]['x'], df_A_LR[df_A_LR['type'] == type][
-            'y'], df_A_LR[df_A_LR['type'] == type]['name'].unique()[0], df_A_LR[df_A_LR['type'] == type]['dx'] * .5, \
-                                                   df_A_LR[df_A_LR['type'] == type]['dy'] * .5
-        ax.errorbar(x_type, y_type, xerr=x_err, yerr=y_err, markersize=0, fmt='o', c='k', lw=.5)
-        ax.plot(x_type, y_type, '.k', markersize=8)
-        ax.plot(x_type, y_type, '.' + type[0], markersize=5, label=label_type)
-    ax.grid(color='w', linestyle='--', linewidth=0.5, alpha=0.3)
-    plt.xlabel(r'$\rm \, LR_{355[nm]}$')
-    plt.ylabel(r'$\rm A$')
-    plt.xlim([xmin, xmax])
-    plt.ylim([ymin, ymax])
-    ax.set_title(f"Angstrom Exponent - Lidar Ratio distribution {t_slice.start.strftime('%Y-%m')}")
-    fig.colorbar(im, ax=ax)
-    plt.legend()
-    plt.tight_layout()
-    plt.show()
+    if args.plot_results:
+        fig, ax = plt.subplots(nrows=1, ncols=1)
+        im = ax.imshow(np.rot90(Z), cmap='turbo',
+                       extent=[xmin, xmax, ymin, ymax], aspect="auto")
+        for type in ['red', 'black', 'green']:
+            x_type, y_type, label_type, x_err, y_err = df_a_lr[df_a_lr['type'] == type]['x'], \
+                                                       df_a_lr[df_a_lr['type'] == type]['y'], \
+                                                       df_a_lr[df_a_lr['type'] == type]['name'].unique()[0], \
+                                                       df_a_lr[df_a_lr['type'] == type]['dx'] * .5, \
+                                                       df_a_lr[df_a_lr['type'] == type]['dy'] * .5
+            ax.errorbar(x_type, y_type, xerr=x_err, yerr=y_err, markersize=0, fmt='o', c='k', lw=.5)
+            ax.plot(x_type, y_type, '.k', markersize=8)
+            ax.plot(x_type, y_type, '.' + type[0], markersize=5, label=label_type)
+        ax.grid(color='w', linestyle='--', linewidth=0.5, alpha=0.3)
+        plt.xlabel(r'$\rm \, LR_{355[nm]}$')
+        plt.ylabel(r'$\rm A$')
+        plt.xlim([xmin, xmax])
+        plt.ylim([ymin, ymax])
+        ax.set_title(f"Angstrom Exponent - Lidar Ratio distribution {t_slice.start.strftime('%Y-%m')}")
+        fig.colorbar(im, ax=ax)
+        plt.legend()
+        plt.tight_layout()
+        plt.show()
 
     # 3. Sampling $LR$ from 1D conditioned probability $P(x=LR|y=A)$
     LR_samp = []
@@ -246,34 +249,36 @@ def main(station, month, year, start_date, end_date, DATA_DIR):
     plt.xlim([xmin, xmax])
     plt.ylim([ymin, Z.max()])
     plt.show()
-    plt.show()
 
     LR_samp = np.array(LR_samp).reshape(2 * monthdays)
 
-    # 4. Show the joint density, and the new samples of LR
-    # Show density, and the new chosen samples
-    fig, ax = plt.subplots(nrows=1, ncols=1)
-    for type in ['red', 'black', 'green']:
-        x_type, y_type, label_type, x_err, y_err = df_A_LR[df_A_LR['type'] == type]['x'], df_A_LR[df_A_LR['type'] == type][
-            'y'], df_A_LR[df_A_LR['type'] == type]['name'].unique()[0], df_A_LR[df_A_LR['type'] == type]['dx'] * .5, \
-                                                   df_A_LR[df_A_LR['type'] == type]['dy'] * .5
-        ax.errorbar(x_type, y_type, xerr=x_err, yerr=y_err, markersize=0, fmt='o', c='k', lw=.5)
-        ax.plot(x_type, y_type, '.k', markersize=8)
-        ax.plot(x_type, y_type, '.' + type[0], markersize=5, label=label_type)
-    im = ax.imshow(np.rot90(Z), cmap='turbo',
-                   extent=[xmin, xmax, ymin, ymax], aspect="auto")
-    ax.plot(LR_samp, ang_355_532, 'k*', markersize=6)
-    ax.plot(LR_samp, ang_355_532, 'w*', markersize=4, label='new samples')
-    plt.xlabel(r'$\rm \, LR_{355[nm]}$')
-    plt.ylabel(r'$\rm A$')
-    plt.xlim([xmin, xmax])
-    plt.ylim([ymin, ymax])
-    ax.set_title(f"Sampling from $P(x=LR|y=A)$ {t_slice.start.strftime('%Y-%m')}")
-    plt.legend()
-    fig.colorbar(im, ax=ax)
-    ax.grid(color='w', linestyle='--', linewidth=0.5, alpha=0.3)
-    plt.tight_layout()
-    plt.show()
+    if args.plot_results:
+        # 4. Show the joint density, and the new samples of LR
+        # Show density, and the new chosen samples
+        fig, ax = plt.subplots(nrows=1, ncols=1)
+        for type in ['red', 'black', 'green']:
+            x_type, y_type, label_type, x_err, y_err = df_a_lr[df_a_lr['type'] == type]['x'], \
+                                                       df_a_lr[df_a_lr['type'] == type]['y'], \
+                                                       df_a_lr[df_a_lr['type'] == type]['name'].unique()[0], \
+                                                       df_a_lr[df_a_lr['type'] == type]['dx'] * .5, \
+                                                       df_a_lr[df_a_lr['type'] == type]['dy'] * .5
+            ax.errorbar(x_type, y_type, xerr=x_err, yerr=y_err, markersize=0, fmt='o', c='k', lw=.5)
+            ax.plot(x_type, y_type, '.k', markersize=8)
+            ax.plot(x_type, y_type, '.' + type[0], markersize=5, label=label_type)
+        im = ax.imshow(np.rot90(Z), cmap='turbo',
+                       extent=[xmin, xmax, ymin, ymax], aspect="auto")
+        ax.plot(LR_samp, ang_355_532, 'k*', markersize=6)
+        ax.plot(LR_samp, ang_355_532, 'w*', markersize=4, label='new samples')
+        plt.xlabel(r'$\rm \, LR_{355[nm]}$')
+        plt.ylabel(r'$\rm A$')
+        plt.xlim([xmin, xmax])
+        plt.ylim([ymin, ymax])
+        ax.set_title(f"Sampling from $P(x=LR|y=A)$ {t_slice.start.strftime('%Y-%m')}")
+        plt.legend()
+        fig.colorbar(im, ax=ax)
+        ax.grid(color='w', linestyle='--', linewidth=0.5, alpha=0.3)
+        plt.tight_layout()
+        plt.show()
 
     # ### Sampling $r_m$ and $\beta_{532}^{max}$ for current month
     # 1 . Load database relevant to current month
@@ -304,16 +309,16 @@ def main(station, month, year, start_date, end_date, DATA_DIR):
     index_to_remove = df_rm_beta[(df_rm_beta['beta-532'] > 1.0) | (df_rm_beta['beta-532'] < 0.0)].index
     df_rm_beta.drop(index=index_to_remove, inplace=True)
     df_rm_beta.dropna(inplace=True)
-
-    fig, ax = plt.subplots(nrows=1, ncols=1)
-    df_rm_beta.plot.scatter(x='rm', y='beta-532', ax=ax, s=10)
     x = df_rm_beta['rm'].T
     y = df_rm_beta['beta-532'].T
-    xmin, xmax = [x.min(), x.max()]
-    ymin, ymax = [y.min(), y.max()]
-    plt.xlim([xmin, xmax])
-    plt.ylim([ymin, ymax])
-    plt.show()
+    if args.plot_results:
+        fig, ax = plt.subplots(nrows=1, ncols=1)
+        df_rm_beta.plot.scatter(x='rm', y='beta-532', ax=ax, s=10)
+        xmin, xmax = [x.min(), x.max()]
+        ymin, ymax = [y.min(), y.max()]
+        plt.xlim([xmin, xmax])
+        plt.ylim([ymin, ymax])
+        plt.show()
 
     # 3. Sample new values for  $r_{m}$ , $\beta_{532}^{max}$ per each day
 
@@ -330,10 +335,10 @@ def main(station, month, year, start_date, end_date, DATA_DIR):
     rm_v = []
     beta_v = []
     for day in range(monthdays):
-        VALID_DOMAIN = False
-        while (~VALID_DOMAIN):
+        valid_domain = False
+        while ~valid_domain:
             sample_rm, sample_beta = kernel_rm_beta.resample(1)[:, 0]
-            VALID_DOMAIN = valid_box_domain(sample_rm, sample_beta,
+            valid_domain = valid_box_domain(sample_rm, sample_beta,
                                             rm_bounds, beta_bounds)
         rm_v.append(sample_rm)
         beta_v.append(sample_beta)
@@ -350,72 +355,50 @@ def main(station, month, year, start_date, end_date, DATA_DIR):
     X, Y = np.mgrid[xmin:xmax:300j, ymin:ymax:300j]
     xy = np.vstack([X.reshape(X.size), Y.reshape(Y.size)])
     Z = np.reshape(kernel_rm_beta(xy).T, X.shape)
-    # %%
 
-    # Show density and the new chosen samples
-    fig, ax = plt.subplots(nrows=1, ncols=1, figsize=(8, 5))
-    df_rm_beta.plot.scatter(x='rm', y='beta-532', ax=ax, c='k')
-    im = ax.imshow(np.rot90(Z), cmap='turbo',
-                   extent=[xmin, xmax, ymin, ymax], aspect="auto")
-    ax.plot(rm_new, beta_532_new, 'k*', markersize=6)
-    ax.plot(rm_new, beta_532_new, 'w*', markersize=4, label='new samples')
-    ax.set_xlabel(r'$r_m$')
-    ax.set_ylabel(r'$\beta_{532}^{max}$')
-    ax.set_title(r"Sampling from $r_m$ - $ \beta_{532}^{max}$  " + f"{t_slice.start.strftime('%Y-%m')}")
-    fig.colorbar(im, ax=ax)
-    plt.legend()
-    plt.tight_layout()
-    plt.show()
+    if args.plot_results:
+        # Show density and the new chosen samples
+        fig, ax = plt.subplots(nrows=1, ncols=1, figsize=(8, 5))
+        df_rm_beta.plot.scatter(x='rm', y='beta-532', ax=ax, c='k')
+        im = ax.imshow(np.rot90(Z), cmap='turbo',
+                       extent=[xmin, xmax, ymin, ymax], aspect="auto")
+        ax.plot(rm_new, beta_532_new, 'k*', markersize=6)
+        ax.plot(rm_new, beta_532_new, 'w*', markersize=4, label='new samples')
+        ax.set_xlabel(r'$r_m$')
+        ax.set_ylabel(r'$\beta_{532}^{max}$')
+        ax.set_title(r"Sampling from $r_m$ - $ \beta_{532}^{max}$  " + f"{t_slice.start.strftime('%Y-%m')}")
+        fig.colorbar(im, ax=ax)
+        plt.legend()
+        plt.tight_layout()
+        plt.show()
 
-    # Create datase of parameters for generating month signals
-    #
-    # rm_new,beta_532_new, LR_samp,ang_355_532, ang_532_1064
+    # Create dataset of parameters for generating month signals
 
     # resizing beta and rm
     listr = [[r, r] for r in rm_new]
     rm_new = np.array(listr).reshape(monthdays * 2)
     listb = [[b, b] for b in beta_532_new]
     beta_532_new = np.array(listb).reshape(monthdays * 2)
-    # %%
+
     start_day = datetime(year, month, 1, 0, 0)
     end_day = datetime(year, month, monthdays, 0, 0)
     days = pd.date_range(start_day, end_day + timedelta(hours=12), freq='12H')
-    ds_month = xr.Dataset(data_vars={'rm': ('Time', rm_new),
-                                     'ang355532': ('Time', ang_355_532),
-                                     'ang5321064': ('Time', ang_532_1064),
-                                     'LR': ('Time', LR_samp),
-                                     'beta532': ('Time', beta_532_new)},
-                          coords={'Time': days.values})
 
-    ds_month = ds_month.assign(
-        aeronet_source=xr.Variable(dims=(), data=os.path.join(station.aeronet_folder, nc_aeronet_name),
-                                   attrs={'info': 'netcdf file name, processed from AERONET retrievals,'
-                                                  ' using: read_AERONET_data.py.'}))
-    ds_month.rm.attrs = {'units': r'$km$', 'long_name': r'$r_m$',
-                         'info': 'Reference range'}
-    ds_month.ang355532.attrs = {'long_name': r'$\AA_{355,532}$',
-                                'info': 'Angstrom Exponent 355,532'}
-    ds_month.ang5321064.attrs = {'long_name': r'$\AA_{532,1064}$',
-                                 'info': 'Angstrom Exponent 532,1064'}
-    ds_month.LR.attrs = {'units': r'$sr$', 'long_name': r'$LR$',
-                         'info': 'Lidar Ratio'}
-    ds_month.beta532.attrs = {'units': r'$km^{{-1}} sr^{-1}$',
-                              'long_name': r'$\beta$',
-                              'info': '$Aerosol Backscatter'}
-
+    ds_month = create_density_params_ds(station, rm_new=rm_new, ang_355_532=ang_355_532, ang_532_1064=ang_532_1064,
+                                        LR_samp=LR_samp, beta_532_new=beta_532_new, times=days.values,
+                                        nc_aeronet_name=nc_aeronet_name)
     # save the dataset
-    SAVE_DS = True
-    if SAVE_DS:
+    if args.save_ds:
         gen_source_path = gen_utils.get_month_gen_params_path(station, start_day, type='density_params')
         print(gen_source_path)
         xr_utils.save_dataset(ds_month, os.path.dirname(gen_source_path), os.path.basename(gen_source_path))
 
-    EXTEND_SMOOTHING_BEZIER = False
-    if EXTEND_SMOOTHING_BEZIER:
+    if args.extended_smoothing_bezier:
         # #### 6. Converting Bezier paths to LC(t) and creating dataset of generated lidar power.
         # Set the period for calculating bezier fitting
         start_time = start_day
-        end_time = end_day + timedelta(days=1)  # - timedelta(seconds = 30) #start_time +timedelta(hours=freq_H)# final_dt# datetime(2017,10,31)
+        end_time = end_day + timedelta(
+            days=1)  # - timedelta(seconds = 30) #start_time +timedelta(hours=freq_H)# final_dt# datetime(2017,10,31)
         tslice = slice(start_time, end_time)
         p_slice = ds_month.ang355532.sel(Time=tslice)
         n_pts = p_slice.Time.size
@@ -445,18 +428,53 @@ def main(station, month, year, start_date, end_date, DATA_DIR):
         plt.show()
 
 
+def create_density_params_ds(station, rm_new, ang_355_532, ang_532_1064, LR_samp, beta_532_new, times, nc_aeronet_name)\
+        -> xr.Dataset:
+    """
+    Wraps the variables into a xr.Dataset
+    """
+
+    ds_month = xr.Dataset(data_vars={'rm': ('Time', rm_new),
+                                     'ang355532': ('Time', ang_355_532),
+                                     'ang5321064': ('Time', ang_532_1064),
+                                     'LR': ('Time', LR_samp),
+                                     'beta532': ('Time', beta_532_new)},
+                          coords={'Time': times})
+
+    ds_month = ds_month.assign(
+        aeronet_source=xr.Variable(dims=(), data=os.path.join(station.aeronet_folder, nc_aeronet_name),
+                                   attrs={'info': 'netcdf file name, processed from AERONET retrievals,'
+                                                  ' using: read_AERONET_data.py.'}))
+    ds_month.rm.attrs = {'units': r'$km$', 'long_name': r'$r_m$',
+                         'info': 'Reference range'}
+    ds_month.ang355532.attrs = {'long_name': r'$\AA_{355,532}$',
+                                'info': 'Angstrom Exponent 355,532'}
+    ds_month.ang5321064.attrs = {'long_name': r'$\AA_{532,1064}$',
+                                 'info': 'Angstrom Exponent 532,1064'}
+    ds_month.LR.attrs = {'units': r'$sr$', 'long_name': r'$LR$',
+                         'info': 'Lidar Ratio'}
+    ds_month.beta532.attrs = {'units': r'$km^{{-1}} sr^{-1}$',
+                              'long_name': r'$\beta$',
+                              'info': '$Aerosol Backscatter'}
+
+    return ds_month
+
+
 if __name__ == '__main__':
 
     HOME_DIR = os.path.abspath(os.path.join(os.getcwd(), os.pardir, os.pardir))
     DATA_DIR = os.path.join(HOME_DIR, 'data')
 
-    # ## Set station and date parameters
-    station = gs.Station('haifa')
-    months = [4, 5]  # months to run KDE on, one month at a time.
-    year = 2017
+    parser = utils.get_base_arguments()
+    parser.add_argument('--save_ds', action='store_true',
+                        help='Whether to save the datasets')
+    parser.add_argument('--extended_smoothing_bezier', action='store_true',
+                        help='Whether to do extended smoothing bezier')
+    parser.add_argument('--plot_results', action='store_true',
+                        help='Whether to plot graphs')
+    args = parser.parse_args()
 
-    # start_date and end_date should corrspond to the extended csv
-    start_date = datetime(2017, 4, 1)
-    end_date = datetime(2017, 5, 31)
-    for month in months:
-        main(station, month, year, start_date, end_date, DATA_DIR)
+    # start_date and end_date should correspond to the extended csv!
+    # months to run KDE on, one month at a time.
+    for date_ in pd.date_range(args.start_date, args.end_date, freq='MS'):
+        kde_estimation_main(args, date_.month, date_.year, DATA_DIR)
