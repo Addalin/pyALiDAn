@@ -66,7 +66,6 @@ def daily_signals_generation_main(params):
     num_processes = 1 if gen_sig_utils.PLOT_RESULTS else min((cpu_count() - 1, num_days))
 
     func = generate_daily_lidar_measurement if not params.update_overlap_only else update_daily_lidar_measurement
-    func(station, days_list[0], params.save_ds)
     with Pool(num_processes) as p:
         p.starmap(func, zip(repeat(station), days_list, repeat(params.save_ds)))
 
