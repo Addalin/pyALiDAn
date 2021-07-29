@@ -152,7 +152,13 @@ def visCurve(lData, rData, stitle=""):
     return [fig, axes]
 
 
-def get_base_arguments(parser=None):
+def get_base_arguments(parser: argparse.ArgumentParser = None) -> argparse.ArgumentParser:
+    """
+    Returns the usual parameters for argument parser (station name, start date, end date)
+
+    :param parser: If not None, appends the arguments to the given parser
+    :return:
+    """
     if not parser:
         parser = argparse.ArgumentParser()
     parser.add_argument('-n', '--station_name', type=str, default='haifa',

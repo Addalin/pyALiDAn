@@ -285,10 +285,8 @@ def extend_calibration_info(df):
         logger.debug("Issue with ds_utils.recalc_LC. Possibly due to missing lidar/molecular paths. Inserting NaNs")
         df[['LC_recalc', 'LCp_recalc']] = None
     logger.info(f"Start mid-reference range calculations")
-    df['bin_rm'] = df[['bin_r0', 'bin_r1']].progress_apply(np.mean, axis=1,
-                                                           result_type='expand').astype(int)
-    df['rm'] = df[['r0', 'r1']].progress_apply(np.mean, axis=1, result_type='expand').astype(
-        float)
+    df['bin_rm'] = df[['bin_r0', 'bin_r1']].progress_apply(np.mean, axis=1, result_type='expand').astype(int)
+    df['rm'] = df[['r0', 'r1']].progress_apply(np.mean, axis=1, result_type='expand').astype(float)
 
     logger.info(f"\nDone database extension")
     return df
