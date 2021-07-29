@@ -14,53 +14,35 @@ from learning_lidar.utils.utils import create_and_configer_logger, get_base_argu
 
 # TODO:  add 2 flags - Debug and save figure.
 
-def generate_daily_lidar_measurement(station, day_date, save_ds=True, update_overlap_only=False):
+def generate_daily_lidar_measurement(station, day_date, save_ds=True):
 
-    overlap_params = pd.read_csv("../../data/overlap_params.csv", index_col=0)
-    try:
-        # TODO Generalize. Currently adapted to 4 months only - (4,5,9,10)
-        overlap_params_index = {4: 0, 5: 1, 9: 2, 10: 3}[day_date.month]
-        overlap_param = overlap_params.loc[overlap_params_index, :].values
-    except KeyError:
-        raise KeyError(f"This month is not currently supported in overlap function.")
+    ds_total = gen_sig_utils.calc_total_optical_density(station=station, day_date=day_date)
+    signal_ds = gen_sig_utils.calc_lidar_signal(station, day_date, ds_total)
+    measure_ds = gen_sig_utils.calc_daily_measurement(station=station, day_date=day_date, signal_ds=signal_ds,
+                                                      update_overlap_only=False)
 
-    if update_overlap_only:
-        month_folder = utils.get_month_folder_name(station.gen_lidar_dataset, day_date) # drop
-        nc_path = os.path.join(month_folder, f"{day_date.strftime('%Y_%m_%d')}_{station.location}_generated_lidar.nc") # drop
-        # TODO: create get_daily_measure_ds similar to get_daily_gen_param_ds (and move it inside calc_daily_measurement use only a flag UPDATE_measure)
+    if save_ds:
+        # TODO: check that the range_corr_p is added to measure_ds, and that the LCNET is uploading the new paths
+        #  (especially if range_corr_p )  . and if so, save only 2 single files of measure_ds, and signal_ds to save
+        #  time and space
+        # NOTE: saving to separated datasets (for the use of the learning phase),
+        # is done in dataseting.prepare_generated_samples()
+        gen_utils.save_generated_dataset(station, measure_ds, data_source='lidar', save_mode='single')
+        gen_utils.save_generated_dataset(station, signal_ds, data_source='signal', save_mode='single')
 
-        measure_ds = gen_sig_utils.calc_daily_measurement(station, day_date, overlap_params=overlap_param,
-                                                          signal_ds=None, measure_ds_path=nc_path)
-
-        if save_ds:
-            # NOTE: saving to separated datasets (for the use of the learning phase),
-            # is done in dataseting.prepare_generated_samples()
-            gen_utils.save_generated_dataset(station, measure_ds, data_source='lidar', save_mode='single')
-
-        return measure_ds
+    return measure_ds, signal_ds
 
 
+def update_daily_lidar_measurement(station, day_date, save_ds=True):
 
+    measure_ds = gen_sig_utils.calc_daily_measurement(station, day_date, signal_ds=None, update_overlap_only=True)
 
+    if save_ds:
+        # NOTE: saving to separated datasets (for the use of the learning phase),
+        # is done in dataseting.prepare_generated_samples()
+        gen_utils.save_generated_dataset(station, measure_ds, data_source='lidar', save_mode='single')
 
-
-
-    else:
-        ds_total = gen_sig_utils.calc_total_optical_density(station=station, day_date=day_date)
-        signal_ds = gen_sig_utils.calc_lidar_signal(station, day_date, ds_total)
-        measure_ds = gen_sig_utils.calc_daily_measurement(station=station, day_date=day_date, signal_ds=signal_ds,
-                                                          overlap_params=overlap_param)
-
-        if save_ds:
-            # TODO: check that the range_corr_p is added to measure_ds, and that the LCNET is uploading the new paths
-            #  (especially if range_corr_p )  . and if so, save only 2 single files of measure_ds, and signal_ds to save
-            #  time and space
-            # NOTE: saving to separated datasets (for the use of the learning phase),
-            # is done in dataseting.prepare_generated_samples()
-            gen_utils.save_generated_dataset(station, measure_ds, data_source='lidar', save_mode='single')
-            gen_utils.save_generated_dataset(station, signal_ds, data_source='signal', save_mode='single')
-
-        return measure_ds, signal_ds
+    return measure_ds
 
 
 def daily_signals_generation_main(params):
@@ -83,9 +65,10 @@ def daily_signals_generation_main(params):
     num_days = len(days_list)
     num_processes = 1 if gen_sig_utils.PLOT_RESULTS else min((cpu_count() - 1, num_days))
 
+    func = generate_daily_lidar_measurement if not params.update_overlap_only else update_daily_lidar_measurement
+    func(station, days_list[0], params.save_ds)
     with Pool(num_processes) as p:
-        p.starmap(generate_daily_lidar_measurement, zip(repeat(station), days_list,
-                                                        repeat(params.save_ds), repeat(params.update_overlap_only)))
+        p.starmap(func, zip(repeat(station), days_list, repeat(params.save_ds)))
 
     logger.info(f"\nDone generating lidar signals & measurements "
                 f"for period: [{start_date.strftime('%Y-%m-%d')},{end_date.strftime('%Y-%m-%d')}]")
