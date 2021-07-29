@@ -1,12 +1,13 @@
+import datetime
 import os
 import logging
 from multiprocessing import Pool, cpu_count
 from itertools import repeat
 import pandas as pd
+import xarray as xr
 
 import learning_lidar.utils.global_settings as gs
 import learning_lidar.generation.generation_utils as gen_utils
-import learning_lidar.utils.utils as utils
 import learning_lidar.utils.vis_utils as vis_utils
 import learning_lidar.generation.daily_signals_generations_utils as gen_sig_utils
 from learning_lidar.utils.utils import create_and_configer_logger, get_base_arguments
@@ -14,8 +15,8 @@ from learning_lidar.utils.utils import create_and_configer_logger, get_base_argu
 
 # TODO:  add 2 flags - Debug and save figure.
 
-def generate_daily_lidar_measurement(station, day_date, save_ds=True):
-
+def generate_daily_lidar_measurement(station: gs.Station, day_date: datetime.date, save_ds: bool = True)\
+        -> (xr.Dataset, xr.Dataset):
     ds_total = gen_sig_utils.calc_total_optical_density(station=station, day_date=day_date)
     signal_ds = gen_sig_utils.calc_lidar_signal(station, day_date, ds_total)
     measure_ds = gen_sig_utils.calc_daily_measurement(station=station, day_date=day_date, signal_ds=signal_ds,
@@ -33,7 +34,15 @@ def generate_daily_lidar_measurement(station, day_date, save_ds=True):
     return measure_ds, signal_ds
 
 
-def update_daily_lidar_measurement(station, day_date, save_ds=True):
+def update_daily_lidar_measurement(station: gs.Station, day_date: datetime.date, save_ds: bool = True) -> xr.Dataset:
+    """
+    Updates a measure ds with overlap.
+
+    :param station: gs.station() object of the lidar station
+    :param day_date: datetime.date object of the required date
+    :param save_ds: bool, whether to save the genated measure ds or not
+    :return: xr.Dataset with the generated measure ds
+    """
 
     measure_ds = gen_sig_utils.calc_daily_measurement(station, day_date, signal_ds=None, update_overlap_only=True)
 
@@ -46,7 +55,6 @@ def update_daily_lidar_measurement(station, day_date, save_ds=True):
 
 
 def daily_signals_generation_main(params):
-
     vis_utils.set_visualization_settings()
     gen_sig_utils.PLOT_RESULTS = params.plot_results
     # TODO: Toggle PLOT_RESULTS to True - doesn't seem to work. Omer - works for me. Adi, please check again..

@@ -1,3 +1,4 @@
+import datetime
 import logging
 import os
 from datetime import timedelta
@@ -366,14 +367,15 @@ def calc_range_corr_measurement(station, day_date, pn_ds, r2_ds):
     return pr2n_ds
 
 
-def calc_daily_measurement(station, day_date, signal_ds, update_overlap_only=False):
+def calc_daily_measurement(station: gs.Station, day_date: datetime.date, signal_ds: xr.Dataset,
+                           update_overlap_only: bool=False) -> xr.Dataset:
     """
     Generate Lidar measurement, by combining background signal and the lidar signal,
     and then creating Poisson signal, which is the measurement of the mean lidar signal.
 
-    If measure_ds_path is given, an existing ds is loaded for the measurement, instead of computed from scratch
+    If update_overlap_only is given, an existing ds is loaded for the lidar and signal, instead of computed from scratch
 
-    :param update_overlap_only: path to existing measure ds
+    :param update_overlap_only: bool, whether to load a precomputed lidar and signal dataset or not
     :param station: gs.station() object of the lidar station
     :param day_date: datetime.date object of the required date
     :param signal_ds: xr.Dataset(), containing the daily lidar signal (clean)

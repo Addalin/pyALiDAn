@@ -12,6 +12,7 @@ import learning_lidar.preprocessing.preprocessing_utils as prep_utils
 import learning_lidar.utils.xr_utils as xr_utils
 from learning_lidar.generation.generate_density_utils import PLOT_RESULTS
 from learning_lidar.utils.global_settings import eps
+import learning_lidar.utils.global_settings as gs
 
 
 def get_gen_dataset_file_name(station, day_date, wavelength='*',
@@ -140,9 +141,9 @@ def get_month_gen_params_path(station, day_date, type='density_params'):
     return gen_source_path
 
 
-def get_daily_ds_path(station, day_date, type_):
+def get_daily_ds_path(station: gs.Station, day_date: datetime.date, type_: str) -> str:
     """
-    Get the path to the daily generated measure (lidar) ds
+    Get the path to the daily generated measure (lidar) or signal ds
 
     :param type_: str, 'lidar' for measure dataset. 'signal' for signal dataset
     :param station: gs.station() object of the lidar station
@@ -197,10 +198,11 @@ def get_daily_gen_param_ds(station, day_date, type='density_params'):
     return day_params_ds
 
 
-def get_daily_gen_ds(station, day_date, type_):
+def get_daily_gen_ds(station: gs.Station, day_date: datetime.date, type_: str) -> xr.Dataset:
     """
-    Returns the daily parameters of measures (lidar) creation as a dataset.
+    Returns the daily parameters of measures (lidar) or signal creation as a dataset.
 
+    :param type_: str, should be one of 'signal' / 'lidar'
     :param station: gs.station() object of the lidar station
     :param day_date: datetime.date object of the required date
     :return: day_params_ds: xarray.Dataset(). Daily dataset of generation parameters.
@@ -210,7 +212,16 @@ def get_daily_gen_ds(station, day_date, type_):
     return ds
 
 
-def get_daily_overlap(station, day_date, height_indx):
+def get_daily_overlap(station: gs.Station, day_date: datetime.date, height_indx: xr.DataArray) -> xr.Dataset:
+    """
+    Generates overlap values per height index, from overlap params
+
+    :param station: gs.station() object of the lidar station
+    :param day_date: datetime.date object of the required date
+    :param height_indx: xr.DataArray, stores the height index per Height
+
+    :return: xr.Dataset with the overlap values per height index
+    """
 
     overlap_params = get_month_gen_params_ds(station, day_date, type='overlap')
     overlap = sigmoid(height_indx, *overlap_params.to_array().values)
