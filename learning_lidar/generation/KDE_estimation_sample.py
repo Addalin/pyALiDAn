@@ -106,7 +106,7 @@ def main(station, month, year, start_date, end_date, DATA_DIR):
 
     folder_name = os.path.join(DATA_DIR, 'Angstrom_LidarRatio', 'plot_data')
     csv_name = r'data_points_with_error_bars.csv'
-    df_A_LR = pd.read_csv(os.path.join(folder_name, csv_name))
+    df_A_LR = pd.read_csv(os.path.join(folder_name, csv_name)) # TODO : update LR/A per station, and update this as the csv
     fig, ax = plt.subplots(nrows=1, ncols=1, figsize=(8, 5))
     df_A_LR[df_A_LR['type'] == 'red'].plot.scatter(x='x', y='y',
                                                    label=df_A_LR[df_A_LR['type'] == 'red']['name'].unique()[0], c='r',
