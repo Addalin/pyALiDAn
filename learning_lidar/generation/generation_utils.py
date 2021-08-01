@@ -6,11 +6,13 @@ import numpy as np
 from matplotlib import pyplot as plt
 from scipy.ndimage import gaussian_filter1d
 from tqdm import tqdm
+import xarray as xr
 
 import learning_lidar.preprocessing.preprocessing_utils as prep_utils
 import learning_lidar.utils.xr_utils as xr_utils
 from learning_lidar.generation.generate_density_utils import PLOT_RESULTS
 from learning_lidar.utils.global_settings import eps
+import learning_lidar.utils.global_settings as gs
 
 
 def get_gen_dataset_file_name(station, day_date, wavelength='*',
@@ -72,6 +74,8 @@ def save_generated_dataset(station, dataset, data_source='lidar', save_mode='bot
         base_folder = station.gen_density_dataset
     elif data_source == 'bg':
         base_folder = station.gen_bg_dataset
+    else:
+        raise Exception("Unsupported data_source.")
     month_folder = prep_utils.get_month_folder_name(base_folder, date_datetime)
 
     xr_utils.get_daily_ds_date(dataset)
@@ -118,7 +122,6 @@ def get_month_gen_params_path(station, day_date, type='density_params'):
         'density_params' - for density sampler generator,
         'bg'- for generated background signal,
         'LC' - for generated Lidar Constant signal
-        # TODO : add 'overlap'
     :param station: gs.station() object of the lidar station
     :param day_date: datetime.date object of the required date
     :return: str. Path to monthly dataset of generation parameters.
@@ -129,12 +132,34 @@ def get_month_gen_params_path(station, day_date, type='density_params'):
     _, monthdays = calendar.monthrange(year, month)
     month_end_day = datetime(year, month, monthdays, 0, 0)
 
+    folder_name = prep_utils.get_month_folder_name(station.generation_folder, day_date)
+
     nc_name = f"generated_{type}_{station.location}_{month_start_day.strftime('%Y-%m-%d')}_" \
               f"{month_end_day.strftime('%Y-%m-%d')}.nc"
 
-    folder_name = prep_utils.get_month_folder_name(station.generation_folder, day_date)
-
     gen_source_path = os.path.join(folder_name, nc_name)
+    return gen_source_path
+
+
+def get_daily_ds_path(station: gs.Station, day_date: datetime.date, type_: str) -> str:
+    """
+    Get the path to the daily generated measure (lidar) or signal ds
+
+    :param type_: str, 'lidar' for measure dataset. 'signal' for signal dataset
+    :param station: gs.station() object of the lidar station
+    :param day_date: datetime.date object of the required date
+    :return: str. Path to monthly dataset of generation parameters.
+    """
+    if type_ == 'lidar':
+        parent_folder = station.gen_lidar_dataset
+    elif type_ == 'signal':
+        parent_folder = station.gen_signal_dataset
+    else:
+        raise Exception("Unsupported type. Should by 'lidar' or 'signal'")
+
+    month_folder = prep_utils.get_month_folder_name(parent_folder, day_date)
+    file_name = get_gen_dataset_file_name(station, day_date, wavelength='*', data_source=type_)
+    gen_source_path = os.path.join(month_folder, file_name)
     return gen_source_path
 
 
@@ -145,7 +170,7 @@ def get_month_gen_params_ds(station, day_date, type='density_params'):
         'density_params' - for density sampler generator,
         'bg'- for generated background signal,
         'LC' - for generated Lidar Constant signal
-        # TODO : add 'overlap'
+        'overlap' - for generated overlap parameters
     :param station: gs.station() object of the lidar station
     :param day_date: datetime.date object of the required date
     :return: day_params_ds: xarray.Dataset(). Monthly dataset of generation parameters.
@@ -171,6 +196,40 @@ def get_daily_gen_param_ds(station, day_date, type='density_params'):
     day_params_ds = month_params_ds.sel(Time=slice(day_date, day_date + timedelta(days=1)))
 
     return day_params_ds
+
+
+def get_daily_gen_ds(station: gs.Station, day_date: datetime.date, type_: str) -> xr.Dataset:
+    """
+    Returns the daily parameters of measures (lidar) or signal creation as a dataset.
+
+    :param type_: str, should be one of 'signal' / 'lidar'
+    :param station: gs.station() object of the lidar station
+    :param day_date: datetime.date object of the required date
+    :return: day_params_ds: xarray.Dataset(). Daily dataset of generation parameters.
+    """
+    daily_ds_path = get_daily_ds_path(station, day_date, type_)
+    ds = xr_utils.load_dataset(daily_ds_path)
+    return ds
+
+
+def get_daily_overlap(station: gs.Station, day_date: datetime.date, height_indx: xr.DataArray) -> xr.Dataset:
+    """
+    Generates overlap values per height index, from overlap params
+
+    :param station: gs.station() object of the lidar station
+    :param day_date: datetime.date object of the required date
+    :param height_indx: xr.DataArray, stores the height index per Height
+
+    :return: xr.Dataset with the overlap values per height index
+    """
+
+    overlap_params = get_month_gen_params_ds(station, day_date, type='overlap')
+    overlap = sigmoid(height_indx, *overlap_params.to_array().values)
+    overlap_ds = xr.Dataset(data_vars={'overlap': ('Height', overlap)},
+                            coords={'Height': height_indx.values},
+                            attrs={'name': 'Overlap Function'})
+
+    return overlap_ds
 
 
 def dt2binscale(dt_time, res_sec=30):

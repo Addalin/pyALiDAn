@@ -1,3 +1,4 @@
+import datetime
 import logging
 import os
 from datetime import timedelta
@@ -366,49 +367,34 @@ def calc_range_corr_measurement(station, day_date, pn_ds, r2_ds):
     return pr2n_ds
 
 
-def calc_daily_measurement(station, day_date, overlap_params, signal_ds, measure_ds_path=None):
+def calc_daily_measurement(station: gs.Station, day_date: datetime.date, signal_ds: xr.Dataset,
+                           update_overlap_only: bool=False) -> xr.Dataset:
     """
     Generate Lidar measurement, by combining background signal and the lidar signal,
     and then creating Poisson signal, which is the measurement of the mean lidar signal.
 
-    If measure_ds_path is given, an existing ds is loaded for the measurement, instead of computed from scratch
+    If update_overlap_only is given, an existing ds is loaded for the lidar and signal, instead of computed from scratch
 
-    :param overlap_params: list of parameters for overlap sigmoid function
-    :param measure_ds_path: path to existing measure ds
+    :param update_overlap_only: bool, whether to load a precomputed lidar and signal dataset or not
     :param station: gs.station() object of the lidar station
     :param day_date: datetime.date object of the required date
     :param signal_ds: xr.Dataset(), containing the daily lidar signal (clean)
     :return: measure_ds: xr.Dataset(), containing the daily lidar measurement (with background and applied photon noise)
     """
-    """
-    if update:
-        load measure ds 
-        load signal ds (pass signal_ds=None)
+    # get the ingredients
+    if update_overlap_only:
+        measure_ds = gen_utils.get_daily_gen_ds(station, day_date, type_='lidar')
+        signal_ds = gen_utils.get_daily_gen_ds(station, day_date, type_='signal')
         p_mean = measure_ds.p_mean
-    p_bg = get_daily_bg(station, day_date)
-    bg_ds = p_bg.broadcast_like(signal_ds.range_corr)
-    p_mean = calc_mean_measurement(station, day_date, signal_ds, bg_ds) if not update
-    overlap_ds = get_daily_overlap() (load daily overlap params (similar to load daily measurement) , sigmoid, attr)
-    """
-    # get the inigridients
-    if measure_ds_path:
-        measure_ds = xr_utils.load_dataset(measure_ds_path)
-        bg_ds = measure_ds.p_bg
-        p_mean = measure_ds.p_mean
-    else:
-        p_bg = get_daily_bg(station, day_date)  # daily background: p_bg
-        # Expand p_bg to coordinates : 'Wavelength','Height', 'Time
-        bg_ds = p_bg.broadcast_like(signal_ds.range_corr)
-        p_mean = calc_mean_measurement(station, day_date, signal_ds, bg_ds)  # me
 
-    Height_indx = p_mean.Height
-    # Apply Overlap function
-    # TODO use gen_utils.create_ratio(total_bins=Height_indx.size, mode='overlap')?
-    #  It has additional options.
-    overlap = sigmoid(Height_indx, *overlap_params)
-    overlap_ds = xr.Dataset(data_vars={'overlap': ('Height', overlap)},
-                            coords={'Height': Height_indx.values},
-                            attrs={'name': 'Overlap Function'})
+    p_bg = get_daily_bg(station, day_date)  # daily background: p_bg
+    # Expand p_bg to coordinates : 'Wavelength','Height', 'Time
+    bg_ds = p_bg.broadcast_like(signal_ds.range_corr)
+
+    p_mean = calc_mean_measurement(station, day_date, signal_ds, bg_ds) if not update_overlap_only else p_mean
+
+    overlap_ds = gen_utils.get_daily_overlap(station, day_date, height_indx=p_mean.Height)
+
     # here the calculation stars
     p_mean = xr.apply_ufunc(lambda x, r: (x * r),
                             p_mean, overlap_ds.overlap,
