@@ -16,7 +16,7 @@ import learning_lidar.preprocessing.preprocessing_utils as prep_utils
 import learning_lidar.utils.global_settings as gs
 import learning_lidar.utils.vis_utils as vis_utils
 import learning_lidar.utils.xr_utils as xr_utils
-from learning_lidar.generation.generation_utils import sigmoid
+from learning_lidar.generation.generation_utils import PLOT_RESULTS
 from learning_lidar.utils.misc_lidar import calc_tau, generate_poisson_signal_STEP
 from learning_lidar.utils.utils import create_and_configer_logger
 from learning_lidar.utils.vis_utils import TIMEFORMAT
@@ -24,7 +24,6 @@ from learning_lidar.utils.vis_utils import TIMEFORMAT
 logger = create_and_configer_logger(f"{os.path.basename(__file__)}.log", level=logging.INFO)
 vis_utils.set_visualization_settings()
 wavelengths = gs.LAMBDA_nm().get_elastic()
-PLOT_RESULTS = False
 
 
 def calc_total_optical_density(station, day_date):

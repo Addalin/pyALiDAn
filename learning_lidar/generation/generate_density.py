@@ -64,6 +64,7 @@ def generate_density_main(station_name='haifa', start_date=datetime(2017, 9, 1),
 
 
 if __name__ == '__main__':
+    # TODO: add parser to input values: station name, dates, PLOT_RESULTS (flag)
     station_name = 'haifa'
     start_date = datetime(2017, 9, 1)
     end_date = datetime(2017, 9, 2)

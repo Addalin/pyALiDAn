@@ -25,7 +25,7 @@ from learning_lidar.utils.vis_utils import TIMEFORMAT
 t_index = [500, 1500, 2500]
 vis_utils.set_visualization_settings()
 wavelengths = gs.LAMBDA_nm().get_elastic()
-PLOT_RESULTS = False
+PLOT_RESULTS = gen_utils.PLOT_RESULTS
 LR_tropos = 55
 
 
