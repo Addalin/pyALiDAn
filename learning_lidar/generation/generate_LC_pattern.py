@@ -31,8 +31,12 @@ sns.set_theme()
 vis_utils.set_visualization_settings()
 
 
-def main(station_name, start_date, end_date):
-    # ## Load extended calibration database
+def generate_LC_pattern_main(params):
+    station_name = params.station_name
+    start_date = params.start_date
+    end_date = params.end_date
+
+    # Load extended calibration database
     station = gs.Station(station_name=station_name)
     wavelengths = gs.LAMBDA_nm().get_elastic()
 
@@ -103,7 +107,7 @@ def main(station_name, start_date, end_date):
         c2 = df_times[period2].apply(lambda row: decay_p(row.t_day, peak_days[1], p0, days_decay), axis=1,
                                      result_type='expand')
         ds_chans.append(xr.Dataset(
-            data_vars={'p': (('Time'), pd.concat([c1, c2])),
+            data_vars={'p': ('Time', pd.concat([c1, c2])),
                        'lambda_nm': ('Wavelength', np.uint16([wavelength]))
                        },
             coords={'Time': df_times.date.values,
@@ -193,7 +197,7 @@ def main(station_name, start_date, end_date):
         points[:, 1] = ds_gen_p.p_new.sel(Wavelength=wavelength, Time=tslice).values
         path = proc_utils.Bezier.evaluate_bezier(points, dn_t)
         paths_chan.append(xr.Dataset(
-            data_vars={'p': (('Time'), path[:, 1]),
+            data_vars={'p': ('Time', path[:, 1]),
                        'lambda_nm': ('Wavelength', np.uint16([wavelength]))
                        },
             coords={'Time': power_time_index.values,
@@ -249,7 +253,7 @@ def main(station_name, start_date, end_date):
 
 
 if __name__ == '__main__':
-    station_name = 'haifa'
-    start_date = datetime(2017, 9, 1)
-    end_date = datetime(2017, 10, 31, 23, 59, 30)
-    main(station_name, start_date, end_date)
+    parser = utils.get_base_arguments()
+    args = parser.parse_args()
+
+    generate_LC_pattern_main(args)

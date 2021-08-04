@@ -25,6 +25,8 @@ vis_utils.set_visualization_settings()
 wavelengths = gs.LAMBDA_nm().get_elastic()
 sns.set_palette(sns.color_palette("tab10"))
 
+# TODO - finish convert to py module
+
 
 # %% Helper Functions
 
@@ -127,10 +129,6 @@ def dt_delta2time(dt_delta):
     m_seconds = dt_delta.microseconds
     dt_time = time(hours, minutes, seconds, m_seconds)
     return dt_time
-
-
-# %%
-# TODO - convert to py module
 
 
 # ## Daily Sun Elevation
@@ -782,7 +780,7 @@ plt.show()
 # %%save yearly dataset
 folder_name = station.generation_folder
 nc_name = f"generated_bg_{station.name}_{start_day.strftime('%Y-%m-%d')}_{end_day.strftime('%Y-%m-%d')}.nc"
-prep.save_dataset(ds_bg_year, folder_name, nc_name)
+xr_utils.save_dataset(ds_bg_year, folder_name, nc_name)
 
 # %% Save monthly bg dataset
 # TODO: this routine is useful for several generation modules as LC, obverlap etc. make it in generation_utils
