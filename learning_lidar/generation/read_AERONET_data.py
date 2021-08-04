@@ -32,7 +32,7 @@ def angstrom(tau_1, tau_2, lambda_1, lambda_2):
     return val
 
 
-def main(station_name, month, year):
+def read_aeronet_data_main(station_name, month, year):
     """
     calculate Angstrom exponent based on AERONET measurements taken from the sunphotometere on EE building
     Assumes aeronet files to exist. if not, download from - https://aeronet.gsfc.nasa.gov/cgi-bin/webtool_aod_v3?stage=3&region=Middle_East&state=Israel&site=Technion_Haifa_IL&place_code=10&if_polarized=0
@@ -186,4 +186,4 @@ if __name__ == '__main__':
     args = parser.parse_args()
 
     for date_ in pd.date_range(start=args.start_date, end=args.end_date, freq='MS'):
-        main(args.station_name, date_.month, date_.year)
+        read_aeronet_data_main(args.station_name, date_.month, date_.year)
