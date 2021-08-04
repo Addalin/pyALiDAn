@@ -1,6 +1,5 @@
 import logging
 import os
-from datetime import datetime
 from itertools import repeat
 from multiprocessing import Pool, cpu_count
 
@@ -8,9 +7,7 @@ import pandas as pd
 
 import learning_lidar.generation.generate_density_utils as gen_den_utils
 import learning_lidar.generation.generation_utils as gen_utils
-import learning_lidar.utils.global_settings as gs
-import learning_lidar.utils.vis_utils as vis_utils
-from learning_lidar.utils.utils import create_and_configer_logger, get_base_arguments
+from learning_lidar.utils import utils, vis_utils, global_settings as gs
 
 
 # TODO:  add 2 flags - Debug and save figure.
@@ -49,7 +46,7 @@ def generate_density_main(params):
     gen_utils.PLOT_RESULTS = params.plot_results
     logging.getLogger('PIL').setLevel(logging.ERROR)  # Fix annoying PIL logs
     logging.getLogger('matplotlib').setLevel(logging.ERROR)  # Fix annoying matplotlib logs
-    logger = create_and_configer_logger(f"{os.path.basename(__file__)}.log", level=logging.INFO)
+    logger = utils.create_and_configer_logger(f"{os.path.basename(__file__)}.log", level=logging.INFO)
     logger.info(params)
     station = gs.Station(station_name=params.station_name)
     start_date, end_date = params.start_date, params.end_date
@@ -67,7 +64,7 @@ def generate_density_main(params):
 
 
 if __name__ == '__main__':
-    parser = get_base_arguments()
+    parser = utils.get_base_arguments()
 
     parser.add_argument('--plot_results', action='store_true',
                         help='Whether to plot graphs')

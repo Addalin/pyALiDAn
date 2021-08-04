@@ -1,7 +1,7 @@
 import generate_density
-from learning_lidar.utils.utils import get_base_arguments
+from learning_lidar.utils import utils, vis_utils, global_settings as gs
 
-parser = get_base_arguments()
+parser = utils.get_base_arguments()
 
 parser.add_argument('--plot_results', action='store_true',
                     help='Whether to plot graphs')

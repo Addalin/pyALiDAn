@@ -10,8 +10,7 @@ from scipy import stats
 from scipy.stats import multivariate_normal
 
 import learning_lidar.generation.generation_utils as gen_utils
-from learning_lidar.utils import utils, xr_utils, vis_utils, global_settings as gs
-from learning_lidar.utils.proc_utils import Bezier
+from learning_lidar.utils import utils, xr_utils, vis_utils, proc_utils, global_settings as gs
 
 vis_utils.set_visualization_settings()
 
@@ -416,7 +415,7 @@ def kde_estimation_main(args, month, year, DATA_DIR):
         points[0:monthdays * 2, 1] = p_slice.values
         points[-1, 1] = p_slice.values[-1]
         # calc bezier
-        path_ang355532 = Bezier.evaluate_bezier(points, int(dn_t))
+        path_ang355532 = proc_utils.Bezier.evaluate_bezier(points, int(dn_t))
         # Set the time index in which the interpolation is calculated.
         time_index = pd.date_range(start=start_date, end=end_time, freq=f'30S')
         ds_bezier = xr.Dataset(

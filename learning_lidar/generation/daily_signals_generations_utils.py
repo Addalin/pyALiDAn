@@ -13,15 +13,9 @@ from tqdm import tqdm
 
 import learning_lidar.generation.generation_utils as gen_utils
 import learning_lidar.preprocessing.preprocessing_utils as prep_utils
-import learning_lidar.utils.global_settings as gs
-import learning_lidar.utils.vis_utils as vis_utils
-import learning_lidar.utils.xr_utils as xr_utils
-from learning_lidar.generation.generation_utils import sigmoid
-from learning_lidar.utils.misc_lidar import calc_tau, generate_poisson_signal_STEP
-from learning_lidar.utils.utils import create_and_configer_logger
-from learning_lidar.utils.vis_utils import TIMEFORMAT
+from learning_lidar.utils import utils, xr_utils, vis_utils, misc_lidar, global_settings as gs
 
-logger = create_and_configer_logger(f"{os.path.basename(__file__)}.log", level=logging.INFO)
+logger = utils.create_and_configer_logger(f"{os.path.basename(__file__)}.log", level=logging.INFO)
 vis_utils.set_visualization_settings()
 wavelengths = gs.LAMBDA_nm().get_elastic()
 PLOT_RESULTS = False
@@ -94,7 +88,7 @@ def calc_attbsc_ds(station, day_date, total_ds):
         exp_tau_t = []
         for t in tqdm(total_ds.Time, desc=f"Wavelength - {wavelength} [nm]"):
             sigma_t = total_ds.sigma.sel(Time=t)
-            e_tau = xr.apply_ufunc(lambda x: np.exp(-2 * calc_tau(x, height_bins)),
+            e_tau = xr.apply_ufunc(lambda x: np.exp(-2 * misc_lidar.calc_tau(x, height_bins)),
                                    sigma_t.sel(Wavelength=wavelength), keep_attrs=True)
             e_tau.name = r'$\exp(-2 \tau)$'
             exp_tau_t.append(e_tau)
@@ -134,7 +128,7 @@ def get_daily_LC(station, day_date):
         fig, ax = plt.subplots(nrows=1, ncols=1, figsize=(7, 5))
         lc_ds.plot(hue='Wavelength', linewidth=0.8)
         ax.set_title(f"{lc_ds.info} - for {day_date.strftime('%d/%m/%Y')}")
-        ax.xaxis.set_major_formatter(TIMEFORMAT)
+        ax.xaxis.set_major_formatter(vis_utils.TIMEFORMAT)
         ax.xaxis.set_tick_params(rotation=0)
         plt.tight_layout()
         plt.show()
@@ -307,7 +301,7 @@ def calc_poiss_measurement(station, day_date, p_mean):
     pn_h = xr.apply_ufunc(
         lambda mu: (mu + (np.sqrt(mu)) * np.random.normal(loc=0, scale=1.0, size=mu.shape)).astype(int),
         p_mean.where(p_mean >= 50).fillna(0), keep_attrs=True)
-    pn_l = xr.apply_ufunc(lambda mu: generate_poisson_signal_STEP(mu),
+    pn_l = xr.apply_ufunc(lambda mu: misc_lidar.generate_poisson_signal_STEP(mu),
                           p_mean.where(p_mean < 50).fillna(0), keep_attrs=True, dask='parallelized')
     tic0.toc()
     pn_ds = pn_h + pn_l
@@ -325,7 +319,7 @@ def calc_poiss_measurement(station, day_date, p_mean):
             pn_ds.where(pn_ds >= 3).sel(Wavelength=wavelength,
                                         Height=slice(0, 10)) \
                 .plot(cmap='turbo', ax=ax)
-            ax.xaxis.set_major_formatter(TIMEFORMAT)
+            ax.xaxis.set_major_formatter(vis_utils.TIMEFORMAT)
             ax.xaxis.set_tick_params(rotation=0)
         plt.suptitle(f"{pn_ds.info}")
         plt.tight_layout()
@@ -357,7 +351,7 @@ def calc_range_corr_measurement(station, day_date, pn_ds, r2_ds):
         for wavelength, ax in zip(wavelengths, axes.ravel()):
             pr2n_ds.where(pr2n_ds >= 3).sel(Wavelength=wavelength, Height=slice(0, 10)) \
                 .plot(cmap='turbo', ax=ax)
-            ax.xaxis.set_major_formatter(TIMEFORMAT)
+            ax.xaxis.set_major_formatter(vis_utils.TIMEFORMAT)
             ax.xaxis.set_tick_params(rotation=0)
         plt.suptitle(f"{pr2n_ds.info}")
         plt.tight_layout()

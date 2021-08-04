@@ -13,13 +13,7 @@ from sklearn.model_selection import train_test_split
 
 import learning_lidar.generation.generation_utils as gen_utils
 import learning_lidar.preprocessing.preprocessing_utils as prep_utils
-import learning_lidar.utils.global_settings as gs
-import learning_lidar.utils.misc_lidar as misc_lidar
-import learning_lidar.utils.vis_utils as vis_utils
-import learning_lidar.utils.xr_utils as xr_utils
-from learning_lidar.utils import utils
-from learning_lidar.utils.proc_utils import make_interpolated_image, normalize
-from learning_lidar.utils.vis_utils import TIMEFORMAT
+from learning_lidar.utils import utils, xr_utils, vis_utils, misc_lidar, proc_utils, global_settings as gs
 
 # Profiles at different times
 t_index = [500, 1500, 2500]
@@ -114,7 +108,7 @@ def create_multi_gaussian_density(grid, nx, ny, grid_x, grid_y, std_ratio=.125, 
         rv = multivariate_normal((x0, y0), cov)
         density += rv.pdf(grid)
     # normalizing:
-    density = normalize(density)
+    density = proc_utils.normalize(density)
     return density
 
 
@@ -130,7 +124,7 @@ def get_sub_sample_level(density, source_indexes, target_indexes):
     df_sigma = pd.DataFrame(density_samples, columns=target_indexes)
     interp_sigma_df = (df_sigma.T.resample('30S').interpolate(method='linear')).T
     sampled_interp = interp_sigma_df.values
-    sampled_interp = normalize(sampled_interp)
+    sampled_interp = proc_utils.normalize(sampled_interp)
     return sampled_interp
 
 
@@ -240,7 +234,7 @@ def create_Z_level2(grid, x, y, grid_cov_size, ref_height_bin):
         r = -1
         density += r * rv.pdf(grid)
 
-    density = normalize(density)
+    density = proc_utils.normalize(density)
 
     if PLOT_RESULTS:
         plt.figure()
@@ -265,9 +259,9 @@ def create_blur_features(density, n_samples):
                          [-1, 0, 1],
                          [0, 1, 0]])
     grad = signal.convolve2d(density, g_filter, boundary='symm', mode='same')
-    grad_norm = normalize(grad)
+    grad_norm = proc_utils.normalize(grad)
     grad_amplitude = np.absolute(grad)
-    grad_norm_amplitude = normalize(grad_amplitude)
+    grad_norm_amplitude = proc_utils.normalize(grad_amplitude)
 
     if PLOT_RESULTS:
         fig, axes = plt.subplots(nrows=3, ncols=1, figsize=(15, 10))
@@ -296,9 +290,9 @@ def create_blur_features(density, n_samples):
         plt.show()
 
     # Subsample and interpolation of the absolute of gradients - component 2
-    interp_features = make_interpolated_image(n_samples, grad_norm_amplitude)
+    interp_features = proc_utils.make_interpolated_image(n_samples, grad_norm_amplitude)
     blur_features = gaussian_filter(interp_features, sigma=(21, 61))
-    blur_features = normalize(blur_features)
+    blur_features = proc_utils.normalize(blur_features)
 
     if PLOT_RESULTS:
         plt.figure()
@@ -379,7 +373,7 @@ def merge_density_components(density_ds):
         fig, ax = plt.subplots(nrows=1, ncols=1, figsize=(7, 5))
         density_ds.merged.plot(cmap='turbo', ax=ax)
         ax.set_title(density_ds.merged.info)
-        ax.xaxis.set_major_formatter(TIMEFORMAT)
+        ax.xaxis.set_major_formatter(vis_utils.TIMEFORMAT)
         ax.xaxis.set_tick_params(rotation=0)
         plt.tight_layout()
         plt.show()
@@ -442,7 +436,7 @@ def generate_density_components(total_time_bins, total_height_bins, time_index, 
 
         density_ds.density.plot(x='Time', y='Height', row='Component', cmap='turbo', figsize=(8, 10), sharex=True)
         ax = plt.gca()
-        ax.xaxis.set_major_formatter(TIMEFORMAT)
+        ax.xaxis.set_major_formatter(vis_utils.TIMEFORMAT)
         ax.xaxis.set_tick_params(rotation=0)
         plt.show()
 
@@ -465,7 +459,7 @@ def normalize_density_ds(density_ds):
     :return:
     """
     # Generating rho - by normalizing and smooth the merged density
-    rho = xr.apply_ufunc(lambda x, r: normalize(r * x),
+    rho = xr.apply_ufunc(lambda x, r: proc_utils.normalize(r * x),
                          density_ds.merged, density_ds.ratio, keep_attrs=False)
 
     rho.attrs = {'info': 'Normalized density', 'name': 'Density',
@@ -474,7 +468,7 @@ def normalize_density_ds(density_ds):
     # Normalizing rho per time measurement
     rho_norm_t = []
     for t in rho.Time:
-        rho_norm_t.append(xr.apply_ufunc(lambda x: normalize(x), rho.sel(Time=t), keep_attrs=True))
+        rho_norm_t.append(xr.apply_ufunc(lambda x: proc_utils.normalize(x), rho.sel(Time=t), keep_attrs=True))
 
     rho_temp_norm = xr.concat(rho_norm_t, dim='Time')
     rho_temp_norm = rho_temp_norm.transpose('Height', 'Time')
@@ -487,7 +481,7 @@ def normalize_density_ds(density_ds):
         fig, ax = plt.subplots(nrows=1, ncols=1, figsize=(7, 5))
         rho_temp_norm.plot(cmap='turbo')
         plt.title('Temporally Normalized density')
-        ax.xaxis.set_major_formatter(TIMEFORMAT)
+        ax.xaxis.set_major_formatter(vis_utils.TIMEFORMAT)
         ax.xaxis.set_tick_params(rotation=0)
         plt.show()
 
@@ -495,7 +489,7 @@ def normalize_density_ds(density_ds):
         fig, ax = plt.subplots(nrows=1, ncols=1, figsize=(7, 5))
         rho.max(dim='Height').plot(ax=ax)
         ax.set_title(r'$\rho^{max}(t)$')
-        ax.xaxis.set_major_formatter(TIMEFORMAT)
+        ax.xaxis.set_major_formatter(vis_utils.TIMEFORMAT)
         ax.xaxis.set_tick_params(rotation=0)
         plt.show()
     return density_ds
@@ -569,7 +563,7 @@ def calc_normalized_tau(dr, sigma_normalized):
         fig, ax = plt.subplots(nrows=1, ncols=1, figsize=(7, 5))
         plt.title('Normalized AOD')
         tau_normalized.plot(ax=ax)
-        ax.xaxis.set_major_formatter(TIMEFORMAT)
+        ax.xaxis.set_major_formatter(vis_utils.TIMEFORMAT)
         ax.xaxis.set_tick_params(rotation=0)
         plt.show()
 
@@ -623,7 +617,7 @@ def get_LR_ds(station, day_date, day_params_ds):
         fig, ax = plt.subplots(nrows=1, ncols=1, figsize=(7, 5))
         LR_ds.LR.plot(ax=ax)
         ax.scatter(times, LRs, label=LR_ds.LR.long_name)
-        ax.xaxis.set_major_formatter(TIMEFORMAT)
+        ax.xaxis.set_major_formatter(vis_utils.TIMEFORMAT)
         ax.xaxis.set_tick_params(rotation=0)
         str_date = LR_ds.Time[0].dt.strftime("%Y-%m-%d").values.tolist()
         plt.suptitle(f"{LR_ds.attrs['info']} - {str_date}")
@@ -696,7 +690,7 @@ def get_angstrom_ds(station, day_date, day_params_ds):
         ax.scatter(times, ang355532s, label=ang_ds.ang_355_532.long_name)
         ang_ds.ang_532_1064.plot(ax=ax)
         ax.scatter(times, ang5321064s, label=ang_ds.ang_532_1064.long_name)
-        ax.xaxis.set_major_formatter(TIMEFORMAT)
+        ax.xaxis.set_major_formatter(vis_utils.TIMEFORMAT)
         ax.xaxis.set_tick_params(rotation=0)
         ax.set_ylabel(r'$\AA$')
         str_date = ang_ds.Time[0].dt.strftime("%Y-%m-%d").values.tolist()
@@ -732,7 +726,7 @@ def calc_tau_ds(ang_ds, sigma_0):
     if PLOT_RESULTS:
         fig, ax = plt.subplots(nrows=1, ncols=1, figsize=(7, 5))
         tau_ds.plot(hue='Wavelength', ax=ax)
-        ax.xaxis.set_major_formatter(TIMEFORMAT)
+        ax.xaxis.set_major_formatter(vis_utils.TIMEFORMAT)
         ax.xaxis.set_tick_params(rotation=0)
         str_date = tau_ds.Time[0].dt.strftime("%Y-%m-%d").values.tolist()
         plt.suptitle(f"{tau_ds.attrs['info']} - {str_date}")
@@ -752,7 +746,7 @@ def generate_sigma_ds(station, day_date, day_params_ds, density_ds):
     :return:
     """
     sigma_532_max = np.float(day_params_ds.sel(Time=day_date).beta532.values) * LR_tropos
-    sigma_g = xr.apply_ufunc(lambda rho: normalize(rho, sigma_532_max),
+    sigma_g = xr.apply_ufunc(lambda rho: proc_utils.normalize(rho, sigma_532_max),
                              density_ds.rho.copy(deep=True), keep_attrs=False).assign_coords({'Wavelength': 532})
     ang_ds = get_angstrom_ds(station, day_date, day_params_ds)
 
@@ -792,7 +786,7 @@ def generate_sigma_ds(station, day_date, day_params_ds, density_ds):
 
         fix, ax = plt.subplots(nrows=1, ncols=1, figsize=(7, 5))
         sigma_max.plot(hue='Wavelength', ax=ax)
-        ax.xaxis.set_major_formatter(TIMEFORMAT)
+        ax.xaxis.set_major_formatter(vis_utils.TIMEFORMAT)
         ax.xaxis.set_tick_params(rotation=0)
         str_date = sigma_max.Time[0].dt.strftime("%Y-%m-%d").values.tolist()
         plt.suptitle(f"{sigma_max.attrs['info']} - {str_date}")
@@ -892,7 +886,7 @@ def explore_gen_day(station, day_date, aer_ds, density_ds):
     ratio_beta.where(ratio_beta < 0.1).plot(x='Time', y='Height', row='Wavelength',
                                             cmap='turbo_r', figsize=(10, 10), sharex=True)
     ax = plt.gca()
-    ax.xaxis.set_major_formatter(TIMEFORMAT)
+    ax.xaxis.set_major_formatter(vis_utils.TIMEFORMAT)
     ax.xaxis.set_tick_params(rotation=0)
     plt.show()
 
@@ -900,13 +894,13 @@ def explore_gen_day(station, day_date, aer_ds, density_ds):
     ratio_sigma.where(ratio_sigma < 0.1).plot(x='Time', y='Height', row='Wavelength',
                                               cmap='turbo_r', figsize=(10, 10), sharex=True)
     ax = plt.gca()
-    ax.xaxis.set_major_formatter(TIMEFORMAT)
+    ax.xaxis.set_major_formatter(vis_utils.TIMEFORMAT)
     ax.xaxis.set_tick_params(rotation=0)
     plt.show()
 
     density_ds.density.plot(x='Time', y='Height', row='Component',
                             cmap='turbo', figsize=(10, 10), sharex=True)
     ax = plt.gca()
-    ax.xaxis.set_major_formatter(TIMEFORMAT)
+    ax.xaxis.set_major_formatter(vis_utils.TIMEFORMAT)
     ax.xaxis.set_tick_params(rotation=0)
     plt.show()

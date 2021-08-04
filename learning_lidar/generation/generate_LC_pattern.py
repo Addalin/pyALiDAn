@@ -10,14 +10,11 @@ import torch.utils.data
 import xarray as xr
 
 import learning_lidar.generation.generation_utils as gen_utils
-import learning_lidar.utils.global_settings as gs
-import learning_lidar.utils.vis_utils as vis_utils
-import learning_lidar.utils.xr_utils as xr_utils
-from learning_lidar.utils import utils
-from learning_lidar.utils.proc_utils import Bezier
+from learning_lidar.utils import utils, xr_utils, vis_utils, proc_utils, global_settings as gs
 
 eps = np.finfo(np.float).eps
 torch.manual_seed(8318)
+
 
 # TODO:  add 2 flags - Debug and save figure.
 # TODO : organize main() to functions & comments
@@ -59,10 +56,12 @@ def main(station_name, start_date, end_date):
     plt.show()
 
     fig, ax = plt.subplots(ncols=1, nrows=1, figsize=(7, 5))
-    ds_extended.sel(Time=slice(start_date, start_date + timedelta(hours=24))).LC.plot(ax=ax, hue='Wavelength', linewidth=0.5)
+    ds_extended.sel(Time=slice(start_date, start_date + timedelta(hours=24))).LC.plot(ax=ax, hue='Wavelength',
+                                                                                      linewidth=0.5)
     ds_extended.sel(Time=slice(start_date, start_date + timedelta(hours=24))).plot.scatter(ax=ax, y='LC', x='Time',
-                                                                                     hue='Wavelength', s=15,
-                                                                                     hue_style='discrete', edgecolor='w')
+                                                                                           hue='Wavelength', s=15,
+                                                                                           hue_style='discrete',
+                                                                                           edgecolor='w')
     ax.set_title(fr"{ds_extended.LC.long_name} for {start_date.strftime('%d/%m/%Y')}")
     ax.ticklabel_format(axis='y', style="sci", scilimits=(0, 0))
     plt.tight_layout()
@@ -99,8 +98,10 @@ def main(station_name, start_date, end_date):
     max_powers = [25000, 70000, 60000]
     ds_chans = []
     for wavelength, p0 in zip(wavelengths, max_powers):
-        c1 = df_times[period1].apply(lambda row: decay_p(row.t_day, peak_days[0], p0, days_decay), axis=1, result_type='expand')
-        c2 = df_times[period2].apply(lambda row: decay_p(row.t_day, peak_days[1], p0, days_decay), axis=1, result_type='expand')
+        c1 = df_times[period1].apply(lambda row: decay_p(row.t_day, peak_days[0], p0, days_decay), axis=1,
+                                     result_type='expand')
+        c2 = df_times[period2].apply(lambda row: decay_p(row.t_day, peak_days[1], p0, days_decay), axis=1,
+                                     result_type='expand')
         ds_chans.append(xr.Dataset(
             data_vars={'p': (('Time'), pd.concat([c1, c2])),
                        'lambda_nm': ('Wavelength', np.uint16([wavelength]))
@@ -153,7 +154,8 @@ def main(station_name, start_date, end_date):
                         ds_gen_p.p_lbound.sel(Wavelength=wavelength).values,
                         ds_gen_p.p_ubound.sel(Wavelength=wavelength).values,
                         color=c, alpha=.1)
-    ax.set_title(fr"Random {ds_gen_p.p.long_name} for {start_date.strftime('%d/%m/%Y')}--{end_date.strftime('%d/%m/%Y')}")
+    ax.set_title(
+        fr"Random {ds_gen_p.p.long_name} for {start_date.strftime('%d/%m/%Y')}--{end_date.strftime('%d/%m/%Y')}")
     ax.ticklabel_format(axis='y', style="sci", scilimits=(0, 0))
     plt.tight_layout()
     plt.show()
@@ -189,7 +191,7 @@ def main(station_name, start_date, end_date):
     paths_chan = []
     for wavelength in wavelengths:
         points[:, 1] = ds_gen_p.p_new.sel(Wavelength=wavelength, Time=tslice).values
-        path = Bezier.evaluate_bezier(points, dn_t)
+        path = proc_utils.Bezier.evaluate_bezier(points, dn_t)
         paths_chan.append(xr.Dataset(
             data_vars={'p': (('Time'), path[:, 1]),
                        'lambda_nm': ('Wavelength', np.uint16([wavelength]))
@@ -222,7 +224,8 @@ def main(station_name, start_date, end_date):
         day_slice = slice(cur_day, cur_day + timedelta(hours=24) - timedelta(seconds=30))
         fig, ax = plt.subplots(ncols=1, nrows=1, figsize=(8, 5))
         new_p.p.sel(Time=day_slice).plot(ax=ax, hue='Wavelength', linewidth=0.8)
-        ds_gen_p.sel(Time=day_slice).plot.scatter(ax=ax, y='p_new', x='Time', hue='Wavelength', s=15, hue_style='discrete',
+        ds_gen_p.sel(Time=day_slice).plot.scatter(ax=ax, y='p_new', x='Time', hue='Wavelength', s=15,
+                                                  hue_style='discrete',
                                                   edgecolor='w')
         ax.ticklabel_format(axis='y', style="sci", scilimits=(0, 0))
         ax.set_title(fr"B\'ezier interpolation of {new_p.p.long_name} - for {cur_day.strftime('%d/%m/%Y')}")

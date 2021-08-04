@@ -9,10 +9,7 @@ from tqdm import tqdm
 import xarray as xr
 
 import learning_lidar.preprocessing.preprocessing_utils as prep_utils
-import learning_lidar.utils.xr_utils as xr_utils
-from learning_lidar.utils.global_settings import eps
-import learning_lidar.utils.global_settings as gs
-
+from learning_lidar.utils import xr_utils, global_settings as gs
 
 PLOT_RESULTS = False
 
@@ -302,5 +299,5 @@ def create_ratio(total_bins, mode='ones', start_height=0.3, ref_height=2.5, ref_
 
 
 def sigmoid(x, x0=0,A = 0 , K = 1,B=1, v=0.4,C=1,Q=1):
-    y =A+(K-A)/(eps+(C + Q*np.exp(-B*(x-x0)))**(v))
+    y =A+(K-A)/(gs.eps+(C + Q*np.exp(-B*(x-x0)))**(v))
     return (y)

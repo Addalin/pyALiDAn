@@ -14,19 +14,18 @@ import pandas as pd
 import xarray as xr
 
 # %% Local modules imports
+
 import learning_lidar.preprocessing.preprocessing_utils as prep_utils
-import learning_lidar.utils.global_settings as gs
 import learning_lidar.dataseting.dataseting_utils as ds_utils
-import learning_lidar.utils.xr_utils as xr_utils
 from learning_lidar.generation.daily_signals_generations_utils import get_daily_bg
-from learning_lidar.utils.utils import create_and_configer_logger, get_base_arguments
 import learning_lidar.generation.generation_utils as gen_utils
+from learning_lidar.utils import utils, xr_utils, global_settings as gs
 
 
 def dataseting_main(params, log_level=logging.DEBUG):
     logging.getLogger('matplotlib').setLevel(logging.ERROR)  # Fix annoying matplotlib logs
     logging.getLogger('PIL').setLevel(logging.ERROR)  # Fix annoying PIL logs
-    logger = create_and_configer_logger(f"{os.path.basename(__file__)}.log", level=log_level)
+    logger = utils.create_and_configer_logger(f"{os.path.basename(__file__)}.log", level=log_level)
     logger.info(params)
     station_name = params.station_name
     start_date = params.start_date
@@ -693,7 +692,7 @@ def prepare_samples(station, start_date, end_date, top_height=15.3, generated=Fa
 
 
 if __name__ == '__main__':
-    parser = get_base_arguments()
+    parser = utils.get_base_arguments()
 
     # TODO change modes to options instead of true\false?
     #  or generation true\false then only one do and split?

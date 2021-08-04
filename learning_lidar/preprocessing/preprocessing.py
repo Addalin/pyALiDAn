@@ -12,16 +12,14 @@ import pandas as pd
 from tqdm import tqdm
 
 import learning_lidar.preprocessing.preprocessing_utils as prep_utils
-import learning_lidar.utils.global_settings as gs
 from learning_lidar.preprocessing.fix_gdas_errors import download_from_noa_gdas_files
-from learning_lidar.utils.utils import create_and_configer_logger, get_base_arguments
-from learning_lidar.utils.xr_utils import save_prep_dataset
+from learning_lidar.utils import utils, xr_utils, global_settings as gs
 
 
 def preprocessing_main(params):
     logging.getLogger('matplotlib').setLevel(logging.ERROR)  # Fix annoying matplotlib logs
     logging.getLogger('PIL').setLevel(logging.ERROR)  # Fix annoying PIL logs
-    logger = create_and_configer_logger(f"{os.path.basename(__file__)}.log", level=logging.INFO)
+    logger = utils.create_and_configer_logger(f"{os.path.basename(__file__)}.log", level=logging.INFO)
     logger.info(params)
     station_name = params.station_name
     start_date = params.start_date
@@ -123,7 +121,7 @@ def preprocessing_main(params):
                                                        verbose=False)
 
             # Save lidar dataset
-            lidar_paths = save_prep_dataset(station, lidar_ds, data_source='lidar', save_mode='single',
+            lidar_paths = xr_utils.save_prep_dataset(station, lidar_ds, data_source='lidar', save_mode='single',
                                             profiles=['range_corr'])
             lidarpaths.extend(lidar_paths)
         logger.info(
@@ -143,7 +141,7 @@ def preprocessing_main(params):
             lidar_ds = prep_utils.get_daily_measurements(station, day_date, use_km_units=params.use_km_unit)
 
             # Save lidar dataset
-            lidar_paths = save_prep_dataset(station, lidar_ds, data_source='lidar', save_mode='single')
+            lidar_paths = xr_utils.save_prep_dataset(station, lidar_ds, data_source='lidar', save_mode='single')
             lidarpaths.extend(lidar_paths)
         logger.info(f"\nDone creation of lidar datasets for period "
                     f"[{start_date.strftime('%Y-%m-%d')},{end_date.strftime('%Y-%m-%d')}]")
@@ -152,7 +150,7 @@ def preprocessing_main(params):
 
 
 if __name__ == '__main__':
-    parser = get_base_arguments()
+    parser = utils.get_base_arguments()
     parser.add_argument('--download_gdas', action='store_true',
                         help='Whether to whether to download the gdas files from NOA')
 

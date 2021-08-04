@@ -6,11 +6,8 @@ from itertools import repeat
 import pandas as pd
 import xarray as xr
 
-import learning_lidar.utils.global_settings as gs
-import learning_lidar.generation.generation_utils as gen_utils
-import learning_lidar.utils.vis_utils as vis_utils
-import learning_lidar.generation.daily_signals_generations_utils as gen_sig_utils
-from learning_lidar.utils.utils import create_and_configer_logger, get_base_arguments
+from learning_lidar.utils import utils, vis_utils, global_settings as gs
+from learning_lidar.generation import generation_utils as gen_utils, daily_signals_generations_utils as gen_sig_utils
 
 
 # TODO:  add 2 flags - Debug and save figure.
@@ -60,7 +57,7 @@ def daily_signals_generation_main(params):
     # TODO: Toggle PLOT_RESULTS to True - doesn't seem to work. Omer - works for me. Adi, please check again..
     logging.getLogger('PIL').setLevel(logging.ERROR)  # Fix annoying PIL logs
     logging.getLogger('matplotlib').setLevel(logging.ERROR)  # Fix annoying matplotlib logs
-    logger = create_and_configer_logger(f"{os.path.basename(__file__)}.log", level=logging.INFO)
+    logger = utils.create_and_configer_logger(f"{os.path.basename(__file__)}.log", level=logging.INFO)
     logger.info(params)
 
     station = gs.Station(station_name=params.station_name)
@@ -82,7 +79,7 @@ def daily_signals_generation_main(params):
 
 
 if __name__ == '__main__':
-    parser = get_base_arguments()
+    parser = utils.get_base_arguments()
     parser.add_argument('--save_ds', action='store_true',
                         help='Whether to save the datasets')
     parser.add_argument('--update_overlap_only', action='store_true',

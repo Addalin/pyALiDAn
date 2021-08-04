@@ -5,8 +5,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 import xarray as xr
-from learning_lidar.utils import vis_utils, xr_utils, global_settings as gs
-from learning_lidar.utils.utils import get_base_arguments
+from learning_lidar.utils import utils, vis_utils, xr_utils, global_settings as gs
 
 vis_utils.set_visualization_settings()
 
@@ -182,7 +181,7 @@ def main(station_name, month, year):
 
 if __name__ == '__main__':
 
-    parser = get_base_arguments()
+    parser = utils.get_base_arguments()
 
     args = parser.parse_args()
 
