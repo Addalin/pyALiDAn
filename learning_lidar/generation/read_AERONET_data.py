@@ -5,10 +5,8 @@ import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 import xarray as xr
-
-import learning_lidar.utils.global_settings as gs
-import learning_lidar.utils.vis_utils as vis_utils
-import learning_lidar.utils.xr_utils as xr_utils
+from learning_lidar.utils import vis_utils, xr_utils, global_settings as gs
+from learning_lidar.utils.utils import get_base_arguments
 
 vis_utils.set_visualization_settings()
 
@@ -35,7 +33,7 @@ def angstrom(tau_1, tau_2, lambda_1, lambda_2):
     return val
 
 
-def main(station, month, year):
+def main(station_name, month, year):
     """
     calculate Angstrom exponent based on AERONET measurements taken from the sunphotometere on EE building
     Assumes aeronet files to exist. if not, download from - https://aeronet.gsfc.nasa.gov/cgi-bin/webtool_aod_v3?stage=3&region=Middle_East&state=Israel&site=Technion_Haifa_IL&place_code=10&if_polarized=0
@@ -44,6 +42,7 @@ def main(station, month, year):
     :return:
     """
     # Load AERONET file of month-year
+    station = gs.Station(station_name)
 
     monthdays = (date(year, month + 1, 1) - date(year, month, 1)).days
     start_day = datetime(year, month, 1, 0, 0)
@@ -182,8 +181,10 @@ def main(station, month, year):
 
 
 if __name__ == '__main__':
-    station = gs.Station('haifa')
-    months = [9]#, 5, 6]
-    year = 2017
-    for month in months:
-        main(station, month, year)
+
+    parser = get_base_arguments()
+
+    args = parser.parse_args()
+
+    for date_ in pd.date_range(start=args.start_date, end=args.end_date, freq='MS'):
+        main(args.station_name, date_.month, date_.year)
