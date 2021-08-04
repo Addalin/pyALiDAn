@@ -667,7 +667,8 @@ def gen_daily_molecular_ds(day_date):
     :return:
     """
     # TODO: Find a way to pass: optim_size, save_mode, USE_KM_UNITS
-    #  as variables when running with multiprocessing.
+    #  as variables when running with multiprocessing. -
+    #  look at p.starmap(generate_daily_aerosol_density, zip(repeat(station), days_list)) for example
     logger = logging.getLogger()
     optim_size = False
     save_mode = 'single'

@@ -10,9 +10,11 @@ import xarray as xr
 
 import learning_lidar.preprocessing.preprocessing_utils as prep_utils
 import learning_lidar.utils.xr_utils as xr_utils
-from learning_lidar.generation.generate_density_utils import PLOT_RESULTS
 from learning_lidar.utils.global_settings import eps
 import learning_lidar.utils.global_settings as gs
+
+
+PLOT_RESULTS = False
 
 
 def get_gen_dataset_file_name(station, day_date, wavelength='*',

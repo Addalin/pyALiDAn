@@ -25,8 +25,8 @@ from learning_lidar.utils.vis_utils import TIMEFORMAT
 t_index = [500, 1500, 2500]
 vis_utils.set_visualization_settings()
 wavelengths = gs.LAMBDA_nm().get_elastic()
-PLOT_RESULTS = False
 LR_tropos = 55
+PLOT_RESULTS = gen_utils.PLOT_RESULTS
 
 
 # Functions of Daily Aerosols' Density Generation
@@ -385,6 +385,7 @@ def merge_density_components(density_ds):
         plt.show()
 
     return density_ds
+
 
 def generate_density_components(total_time_bins, total_height_bins, time_index, heights, ref_height_bin):
     """
