@@ -178,6 +178,7 @@ plt.show()
 
 
 # %% Load irradiance - solar elevation data
+
 data_folder = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(os.curdir))), 'data')
 csv_iradiance_elevation = r'irradiance_solarElevation.csv'
 bg_signal_folder = os.path.join(data_folder, 'background_signal')
