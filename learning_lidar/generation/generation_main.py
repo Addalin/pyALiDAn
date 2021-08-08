@@ -37,6 +37,8 @@ if __name__ == '__main__':
         read_aeronet_data_main(args.station_name, month_date.month, month_date.year)
 
     # 3. Initial parameters for density generation
+
+    # currently DATA_DIR is used to get the path of the data folder (inside repository), for the extended dataset path.
     HOME_DIR = os.path.abspath(os.path.join(os.getcwd(), os.pardir, os.pardir))
     DATA_DIR = os.path.join(HOME_DIR, 'data')
 

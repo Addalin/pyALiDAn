@@ -98,9 +98,7 @@ def kde_estimation_main(args, month, year, DATA_DIR):
 
     # ## Angstrom - Lidar Ratio
 
-    folder_name = os.path.join(DATA_DIR, 'Angstrom_LidarRatio', 'plot_data')  # TODO adapt this paths to more general
-    csv_name = r'data_points_with_error_bars.csv'
-    df_a_lr = pd.read_csv(os.path.join(folder_name, csv_name))# TODO : update LR/A per station, and update this as the csv
+    df_a_lr = pd.read_csv(station.Angstrom_LidarRatio)
     if args.plot_results:
         fig, ax = plt.subplots(nrows=1, ncols=1, figsize=(8, 5))
         df_a_lr[df_a_lr['type'] == 'red'].plot.scatter(x='x', y='y',
