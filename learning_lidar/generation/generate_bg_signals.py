@@ -1,6 +1,6 @@
 import calendar
 import os
-from datetime import datetime, timedelta, time
+from datetime import datetime, timedelta
 
 import astral
 import matplotlib.pyplot as plt
@@ -10,13 +10,12 @@ import seaborn as sns
 import xarray as xr
 import yaml
 from astral.sun import sun
-from dateutil import tz
 from scipy.optimize import curve_fit
 from sklearn.linear_model import LinearRegression
 
 import learning_lidar.generation.generation_utils as gen_utils
-import learning_lidar.preprocessing.preprocessing as prep
-from learning_lidar.utils import utils, xr_utils, vis_utils, global_settings as gs
+import learning_lidar.generation.generate_bg_signals_utils as gen_bg_utils
+from learning_lidar.utils import xr_utils, vis_utils, global_settings as gs
 from learning_lidar.utils.misc_lidar import calc_gauss_curve
 
 sns.set_theme()
@@ -30,106 +29,8 @@ sns.set_palette(sns.color_palette("tab10"))
 
 # %% Helper Functions
 
-def gauss_fit(x, y, mean_0=None, sigma_0=None):
-    if mean_0:
-        mean = mean_0
-    else:
-        mean = np.mean(x)
-    if sigma_0:
-        sigma = sigma_0
-    else:
-        sigma = np.std(y) ** 2
-    initial_guess = [np.mean(y), max(y), mean, sigma]
-    popt, pcov = curve_fit(calc_gauss_curve, x, y, p0=initial_guess, absolute_sigma=True)
-    return popt
-
-
-def func_log(x, a, b, c, d):
-    """Return values from a general log function."""
-    return a * np.log(b * x + c) + d
-
-
-def func_cos(x, a, b, c, d):
-    """Return values from a general log function."""
-    return a * np.cos(np.deg2rad(b * x) + c) + d
-
-
-def calc_gauss_width(min_val, max_val, rel_val, FWRM):
-    max_rel_ratio = (rel_val - min_val) / (max_val - min_val)
-    W = FWRM / (2 * np.sqrt(2 * np.log(1 / max_rel_ratio)))
-    return W
-
-
-def get_params(date, lat, lon):
-    loc = astral.Location(('Greenwich', 'England', lat, lon, 'Europe/London'))
-    loc.solar_depression = 'nautical'
-    sun = loc.sun(date)
-    day_light = loc.daylight(date)
-    day_len = str(day_light[1] - day_light[0])  # converts from timedelta seconds to HH:mm:ss
-    sun_alt = loc.solar_elevation(date)
-
-    return sun['noon'], day_len, sun_alt
-
-
-def utc2tzloc(utc_dt, location):
-    """
-    Convert time zone from UTC to the locations' time zone
-    :param utc_dt: datetime.datetime(), UTC time to convert
-    :param location: astral.LocationInfo(), location info
-    :return: datetime.datetime() , time in locations' time zone
-    """
-    to_zone = tz.gettz(location.region)
-    from_zone = tz.gettz('UTC')
-    utc_dt = utc_dt.replace(tzinfo=from_zone)
-    loc_dt = utc_dt.astimezone(to_zone)
-    return loc_dt
-
-
-def tzloc2utc(loc_dt, location):
-    """
-    Convert time zone from input location to UTC
-    :param loc_dt: datetime.datetime(), time in location time zone to convert
-    :param location: astral.LocationInfo(), location info
-    :return: datetime.datetime() , time in UTC time zone
-    """
-    to_zone = tz.gettz('UTC')
-    from_zone = tz.gettz(location.region)
-    loc_dt = loc_dt.replace(tzinfo=from_zone)
-    utc_dt = loc_dt.astimezone(to_zone)
-    return utc_dt
-
-
-def dt2binscale(dt_time, res_sec=30):
-    """
-    Returns the bin index corresponds to dt_time
-    binscale - is the time scale [0,2880], of a daily lidar bin index from 00:00:00 to 23:59:30.
-    The lidar has a bin measure every 30 sec, in total 2880 bins per day.
-    :param dt_time: datetime.datetime object
-    :return: binscale - float in [0,2880]
-    """
-
-    res_minute = 60 / res_sec
-    res_hour = 60 * res_minute
-    res_musec = 1e-6 / res_sec
-    tind = dt_time.hour * res_hour + dt_time.minute * res_minute + dt_time.second / res_sec + dt_time.microsecond * res_musec
-    return tind
-
-
-def binscale2dt(tind, day_date=datetime.today(), res_sec=30):
-    dt_time = day_date + timedelta(seconds=res_sec) * tind
-    return dt_time
-
 
 sun_dt = lambda day, type: sun(loc.observer, day)[type]
-
-
-def dt_delta2time(dt_delta):
-    hours, remainder = divmod(dt_delta.seconds, 3600)
-    minutes, seconds = divmod(remainder, 60)
-    m_seconds = dt_delta.microseconds
-    dt_time = time(hours, minutes, seconds, m_seconds)
-    return dt_time
-
 
 # ## Daily Sun Elevation
 # - Explore daily and yearly $\alpha_{\rm sun}$
@@ -161,59 +62,7 @@ ds_year = xr.Dataset(data_vars={'sunelevation': ('Time', sun_elevations)},
 ds_year.sunelevation.attrs = {'long_name': r'$\alpha_{sun}$', 'units': r'$^{\circ}$'}
 ds_year.Time.attrs = {"units": fr"{timezone}"}
 
-# Maximum sun elevation during 2017:
-max_year_elevation = np.max(ds_year.sunelevation.values)
-day_max_num = np.argmax(ds_year.sunelevation.values)
-day_max = ds_year.Time.values[day_max_num]
-day_max_str = utils.dt64_2_datetime(day_max).strftime('%Y-%m-%d')
-
-# Minimum sun elevation during 2017:
-min_year_elevation = np.min(ds_year.sunelevation.values)
-day_min_num = np.argmin(ds_year.sunelevation.values)
-day_min_num = np.argmin(ds_year.sunelevation.values)
-day_min = ds_year.Time.values[day_min_num]
-day_min_str = utils.dt64_2_datetime(day_min).strftime('%Y-%m-%d')
-
-# %%Plot sun elevation at noon times
-fig, ax = plt.subplots(ncols=1, nrows=1)
-ds_year.sunelevation.plot(ax=ax)
-ax.annotate(fr'{day_max_str}', fontweight='bold', fontsize=12,
-            xy=(day_max, max_year_elevation - 10), color='darkgreen', va="center",
-            xytext=(ds_year.Time.values[day_max_num - 35], 70),
-            bbox=dict(boxstyle='round,pad=0.2', ec="none", fc=[1, 1, 1]), )
-
-ax.annotate(fr'{day_min_str}',
-            fontweight='bold', fontsize=12, color='darkgreen',
-            xy=(day_min, 30 + min_year_elevation), va="center",
-            bbox=dict(boxstyle='round,pad=0.2', ec="none", fc=[1, 1, 1]),
-            xytext=(ds_year.Time.values[day_min_num - 35], 70), )
-
-ax.annotate(fr'{min_year_elevation:.2f}$^\circ$',
-            fontweight='bold', fontsize=12, color='darkmagenta',
-            xy=(day_min, min_year_elevation), va="center",
-            bbox=dict(boxstyle='round,pad=0.2', fc=[1, 1, 1], ec="none"),
-            xytext=(ds_year.Time.values[0], min_year_elevation))
-
-ax.annotate(fr'{max_year_elevation:.2f}$^\circ$',
-            fontweight='bold', fontsize=12, color='darkmagenta',
-            xy=(day_max, max_year_elevation), va="center",
-            bbox=dict(boxstyle='round,pad=0.2', fc=[1, 1, 1], ec="none"),
-            xytext=(ds_year.Time.values[0], max_year_elevation))
-
-ax.axhline(y=min_year_elevation, xmin=0.0, xmax=1.0, alpha=.6,
-           color='darkmagenta', linestyle='--', linewidth=1)
-ax.axhline(y=max_year_elevation, xmin=0.0, xmax=1.0, alpha=.6,
-           color='darkmagenta', linestyle='--', linewidth=1)
-ax.axvline(x=ds_year.Time.values[day_min_num], ymin=0.0, ymax=1.0, alpha=.6,
-           color='darkgreen', linestyle='--', linewidth=1)
-ax.axvline(x=ds_year.Time.values[day_max_num], ymin=0.0, ymax=1.0, alpha=.6,
-           color='darkgreen', linestyle='--', linewidth=1)
-ax.xaxis.set_major_formatter(vis_utils.MONTHFORMAT)
-ax.xaxis.set_tick_params(rotation=0)
-plt.title('Sun elevation at noon times during 2017')
-plt.tight_layout()
-plt.show()
-
+gen_bg_utils.plot_sun_elevation_at_noon(ds_year)
 # %%
 
 
@@ -257,20 +106,20 @@ t = np.arange(0, bins_per_day)
 dawn_dusk_angle = -6
 day_light_sun[day_light_sun < dawn_dusk_angle] = dawn_dusk_angle
 MST_noon = cur_day + timedelta(hours=12)
-MST_noon = tzloc2utc(MST_noon, loc)
+MST_noon = gen_bg_utils.tzloc2utc(MST_noon, loc)
 TST_noon = day_sun['noon']
-mean0 = dt2binscale(TST_noon, res_sec=30)
+mean0 = gen_bg_utils.dt2binscale(TST_noon, res_sec=30)
 
 # %% Initial guess of std (width of curve) - using width gaussian properties:
 dawn_to_dusk = (day_sun['dusk'] - day_sun['dawn'])
 min_angle = ds_day.sunelevation.values.min()
 max_angle = ds_day.sunelevation.values.max()
-sigma0 = calc_gauss_width(min_angle, max_angle, dawn_dusk_angle, dt2binscale(dawn_to_dusk + day_0))
+sigma0 = gen_bg_utils.calc_gauss_width(min_angle, max_angle, dawn_dusk_angle, gen_bg_utils.dt2binscale(dawn_to_dusk + day_0))
 # %% Gaussian fit to sun elevation
 
 y = ds_day.sunelevation.values.copy()
-A3, H3, x0_3, sigma3 = gauss_fit(t, y, mean_0=mean0, sigma_0=sigma0)
-fit3 = calc_gauss_curve(t, *gauss_fit(t, y, mean_0=mean0, sigma_0=sigma0))
+A3, H3, x0_3, sigma3 = gen_bg_utils.gauss_fit(t, y, mean_0=mean0, sigma_0=sigma0)
+fit3 = calc_gauss_curve(t, *gen_bg_utils.gauss_fit(t, y, mean_0=mean0, sigma_0=sigma0))
 
 print(f"Sigma fit:{sigma3 :.2f}, Sigma init estimated:{sigma0 :.2f} ")
 print(f"Mean fit:{x0_3 :.2f}, Mean init estimated:{mean0 :.2f} ")
@@ -345,9 +194,9 @@ linear_regressor = LinearRegression()  # create object for the class
 linear_regressor.fit(X[:], Y[:])  # perform linear regression
 Y_pred = linear_regressor.predict(X)  # make predictions
 # %% Cos() - fit :
-popt, pcov = curve_fit(func_cos, X[:, 0], Y[:, 0])
+popt, pcov = curve_fit(gen_bg_utils.func_cos, X[:, 0], Y[:, 0])
 angles = np.linspace(0, 90, 100, endpoint=True)
-cos_fit = func_cos(angles, popt[0], popt[1], popt[2], popt[3])
+cos_fit = gen_bg_utils.func_cos(angles, popt[0], popt[1], popt[2], popt[3])
 # %% Plot data + fitting curves
 fig, ax = plt.subplots(ncols=1, nrows=1)
 ax.plot(X, Y_pred, color='magenta', label='linear-fit', linestyle='--')
@@ -465,22 +314,22 @@ plt.show()
 
 
 # %%Shifted mean of the curve
-tbin_dusk = dt2binscale(day_sun['dusk'])
-tbin_dawn = dt2binscale(day_sun['dawn'])
-tbin_noon_tst = dt2binscale(day_sun['noon'])
+tbin_dusk = gen_bg_utils.dt2binscale(day_sun['dusk'])
+tbin_dawn = gen_bg_utils.dt2binscale(day_sun['dawn'])
+tbin_noon_tst = gen_bg_utils.dt2binscale(day_sun['noon'])
 day_bins_length = (tbin_dusk - tbin_dawn)
 
 day_sun0 = sun(loc.observer, day_0)
-day_bins_length_0 = dt2binscale(day_sun0['dusk']) - dt2binscale(day_sun0['dawn'])
-tbin_noon_tst_0 = dt2binscale(day_sun0['noon'])
+day_bins_length_0 = gen_bg_utils.dt2binscale(day_sun0['dusk']) - gen_bg_utils.dt2binscale(day_sun0['dawn'])
+tbin_noon_tst_0 = gen_bg_utils.dt2binscale(day_sun0['noon'])
 
 # %% Calc elevation ratio
 max_elevation_0 = astral.sun.elevation(loc.observer, day_sun0['noon'])
 
 # %%
 day_max_elevation = ds_day.sunelevation.values.max()
-iradiance_orig_cos = func_cos(max_elevation_0, popt[0], popt[1], popt[2], popt[3])
-iradiance_day_cos = func_cos(day_max_elevation, popt[0], popt[1], popt[2], popt[3])
+iradiance_orig_cos = gen_bg_utils.func_cos(max_elevation_0, popt[0], popt[1], popt[2], popt[3])
+iradiance_day_cos = gen_bg_utils.func_cos(day_max_elevation, popt[0], popt[1], popt[2], popt[3])
 
 ratio_elevation = iradiance_day_cos / iradiance_orig_cos
 print(f"Ration elevation for {cur_day_str}: {ratio_elevation:.2f}")
@@ -507,13 +356,13 @@ for i, (curve_h, curve_l, mean_val, c, chan) in enumerate(
     photons_twilight_l = 0.5 * (curve_l[int(t1)] + curve_l[int(t0)])
     max_val = (prms_l['H'] + prms_l['A']) * ratio_elevation * factors[i]
     min_val = (prms_l['A']) * ratio_elevation * factors[i]
-    W_l = calc_gauss_width(min_val, max_val, photons_twilight_l, day_bins_length)
+    W_l = gen_bg_utils.calc_gauss_width(min_val, max_val, photons_twilight_l, day_bins_length)
 
     min_new = calc_gauss_curve(t, A_l, H_l, t0_l, W_l)
     min_new_curves.append(min_new)
     print(f"{chan} low: A={A_l:.2f}, H={H_l:.2f}, W={W_l:.2f},"
-          f" t0={t0_l:.2f},W_dt={binscale2dt(W_l, cur_day).strftime('%H:%M:%S')} ,"
-          f"t0_dt:{binscale2dt(t0_l, cur_day).strftime('%H:%M:%S')}")
+          f" t0={t0_l:.2f},W_dt={gen_bg_utils.binscale2dt(W_l, cur_day).strftime('%H:%M:%S')} ,"
+          f"t0_dt:{gen_bg_utils.binscale2dt(t0_l, cur_day).strftime('%H:%M:%S')}")
 
     A_h = prms_h['A'] * ratio_elevation * factors[i]
     H_h = prms_h['H'] * ratio_elevation * factors[i]
@@ -525,13 +374,13 @@ for i, (curve_h, curve_l, mean_val, c, chan) in enumerate(
     photons_twilight_h = 0.5 * (curve_h[int(t1)] + curve_h[int(t0)])
     max_val = (prms_h['H'] + prms_h['A']) * ratio_elevation * factors[i]
     min_val = (prms_h['A']) * ratio_elevation * factors[i]
-    W_h = calc_gauss_width(min_val, max_val, photons_twilight_h, day_bins_length)
+    W_h = gen_bg_utils.calc_gauss_width(min_val, max_val, photons_twilight_h, day_bins_length)
 
     max_new = calc_gauss_curve(t, A_h, H_h, t0_h, W_h)
     max_new_curves.append(max_new)
     print(f"{chan} high: A={A_h:.2f}, H={H_h:.2f}, W={W_h:.2f},"
-          f" t0={t0_h:.2f}, W_dt={binscale2dt(W_h, cur_day).strftime('%H:%M:%S')} ,"
-          f" t0_dt:{binscale2dt(t0_h, cur_day).strftime('%H:%M:%S')}")
+          f" t0={t0_h:.2f}, W_dt={gen_bg_utils.binscale2dt(W_h, cur_day).strftime('%H:%M:%S')} ,"
+          f" t0_dt:{gen_bg_utils.binscale2dt(t0_h, cur_day).strftime('%H:%M:%S')}")
 
     mean_new = 0.5 * (max_new + min_new)
     mean_new_curves.append(mean_new)
@@ -585,7 +434,7 @@ plt.show()
 # %% Irradiance vs sun elevation
 fig, ax = plt.subplots()
 ds_year = ds_year.assign(irradiance=xr.apply_ufunc(lambda alpha:
-                                                   func_cos(alpha, popt[0], popt[1], popt[2], popt[3]),
+                                                   gen_bg_utils.func_cos(alpha, popt[0], popt[1], popt[2], popt[3]),
                                                    ds_year.sunelevation, keep_attrs=True))
 ds_year.irradiance.name = 'irradiance'
 ds_year.irradiance.attrs = {'long_name': 'irradiance'}
@@ -605,7 +454,7 @@ plt.show()
 
 
 # %%Ratio elevation per day
-irradiance_0 = func_cos(max_elevation_0, popt[0], popt[1], popt[2], popt[3])
+irradiance_0 = gen_bg_utils.func_cos(max_elevation_0, popt[0], popt[1], popt[2], popt[3])
 ds_year = ds_year.assign(relevation=xr.apply_ufunc(lambda x, y: x / y, ds_year.irradiance,
                                                    irradiance_0, keep_attrs=True))
 ds_year.relevation.name = 'ratio elevation'
@@ -623,8 +472,8 @@ plt.show()
 
 # %%Daylight time per day
 daylight_timedelta = np.array([sun_dt(c_day, 'dusk') - sun_dt(c_day, 'dawn') for c_day in year_days])
-daylight_time = np.array([dt_delta2time(dt) for dt in daylight_timedelta])
-daylight_bins = np.array([dt2binscale(dt) for dt in daylight_time])
+daylight_time = np.array([gen_bg_utils.dt_delta2time(dt) for dt in daylight_timedelta])
+daylight_bins = np.array([gen_bg_utils.dt2binscale(dt) for dt in daylight_time])
 ds_year = ds_year.assign(daylightbins=xr.Variable(dims={'Time': ds_year.Time},
                                                   data=daylight_bins,
                                                   attrs={'long_name': 'Daylight bins',
@@ -664,7 +513,7 @@ for i, (curve_h, curve_l, mean_val, chan) in enumerate(zip(high_curves, low_curv
                             ds_year.relevation, keep_attrs=True)
     # calculating dx_l for 4/4/2017
     dx_l = (tbin_noon_tst_0 - (bins_ratio * prms_l['t0'])) / day_bins_length_0
-    t0_l_ = [(dt2binscale(tnoon) - dx_l * daylight) for tnoon, daylight in zip(sun_noons, ds_year.daylightbins.values)]
+    t0_l_ = [(gen_bg_utils.dt2binscale(tnoon) - dx_l * daylight) for tnoon, daylight in zip(sun_noons, ds_year.daylightbins.values)]
     t0_l_ds = H_l_ds.copy(deep=True)
     t0_l_ds.data = t0_l_
     photons_twilight_l = 0.5 * (curve_l[int(t1)] + curve_l[int(t0)])
@@ -673,7 +522,7 @@ for i, (curve_h, curve_l, mean_val, chan) in enumerate(zip(high_curves, low_curv
     min_val_ds = xr.apply_ufunc(lambda ratio: (prms_l['A']) * ratio * factors[i],
                                 ds_year.relevation, keep_attrs=True)
     W_l_ds = xr.apply_ufunc(lambda min_val, max_val, daylight:
-                            calc_gauss_width(min_val, max_val, photons_twilight_l, daylight),
+                            gen_bg_utils.calc_gauss_width(min_val, max_val, photons_twilight_l, daylight),
                             min_val_ds, max_val_ds, ds_year.daylightbins, keep_attrs=True)
     min_new = np.array([calc_gauss_curve(t, A, H, t0, W)
                         for A, H, t0, W in zip(A_l_ds.values, H_l_ds.values, t0_l_ds.values, W_l_ds.values)])
@@ -687,7 +536,7 @@ for i, (curve_h, curve_l, mean_val, chan) in enumerate(zip(high_curves, low_curv
                             ds_year.relevation, keep_attrs=True)
     # calculating dx_h for 4/4/2017
     dx_h = (tbin_noon_tst_0 - (bins_ratio * prms_h['t0'])) / day_bins_length_0
-    t0_h_ = [(dt2binscale(tnoon) - dx_h * daylight)
+    t0_h_ = [(gen_bg_utils.dt2binscale(tnoon) - dx_h * daylight)
              for tnoon, daylight in zip(sun_noons, ds_year.daylightbins.values)]
     t0_h_ds = t0_l_ds.copy(deep=True)
     t0_h_ds.data = t0_h_
@@ -697,7 +546,7 @@ for i, (curve_h, curve_l, mean_val, chan) in enumerate(zip(high_curves, low_curv
     min_val_ds = xr.apply_ufunc(lambda ratio: (prms_h['A']) * ratio * factors[i],
                                 ds_year.relevation, keep_attrs=True)
     W_h_ds = xr.apply_ufunc(lambda min_val, max_val, daylight:
-                            calc_gauss_width(min_val, max_val, photons_twilight_h, daylight),
+                            gen_bg_utils.calc_gauss_width(min_val, max_val, photons_twilight_h, daylight),
                             min_val_ds, max_val_ds, ds_year.daylightbins, keep_attrs=True)
     max_new = np.array([calc_gauss_curve(t, A, H, t0, W)
                         for A, H, t0, W in zip(A_h_ds.values, H_h_ds.values, t0_h_ds.values, W_h_ds.values)])
