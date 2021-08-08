@@ -53,7 +53,7 @@ def update_daily_lidar_measurement(station: gs.Station, day_date: datetime.date,
 
 def daily_signals_generation_main(params):
     vis_utils.set_visualization_settings()
-    gen_sig_utils.PLOT_RESULTS = params.plot_results
+    gen_utils.PLOT_RESULTS = params.plot_results
     # TODO: Toggle PLOT_RESULTS to True - doesn't seem to work. Omer - works for me. Adi, please check again..
     logging.getLogger('PIL').setLevel(logging.ERROR)  # Fix annoying PIL logs
     logging.getLogger('matplotlib').setLevel(logging.ERROR)  # Fix annoying matplotlib logs
@@ -68,7 +68,7 @@ def daily_signals_generation_main(params):
 
     days_list = pd.date_range(start=start_date, end=end_date).to_pydatetime().tolist()
     num_days = len(days_list)
-    num_processes = 1 if gen_sig_utils.PLOT_RESULTS else min((cpu_count() - 1, num_days))
+    num_processes = 1 if gen_utils.PLOT_RESULTS else min((cpu_count() - 1, num_days))
 
     func = generate_daily_lidar_measurement if not params.update_overlap_only else update_daily_lidar_measurement
     with Pool(num_processes) as p:
