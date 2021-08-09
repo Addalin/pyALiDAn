@@ -20,13 +20,13 @@ sns.set_theme()
 vis_utils.set_visualization_settings()
 sns.set_palette(sns.color_palette("tab10"))
 
+
 # TODO - finish convert to py module
 
 # ## Daily Sun Elevation
 # - Explore daily and yearly $\alpha_{\rm sun}$
 
-def bg_signals_generation_main(station_name='haifa'):
-    sun_dt = lambda day, type: sun(loc.observer, day)[type]
+def bg_signals_generation_main(station_name='haifa', plot_results=True):
     wavelengths = gs.LAMBDA_nm().get_elastic()
     eps = np.finfo(np.float).eps
 
@@ -50,7 +50,8 @@ def bg_signals_generation_main(station_name='haifa'):
     ds_year.sunelevation.attrs = {'long_name': r'$\alpha_{sun}$', 'units': r'$^{\circ}$'}
     ds_year.Time.attrs = {"units": fr"{timezone}"}
 
-    gen_bg_utils.plot_sun_elevation_at_noon_times(ds_year)
+    if plot_results:
+        gen_bg_utils.plot_sun_elevation_at_noon_times(ds_year)
 
     # #### 2. Sun elevation during the day :
 
@@ -70,7 +71,8 @@ def bg_signals_generation_main(station_name='haifa'):
     bins_per_day = station.total_time_bins
     t = np.arange(0, bins_per_day)
 
-    gen_bg_utils.fit_curve_and_plot_sun_elevation_during_day(loc, day_sun, day_0, ds_day, bins_per_day)
+    if plot_results:
+        gen_bg_utils.fit_curve_and_plot_sun_elevation_during_day(loc, day_sun, day_0, ds_day, bins_per_day)
 
     # #### 3. Solar Irradiance vs. Solar Elevation
     #  - Fitting irradiance according to :$f(\alpha_{sun}) = a\cdot \cos(b \cdot \alpha_{sun} + c) + d$
@@ -126,7 +128,6 @@ def bg_signals_generation_main(station_name='haifa'):
     # - The ratio is to adjust time bins $t$ to lidar sampling bins (delta_t=30[s] )
     # - the estimated curve refer to delta_t=100[s], bins_per_day=864
 
-
     bins_ratio = bins_per_day / params['bins_per_day']
     factors = [1 / 2, 1, 1 / 7]  # This are the original factor of the data for [UV,G,IR]
 
@@ -146,9 +147,9 @@ def bg_signals_generation_main(station_name='haifa'):
         prms_l = params[chan]['low']
         ''' Calculating bounding curves series'''
         high_curve = factor * misc_lidar.calc_gauss_curve(t, prms_h['A'], prms_h['H'], bins_ratio * prms_h['t0'],
-                                               bins_ratio * prms_h['W'])
+                                                          bins_ratio * prms_h['W'])
         low_curve = factor * misc_lidar.calc_gauss_curve(t, prms_l['A'], prms_l['H'], bins_ratio * prms_l['t0'],
-                                              bins_ratio * prms_l['W'])
+                                                         bins_ratio * prms_l['W'])
         high_curves.append(high_curve)
         low_curves.append(low_curve)
         ''' Generating new random series of background signal'''
@@ -298,41 +299,33 @@ def bg_signals_generation_main(station_name='haifa'):
     # In[19]:
 
     # %% Irradiance vs sun elevation
-    fig, ax = plt.subplots()
     ds_year = ds_year.assign(irradiance=xr.apply_ufunc(lambda alpha:
                                                        gen_bg_utils.func_cos(alpha, popt[0], popt[1], popt[2], popt[3]),
                                                        ds_year.sunelevation, keep_attrs=True))
+
     ds_year.irradiance.name = 'irradiance'
     ds_year.irradiance.attrs = {'long_name': 'irradiance'}
 
-    ds_year.irradiance.plot(ax=ax)
-    ax1 = ax.twinx()
-    ds_year.sunelevation.plot(ax=ax1, c='m')
-    ax.set_title('Yearly - irradiance vs sun elevation at noon times')
-    plt.tight_layout()
-    plt.show()
-    # %%
+    if plot_results:
+        gen_bg_utils.plot_irradiance_vs_sun_elevation_at_noon_times(ds_year)
 
     # ### 2. Ratio elevation per day (at noon time)
-
-    # In[20]:
-
-    # %%Ratio elevation per day
+    # Ratio elevation per day
     irradiance_0 = gen_bg_utils.func_cos(max_elevation_0, popt[0], popt[1], popt[2], popt[3])
     ds_year = ds_year.assign(relevation=xr.apply_ufunc(lambda x, y: x / y, ds_year.irradiance,
                                                        irradiance_0, keep_attrs=True))
     ds_year.relevation.name = 'ratio elevation'
     ds_year.relevation.attrs = {'long_name': 'ratio elevation'}
-    ds_year.relevation.plot()
-    plt.show()
-    # %%
+    if plot_results:
+        ds_year.relevation.plot()
+        plt.show()
 
     # ### 3. Daylight time (hours) per day
     # > Or bins where there are 120 bins per one hour.
 
-    # In[21]:
+    # Daylight time per day
+    sun_dt = lambda day, type_: sun(loc.observer, day)[type_]
 
-    # %%Daylight time per day
     daylight_timedelta = np.array([sun_dt(c_day, 'dusk') - sun_dt(c_day, 'dawn') for c_day in year_days])
     daylight_time = np.array([gen_bg_utils.dt_delta2time(dt) for dt in daylight_timedelta])
     daylight_bins = np.array([gen_bg_utils.dt2binscale(dt) for dt in daylight_time])
@@ -343,8 +336,9 @@ def bg_signals_generation_main(station_name='haifa'):
                              daylighthrs=xr.Variable(dims={'Time': ds_year.Time}, data=daylight_bins / 120,
                                                      attrs={'long_name': 'Daylight hours',
                                                             'info': 'Daylight hours per day'}))
-    ds_year.daylighthrs.plot()
-    plt.show()
+    if plot_results:
+        ds_year.daylighthrs.plot()
+        plt.show()
     # %%
 
     # ### 4. Calculating Gaussian curve parameters for any day of 2017
@@ -453,52 +447,21 @@ def bg_signals_generation_main(station_name='haifa'):
     ds_bg_year.Wavelength.attrs = {'long_name': r'$\lambda$', 'units': r'$\rm nm$'}
     ds_bg_year.bg.attrs = {'long_name': r'$<p_{\rm bg}>$', 'units': r'$\rm photons$',
                            'info': 'Daily averaged background signal'}
-    # %%
 
-    # In[24]:
+    if plot_results:
+        # Plot current day
+        gen_bg_utils.plot_bg_one_day(ds_bg_year, c_day=cur_day)
 
-    # %%Plot current day
-    c_day = cur_day
-    dslice = slice(c_day, c_day + timedelta(days=1) - timedelta(seconds=30))
-    fig, ax = plt.subplots(ncols=1, nrows=1)
-    ds_bg_year.sel(Time=dslice).bg.plot(hue='Wavelength', ax=ax, linewidth=0.8)
-    ax.set_xlim([dslice.start, dslice.stop])
-    ax.set_title(f"{ds_bg_year.bg.info} - {c_day.strftime('%d/%m/%Y')}")
-    ax.xaxis.set_major_formatter(vis_utils.TIMEFORMAT)
-    ax.xaxis.set_tick_params(rotation=0)
-    ax.set_ybound([-.01, 2])
-    plt.tight_layout()
-    plt.show()
-    # %%
+        c_day = datetime(2017, 1, 1)
+        # Plot 1st half of the year
+        gen_bg_utils.plot_bg_part_of_year(ds_bg_year,
+                                          dslice=slice(c_day, c_day + timedelta(days=181) - timedelta(seconds=30)))
 
-    # In[25]:
+        # Plot 2nd half of the year
+        gen_bg_utils.plot_bg_part_of_year(ds_bg_year,
+                                          dslice=slice(c_day, c_day + timedelta(days=184) - timedelta(seconds=30)))
 
-    # %% Plot 1st half of the year
-    c_day = datetime(2017, 1, 1)
-    dslice = slice(c_day, c_day + timedelta(days=181) - timedelta(seconds=30))
-    fig, ax = plt.subplots(ncols=1, nrows=1)
-    ds_bg_year.sel(Time=dslice).bg.plot(hue='Wavelength', ax=ax, linewidth=0.1)
-    ax.set_xlim([dslice.start, dslice.stop])
-    ax.set_title(f"Background signal: {dslice.start.strftime('%d/%m/%Y')}--{dslice.stop.strftime('%d/%m/%Y')}")
-    ax.set_ybound([-.01, 2])
-    plt.tight_layout()
-    plt.show()
-
-    # %% Plot 2nd half of the year
-    c_day = datetime(2017, 7, 1)
-    dslice = slice(c_day, c_day + timedelta(days=184) - timedelta(seconds=30))
-    fig, ax = plt.subplots(ncols=1, nrows=1)
-    ds_bg_year.sel(Time=dslice).bg.plot(hue='Wavelength', ax=ax, linewidth=0.1)
-    ax.set_xlim([dslice.start, dslice.stop])
-    ax.set_title(f"Background signal: {dslice.start.strftime('%d/%m/%Y')}--{dslice.stop.strftime('%d/%m/%Y')}")
-    ax.set_ybound([-.01, 2])
-    plt.tight_layout()
-    plt.show()
-    # %%
-
-    # In[6]:
-
-    # %%save yearly dataset
+    # save yearly dataset
     folder_name = station.generation_folder
     nc_name = f"generated_bg_{station.name}_{start_day.strftime('%Y-%m-%d')}_{end_day.strftime('%Y-%m-%d')}.nc"
     xr_utils.save_dataset(ds_bg_year, folder_name, nc_name)
@@ -513,10 +476,8 @@ def bg_signals_generation_main(station_name='haifa'):
         gen_source_path = gen_utils.get_month_gen_params_path(station, start_dt, type='bg')
         month_slice = slice(start_dt, end_dt)
         xr_utils.save_dataset(dataset=ds_bg_year.sel(Time=month_slice), nc_path=gen_source_path)
-    # %% TODOS
 
-    # Final TODOS:
-    # > TODOs:
+    #  TODO
     # #### 1. Adjust section 4 - to run for any given period with start_day, end_day
     # #### 2. Save the curve parameters per day : A_l, H_l, W_l, t0_l and  A_h, H_h, W_h, t0_h
     # > A_l_ds, H_l_ds, W_l_ds , t0_l_ds, A_h_ds, H_h_ds, W_h_ds , t0_h_ds

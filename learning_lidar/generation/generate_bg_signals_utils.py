@@ -4,7 +4,8 @@ import astral
 import numpy as np
 import seaborn as sns
 from dateutil import tz
-from matplotlib import pyplot as plt
+import matplotlib.pyplot as plt
+from matplotlib import pyplot
 from scipy.optimize import curve_fit
 
 from learning_lidar.utils import utils, vis_utils, global_settings as gs
@@ -269,6 +270,39 @@ def plot_daily_bg_signal(bgmean, high_curves, low_curves, mean_curves, bins_per_
     ax.xaxis.set_major_formatter(vis_utils.TIMEFORMAT)
     ax.xaxis.set_tick_params(rotation=0)
     ax.set_xlim([bgmean.Time.values[0], bgmean.Time.values[-1]])
+    ax.set_ybound([-.01, 2])
+    plt.tight_layout()
+    plt.show()
+
+
+def plot_bg_part_of_year(ds_bg_year, dslice):
+    fig, ax = plt.subplots(ncols=1, nrows=1)
+    ds_bg_year.sel(Time=dslice).bg.plot(hue='Wavelength', ax=ax, linewidth=0.1)
+    ax.set_xlim([dslice.start, dslice.stop])
+    ax.set_title(f"Background signal: {dslice.start.strftime('%d/%m/%Y')}--{dslice.stop.strftime('%d/%m/%Y')}")
+    ax.set_ybound([-.01, 2])
+    plt.tight_layout()
+    plt.show()
+
+
+def plot_irradiance_vs_sun_elevation_at_noon_times(ds_year):
+    fig, ax = plt.subplots()
+    ds_year.irradiance.plot(ax=ax)
+    ax1 = ax.twinx()
+    ds_year.sunelevation.plot(ax=ax1, c='m')
+    ax.set_title('Yearly - irradiance vs sun elevation at noon times')
+    plt.tight_layout()
+    plt.show()
+
+
+def plot_bg_one_day(ds_bg_year, c_day):
+    dslice = slice(c_day, c_day + timedelta(days=1) - timedelta(seconds=30))
+    fig, ax = plt.subplots(ncols=1, nrows=1)
+    ds_bg_year.sel(Time=dslice).bg.plot(hue='Wavelength', ax=ax, linewidth=0.8)
+    ax.set_xlim([dslice.start, dslice.stop])
+    ax.set_title(f"{ds_bg_year.bg.info} - {c_day.strftime('%d/%m/%Y')}")
+    ax.xaxis.set_major_formatter(vis_utils.TIMEFORMAT)
+    ax.xaxis.set_tick_params(rotation=0)
     ax.set_ybound([-.01, 2])
     plt.tight_layout()
     plt.show()
