@@ -2,11 +2,12 @@ from datetime import datetime, timedelta, time
 
 import astral
 import numpy as np
+import seaborn as sns
 from dateutil import tz
 from matplotlib import pyplot as plt
 from scipy.optimize import curve_fit
 
-from learning_lidar.utils import utils, vis_utils
+from learning_lidar.utils import utils, vis_utils, global_settings as gs
 from learning_lidar.utils.misc_lidar import calc_gauss_curve
 
 
@@ -108,7 +109,7 @@ def dt_delta2time(dt_delta):
     return dt_time
 
 
-def plot_sun_elevation_at_noon(ds_year):
+def plot_sun_elevation_at_noon_times(ds_year):
     # Maximum sun elevation during 2017:
     max_year_elevation = np.max(ds_year.sunelevation.values)
     day_max_num = np.argmax(ds_year.sunelevation.values)
@@ -158,5 +159,116 @@ def plot_sun_elevation_at_noon(ds_year):
     ax.xaxis.set_major_formatter(vis_utils.MONTHFORMAT)
     ax.xaxis.set_tick_params(rotation=0)
     plt.title('Sun elevation at noon times during 2017')
+    plt.tight_layout()
+    plt.show()
+
+
+def fit_curve_and_plot_sun_elevation_during_day(loc, day_sun, day_0, ds_day, bins_per_day):
+    day_light_sun = ds_day.sunelevation.copy(deep=True)
+    # #### Gaussian curve fit of sun elevation during daylight hours:
+    #  - Fitting to : $y(t) = A + H \cdot \exp \bigg( -\frac {(t - t_0) ^ 2}{2 \cdot W ^2}\bigg) $
+    #  - Initial guess : $t_0=t_{\rm noon-TST}$
+    #  - Initial guess : $ W = \frac{\Delta t_{\rm daylight}}{2\sqrt({2\ln({\frac{1}{\alpha_{\rm ratio}}})}) }$,
+    #  $\alpha_{\rm ratio} =\frac{\alpha_{\rm twilight} - \alpha_{\rm min}}{\alpha_{\rm noon}-\alpha_{\rm min}}$
+    # > Assuming:
+    # > - A parametric curve $t$ with 2880 bins (similar to lidar's bins per day).
+    # > - $\alpha_{\rm twilight}=-6^\circ$
+    # > - $\Delta t_{\rm daylight} = t_{\rm dusk} -  t_{\rm dawn}$
+
+    t = np.arange(0, bins_per_day)
+
+    #  Initial guess of mean - at noon time / or when the sun elevation is at maximum angle.
+    dawn_dusk_angle = -6
+    day_light_sun[day_light_sun < dawn_dusk_angle] = dawn_dusk_angle
+    cur_day = datetime.combine(day_sun['noon'].date(), datetime.min.time())
+    MST_noon = cur_day + timedelta(hours=12)
+    MST_noon = tzloc2utc(MST_noon, loc)
+    TST_noon = day_sun['noon']
+    mean0 = dt2binscale(TST_noon, res_sec=30)
+
+    #  Initial guess of std (width of curve) - using width gaussian properties:
+    dawn_to_dusk = (day_sun['dusk'] - day_sun['dawn'])
+    min_angle = ds_day.sunelevation.values.min()
+    max_angle = ds_day.sunelevation.values.max()
+    sigma0 = calc_gauss_width(min_angle, max_angle, dawn_dusk_angle, dt2binscale(dawn_to_dusk + day_0))
+    #  Gaussian fit to sun elevation
+    y = ds_day.sunelevation.values.copy()
+    A3, H3, x0_3, sigma3 = gauss_fit(t, y, mean_0=mean0, sigma_0=sigma0)
+    fit3 = calc_gauss_curve(t, *gauss_fit(t, y, mean_0=mean0, sigma_0=sigma0))
+
+    print(f"Sigma fit:{sigma3 :.2f}, Sigma init estimated:{sigma0 :.2f} ")
+    print(f"Mean fit:{x0_3 :.2f}, Mean init estimated:{mean0 :.2f} ")
+
+    #  Plot curve and fit
+    sns.set_palette(sns.color_palette("tab10"))
+    fig, ax = plt.subplots(ncols=1, nrows=1)
+    ds_day.sunelevation.plot(ax=ax, label=r'$\alpha_{\rm sun}$', color='darkblue', linewidth=2.0)
+    ax.fill_between(ds_day.Time, day_light_sun, ds_day.sunelevation, alpha=0.2)
+    ax.fill_between(ds_day.Time, day_light_sun, dawn_dusk_angle, alpha=0.2)
+    ax.fill_between(ds_day.Time, ds_day.sunelevation, day_light_sun, alpha=0.1)
+    ax.plot(ds_day.Time, fit3, '-.', label=r'$\alpha_{\rm sun}$ - Gaussian fit', color='fuchsia')
+    ax.axvline(x=TST_noon, ymin=0.0, ymax=1.0, alpha=.6,
+               color='darkblue', linestyle='--', linewidth=1)
+    ax.axvline(x=MST_noon, ymin=0.0, ymax=1.0, alpha=.6,
+               color='darkgreen', linestyle='--', linewidth=1)
+    TST_noon_str = fr"Noon TST: {TST_noon.strftime('%H:%M:%S')}"
+    MST_noon_str = fr"Noon MST: {MST_noon.strftime('%H:%M:%S')}"
+    if MST_noon < TST_noon:
+        left_title = MST_noon_str
+        left_c = 'darkgreen'
+        left_x = TST_noon
+        right_title = TST_noon_str
+        right_c = 'darkblue'
+        right_x = MST_noon
+    else:
+        left_title = TST_noon_str
+        left_c = 'darkblue'
+        left_x = TST_noon
+        right_title = MST_noon_str
+        right_c = 'darkgreen'
+        right_x = TST_noon
+    ax.annotate(right_title,
+                fontweight='bold', fontsize=12, color=right_c,
+                xy=(right_x, y.min()),
+                ha="left", va="center",
+                bbox=dict(boxstyle='round,pad=0.2', ec="none", fc=[1, 1, 1]),
+                xytext=(right_x + timedelta(minutes=50), y.min()))
+    ax.annotate(left_title,
+                fontweight='bold', fontsize=12, color=left_c,
+                xy=(left_x, y.min()),
+                ha="right", va="center",
+                bbox=dict(boxstyle='round,pad=0.2', ec="none", fc=[1, 1, 1]),
+                xytext=(left_x - timedelta(minutes=50), y.min()))
+    ax.xaxis.set_major_formatter(vis_utils.TIMEFORMAT)
+    ax.xaxis.set_tick_params(rotation=0)
+    plt.title(f"Sun elevation during {cur_day.strftime('%Y-%m-%d')}")
+    plt.legend()
+    plt.tight_layout()
+    plt.show()
+
+
+def plot_daily_bg_signal(bgmean, high_curves, low_curves, mean_curves, bins_per_day):
+    wavelengths = gs.LAMBDA_nm().get_elastic()
+
+    bg_max = bgmean.copy(deep=True).assign_attrs({'info': 'Max Background Signal'})
+    bg_max.data = np.array(high_curves).reshape((3, bins_per_day))
+    bg_min = bgmean.copy(deep=True).assign_attrs({'info': 'Min Background Signal'})
+    bg_min.data = np.array(low_curves).reshape((3, bins_per_day))
+
+    # Plot background signal
+    sns.set_palette(sns.color_palette(vis_utils.COLORS))
+    fig, ax = plt.subplots(ncols=1, nrows=1)
+    for i, (curve_h, curve_l, mean_val, c, chan, wavelength) in enumerate(
+            zip(high_curves, low_curves, mean_curves, vis_utils.COLORS, ['UV', 'G', 'IR'], wavelengths)):
+        ax.fill_between(bgmean.Time, curve_h, curve_l, alpha=.3, color=c)
+    bg_min.plot(hue='Wavelength', ax=ax, linewidth=0.8, linestyle='--')
+    bg_max.plot(hue='Wavelength', ax=ax, linewidth=0.8, linestyle='--')
+    SHOW_MEAN = False
+    if SHOW_MEAN:
+        bgmean.plot(hue='Wavelength', ax=ax, linewidth=0.8)
+    ax.xaxis.set_major_formatter(vis_utils.TIMEFORMAT)
+    ax.xaxis.set_tick_params(rotation=0)
+    ax.set_xlim([bgmean.Time.values[0], bgmean.Time.values[-1]])
+    ax.set_ybound([-.01, 2])
     plt.tight_layout()
     plt.show()
