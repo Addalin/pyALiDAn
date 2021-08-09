@@ -14,7 +14,6 @@ if __name__ == '__main__':
     parser = utils.get_base_arguments()
 
 
-
     parser.add_argument('--save_ds', action='store_true',
                         help='Whether to save the datasets')
 
@@ -30,6 +29,7 @@ if __name__ == '__main__':
 
     # ####### Ingredients generation #########
     # 1. Daily mean background signal
+    # TODO download irradnce
     # TODO adapt to given time period, currently hardcoded 2017
     # bg_generator = BackgroundGenerator(station_name=args.station_name)
     # bg_generator.bg_signals_generation_main()
