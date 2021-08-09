@@ -238,15 +238,17 @@ def kde_estimation_main(args, month, year, DATA_DIR):
         ax.plot(xx_i, yy_i, linewidth=0.8)
         ax.scatter(x=xx_i[indx], y=yy_i[indx], s=10)
         LR_samp.append(xx_i[indx])
-    plt.xlabel(r'$\rm \, LR_{355[nm]}$')
-    plt.ylabel(r'$\rm A 355-532$')
 
-    ax.set_title(f"Sampling from conditioned distribution $P(x=LR|y=A)$ {t_slice.start.strftime('%Y-%m')}")
-    plt.tight_layout()
-    ax.grid(color='darkgray', linestyle='--', linewidth=0.5, alpha=0.3)
-    plt.xlim([xmin, xmax])
-    plt.ylim([ymin, Z.max()])
-    plt.show()
+    if args.plot_results:
+        plt.xlabel(r'$\rm \, LR_{355[nm]}$')
+        plt.ylabel(r'$\rm A 355-532$')
+
+        ax.set_title(f"Sampling from conditioned distribution $P(x=LR|y=A)$ {t_slice.start.strftime('%Y-%m')}")
+        plt.tight_layout()
+        ax.grid(color='darkgray', linestyle='--', linewidth=0.5, alpha=0.3)
+        plt.xlim([xmin, xmax])
+        plt.ylim([ymin, Z.max()])
+        plt.show()
 
     LR_samp = np.array(LR_samp).reshape(2 * monthdays)
 

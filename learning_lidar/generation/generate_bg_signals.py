@@ -255,8 +255,8 @@ class BackgroundGenerator:
 
         # %%Generate background signal'''
         bgmean, high_curves, low_curves, mean_curves = self.generate_curves(day_0)
-
-        gen_bg_utils.plot_daily_bg_signal(bgmean, high_curves, low_curves, mean_curves, self.bins_per_day)
+        if plot_results:
+            gen_bg_utils.plot_daily_bg_signal(bgmean, high_curves, low_curves, mean_curves, self.bins_per_day)
 
         # #### 4. Calculating Gaussian curve parameters for a new day:
         # - The mean is set based on the time shifting of the mean curves from 04/04/2017:
@@ -355,25 +355,26 @@ class BackgroundGenerator:
         bg_signal_new.attrs['info'] = 'Background Mean Signal'
         bg_signal_new.data = np.array(mean_new_signal).reshape((3, self.bins_per_day))
         # %%Plot the new curves
-        fig, ax = plt.subplots(ncols=1, nrows=1)
-        for i, (curve_h, curve_l, mean_val, c, chan, wavelength) in enumerate(
-                zip(high_curves, low_curves, mean_curves, vis_utils.COLORS, ['UV', 'G', 'IR'], self.wavelengths)):
-            ax.fill_between(bgmean.Time, curve_h, curve_l, alpha=.2, color=c)
+        if plot_results:
+            fig, ax = plt.subplots(ncols=1, nrows=1)
+            for i, (curve_h, curve_l, mean_val, c, chan, wavelength) in enumerate(
+                    zip(high_curves, low_curves, mean_curves, vis_utils.COLORS, ['UV', 'G', 'IR'], self.wavelengths)):
+                ax.fill_between(bgmean.Time, curve_h, curve_l, alpha=.2, color=c)
 
-        bg_min_new.plot(hue='Wavelength', ax=ax, linewidth=0.8, linestyle='--')
-        bg_max_new.plot(hue='Wavelength', ax=ax, linewidth=0.8, linestyle='--')
-        SHOW_MEAN = False
-        if SHOW_MEAN:
-            bg_mean_new.plot(hue='Wavelength', ax=ax, linewidth=0.8)
-        SHOW_NEW = False
-        if SHOW_NEW:
-            bg_signal_new.plot(hue='Wavelength', ax=ax, linewidth=0.8)
-        ax.xaxis.set_major_formatter(vis_utils.TIMEFORMAT)
-        ax.xaxis.set_tick_params(rotation=0)
-        ax.set_ybound([-.01, 2])
-        ax.set_xlim([bg_max_new.Time.values[0], bg_max_new.Time.values[-1]])
-        plt.tight_layout()
-        plt.show()
+            bg_min_new.plot(hue='Wavelength', ax=ax, linewidth=0.8, linestyle='--')
+            bg_max_new.plot(hue='Wavelength', ax=ax, linewidth=0.8, linestyle='--')
+            SHOW_MEAN = False
+            if SHOW_MEAN:
+                bg_mean_new.plot(hue='Wavelength', ax=ax, linewidth=0.8)
+            SHOW_NEW = False
+            if SHOW_NEW:
+                bg_signal_new.plot(hue='Wavelength', ax=ax, linewidth=0.8)
+            ax.xaxis.set_major_formatter(vis_utils.TIMEFORMAT)
+            ax.xaxis.set_tick_params(rotation=0)
+            ax.set_ybound([-.01, 2])
+            ax.set_xlim([bg_max_new.Time.values[0], bg_max_new.Time.values[-1]])
+            plt.tight_layout()
+            plt.show()
 
         # #### 4. Calculating Gaussian curve parameters for any day of 2017
 

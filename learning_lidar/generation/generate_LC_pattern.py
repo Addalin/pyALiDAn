@@ -46,37 +46,38 @@ def generate_LC_pattern_main(params):
     ds_path_extended = os.path.join(data_folder, ds_extended_name)
     ds_extended = xr_utils.load_dataset(ds_path_extended)
 
-    csv_extended_name = f"dataset_{station_name}_{start_date.strftime('%Y-%m-%d')}_{end_date.strftime('%Y-%m-%d')}_extended.csv"
-    csv_path_extended = os.path.join(data_folder, csv_extended_name)
+    if params.plot_results:
+        fig, ax = plt.subplots(ncols=1, nrows=1, figsize=(7, 5))
+        ds_extended.LC.plot(ax=ax, hue='Wavelength', linewidth=0.8)
+        ds_extended.plot.scatter(ax=ax, y='LC', x='Time',
+                                 hue='Wavelength',
+                                 s=8, hue_style='discrete', edgecolor='w')
+        ax.set_title(
+            fr"{ds_extended.LC.long_name} for {start_date.strftime('%d/%m/%Y')}--{end_date.strftime('%d/%m/%Y')}")
+        ax.ticklabel_format(axis='y', style="sci", scilimits=(0, 0))
+        plt.tight_layout()
+        plt.show()
 
-    fig, ax = plt.subplots(ncols=1, nrows=1, figsize=(7, 5))
-    ds_extended.LC.plot(ax=ax, hue='Wavelength', linewidth=0.8)
-    ds_extended.plot.scatter(ax=ax, y='LC', x='Time',
-                             hue='Wavelength',
-                             s=8, hue_style='discrete', edgecolor='w')
-    ax.set_title(fr"{ds_extended.LC.long_name} for {start_date.strftime('%d/%m/%Y')}--{end_date.strftime('%d/%m/%Y')}")
-    ax.ticklabel_format(axis='y', style="sci", scilimits=(0, 0))
-    plt.tight_layout()
-    plt.show()
-
-    fig, ax = plt.subplots(ncols=1, nrows=1, figsize=(7, 5))
-    ds_extended.sel(Time=slice(start_date, start_date + timedelta(hours=24))).LC.plot(ax=ax, hue='Wavelength',
-                                                                                      linewidth=0.5)
-    ds_extended.sel(Time=slice(start_date, start_date + timedelta(hours=24))).plot.scatter(ax=ax, y='LC', x='Time',
-                                                                                           hue='Wavelength', s=15,
-                                                                                           hue_style='discrete',
-                                                                                           edgecolor='w')
-    ax.set_title(fr"{ds_extended.LC.long_name} for {start_date.strftime('%d/%m/%Y')}")
-    ax.ticklabel_format(axis='y', style="sci", scilimits=(0, 0))
-    plt.tight_layout()
-    plt.show()
+        fig, ax = plt.subplots(ncols=1, nrows=1, figsize=(7, 5))
+        ds_extended.sel(Time=slice(start_date, start_date + timedelta(hours=24))).LC.plot(ax=ax, hue='Wavelength',
+                                                                                          linewidth=0.5)
+        ds_extended.sel(Time=slice(start_date, start_date + timedelta(hours=24))).plot.scatter(ax=ax, y='LC', x='Time',
+                                                                                               hue='Wavelength', s=15,
+                                                                                               hue_style='discrete',
+                                                                                               edgecolor='w')
+        ax.set_title(fr"{ds_extended.LC.long_name} for {start_date.strftime('%d/%m/%Y')}")
+        ax.ticklabel_format(axis='y', style="sci", scilimits=(0, 0))
+        plt.tight_layout()
+        plt.show()
 
     # ### Creating pattern of laser power through days
     # #### 1. The lidar factor is dependent on optical and geometrical values of the system.
     # #### 2. From the LC retrieved by TROPOS it seems as it has an exponential decay through the period.
     # #### 3. Therefore, first generating decay power $p(t)=p_0\cdot\exp(-\frac{t-t_0}{t_{decay}})$
-    # #### 4. Then calculating upper and lower bounding curves of interval of confidence. The interval of confidence is  set as $[\pm5\%,\pm25\% ]$. Higher confidence is for higher power values (meaning small interval of confidence).
-    # #### 4. Then the new power is randomly generated withing the interval of confidence per time $t$
+    # #### 4. Then calculating upper and lower bounding curves of interval of confidence.
+    # The interval of confidence is  set as $[\pm5\%,\pm25\% ]$.
+    # Higher confidence is for higher power values (meaning small interval of confidence).
+    # #### 5. Then the new power is randomly generated withing the interval of confidence per time $t$
 
     # Set the times for generating random powers.
     freq_H = 5  # choose some hourly frequency e.g. 3,4,7 hrs...
@@ -131,38 +132,39 @@ def generate_LC_pattern_main(params):
                                                     ds_gen_p.p_lbound, ds_gen_p.p_ubound,
                                                     np.random.rand(3, ds_gen_p.Time.size), keep_attrs=True))
 
-    fig, ax = plt.subplots(ncols=1, nrows=1, figsize=(7, 5))
-    ds_gen_p.p.plot(ax=ax, hue='Wavelength', linewidth=0.8)
-    ax.set_title(fr"{ds_gen_p.p.long_name} for {start_date.strftime('%d/%m/%Y')}--{end_date.strftime('%d/%m/%Y')}")
-    ax.ticklabel_format(axis='y', style="sci", scilimits=(0, 0))
-    plt.tight_layout()
-    plt.show()
+    if params.plot_results:
+        fig, ax = plt.subplots(ncols=1, nrows=1, figsize=(7, 5))
+        ds_gen_p.p.plot(ax=ax, hue='Wavelength', linewidth=0.8)
+        ax.set_title(fr"{ds_gen_p.p.long_name} for {start_date.strftime('%d/%m/%Y')}--{end_date.strftime('%d/%m/%Y')}")
+        ax.ticklabel_format(axis='y', style="sci", scilimits=(0, 0))
+        plt.tight_layout()
+        plt.show()
 
-    fig, ax = plt.subplots(ncols=1, nrows=1, figsize=(7, 5))
-    ds_gen_p.p.plot(ax=ax, hue='Wavelength', linewidth=0.5)
-    for wavelength, c in zip(wavelengths, vis_utils.COLORS):
-        ax.fill_between(ds_gen_p.Time.values,
-                        ds_gen_p.p_lbound.sel(Wavelength=wavelength).values,
-                        ds_gen_p.p_ubound.sel(Wavelength=wavelength).values,
-                        color=c, alpha=.1)
-    ax.set_title(fr"{ds_gen_p.p.long_name} for {start_date.strftime('%d/%m/%Y')}--{end_date.strftime('%d/%m/%Y')}")
-    ax.ticklabel_format(axis='y', style="sci", scilimits=(0, 0))
-    plt.tight_layout()
-    plt.show()
+        fig, ax = plt.subplots(ncols=1, nrows=1, figsize=(7, 5))
+        ds_gen_p.p.plot(ax=ax, hue='Wavelength', linewidth=0.5)
+        for wavelength, c in zip(wavelengths, vis_utils.COLORS):
+            ax.fill_between(ds_gen_p.Time.values,
+                            ds_gen_p.p_lbound.sel(Wavelength=wavelength).values,
+                            ds_gen_p.p_ubound.sel(Wavelength=wavelength).values,
+                            color=c, alpha=.1)
+        ax.set_title(fr"{ds_gen_p.p.long_name} for {start_date.strftime('%d/%m/%Y')}--{end_date.strftime('%d/%m/%Y')}")
+        ax.ticklabel_format(axis='y', style="sci", scilimits=(0, 0))
+        plt.tight_layout()
+        plt.show()
 
-    fig, ax = plt.subplots(ncols=1, nrows=1, figsize=(7, 5))
-    ds_gen_p.p.plot(ax=ax, hue='Wavelength', linewidth=0.5)
-    ds_gen_p.plot.scatter(ax=ax, y='p_new', x='Time', hue='Wavelength', s=8, hue_style='discrete', edgecolor='w')
-    for wavelength, c in zip(wavelengths, vis_utils.COLORS):
-        ax.fill_between(ds_gen_p.Time.values,
-                        ds_gen_p.p_lbound.sel(Wavelength=wavelength).values,
-                        ds_gen_p.p_ubound.sel(Wavelength=wavelength).values,
-                        color=c, alpha=.1)
-    ax.set_title(
-        fr"Random {ds_gen_p.p.long_name} for {start_date.strftime('%d/%m/%Y')}--{end_date.strftime('%d/%m/%Y')}")
-    ax.ticklabel_format(axis='y', style="sci", scilimits=(0, 0))
-    plt.tight_layout()
-    plt.show()
+        fig, ax = plt.subplots(ncols=1, nrows=1, figsize=(7, 5))
+        ds_gen_p.p.plot(ax=ax, hue='Wavelength', linewidth=0.5)
+        ds_gen_p.plot.scatter(ax=ax, y='p_new', x='Time', hue='Wavelength', s=8, hue_style='discrete', edgecolor='w')
+        for wavelength, c in zip(wavelengths, vis_utils.COLORS):
+            ax.fill_between(ds_gen_p.Time.values,
+                            ds_gen_p.p_lbound.sel(Wavelength=wavelength).values,
+                            ds_gen_p.p_ubound.sel(Wavelength=wavelength).values,
+                            color=c, alpha=.1)
+        ax.set_title(
+            fr"Random {ds_gen_p.p.long_name} for {start_date.strftime('%d/%m/%Y')}--{end_date.strftime('%d/%m/%Y')}")
+        ax.ticklabel_format(axis='y', style="sci", scilimits=(0, 0))
+        plt.tight_layout()
+        plt.show()
 
     # #### 5. Calculate interpolated lidar power per each wavelength for the period from the randomized powers.
     # - The calculation is based on a fit of randomised powers $p_t, t \in [0,t_{np}]$, with Bezier interpolation.
@@ -170,7 +172,8 @@ def generate_LC_pattern_main(params):
     # - $dn$ is set according to lidar measuring frequency of $\delta_t = 30[s]$
     # - For a period starting at $t_0$, ending at $t_{np}$, there are $np$ randomised points
     # 	-  The total measurements bins will be $n_{total}=\frac {t_1 - t_0 [s]}{\delta_t[s]}$
-    # 	-  The amount of interpolated bins between each couple is $dn = \frac{n_{total}}{np-1}$, where $np-1$ is the number of cubic curves to evaluate.
+    # 	-  The amount of interpolated bins between each couple is $dn = \frac{n_{total}}{np-1}$,
+    # 	where $np-1$ is the number of cubic curves to evaluate.
     #
     # #### 6. Converting Bezier paths to LC(t) and creating dataset of generated lidar power.
 
@@ -209,39 +212,40 @@ def generate_LC_pattern_main(params):
                      'info': 'LC - Lidar constant - from generation'}
     new_p.Wavelength.attrs = {'long_name': r'$\lambda$', 'units': r'$nm$'}
 
-    fig, ax = plt.subplots(ncols=1, nrows=1, figsize=(10, 5))
-    for wavelength, c in zip(wavelengths, vis_utils.COLORS):
-        ax.fill_between(ds_gen_p.Time.values,
-                        ds_gen_p.p_lbound.sel(Wavelength=wavelength).values,
-                        ds_gen_p.p_ubound.sel(Wavelength=wavelength).values,
-                        color=c, alpha=.1)
-    ds_gen_p.plot.scatter(ax=ax, y='p_new', x='Time', hue='Wavelength', s=10, hue_style='discrete', edgecolor='w')
-    new_p.p.plot(ax=ax, hue='Wavelength', linewidth=0.8)
-    ax.set_title(
-        fr"B\'ezier interpolation of {new_p.p.long_name} for {start_date.strftime('%d/%m/%Y')}-- {end_date.strftime('%d/%m/%Y')}")
-    ax.ticklabel_format(axis='y', style="sci", scilimits=(0, 0))
-    plt.tight_layout()
-    plt.show()
-
-    curdays = [start_date + timedelta(days=1 * n * 8) for n in range(8)]
-    for cur_day in curdays:
-        day_slice = slice(cur_day, cur_day + timedelta(hours=24) - timedelta(seconds=30))
-        fig, ax = plt.subplots(ncols=1, nrows=1, figsize=(8, 5))
-        new_p.p.sel(Time=day_slice).plot(ax=ax, hue='Wavelength', linewidth=0.8)
-        ds_gen_p.sel(Time=day_slice).plot.scatter(ax=ax, y='p_new', x='Time', hue='Wavelength', s=15,
-                                                  hue_style='discrete',
-                                                  edgecolor='w')
+    if params.plot_results:
+        fig, ax = plt.subplots(ncols=1, nrows=1, figsize=(10, 5))
+        for wavelength, c in zip(wavelengths, vis_utils.COLORS):
+            ax.fill_between(ds_gen_p.Time.values,
+                            ds_gen_p.p_lbound.sel(Wavelength=wavelength).values,
+                            ds_gen_p.p_ubound.sel(Wavelength=wavelength).values,
+                            color=c, alpha=.1)
+        ds_gen_p.plot.scatter(ax=ax, y='p_new', x='Time', hue='Wavelength', s=10, hue_style='discrete', edgecolor='w')
+        new_p.p.plot(ax=ax, hue='Wavelength', linewidth=0.8)
+        ax.set_title(fr"B\'ezier interpolation of {new_p.p.long_name} for "
+                     fr"{start_date.strftime('%d/%m/%Y')}-- {end_date.strftime('%d/%m/%Y')}")
         ax.ticklabel_format(axis='y', style="sci", scilimits=(0, 0))
-        ax.set_title(fr"B\'ezier interpolation of {new_p.p.long_name} - for {cur_day.strftime('%d/%m/%Y')}")
         plt.tight_layout()
         plt.show()
 
+        curdays = [start_date + timedelta(days=1 * n * 8) for n in range(8)]
+        for cur_day in curdays:
+            day_slice = slice(cur_day, cur_day + timedelta(hours=24) - timedelta(seconds=30))
+            fig, ax = plt.subplots(ncols=1, nrows=1, figsize=(8, 5))
+            new_p.p.sel(Time=day_slice).plot(ax=ax, hue='Wavelength', linewidth=0.8)
+            ds_gen_p.sel(Time=day_slice).plot.scatter(ax=ax, y='p_new', x='Time', hue='Wavelength', s=15,
+                                                      hue_style='discrete',
+                                                      edgecolor='w')
+            ax.ticklabel_format(axis='y', style="sci", scilimits=(0, 0))
+            ax.set_title(fr"B\'ezier interpolation of {new_p.p.long_name} - for {cur_day.strftime('%d/%m/%Y')}")
+            plt.tight_layout()
+            plt.show()
+
     # %% Save monthly LC dataset
+    if args.save_ds:
+        for month in range(start_date.month, end_date.month + 1):
+            gen_utils.save_monthly_params_dataset(station, start_date.year, month, new_p, type_="LC")
 
-    for month in range(start_date.month, end_date.month + 1):
-        gen_utils.save_monthly_params_dataset(station, start_date.year, month, new_p, type_="LC")
-
-    gen_utils.save_full_params_dataset(station, start_date, end_date, new_p, type_="LC")
+        gen_utils.save_full_params_dataset(station, start_date, end_date, new_p, type_="LC")
 
 
 if __name__ == '__main__':
