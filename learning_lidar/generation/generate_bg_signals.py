@@ -21,16 +21,159 @@ vis_utils.set_visualization_settings()
 sns.set_palette(sns.color_palette("tab10"))
 
 
+
+# TODO move params to correct places
+wavelengths = gs.LAMBDA_nm().get_elastic()
+eps = np.finfo(np.float).eps
+
+data_folder = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(os.curdir))), 'data')
+bg_signal_folder = os.path.join(data_folder, 'background_signal')
+
+# #### 1. Load parameters of gaussian curve fit
+bg_params_path = os.path.join(bg_signal_folder, 'curve_params.yml')
+with open(bg_params_path, 'r') as ymlfile:
+    params = yaml.safe_load(ymlfile)
+
+# #### 2.Time resolution adjustments of the curve fitting
+# - The ratio is to adjust time bins $t$ to lidar sampling bins (delta_t=30[s] )
+# - the estimated curve refer to delta_t=100[s], bins_per_day=864
+station_name = 'haifa'
+station = gs.Station(station_name=station_name)
+bins_per_day = station.total_time_bins
+t = np.arange(0, bins_per_day)
+bins_ratio = bins_per_day / params['bins_per_day']
+factors = [1 / 2, 1, 1 / 7]  # This are the original factor of the data for [UV,G,IR]
+
+
 # TODO - finish convert to py module
 
-# ## Daily Sun Elevation
-# - Explore daily and yearly $\alpha_{\rm sun}$
+
+def generate_bg(start_day, end_day, high_curves, low_curves, mean_curves, ds_year,
+                day_bins_length_0, tbin_noon_tst_0, sun_noons):
+    # %%Calculating Gaussian curve parameters for any day of 2017
+    # #TODO: this section requires massive re-organisation and commenting
+
+    max_new_curves = []
+    min_new_curves = []
+    mean_new_curves = []
+    mean_new_signal = []
+    for i, (curve_h, curve_l, mean_val, chan) in enumerate(
+            zip(high_curves, low_curves, mean_curves, ['UV', 'G', 'IR'])):
+        prms_h = params[chan]['high']
+        prms_l = params[chan]['low']
+        t0 = bins_ratio * prms_l['t0'] - day_bins_length_0 / 2
+        t1 = bins_ratio * prms_l['t0'] + day_bins_length_0 / 2
+
+        def calc_curves(prms, curve):
+            A_ds = xr.apply_ufunc(lambda x: prms['A'] * factors[i] * x, ds_year.relevation, keep_attrs=True)
+            H_ds = xr.apply_ufunc(lambda x: prms['H'] * factors[i] * x, ds_year.relevation, keep_attrs=True)
+
+            # calculating dx for specific day
+
+            dx = (tbin_noon_tst_0 - (bins_ratio * prms['t0'])) / day_bins_length_0
+
+            t0_bound = [(gen_bg_utils.dt2binscale(tnoon) - dx * daylight)
+                        for tnoon, daylight in zip(sun_noons, ds_year.daylightbins.values)]
+
+            t0_ds = H_ds.copy(deep=True)
+            t0_ds.data = t0_bound
+
+            photons_twilight = 0.5 * (curve[int(t1)] + curve[int(t0)])
+
+            max_val_ds = xr.apply_ufunc(lambda ratio: (prms['H'] + prms['A']) * ratio * factors[i],
+                                        ds_year.relevation, keep_attrs=True)
+
+            min_val_ds = xr.apply_ufunc(lambda ratio: (prms['A']) * ratio * factors[i],
+                                        ds_year.relevation, keep_attrs=True)
+
+            W_ds = xr.apply_ufunc(lambda min_val, max_val, daylight:
+                                  gen_bg_utils.calc_gauss_width(min_val, max_val, photons_twilight, daylight),
+                                  min_val_ds, max_val_ds, ds_year.daylightbins, keep_attrs=True)
+
+            bound = np.array([misc_lidar.calc_gauss_curve(t, A, H, t0_, W)
+                              for A, H, t0_, W in zip(A_ds.values, H_ds.values, t0_ds.values, W_ds.values)])
+
+            return bound
+
+        max_new = calc_curves(prms=prms_h, curve=curve_h)  # High curves
+        min_new = calc_curves(prms=prms_l, curve=curve_l)  # low curves
+        max_new_curves.append(max_new)
+        min_new_curves.append(min_new)
+
+        """Calculating mean curves & generating new averaged bg signal """
+        mean_new = (0.5 * (max_new + min_new))
+        mean_new_curves.append(mean_new)
+        std_val = (0.5 * (max_new - min_new))
+        bg_new_sig = np.zeros((len(ds_year.Time), bins_per_day))
+        for day in range(len(ds_year.Time)):
+            bg_new_sig[day, :] = (mean_new[day].reshape(bins_per_day, 1) + np.diagflat(std_val[day])
+                                  @ np.random.randn(bins_per_day, 1)).T
+        bg_new_sig[bg_new_sig < 0] = eps
+        mean_new_signal.append(bg_new_sig)
+    # %% Generating background dataset per year
+    ds_bins = pd.date_range(start=start_day,
+                            end=end_day,
+                            freq='30S',
+                            tz='UTC')
+    bg_channels = []
+    for ind, wavelength in enumerate(wavelengths):
+        bg_channels.append(xr.Dataset(data_vars={'bg': ('Time', mean_new_signal[ind].flatten())},
+                                      coords={'Time': ds_bins.values, 'Wavelength': wavelength}))
+    ds_bg_year = xr.concat(bg_channels, dim='Wavelength')
+    ds_bg_year.Wavelength.attrs = {'long_name': r'$\lambda$', 'units': r'$\rm nm$'}
+    ds_bg_year.bg.attrs = {'long_name': r'$<p_{\rm bg}>$', 'units': r'$\rm photons$',
+                           'info': 'Daily averaged background signal'}
+
+    return ds_bg_year
+
+
+def generate_curves(day_0):
+    bg_new = []
+    high_curves = []
+    low_curves = []
+    mean_curves = []
+    day_times_day0 = pd.date_range(start=day_0, end=(day_0 + timedelta(hours=24) - timedelta(seconds=30)),
+                                   freq='30S',
+                                   tz='UTC')
+    df_day0 = pd.DataFrame(data=day_times_day0, columns=['Time'])
+    for chan, factor in zip(['UV', 'G', 'IR'], factors):
+        prms_h = params[chan]['high']
+        prms_l = params[chan]['low']
+        ''' Calculating bounding curves series'''
+        high_curve = factor * misc_lidar.calc_gauss_curve(t, prms_h['A'], prms_h['H'], bins_ratio * prms_h['t0'],
+                                                          bins_ratio * prms_h['W'])
+        low_curve = factor * misc_lidar.calc_gauss_curve(t, prms_l['A'], prms_l['H'], bins_ratio * prms_l['t0'],
+                                                         bins_ratio * prms_l['W'])
+        high_curves.append(high_curve)
+        low_curves.append(low_curve)
+        ''' Generating new random series of background signal'''
+        mean_val = 0.5 * (low_curve + high_curve)
+        mean_curves.append(mean_val)
+        std_val = 0.5 * (high_curve - low_curve)
+        bg_new_chan = mean_val.reshape(bins_per_day, 1) + np.matmul(np.diagflat(std_val),
+                                                                    np.random.randn(bins_per_day, 1))
+        bg_new.append(bg_new_chan)
+    bg_new = np.array(bg_new)
+    bg_new[bg_new < 0] = eps
+    bgmean = xr.DataArray(dims=('Wavelength', 'Time'), data=bg_new.reshape((3, bins_per_day)))
+    bgmean = bgmean.assign_coords({"Wavelength": wavelengths, "Time": df_day0.Time.values})
+    bgmean.Wavelength.attrs = {'long_name': r'$\lambda$', 'units': r'$\rm nm$'}
+    bgmean.attrs = {'info': 'Background Mean Signal',
+                    'long_name': r'$<p_{bg}>$',
+                    'units': r'$photons$',
+                    'name': 'pbg'}
+
+    bg_mean = bgmean.copy(deep=True).assign_attrs({'info': 'Mean Background Signal'})
+    bg_mean.data = np.array(mean_curves).reshape((3, bins_per_day))
+    # TODO bg_mean vs bgmean - what is it supposed to be?
+
+    return bgmean, high_curves, low_curves, mean_curves
+
 
 def bg_signals_generation_main(station_name='haifa', plot_results=True):
-    wavelengths = gs.LAMBDA_nm().get_elastic()
-    eps = np.finfo(np.float).eps
+    # ## Daily Sun Elevation
+    # - Explore daily and yearly $\alpha_{\rm sun}$
 
-    station = gs.Station(station_name=station_name)
     cur_day = datetime(2017, 10, 4)
     day_0 = datetime(2017, 4, 4)
     timezone = 'UTC'
@@ -68,9 +211,6 @@ def bg_signals_generation_main(station_name='haifa', plot_results=True):
     ds_day.sunelevation.attrs = {'long_name': r'$\alpha_{sun}$', 'units': r'$^{\circ}$'}
     ds_day.Time.attrs = {"units": fr"{timezone}"}
 
-    bins_per_day = station.total_time_bins
-    t = np.arange(0, bins_per_day)
-
     if plot_results:
         gen_bg_utils.fit_curve_and_plot_sun_elevation_during_day(loc, day_sun, day_0, ds_day, bins_per_day)
 
@@ -79,9 +219,7 @@ def bg_signals_generation_main(station_name='haifa', plot_results=True):
 
     # Load irradiance - solar elevation data
 
-    data_folder = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(os.curdir))), 'data')
     csv_iradiance_elevation = r'irradiance_solarElevation.csv'
-    bg_signal_folder = os.path.join(data_folder, 'background_signal')
     csv_name = os.path.join(bg_signal_folder, csv_iradiance_elevation)
     df_iradiance_solar = pd.read_csv(csv_name)
     df_iradiance_solar.rename(columns=
@@ -113,65 +251,14 @@ def bg_signals_generation_main(station_name='haifa', plot_results=True):
     plt.ylim([-0.02, 1.1])
     plt.tight_layout()
     plt.show()
-    # %%
 
     # ## Daily background
     # - Create a mean background noise $<p_{bg}>$
 
-    # #### 1. Load parameters of gaussian curve fit
-
-    bg_params_path = os.path.join(bg_signal_folder, 'curve_params.yml')
-    with open(bg_params_path, 'r') as ymlfile:
-        params = yaml.safe_load(ymlfile)
-
-    # #### 2.Time resolution adjustments of the curve fitting
-    # - The ratio is to adjust time bins $t$ to lidar sampling bins (delta_t=30[s] )
-    # - the estimated curve refer to delta_t=100[s], bins_per_day=864
-
-    bins_ratio = bins_per_day / params['bins_per_day']
-    factors = [1 / 2, 1, 1 / 7]  # This are the original factor of the data for [UV,G,IR]
-
     # #### 3. Calculate bg mean of the original day - 04/04/2014
 
     # %%Generate background signal'''
-    bg_new = []
-    high_curves = []
-    low_curves = []
-    mean_curves = []
-    day_times_4_4_2017 = pd.date_range(start=day_0, end=(day_0 + timedelta(hours=24) - timedelta(seconds=30)),
-                                       freq='30S',
-                                       tz='UTC')
-    df_4_4_2017 = pd.DataFrame(data=day_times_4_4_2017, columns=['Time'])
-    for chan, factor in zip(['UV', 'G', 'IR'], factors):
-        prms_h = params[chan]['high']
-        prms_l = params[chan]['low']
-        ''' Calculating bounding curves series'''
-        high_curve = factor * misc_lidar.calc_gauss_curve(t, prms_h['A'], prms_h['H'], bins_ratio * prms_h['t0'],
-                                                          bins_ratio * prms_h['W'])
-        low_curve = factor * misc_lidar.calc_gauss_curve(t, prms_l['A'], prms_l['H'], bins_ratio * prms_l['t0'],
-                                                         bins_ratio * prms_l['W'])
-        high_curves.append(high_curve)
-        low_curves.append(low_curve)
-        ''' Generating new random series of background signal'''
-        mean_val = 0.5 * (low_curve + high_curve)
-        mean_curves.append(mean_val)
-        std_val = 0.5 * (high_curve - low_curve)
-        bg_new_chan = mean_val.reshape(bins_per_day, 1) + np.matmul(np.diagflat(std_val),
-                                                                    np.random.randn(bins_per_day, 1))
-        bg_new.append(bg_new_chan)
-    bg_new = np.array(bg_new)
-    bg_new[bg_new < 0] = eps
-    bgmean = xr.DataArray(dims=('Wavelength', 'Time'), data=bg_new.reshape((3, bins_per_day)))
-    bgmean = bgmean.assign_coords({"Wavelength": wavelengths, "Time": df_4_4_2017.Time.values})
-    bgmean.Wavelength.attrs = {'long_name': r'$\lambda$', 'units': r'$\rm nm$'}
-    bgmean.attrs = {'info': 'Background Mean Signal',
-                    'long_name': r'$<p_{bg}>$',
-                    'units': r'$photons$',
-                    'name': 'pbg'}
-
-    bg_mean = bgmean.copy(deep=True).assign_attrs({'info': 'Mean Background Signal'})
-    bg_mean.data = np.array(mean_curves).reshape((3, bins_per_day))
-    # TODO bg_mean vs bgmean - what is it supposed to be?
+    bgmean, high_curves, low_curves, mean_curves = generate_curves(day_0)
 
     gen_bg_utils.plot_daily_bg_signal(bgmean, high_curves, low_curves, mean_curves, bins_per_day)
 
@@ -235,7 +322,7 @@ def bg_signals_generation_main(station_name='haifa', plot_results=True):
         H_h = prms_h['H'] * ratio_elevation * factors[i]
 
         # calculating dx_h for 4/4/2017
-        dx_h = (tbin_noon_tst_0 - (bins_ratio * prms_h['t0'])) / (day_bins_length_0)
+        dx_h = (tbin_noon_tst_0 - (bins_ratio * prms_h['t0'])) / day_bins_length_0
         t0_h = tbin_noon_tst - dx_h * day_bins_length
 
         photons_twilight_h = 0.5 * (curve_h[int(t1)] + curve_h[int(t0)])
@@ -295,8 +382,6 @@ def bg_signals_generation_main(station_name='haifa', plot_results=True):
     # #### 4. Calculating Gaussian curve parameters for any day of 2017
 
     # ### 1. Irradiance vs sun elevation at noon times
-
-    # In[19]:
 
     # %% Irradiance vs sun elevation
     ds_year = ds_year.assign(irradiance=xr.apply_ufunc(lambda alpha:
@@ -360,93 +445,10 @@ def bg_signals_generation_main(station_name='haifa', plot_results=True):
     C ) generate the above parameters based on a single example. 
     """
 
-    # In[4]:
-
-    # %%Calculating Gaussian curve parameters for any day of 2017
-    # #TODO: this section requires massive re-organisation and commenting
     start_day = datetime(2017, 1, 1)
     end_day = datetime(2018, 1, 1) - timedelta(seconds=station.freq)
-    max_new_curves = []
-    min_new_curves = []
-    mean_new_curves = []
-    mean_new_signal = []
-    for i, (curve_h, curve_l, mean_val, chan) in enumerate(
-            zip(high_curves, low_curves, mean_curves, ['UV', 'G', 'IR'])):
-        prms_h = params[chan]['high']
-        prms_l = params[chan]['low']
-        t0 = bins_ratio * prms_l['t0'] - day_bins_length_0 / 2
-        t1 = bins_ratio * prms_l['t0'] + day_bins_length_0 / 2
-
-        """Calculating low curves """
-        A_l_ds = xr.apply_ufunc(lambda x: prms_l['A'] * factors[i] * x,
-                                ds_year.relevation, keep_attrs=True)
-        H_l_ds = xr.apply_ufunc(lambda x: prms_l['H'] * factors[i] * x,
-                                ds_year.relevation, keep_attrs=True)
-        # calculating dx_l for 4/4/2017
-        dx_l = (tbin_noon_tst_0 - (bins_ratio * prms_l['t0'])) / day_bins_length_0
-        t0_l_ = [(gen_bg_utils.dt2binscale(tnoon) - dx_l * daylight) for tnoon, daylight in
-                 zip(sun_noons, ds_year.daylightbins.values)]
-        t0_l_ds = H_l_ds.copy(deep=True)
-        t0_l_ds.data = t0_l_
-        photons_twilight_l = 0.5 * (curve_l[int(t1)] + curve_l[int(t0)])
-        max_val_ds = xr.apply_ufunc(lambda ratio: (prms_l['H'] + prms_l['A']) * ratio * factors[i],
-                                    ds_year.relevation, keep_attrs=True)
-        min_val_ds = xr.apply_ufunc(lambda ratio: (prms_l['A']) * ratio * factors[i],
-                                    ds_year.relevation, keep_attrs=True)
-        W_l_ds = xr.apply_ufunc(lambda min_val, max_val, daylight:
-                                gen_bg_utils.calc_gauss_width(min_val, max_val, photons_twilight_l, daylight),
-                                min_val_ds, max_val_ds, ds_year.daylightbins, keep_attrs=True)
-        min_new = np.array([misc_lidar.calc_gauss_curve(t, A, H, t0, W)
-                            for A, H, t0, W in zip(A_l_ds.values, H_l_ds.values, t0_l_ds.values, W_l_ds.values)])
-        min_new_curves.append(min_new)
-
-        """Calculating high curves """
-
-        A_h_ds = xr.apply_ufunc(lambda x: prms_h['A'] * factors[i] * x,
-                                ds_year.relevation, keep_attrs=True)
-        H_h_ds = xr.apply_ufunc(lambda x: prms_h['H'] * factors[i] * x,
-                                ds_year.relevation, keep_attrs=True)
-        # calculating dx_h for 4/4/2017
-        dx_h = (tbin_noon_tst_0 - (bins_ratio * prms_h['t0'])) / day_bins_length_0
-        t0_h_ = [(gen_bg_utils.dt2binscale(tnoon) - dx_h * daylight)
-                 for tnoon, daylight in zip(sun_noons, ds_year.daylightbins.values)]
-        t0_h_ds = t0_l_ds.copy(deep=True)
-        t0_h_ds.data = t0_h_
-        photons_twilight_h = 0.5 * (curve_h[int(t1)] + curve_h[int(t0)])
-        max_val_ds = xr.apply_ufunc(lambda ratio: (prms_h['H'] + prms_h['A']) * ratio * factors[i],
-                                    ds_year.relevation, keep_attrs=True)
-        min_val_ds = xr.apply_ufunc(lambda ratio: (prms_h['A']) * ratio * factors[i],
-                                    ds_year.relevation, keep_attrs=True)
-        W_h_ds = xr.apply_ufunc(lambda min_val, max_val, daylight:
-                                gen_bg_utils.calc_gauss_width(min_val, max_val, photons_twilight_h, daylight),
-                                min_val_ds, max_val_ds, ds_year.daylightbins, keep_attrs=True)
-        max_new = np.array([misc_lidar.calc_gauss_curve(t, A, H, t0, W)
-                            for A, H, t0, W in zip(A_h_ds.values, H_h_ds.values, t0_h_ds.values, W_h_ds.values)])
-        max_new_curves.append(max_new)
-
-        """Calculating mean curves & generating new averaged bg signal """
-        mean_new = (0.5 * (max_new + min_new))
-        mean_new_curves.append(mean_new)
-        std_val = (0.5 * (max_new - min_new))
-        bg_new_sig = np.zeros((len(ds_year.Time), bins_per_day))
-        for day in range(len(ds_year.Time)):
-            bg_new_sig[day, :] = (mean_new[day].reshape(bins_per_day, 1) + np.diagflat(std_val[day])
-                                  @ np.random.randn(bins_per_day, 1)).T
-        bg_new_sig[bg_new_sig < 0] = eps
-        mean_new_signal.append(bg_new_sig)
-    # %% Generating background dataset per year
-    ds_bins = pd.date_range(start=start_day,
-                            end=end_day,
-                            freq='30S',
-                            tz='UTC')
-    bg_channels = []
-    for ind, wavelength in enumerate(wavelengths):
-        bg_channels.append(xr.Dataset(data_vars={'bg': ('Time', mean_new_signal[ind].flatten())},
-                                      coords={'Time': ds_bins.values, 'Wavelength': wavelength}))
-    ds_bg_year = xr.concat(bg_channels, dim='Wavelength')
-    ds_bg_year.Wavelength.attrs = {'long_name': r'$\lambda$', 'units': r'$\rm nm$'}
-    ds_bg_year.bg.attrs = {'long_name': r'$<p_{\rm bg}>$', 'units': r'$\rm photons$',
-                           'info': 'Daily averaged background signal'}
+    ds_bg_year = generate_bg(start_day, end_day, high_curves, low_curves, mean_curves, ds_year,
+                             day_bins_length_0, tbin_noon_tst_0, sun_noons)
 
     if plot_results:
         # Plot current day
@@ -462,9 +464,8 @@ def bg_signals_generation_main(station_name='haifa', plot_results=True):
                                           dslice=slice(c_day, c_day + timedelta(days=184) - timedelta(seconds=30)))
 
     # save yearly dataset
-    folder_name = station.generation_folder
     nc_name = f"generated_bg_{station.name}_{start_day.strftime('%Y-%m-%d')}_{end_day.strftime('%Y-%m-%d')}.nc"
-    xr_utils.save_dataset(ds_bg_year, folder_name, nc_name)
+    xr_utils.save_dataset(dataset=ds_bg_year, folder_name=station.generation_folder, nc_name=nc_name)
 
     # %% Save monthly bg dataset
     # TODO: this routine is useful for several generation modules as LC, obverlap etc. make it in generation_utils
@@ -483,8 +484,6 @@ def bg_signals_generation_main(station_name='haifa', plot_results=True):
     # > A_l_ds, H_l_ds, W_l_ds , t0_l_ds, A_h_ds, H_h_ds, W_h_ds , t0_h_ds
     # #### 2.  Save the bounding curves per day :  max_new_curves, min_new_curves, mean_new_curves
     # > similar to the way ds_bg_year was generated
-    #
-    #
 
 
 if __name__ == '__main__':
