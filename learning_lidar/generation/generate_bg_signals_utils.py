@@ -5,7 +5,6 @@ import numpy as np
 import seaborn as sns
 from dateutil import tz
 import matplotlib.pyplot as plt
-from matplotlib import pyplot
 from scipy.optimize import curve_fit
 
 from learning_lidar.utils import utils, vis_utils, global_settings as gs

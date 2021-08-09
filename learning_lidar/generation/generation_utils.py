@@ -115,9 +115,9 @@ def save_generated_dataset(station, dataset, data_source='lidar', save_mode='bot
     return ncpaths
 
 
-def get_month_gen_params_path(station, day_date, type='density_params'):
+def get_month_gen_params_path(station, day_date, type_='density_params'):
     """
-    :param type: type of generated parameter:
+    :param type_: type of generated parameter:
         'density_params' - for density sampler generator,
         'bg'- for generated background signal,
         'LC' - for generated Lidar Constant signal
@@ -133,7 +133,7 @@ def get_month_gen_params_path(station, day_date, type='density_params'):
 
     folder_name = prep_utils.get_month_folder_name(station.generation_folder, day_date)
 
-    nc_name = f"generated_{type}_{station.location}_{month_start_day.strftime('%Y-%m-%d')}_" \
+    nc_name = f"generated_{type_}_{station.location}_{month_start_day.strftime('%Y-%m-%d')}_" \
               f"{month_end_day.strftime('%Y-%m-%d')}.nc"
 
     gen_source_path = os.path.join(folder_name, nc_name)
@@ -162,10 +162,10 @@ def get_daily_ds_path(station: gs.Station, day_date: datetime.date, type_: str) 
     return gen_source_path
 
 
-def get_month_gen_params_ds(station, day_date, type='density_params'):
+def get_month_gen_params_ds(station, day_date, type_='density_params'):
     """
     Returns the monthly parameters of density creation as a dataset.
-    :param type: type of generated parameter:
+    :param type_: type of generated parameter:
         'density_params' - for density sampler generator,
         'bg'- for generated background signal,
         'LC' - for generated Lidar Constant signal
@@ -175,15 +175,15 @@ def get_month_gen_params_ds(station, day_date, type='density_params'):
     :return: day_params_ds: xarray.Dataset(). Monthly dataset of generation parameters.
     """
 
-    gen_source_path = get_month_gen_params_path(station, day_date, type)
+    gen_source_path = get_month_gen_params_path(station, day_date, type_)
     month_params_ds = xr_utils.load_dataset(gen_source_path)
     return month_params_ds
 
 
-def get_daily_gen_param_ds(station, day_date, type='density_params'):
+def get_daily_gen_param_ds(station, day_date, type_='density_params'):
     """
     Returns the daily parameters of density creation as a dataset.
-    :param type: type of generated parameter:
+    :param type_: type of generated parameter:
         'density_params' - for density sampler generator,
         'bg'- for generated background signal,
         'LC' - for generated Lidar Constant signal
@@ -191,7 +191,7 @@ def get_daily_gen_param_ds(station, day_date, type='density_params'):
     :param day_date: datetime.date object of the required date
     :return: day_params_ds: xarray.Dataset(). Daily dataset of generation parameters.
     """
-    month_params_ds = get_month_gen_params_ds(station, day_date, type)
+    month_params_ds = get_month_gen_params_ds(station, day_date, type_)
     day_params_ds = month_params_ds.sel(Time=slice(day_date, day_date + timedelta(days=1)))
 
     return day_params_ds
@@ -211,21 +211,21 @@ def get_daily_gen_ds(station: gs.Station, day_date: datetime.date, type_: str) -
     return ds
 
 
-def get_daily_overlap(station: gs.Station, day_date: datetime.date, height_indx: xr.DataArray) -> xr.Dataset:
+def get_daily_overlap(station: gs.Station, day_date: datetime.date, height_index: xr.DataArray) -> xr.Dataset:
     """
     Generates overlap values per height index, from overlap params
 
     :param station: gs.station() object of the lidar station
     :param day_date: datetime.date object of the required date
-    :param height_indx: xr.DataArray, stores the height index per Height
+    :param height_index: xr.DataArray, stores the height index per Height
 
     :return: xr.Dataset with the overlap values per height index
     """
 
-    overlap_params = get_month_gen_params_ds(station, day_date, type='overlap')
-    overlap = sigmoid(height_indx, *overlap_params.to_array().values)
+    overlap_params = get_month_gen_params_ds(station, day_date, type_='overlap')
+    overlap = sigmoid(height_index, *overlap_params.to_array().values)
     overlap_ds = xr.Dataset(data_vars={'overlap': ('Height', overlap)},
-                            coords={'Height': height_indx.values},
+                            coords={'Height': height_index.values},
                             attrs={'name': 'Overlap Function'})
 
     return overlap_ds
@@ -237,12 +237,13 @@ def dt2binscale(dt_time, res_sec=30):
     Returns the bin index corresponds to dt_time
     binscale - is the time scale [0,2880], of a daily lidar bin index from 00:00:00 to 23:59:30.
     The lidar has a bin measure every 30 sec, in total 2880 bins per day.
+    :param res_sec: TODO
     :param dt_time: datetime.datetime object
     :return: binscale - float in [0,2880]
     """
     res_minute = 60 / res_sec
     res_hour = 60 * res_minute
-    res_musec = (1e-6) / res_sec
+    res_musec = 1e-6 / res_sec
     tind = dt_time.hour * res_hour + \
            dt_time.minute * res_minute + \
            dt_time.second / res_sec + \
@@ -298,6 +299,21 @@ def create_ratio(total_bins, mode='ones', start_height=0.3, ref_height=2.5, ref_
     return smooth_ratio
 
 
-def sigmoid(x, x0=0,A = 0 , K = 1,B=1, v=0.4,C=1,Q=1):
-    y =A+(K-A)/(gs.eps+(C + Q*np.exp(-B*(x-x0)))**(v))
-    return (y)
+def sigmoid(x, x0=0, A=0, K=1, B=1, v=0.4, C=1, Q=1):
+    y = A + (K - A) / (gs.eps + (C + Q * np.exp(-B * (x - x0))) ** v)
+    return y
+
+
+def save_monthly_params_dataset(station, year, month, data, type_):
+    last = (calendar.monthrange(year, month)[1])
+    start_dt = datetime(year, month, 1)
+    end_dt = datetime(year, month, last) + timedelta(days=1) - timedelta(seconds=station.freq)
+    gen_source_path = get_month_gen_params_path(station, start_dt, type_=type_)
+    month_slice = slice(start_dt, end_dt)
+    xr_utils.save_dataset(dataset=data.sel(Time=month_slice), nc_path=gen_source_path)
+
+
+def save_full_params_dataset(station, start_date, end_date, data, type_):
+    folder_name = station.generation_folder
+    nc_name = f"generated_{type_}_{station.name}_{start_date.strftime('%Y-%m-%d')}_{end_date.strftime('%Y-%m-%d')}.nc"
+    xr_utils.save_dataset(data, folder_name, nc_name)

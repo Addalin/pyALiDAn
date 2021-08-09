@@ -386,7 +386,7 @@ def kde_estimation_main(args, month, year, DATA_DIR):
                                         nc_aeronet_name=nc_aeronet_name)
     # save the dataset
     if args.save_ds:
-        gen_source_path = gen_utils.get_month_gen_params_path(station, start_day, type='density_params')
+        gen_source_path = gen_utils.get_month_gen_params_path(station, start_day, type_='density_params')
         print(gen_source_path)
         xr_utils.save_dataset(ds_month, os.path.dirname(gen_source_path), os.path.basename(gen_source_path))
 

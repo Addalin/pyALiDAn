@@ -121,7 +121,7 @@ def get_daily_LC(station, day_date):
     :return: xr.Dataset() of daily generated Lidar power factor
     """
     # %% 2.
-    ds_gen_p = gen_utils.get_daily_gen_param_ds(station, day_date, type='LC')
+    ds_gen_p = gen_utils.get_daily_gen_param_ds(station, day_date, type_='LC')
     day_slice = slice(day_date, day_date + timedelta(days=1) - timedelta(seconds=30))
     lc_ds = ds_gen_p.p.sel(Time=day_slice)
     if PLOT_RESULTS:
@@ -142,7 +142,7 @@ def get_daily_bg(station, day_date):
     :param day_date: datetime.date object of the required date
     :return: xr.Dataset() of daily generated background signal. Having coordinates of: 'Wavelength','Time' (1D signal!)
     """
-    bg_1D_ds = gen_utils.get_daily_gen_param_ds(station, day_date, type='bg')
+    bg_1D_ds = gen_utils.get_daily_gen_param_ds(station, day_date, type_='bg')
     day_slice = slice(day_date, day_date + timedelta(days=1) - timedelta(seconds=30))
     bg_1D_ds = bg_1D_ds.sel(Time=day_slice)
     p_bg = bg_1D_ds.bg
@@ -387,7 +387,7 @@ def calc_daily_measurement(station: gs.Station, day_date: datetime.date, signal_
 
     p_mean = calc_mean_measurement(station, day_date, signal_ds, bg_ds) if not update_overlap_only else p_mean
 
-    overlap_ds = gen_utils.get_daily_overlap(station, day_date, height_indx=p_mean.Height)
+    overlap_ds = gen_utils.get_daily_overlap(station, day_date, height_index=p_mean.Height)
 
     # here the calculation stars
     p_mean = xr.apply_ufunc(lambda x, r: (x * r),

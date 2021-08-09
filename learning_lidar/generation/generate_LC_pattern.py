@@ -237,19 +237,11 @@ def generate_LC_pattern_main(params):
         plt.show()
 
     # %% Save monthly LC dataset
-    year = start_date.year
-    for month in range(start_date.month, end_date.month + 1):
-        _, monthdays = calendar.monthrange(year, month)
-        start_dt = datetime(year, month, 1)
-        end_dt = datetime(year, month, monthdays) + timedelta(days=1) - timedelta(seconds=station.freq)
-        gen_source_path = gen_utils.get_month_gen_params_path(station, start_dt, type='LC')
-        month_slice = slice(start_dt, end_dt)
-        xr_utils.save_dataset(dataset=new_p.sel(Time=month_slice), nc_path=gen_source_path)
-        print(gen_source_path)  # TODO:  log
 
-    folder_name = station.generation_folder
-    nc_name = f"generated_LC_{station.name}_{start_date.strftime('%Y-%m-%d')}_{end_date.strftime('%Y-%m-%d')}.nc"
-    xr_utils.save_dataset(new_p, folder_name, nc_name)
+    for month in range(start_date.month, end_date.month + 1):
+        gen_utils.save_monthly_params_dataset(station, start_date.year, month, new_p, type_="LC")
+
+    gen_utils.save_full_params_dataset(station, start_date, end_date, new_p, type_="LC")
 
 
 if __name__ == '__main__':
