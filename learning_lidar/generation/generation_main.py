@@ -5,6 +5,7 @@ import pandas as pd
 from KDE_estimation_sample import kde_estimation_main
 from generate_LC_pattern import generate_LC_pattern_main
 from generate_density import generate_density_main
+from generate_bg_signals import BackgroundGenerator
 from daily_signals_generation import daily_signals_generation_main
 from learning_lidar.utils import utils
 from read_AERONET_data import read_aeronet_data_main
@@ -12,8 +13,7 @@ from read_AERONET_data import read_aeronet_data_main
 if __name__ == '__main__':
     parser = utils.get_base_arguments()
 
-    parser.add_argument('--plot_results', action='store_true',
-                        help='Whether to plot graphs')
+
 
     parser.add_argument('--save_ds', action='store_true',
                         help='Whether to save the datasets')
@@ -30,11 +30,14 @@ if __name__ == '__main__':
 
     # ####### Ingredients generation #########
     # 1. Daily mean background signal
-    # TODO Background generation (use generate_bg_signals.py)
+    # TODO adapt to given time period, currently hardcoded 2017
+    # bg_generator = BackgroundGenerator(station_name=args.station_name)
+    # bg_generator.bg_signals_generation_main()
 
     # 2. Daily Angstrom Exponent and Optical Depth
     for month_date in pd.date_range(start=args.start_date, end=args.end_date, freq='MS'):
-        read_aeronet_data_main(args.station_name, month_date.month, month_date.year)
+        read_aeronet_data_main(station_name=args.station_name, month=month_date.month, year=month_date.year,
+                               plot_results=args.plot_results)
 
     # 3. Initial parameters for density generation
 

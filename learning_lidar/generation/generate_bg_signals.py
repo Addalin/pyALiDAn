@@ -475,6 +475,7 @@ class BackgroundGenerator:
         # #### 2.  Save the bounding curves per day :  max_new_curves, min_new_curves, mean_new_curves
         # > similar to the way ds_bg_year was generated
 
+
 if __name__ == '__main__':
     bg_generator = BackgroundGenerator(station_name='haifa_shubi')
     bg_generator.bg_signals_generation_main()

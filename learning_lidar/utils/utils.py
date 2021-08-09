@@ -163,12 +163,17 @@ def get_base_arguments(parser: argparse.ArgumentParser = None) -> argparse.Argum
         parser = argparse.ArgumentParser()
     parser.add_argument('-n', '--station_name', type=str, default='haifa',
                         help='The station name')
+
     parser.add_argument('--start_date', type=datetime.fromisoformat,
                         default='2017-09-01',
                         help='The start date to use')
+
     parser.add_argument('--end_date', type=datetime.fromisoformat,
                         default='2017-10-31',
                         help='The end date to use')
+
+    parser.add_argument('--plot_results', action='store_true',
+                        help='Whether to plot graphs')
 
     return parser
 

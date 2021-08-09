@@ -54,7 +54,8 @@ def kde_estimation_main(args, month, year, DATA_DIR):
 
     x, y = ds_ang.angstrom.sel(Wavelengths=couple_0).values, ds_ang.angstrom.sel(Wavelengths=couple_1).values
 
-    plot_angstrom_exponent_distribution(x, y, x_label=couple_0, y_label=couple_1, date_=t_slice.start.strftime('%Y-%m'))
+    if args.plot_results:
+        plot_angstrom_exponent_distribution(x, y, x_label=couple_0, y_label=couple_1, date_=t_slice.start.strftime('%Y-%m'))
 
     # 2. Perform a kernel density estimation on the data
     # 3. Resample the estimated density generate new values for $A_{355,532}$ & $A_{532,1064 }$, per each day

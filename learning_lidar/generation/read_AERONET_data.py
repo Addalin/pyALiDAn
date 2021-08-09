@@ -32,7 +32,7 @@ def angstrom(tau_1, tau_2, lambda_1, lambda_2):
     return val
 
 
-def read_aeronet_data_main(station_name, month, year):
+def read_aeronet_data_main(station_name, month, year, plot_results):
     """
     calculate Angstrom exponent based on AERONET measurements taken from the sunphotometere on EE building
     Assumes aeronet files to exist. if not, download from - https://aeronet.gsfc.nasa.gov/cgi-bin/webtool_aod_v3?stage=3&region=Middle_East&state=Israel&site=Technion_Haifa_IL&place_code=10&if_polarized=0
@@ -66,7 +66,8 @@ def read_aeronet_data_main(station_name, month, year):
     cols.extend(wavelengths)
     df_AOD_ANGSTROM = df_AOD_ANGSTROM.reindex(cols, axis='columns').sort_index(axis=1)
 
-    # #### Calculate AOD for missing wavelengths as $355,532,1064$ by interpolation values from the nearest existing measured wavelengths.
+    # #### Calculate AOD for missing wavelengths as $355,532,1064$
+    # by interpolation values from the nearest existing measured wavelengths.
     cols = df_AOD_ANGSTROM.columns.values.tolist()
     for wavelength in wavelengths:
         col_ind = df_AOD_ANGSTROM.columns.get_loc(wavelength)
@@ -104,7 +105,7 @@ def read_aeronet_data_main(station_name, month, year):
                                                                ds_aod.sel(Wavelength=y), x, y), lambda_1, lambda_2,
                                          keep_attrs=True)
         angstrom_ds_chan = xr.Dataset(
-            data_vars={'angstrom': (('Time'), angstrom_couple.aod),
+            data_vars={'angstrom': ('Time', angstrom_couple.aod),
                        'lambda_nm': ('Wavelengths', [f"{lambda_1}-{lambda_2}"])
                        },
             coords={'Time': df_AOD_ANGSTROM.index.tolist(),
@@ -119,71 +120,64 @@ def read_aeronet_data_main(station_name, month, year):
                     'start_time': start_day.strftime("%Y-%d-%m"), 'end_time': end_day.strftime("%Y-%d-%m")}
 
     # Show AOD and Angstrom Exponent for a period
-    fig, axes = plt.subplots(nrows=1, ncols=2, figsize=(8, 8))
-    t_slice = slice(start_day, start_day + timedelta(days=30) - timedelta(seconds=30))
-    ax = axes.ravel()
-    for wavelength in wavelengths:
-        aod_mean = ds_aod.aod.sel(Wavelength=wavelength, Time=t_slice).mean().item()
-        aod_std = ds_aod.aod.sel(Wavelength=wavelength, Time=t_slice).std().item()
-        textstr = ' '.join((
-            r'$\mu=%.2f$, ' % (aod_mean,),
-            r'$\sigma=%.2f$' % (aod_std,)))
-        ds_aod.aod.sel(Wavelength=wavelength, Time=t_slice).plot(label=fr"{wavelength}, " + textstr, ax=ax[0])
-    ax[0].set_title(ds_aod.attrs['info'])
-    ax[0].legend()
-    ax[0].set_ylabel(r'$\tau$')
 
-    couples = [(355, 532), (355, 1064), (532, 1064)]
-    angstrom_daily = []
-    for lambda_1, lambda_2 in couples:
-        angstrom_mean = ds_ang.angstrom.sel(Wavelengths=f"{lambda_1}-{lambda_2}", Time=t_slice).mean().item()
-        angstrom_std = ds_ang.angstrom.sel(Wavelengths=f"{lambda_1}-{lambda_2}", Time=t_slice).std().item()
-        textstr = ' '.join((
-            r'$\mu=%.2f$, ' % (angstrom_mean,),
-            r'$\sigma=%.2f$' % (angstrom_std,)))
-        ds_ang.angstrom.sel(Wavelengths=f"{lambda_1}-{lambda_2}", Time=t_slice).plot(x='Time',
-                                                                                     label=fr"$ \AA \, {lambda_1},{lambda_2}$,  " + textstr
-                                                                                     , ax=ax[1])
-    ax[1].legend()
-    ax[1].set_title('Angstrom Exponent')
-    plt.tight_layout()
-    plt.show()
+    if plot_results:
+        t_slice = slice(start_day, start_day + timedelta(days=30) - timedelta(seconds=30))
 
-    # Angstrom Exponent distribution of a month
-    couple_0 = f"{355}-{532}"
-    couple_1 = f"{532}-{1064}"
-    angstrom_daily = []
+        fig, axes = plt.subplots(nrows=1, ncols=2, figsize=(8, 8))
+        ax = axes.ravel()
+        for wavelength in wavelengths:
+            aod_mean = ds_aod.aod.sel(Wavelength=wavelength, Time=t_slice).mean().item()
+            aod_std = ds_aod.aod.sel(Wavelength=wavelength, Time=t_slice).std().item()
+            textstr = ' '.join((
+                r'$\mu=%.2f$, ' % (aod_mean,),
+                r'$\sigma=%.2f$' % (aod_std,)))
+            ds_aod.aod.sel(Wavelength=wavelength, Time=t_slice).plot(label=fr"{wavelength}, " + textstr, ax=ax[0])
+        ax[0].set_title(ds_aod.attrs['info'])
+        ax[0].legend()
+        ax[0].set_ylabel(r'$\tau$')
 
-    x = ds_ang.angstrom.sel(Time=t_slice, Wavelengths=couple_0).values
-    y = ds_ang.angstrom.sel(Time=t_slice, Wavelengths=couple_1).values
+        couples = [(355, 532), (355, 1064), (532, 1064)]
+        for lambda_1, lambda_2 in couples:
+            angstrom_mean = ds_ang.angstrom.sel(Wavelengths=f"{lambda_1}-{lambda_2}", Time=t_slice).mean().item()
+            angstrom_std = ds_ang.angstrom.sel(Wavelengths=f"{lambda_1}-{lambda_2}", Time=t_slice).std().item()
+            textstr = ' '.join((
+                r'$\mu=%.2f$, ' % (angstrom_mean,),
+                r'$\sigma=%.2f$' % (angstrom_std,)))
+            ds_ang.angstrom.sel(Wavelengths=f"{lambda_1}-{lambda_2}", Time=t_slice).plot(x='Time',
+                                                                                         label=fr"$ \AA \, {lambda_1},{lambda_2}$,  " + textstr
+                                                                                         , ax=ax[1])
+        ax[1].legend()
+        ax[1].set_title('Angstrom Exponent')
+        plt.tight_layout()
+        plt.show()
 
-    fig, ax = plt.subplots(nrows=1, ncols=1)
-    ax.scatter(x=x, y=y)
-    ax.set_ylabel(couple_0)
-    ax.set_xlabel(couple_1)
-    ax.set_title(f"Angstrom Exponent distribution {t_slice.start.strftime('%Y-%m')}")
-    plt.tight_layout()
-    plt.show()
+        # Angstrom Exponent distribution of a month
+        couple_0 = f"{355}-{532}"
+        couple_1 = f"{532}-{1064}"
 
-    # print(t_slice)
+        x = ds_ang.angstrom.sel(Time=t_slice, Wavelengths=couple_0).values
+        y = ds_ang.angstrom.sel(Time=t_slice, Wavelengths=couple_1).values
+
+        fig, ax = plt.subplots(nrows=1, ncols=1)
+        ax.scatter(x=x, y=y)
+        ax.set_ylabel(couple_0)
+        ax.set_xlabel(couple_1)
+        ax.set_title(f"Angstrom Exponent distribution {t_slice.start.strftime('%Y-%m')}")
+        plt.tight_layout()
+        plt.show()
 
     # Save AOD and  Angstrom Exponent datasets
-    folder_name = station.aeronet_folder
+    nc_base_name = f"{start_day.strftime('%Y%m%d')}_{end_day.strftime('%Y%m%d')}_{station.name}"
 
-    print(ds_aod)
-    nc_name = f"{start_day.strftime('%Y%m%d')}_{end_day.strftime('%Y%m%d')}_{station.name}_aod.nc"
-    xr_utils.save_dataset(ds_aod, folder_name, nc_name)
-
-    print(ds_ang)
-    nc_name = f"{start_day.strftime('%Y%m%d')}_{end_day.strftime('%Y%m%d')}_{station.name}_ang.nc"
-    xr_utils.save_dataset(ds_ang, folder_name, nc_name)
+    xr_utils.save_dataset(ds_aod, folder_name=station.aeronet_folder, nc_name=nc_base_name+"_aod.nc")
+    xr_utils.save_dataset(ds_ang, folder_name=station.aeronet_folder, nc_name=nc_base_name+"_ang.nc")
 
 
 if __name__ == '__main__':
 
     parser = utils.get_base_arguments()
-
     args = parser.parse_args()
 
     for date_ in pd.date_range(start=args.start_date, end=args.end_date, freq='MS'):
-        read_aeronet_data_main(args.station_name, date_.month, date_.year)
+        read_aeronet_data_main(args.station_name, date_.month, date_.year, args.plot_results)
