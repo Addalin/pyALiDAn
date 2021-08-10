@@ -59,6 +59,7 @@ def generate_LC_pattern_main(params):
         plt.show()
 
         fig, ax = plt.subplots(ncols=1, nrows=1, figsize=(7, 5))
+        # TODO requires - conda install -c conda-forge nc-time-axis
         ds_extended.sel(Time=slice(start_date, start_date + timedelta(hours=24))).LC.plot(ax=ax, hue='Wavelength',
                                                                                           linewidth=0.5)
         ds_extended.sel(Time=slice(start_date, start_date + timedelta(hours=24))).plot.scatter(ax=ax, y='LC', x='Time',
