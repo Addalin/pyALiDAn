@@ -75,6 +75,7 @@ def main(station, month, year, start_date, end_date, DATA_DIR):
     # Sample new points
     [x1, y1] = kernel.resample(2 * monthdays)
     scores_new = kernel(np.vstack([x1, y1]))
+    # TODO: the argpartition was to make sure values are within limits . so make sure the usage of regection sampling is done correctly
     max_ind = np.argpartition(scores_new, -2 * monthdays)[-2 * monthdays:]
     ang_355_532, ang_532_1064 = x1[max_ind], y1[max_ind]
 
@@ -158,7 +159,7 @@ def main(station, month, year, start_date, end_date, DATA_DIR):
     weights = weights / weights.sum()
     normal_Z = np.zeros((grid.shape[0], grid.shape[1]))
     for z_type, weight in zip(Z_types, weights):
-        normal_Z += weight * z_type / z_type.sum()
+        normal_Z += weight * z_type / z_type.sum() # TODO: check that the sum of total density is 1
 
     # Sampling the grid , with the weights set by the joint distribution inorder to generate a kernel distribution
     xy = np.vstack([X.reshape(X.size), Y.reshape(Y.size)])
@@ -189,7 +190,7 @@ def main(station, month, year, start_date, end_date, DATA_DIR):
     weights = np.array([.05, .75, .20])
     normal_Z = np.zeros((grid.shape[0], grid.shape[1]))
     for z_type, weight in zip(Z_types, weights):
-        normal_Z += weight * z_type / z_type.sum()
+        normal_Z += weight * z_type / z_type.sum() # TODO: check that the sum of total density is 1
 
     # Sampling the grid , with the weights set by the joint distribution inorder to generate a kernel distribution
     xy = np.vstack([X.reshape(X.size), Y.reshape(Y.size)])
