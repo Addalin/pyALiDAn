@@ -29,10 +29,12 @@ if __name__ == '__main__':
     # ####### Ingredients generation #########
     # 1. Daily mean background signal
     # TODO adapt to given time period, currently hardcoded 2017
+    logger.info("Generating background signal...")
     bg_generator = BackgroundGenerator(station_name=args.station_name)
     bg_generator.bg_signals_generation_main(plot_results=args.plot_results)
 
     # 2. Daily Angstrom Exponent and Optical Depth
+    logger.info("Generating Angstrom Exponent and Optical Depth...")
     for month_date in pd.date_range(start=args.start_date, end=args.end_date, freq='MS'):
         read_aeronet_data_main(station_name=args.station_name, month=month_date.month, year=month_date.year,
                                plot_results=args.plot_results)
@@ -45,16 +47,20 @@ if __name__ == '__main__':
 
     # start_date and end_date should correspond to the extended csv!
     # months to run KDE on, one month at a time.
+    # logger.info("KDE Estimation...")
     for month_date in pd.date_range(args.start_date, args.end_date, freq='MS'):
         kde_estimation_main(args, month_date.month, month_date.year, DATA_DIR)
 
     # 4. Lidar Constant for a period
+    logger.info("Generating Lidar Constant...")
     generate_LC_pattern_main(args)
 
     # 5. Density Generation
+    logger.info("Generating Density...")
     generate_density_main(args)
 
     # ####### Lidar Signal generation #######
+    logger.info("Generating Lidar Signal...")
     daily_signals_generator = DailySignalGenerator(station_name=args.station_name,
                                                    save_ds=args.save_ds, logger=logger)
 

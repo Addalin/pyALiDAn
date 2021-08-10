@@ -154,7 +154,7 @@ def visCurve(lData, rData, stitle=""):
 
 def get_base_arguments(parser: argparse.ArgumentParser = None) -> argparse.ArgumentParser:
     """
-    Returns the usual parameters for argument parser (station_name, start_date, end_date, plot_results)
+    Returns the usual parameters for argument parser (station_name, start_date, end_date, plot_results, save_ds)
 
     :param parser: If not None, appends the arguments to the given parser
     :return:

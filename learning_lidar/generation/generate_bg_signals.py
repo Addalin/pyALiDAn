@@ -168,11 +168,10 @@ class BackgroundGenerator:
     def bg_signals_generation_main(self, plot_results=True):
         # ## Daily Sun Elevation
         # - Explore daily and yearly $\alpha_{\rm sun}$
-
+        # TODO how to generalzied cur_day, day_0, year_days?
         cur_day = datetime(2017, 10, 4)
         day_0 = datetime(2017, 4, 4)
         timezone = 'UTC'
-        cur_day_str = cur_day.strftime('%Y-%m-%d')
         loc = astral.LocationInfo("Haifa", 'Israel', timezone, self.station.lat, self.station.lon)
         loc.observer.elevation = self.station.altitude
 
@@ -282,7 +281,7 @@ class BackgroundGenerator:
         iradiance_day_cos = gen_bg_utils.func_cos(day_max_elevation, popt[0], popt[1], popt[2], popt[3])
 
         ratio_elevation = iradiance_day_cos / iradiance_orig_cos
-        print(f"Ration elevation for {cur_day_str}: {ratio_elevation:.2f}")
+        print(f"Ration elevation for {cur_day.strftime('%Y-%m-%d')}: {ratio_elevation:.2f}")
 
         # %% Calculate curves parameters
         max_new_curves = []

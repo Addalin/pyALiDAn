@@ -241,7 +241,7 @@ def generate_LC_pattern_main(params):
             plt.show()
 
     # %% Save monthly LC dataset
-    if args.save_ds:
+    if params.save_ds:
         for month in range(start_date.month, end_date.month + 1):
             gen_utils.save_monthly_params_dataset(station, start_date.year, month, new_p, type_="LC")
 
