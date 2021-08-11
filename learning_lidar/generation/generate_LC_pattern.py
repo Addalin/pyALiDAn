@@ -235,7 +235,7 @@ def main(station_name, start_date, end_date):
         _, monthdays = calendar.monthrange(year, month)
         start_dt = datetime(year, month, 1)
         end_dt = datetime(year, month, monthdays) + timedelta(days=1) - timedelta(seconds=station.freq)
-        gen_source_path = gen_utils.get_month_gen_params_path(station, start_dt, type='LC')
+        gen_source_path = gen_utils.get_month_gen_params_path(station, start_dt, type_='LC')
         month_slice = slice(start_dt, end_dt)
         xr_utils.save_dataset(dataset=new_p.sel(Time=month_slice), nc_path=gen_source_path)
         print(gen_source_path)  # TODO:  log

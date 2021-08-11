@@ -11,27 +11,28 @@ import learning_lidar.generation.generation_utils as gen_utils
 import learning_lidar.utils.global_settings as gs
 import learning_lidar.utils.vis_utils as vis_utils
 from learning_lidar.utils.utils import create_and_configer_logger
+import xarray as xr
 
 
 # TODO:  add 2 flags - Debug and save figure.
-def generate_daily_aerosol_density(station, day_date, SAVE_DS=True):
+def generate_daily_aerosol_density(station: gs.Station, day_date: datetime.date, SAVE_DS: bool = True) -> (
+        xr.Dataset, xr.Dataset):
     """
-    TODO: add usage
-    :param station:
-    :param day_date:
-    :param SAVE_DS:
-    :return:
+    Generate daily density (normalized and unit--less) , and optical density of aerosols: extinction (alpha [1/km]) ,
+    and backscatter (beta [1/km sr])) :param station: gs.station() object of the lidar station :param day_date:
+    datetime.date object of the required date :param SAVE_DS: bool. True - save the dataset :return: aer_ds,
+    density_ds : (xr.Dataset(), xr.Dataset()) - The aerosols optical density and the density datasets
     """
     logger = logging.getLogger()
     logger.debug(f"Start generate_daily_aerosol_density for {station.name} on {day_date}")
-    ds_day_params = gen_utils.get_daily_gen_param_ds(station=station, day_date=day_date, type='density_params')
+    ds_day_params = gen_utils.get_daily_gen_param_ds(station=station, day_date=day_date, type_='density_params')
 
     # Generate Daily Aerosols' Density
     density_ds = gen_den_utils.generate_density(station=station, day_date=day_date, day_params_ds=ds_day_params)
 
     # Generate Daily Aerosols' Optical Density
     aer_ds = gen_den_utils.generate_aerosol(station=station, day_date=day_date, day_params_ds=ds_day_params,
-                              density_ds=density_ds)
+                                            density_ds=density_ds)
 
     # TODO: add שמ option of 'size_optim' to optimize size from float64 to float32.
     #  example:  rho32= density_ds.rho.astype('float32',casting='same_kind')
@@ -44,7 +45,8 @@ def generate_daily_aerosol_density(station, day_date, SAVE_DS=True):
     return aer_ds, density_ds
 
 
-def generate_density_main(station_name='haifa', start_date=datetime(2017, 9, 1), end_date=datetime(2017, 9, 2)):
+def generate_density_main(station_name: str = 'haifa', start_date: datetime.date = datetime(2017, 9, 1),
+                          end_date: datetime.date = datetime(2017, 9, 2)):
     vis_utils.set_visualization_settings()
     gen_den_utils.PLOT_RESULTS = False  # Toggle True for debug. False for run.
     logging.getLogger('PIL').setLevel(logging.ERROR)  # Fix annoying PIL logs

@@ -26,7 +26,7 @@ vis_utils.set_visualization_settings()
 wavelengths = gs.LAMBDA_nm().get_elastic()
 
 
-def calc_total_optical_density(station, day_date):
+def calc_total_optical_density(station: gs.Station, day_date: datetime.date) -> xr.Dataset:
     """
     Generate total backscatter and extinction profiles
     :param station: gs.station() object of the lidar station
@@ -76,7 +76,7 @@ def calc_total_optical_density(station, day_date):
     return total_ds
 
 
-def calc_attbsc_da(station, day_date, total_ds):
+def calc_attbsc_da(station: gs.Station, day_date: datetime.date, total_ds: xr.Dataset) -> xr.DataArray:
     """
     Calculating the attenuated backscatter: attbsc = beta*exp(-2*tau)
     :param station: gs.station() object of the lidar station
@@ -118,7 +118,7 @@ def calc_attbsc_da(station, day_date, total_ds):
     return attbsc_da
 
 
-def get_daily_LC(station, day_date):
+def get_daily_LC(station: gs.Station, day_date: datetime.date) -> xr.DataArray:
     """
     Load daily generated Lidar power factor
     :param station: gs.station() object of the lidar station
@@ -126,7 +126,7 @@ def get_daily_LC(station, day_date):
     :return: xr.DataArray() of daily generated Lidar power factor
     """
     # %% 2.
-    ds_gen_p = gen_utils.get_daily_gen_param_ds(station, day_date, type='LC')
+    ds_gen_p = gen_utils.get_daily_gen_param_ds(station, day_date, type_='LC')
     day_slice = slice(day_date, day_date + timedelta(days=1) - timedelta(seconds=30))
     lc_da = ds_gen_p.p.sel(Time=day_slice)
     if PLOT_RESULTS:
@@ -140,14 +140,14 @@ def get_daily_LC(station, day_date):
     return lc_da
 
 
-def get_daily_bg(station, day_date):
+def get_daily_bg(station: gs.Station, day_date: datetime.date) -> xr.DataArray:
     """
     Load daily generated background signal
     :param station: gs.station() object of the lidar station
     :param day_date: datetime.date object of the required date
-    :return: xr.Dataset() of daily generated background signal. Having coordinates of: 'Wavelength','Time' (1D signal!)
+    :return: xr.DataArray() of daily generated background signal. Having coordinates of: 'Wavelength','Time' (1D signal!)
     """
-    bg_1D_ds = gen_utils.get_daily_gen_param_ds(station, day_date, type='bg')
+    bg_1D_ds = gen_utils.get_daily_gen_param_ds(station, day_date, type_='bg')
     day_slice = slice(day_date, day_date + timedelta(days=1) - timedelta(seconds=30))
     bg_1D_ds = bg_1D_ds.sel(Time=day_slice)
     p_bg = bg_1D_ds.bg
@@ -165,14 +165,15 @@ def get_daily_bg(station, day_date):
     return p_bg
 
 
-def calc_range_corr_signal_ds(station, day_date, attbsc_ds, lc_ds):
+def calc_range_corr_signal_da(station: gs.Station, day_date: datetime.date, attbsc_da: xr.DataArray,
+                              lc_da: xr.DataArray) -> xr.DataArray:
     """
     Calculating daily range corrected signal: pr2 = LC * attbsc
     :param station: gs.station() object of the lidar station
     :param day_date: datetime.date object of the required date
-    :param attbsc_ds: xr.Dataset(). The daily attenuated backscatter profile.
-    :param lc_ds: xr.Dataset() of daily generated Lidar power factor
-    :return: pr2_ds: xr.Dataset(). The daily range corrected signal,
+    :param attbsc_da: xr.DataArray(). The daily attenuated backscatter profile.
+    :param lc_da: xr.DataArray() of daily generated Lidar power factor
+    :return: pr2_ds: xr.DataArray(). The daily range corrected signal,
      with share 3 dimensions : 'Wavelength', 'Height', 'Time'
     """
     logger = logging.getLogger()
@@ -180,9 +181,9 @@ def calc_range_corr_signal_ds(station, day_date, attbsc_ds, lc_ds):
     pr2_c = []
     for wavelength in wavelengths:
         pr2_t = []
-        for t in tqdm(attbsc_ds.Time, desc=f"Wavelength - {wavelength} [nm]"):
-            attbsc_t = attbsc_ds.sel(Time=t)
-            LC_t = lc_ds.sel(Time=t)
+        for t in tqdm(attbsc_da.Time, desc=f"Wavelength - {wavelength} [nm]"):
+            attbsc_t = attbsc_da.sel(Time=t)
+            LC_t = lc_da.sel(Time=t)
             pr2 = xr.apply_ufunc(lambda x, y: (x * y),
                                  attbsc_t.sel(Wavelength=wavelength),
                                  LC_t.sel(Wavelength=wavelength), keep_attrs=True)
@@ -190,22 +191,23 @@ def calc_range_corr_signal_ds(station, day_date, attbsc_ds, lc_ds):
             pr2_t.append(pr2)
         pr2_c.append(xr.concat(pr2_t, dim='Time'))
 
-    pr2_ds = xr.concat(pr2_c, dim='Wavelength')
-    pr2_ds = pr2_ds.transpose('Wavelength', 'Height', 'Time')
-    pr2_ds.attrs = {'info': 'Generated Range Corrected Lidar Signal',
+    pr2_da = xr.concat(pr2_c, dim='Wavelength')
+    pr2_da = pr2_da.transpose('Wavelength', 'Height', 'Time')
+    pr2_da.attrs = {'info': 'Generated Range Corrected Lidar Signal',
                     'long_name': r'$LC \beta \cdot \exp(-2\tau)$', 'name': 'range_corr',
                     'units': r'$\rm$' + r'$photons$' + r'$\cdot km^2$',
                     'location': station.location, }
-    attbsc_ds.Height.attrs = {'units': r'$km$', 'info': 'Measurements heights above sea level'}
-    attbsc_ds.Wavelength.attrs = {'units': r'$\lambda$', 'units': r'$nm$'}
-    attbsc_ds['date'] = day_date
+    attbsc_da.Height.attrs = {'units': r'$km$', 'info': 'Measurements heights above sea level'}
+    attbsc_da.Wavelength.attrs = {'units': r'$\lambda$', 'units': r'$nm$'}
+    attbsc_da['date'] = day_date
     if PLOT_RESULTS:
-        vis_utils.plot_daily_profile(profile_ds=pr2_ds, figsize=(16, 8))
+        vis_utils.plot_daily_profile(profile_ds=pr2_da, figsize=(16, 8))
 
-    return pr2_ds
+    return pr2_da
 
 
-def calc_lidar_signal_da(station, day_date, r2_da, pr2_da):
+def calc_lidar_signal_da(station: gs.Station, day_date: datetime.date, r2_da: xr.DataArray,
+                         pr2_da: xr.DataArray) -> xr.DataArray:
     """
     Calculates daily lidar signal: p = pr2 / r^2
     :param station: gs.station() object of the lidar station
@@ -237,7 +239,7 @@ def calc_lidar_signal_da(station, day_date, r2_da, pr2_da):
     return p_da
 
 
-def calc_lidar_signal(station, day_date, total_ds):
+def calc_lidar_signal(station: gs.Station, day_date: datetime.date, total_ds: xr.Dataset) -> xr.Dataset:
     """
     Generate daily lidar signal, using the optical densities and the LC (Lidar Constant)
     :param station: gs.station() object of the lidar station
@@ -247,7 +249,7 @@ def calc_lidar_signal(station, day_date, total_ds):
     """
     attbsc_da = calc_attbsc_da(station, day_date, total_ds)  # attbsc = beta*exp(-2*tau)
     lc_da = get_daily_LC(station, day_date)  # LC
-    pr2_da = calc_range_corr_signal_ds(station, day_date, attbsc_da, lc_da)  # pr2 = LC * attbsc
+    pr2_da = calc_range_corr_signal_da(station, day_date, attbsc_da, lc_da)  # pr2 = LC * attbsc
     r2_da = prep_utils.calc_r2_da(station, day_date)  # r^2
     p_da = calc_lidar_signal_da(station, day_date, r2_da, pr2_da)  # p = pr2 / r^2
     pn_da = calc_poiss_measurement(station, day_date, p_da)  # lidar measurement: pn ~Poiss(p), w.o background
@@ -265,13 +267,14 @@ def calc_lidar_signal(station, day_date, total_ds):
     return signal_ds
 
 
-def calc_mean_measurement(station, day_date, p_da, bg_da):
+def calc_mean_measurement(station: gs.Station, day_date: datetime.date, p_da: xr.DataArray,
+                          bg_da: xr.DataArray) -> xr.DataArray:
     """
     Calculate mean signal measurement: mu_p = p_bg + p
     :param station: gs.station() object of the lidar station
     :param day_date: datetime.date object of the required date
-    :param signal_ds: xr.DataArray(). Containing the daily lidar signal (clean)
-    :param bg_ds: xr.DataArray(). The daily generated background signal
+    :param p_da: xr.DataArray(). Containing the daily lidar signal (clean)
+    :param bg_da: xr.DataArray(). The daily generated background signal
     :return: xr.DataArray(). The daily mean measurement of the lidar signal
     """
     p_mean = p_da + bg_da
@@ -287,7 +290,7 @@ def calc_mean_measurement(station, day_date, p_da, bg_da):
     return p_mean
 
 
-def calc_poiss_measurement(station, day_date, p_mean):
+def calc_poiss_measurement(station: gs.Station, day_date: datetime.date, p_mean: xr.DataArray) -> xr.DataArray:
     """
     Calculate lidar signal measurement: pn ~ Poiss(mu_p)
         $P_{measure}\simPoiss(\mu_{p} ) $
@@ -333,7 +336,8 @@ def calc_poiss_measurement(station, day_date, p_mean):
     return pn_da
 
 
-def calc_range_corr_measurement(station, day_date, pn_da, r2_da):
+def calc_range_corr_measurement(station: gs.Station, day_date: datetime.date, pn_da: xr.DataArray,
+                                r2_da: xr.DataArray) -> xr.DataArray:
     """
     Calculate generated range corrected measure: pr2n = pn * r^2
     :param station: gs.station() object of the lidar station
@@ -367,7 +371,7 @@ def calc_range_corr_measurement(station, day_date, pn_da, r2_da):
 
 
 def calc_daily_measurement(station: gs.Station, day_date: datetime.date, signal_ds: xr.Dataset,
-                           update_overlap_only: bool=False) -> xr.Dataset:
+                           update_overlap_only: bool = False) -> xr.Dataset:
     """
     Generate Lidar measurement, by combining background signal and the lidar signal,
     and then creating Poisson signal, which is the measurement of the mean lidar signal.
@@ -387,8 +391,8 @@ def calc_daily_measurement(station: gs.Station, day_date: datetime.date, signal_
     # apply overlap on the lidar signal
     overlap_ds = gen_utils.get_daily_overlap(station, day_date, height_indx=signal_ds.Height)
     p_da = xr.apply_ufunc(lambda x, r: (x * r),
-                            signal_ds.p, overlap_ds.overlap,
-                            keep_attrs=True).assign_attrs({'info': signal_ds.p.info+' with applied overlap'})
+                          signal_ds.p, overlap_ds.overlap,
+                          keep_attrs=True).assign_attrs({'info': signal_ds.p.info + ' with applied overlap'})
 
     # add background signal
     p_bg = get_daily_bg(station, day_date)  # daily background: p_bg
@@ -400,7 +404,8 @@ def calc_daily_measurement(station: gs.Station, day_date: datetime.date, signal_
     pn_da = calc_poiss_measurement(station, day_date, p_mean)  # lidar measurement: pn ~Poiss(mu_p)
     r2_da = prep_utils.calc_r2_da(station, day_date)
 
-    pr2n_da = calc_range_corr_measurement(station, day_date, pn_da, r2_da)  # range corrected measurement: pr2n = pn * r^2
+    pr2n_da = calc_range_corr_measurement(station, day_date, pn_da,
+                                          r2_da)  # range corrected measurement: pr2n = pn * r^2
     measure_ds = xr.Dataset().assign(p=pn_da, range_corr=pr2n_da, p_mean=p_mean,
                                      p_bg=bg_da, overlap=overlap_ds.overlap)
     measure_ds['date'] = day_date

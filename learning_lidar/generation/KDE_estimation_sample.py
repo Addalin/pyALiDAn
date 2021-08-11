@@ -407,7 +407,7 @@ def main(station, month, year, start_date, end_date, DATA_DIR):
     # save the dataset
     SAVE_DS = True
     if SAVE_DS:
-        gen_source_path = gen_utils.get_month_gen_params_path(station, start_day, type='density_params')
+        gen_source_path = gen_utils.get_month_gen_params_path(station, start_day, type_='density_params')
         print(gen_source_path)
         xr_utils.save_dataset(ds_month, os.path.dirname(gen_source_path), os.path.basename(gen_source_path))
 
