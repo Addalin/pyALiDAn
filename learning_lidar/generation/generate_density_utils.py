@@ -55,6 +55,8 @@ def get_random_sample_grid(nx, ny, orig_x, orig_y, std_ratio=.125):
     # set random point in each patch of the new grid
     points_x = center_x + dx
     points_y = center_y + dy
+    # TODO: Validate that each point of (points_x,points_y) is in the relevant patch, otherwise resample the point
+    #  location. See example of resampling and the the usage of gen_utils.valid_box_domain in KDE_estimation_sample.py
 
     new_grid = {'x': center_x.flatten(), 'y': center_y.flatten()}
     sample_points = {'x': points_x.flatten(), 'y': points_y.flatten()}
@@ -108,13 +110,14 @@ def create_multi_gaussian_density(grid, nx, ny, grid_x, grid_y, std_ratio=.125, 
         center_y = sample_points['y']
 
     # 2. Define covariance and distribution to each gaussian, and calculated the total density
-    density = np.zeros((grid.shape[0], grid.shape[1]))
+    density_pdf = np.zeros((grid.shape[0], grid.shape[1]))
     for x0, y0 in zip(center_x, center_y):
         cov = cov_size * get_random_cov_mat(lbound_x=cov_r_lbounds[0], lbound_y=cov_r_lbounds[1])
         rv = multivariate_normal((x0, y0), cov)
-        density += rv.pdf(grid)
+        density_pdf += rv.pdf(grid)
     # normalizing:
-    density = normalize(density)
+    density_pdf = density_pdf/density_pdf.sum()
+    density = normalize(density_pdf)
     return density
 
 

@@ -20,8 +20,6 @@ vis_utils.set_visualization_settings()
 
 # TODO: add debug and save of figures option
 # TODO : organize main() to functions & comments
-def valid_box_domain(x, y, bounds_x, bounds_y):
-    return bounds_x[0] <= x <= bounds_x[1] and bounds_y[0] <= y <= bounds_y[1]
 
 
 def plot_angstrom_exponent_distribution(x, y, x_label, y_label, date):
@@ -334,7 +332,7 @@ def main(station, month, year, start_date, end_date, DATA_DIR):
         VALID_DOMAIN = False
         while (~VALID_DOMAIN):
             sample_rm, sample_beta = kernel_rm_beta.resample(1)[:, 0]
-            VALID_DOMAIN = valid_box_domain(sample_rm, sample_beta,
+            VALID_DOMAIN = gen_utils.valid_box_domain(sample_rm, sample_beta,
                                             rm_bounds, beta_bounds)
         rm_v.append(sample_rm)
         beta_v.append(sample_beta)

@@ -305,3 +305,7 @@ def create_ratio(total_bins, mode='ones', start_height=0.3, ref_height=2.5, ref_
 def sigmoid(x, x0=0, A=0, K=1, B=1, v=0.4, C=1, Q=1):
     y = A + (K - A) / (eps + (C + Q * np.exp(-B * (x - x0))) ** (v))
     return (y)
+
+
+def valid_box_domain(x, y, bounds_x, bounds_y):
+    return bounds_x[0] <= x <= bounds_x[1] and bounds_y[0] <= y <= bounds_y[1]
