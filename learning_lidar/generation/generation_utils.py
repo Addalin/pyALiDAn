@@ -14,9 +14,9 @@ from learning_lidar.utils import xr_utils, global_settings as gs
 PLOT_RESULTS = False
 
 
-def get_gen_dataset_file_name(station, day_date, wavelength='*',
+def get_gen_dataset_file_name(station: gs.Station, day_date, wavelength='*',
                               data_source='lidar', file_type='range_corr',
-                              time_slice=None):
+                              time_slice=None) -> str:
     """
      Retrieves file pattern name of generated lidar dataset according to:
       station, date, wavelength.
@@ -42,7 +42,8 @@ def get_gen_dataset_file_name(station, day_date, wavelength='*',
     return file_name
 
 
-def save_generated_dataset(station, dataset, data_source='lidar', save_mode='both',
+def save_generated_dataset(station: gs.Station, dataset: xr.Dataset, data_source: str = 'lidar',
+                           save_mode: str = 'both',
                            profiles=None, time_slices=None):
     """
     Save the input dataset to netcdf file
@@ -115,7 +116,7 @@ def save_generated_dataset(station, dataset, data_source='lidar', save_mode='bot
     return ncpaths
 
 
-def get_month_gen_params_path(station, day_date, type_='density_params'):
+def get_month_gen_params_path(station: gs.Station, day_date: datetime.date, type_: str = 'density_params') -> str:
     """
     :param type_: type of generated parameter:
         'density_params' - for density sampler generator,
@@ -162,7 +163,7 @@ def get_daily_ds_path(station: gs.Station, day_date: datetime.date, type_: str) 
     return gen_source_path
 
 
-def get_month_gen_params_ds(station, day_date, type_='density_params'):
+def get_month_gen_params_ds(station: gs.Station, day_date: datetime.date, type_: str = 'density_params') -> xr.Dataset:
     """
     Returns the monthly parameters of density creation as a dataset.
     :param type_: type of generated parameter:
@@ -180,7 +181,7 @@ def get_month_gen_params_ds(station, day_date, type_='density_params'):
     return month_params_ds
 
 
-def get_daily_gen_param_ds(station, day_date, type_='density_params'):
+def get_daily_gen_param_ds(station: gs.Station, day_date: datetime.date, type_: str = 'density_params') -> xr.Dataset:
     """
     Returns the daily parameters of density creation as a dataset.
     :param type_: type of generated parameter:
@@ -231,7 +232,7 @@ def get_daily_overlap(station: gs.Station, day_date: datetime.date, height_index
     return overlap_ds
 
 
-def dt2binscale(dt_time, res_sec=30):
+def dt2binscale(dt_time: datetime.date, res_sec: int = 30) -> np.ndarray:
     """
     TODO consider to move this function to Station ?
     Returns the bin index corresponds to dt_time
@@ -317,3 +318,6 @@ def save_full_params_dataset(station, start_date, end_date, data, type_):
     folder_name = station.generation_folder
     nc_name = f"generated_{type_}_{station.name}_{start_date.strftime('%Y-%m-%d')}_{end_date.strftime('%Y-%m-%d')}.nc"
     xr_utils.save_dataset(data, folder_name, nc_name)
+
+def valid_box_domain(x, y, bounds_x, bounds_y):
+    return bounds_x[0] <= x <= bounds_x[1] and bounds_y[0] <= y <= bounds_y[1]

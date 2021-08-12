@@ -61,7 +61,7 @@ def update_params(config, consts):
 
 
 # ######## RESUME EXPERIMENT #########
-RESUME_EXP = False #'ERRORED_ONLY' # #'ERRORED_ONLY' # Can be "LOCAL" to continue experiment when it was disrupted
+RESUME_EXP = False #'ERRORED_ONLY' # Can be "LOCAL" to continue experiment when it was disrupted
 # (trials that were completed seem to continue training),
 # or "ERRORED_ONLY" to reset and rerun ERRORED trials (not tested). Otherwise False to start a new experiment.
 # Note: if fail_fast was 'True' in the the folder of 'EXP_NAME', then tune will not be able to load trials that didn't store any folder

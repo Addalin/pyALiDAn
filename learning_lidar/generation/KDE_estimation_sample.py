@@ -17,10 +17,6 @@ vis_utils.set_visualization_settings()
 
 # TODO: add debug and save of figures option
 # TODO : organize main() to functions & comments
-# TODO Highlight rejected sampling
-
-def valid_box_domain(x, y, bounds_x, bounds_y):
-    return bounds_x[0] <= x <= bounds_x[1] and bounds_y[0] <= y <= bounds_y[1]
 
 
 def plot_angstrom_exponent_distribution(x, y, x_label, y_label, date_):
@@ -339,7 +335,7 @@ def kde_estimation_main(args, month, year, DATA_DIR):
         valid_domain = False
         while ~valid_domain:
             sample_rm, sample_beta = kernel_rm_beta.resample(1)[:, 0]
-            valid_domain = valid_box_domain(sample_rm, sample_beta,
+            valid_domain = gen_utils.valid_box_domain(sample_rm, sample_beta,
                                             rm_bounds, beta_bounds)
         rm_v.append(sample_rm)
         beta_v.append(sample_beta)

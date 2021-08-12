@@ -572,12 +572,12 @@ def generate_daily_molecular_chan(station, day_date, lambda_nm, time_res='30S',
     return ds_chan
 
 
-def calc_r2_ds(station, day_date):
+def calc_r2_da(station, day_date):
     """
     calc r^2 (as 2D image)
     :param station: gs.station() object of the lidar station
     :param day_date: datetime.date object of the required date
-    :return: xr.Dataset(). A a daily r^2 dataset
+    :return: xr.DataArray(). A a daily r^2 dataset
     """
     # TODO add USE_KM_UNITS flag and units is km if  USE_KM_UNITS else m
     height_bins = station.get_height_bins_values()
@@ -811,7 +811,7 @@ def get_raw_lidar_signal(station: gs.Station, day_date: datetime, height_slice: 
     return ds
 
 
-def get_daily_measurements(station: gs.Station, day_date: Union[datetime.date, datetime], use_km_units: bool = True) \
+def get_daily_raw_measurements(station: gs.Station, day_date: Union[datetime.date, datetime], use_km_units: bool = True) \
         -> xr.Dataset:
     """
     Retrieving daily range corrected lidar signal (pr^2), background and raw lidar signal
@@ -855,7 +855,7 @@ def get_daily_measurements(station: gs.Station, day_date: Union[datetime.date, d
     p_bg = bg_mean.p.broadcast_like(pn_ds.p)
 
     # Raw Range Corrected Lidar Signal
-    r2_ds = calc_r2_ds(station, day_date)
+    r2_ds = calc_r2_da(station, day_date)
     pr2n = (pn_ds.p.copy(deep=True) * r2_ds)  # calc_range_corr_measurement #
     # TODO add assert np.sum(r2_ds.Height.values- pn_ds.p.Height.values)==0
     #  assert np.sum(r2_ds.Time.values- pn_ds.p.Time.values) == np.timedelta64(0,'ns')

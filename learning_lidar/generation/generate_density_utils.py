@@ -49,6 +49,8 @@ def get_random_sample_grid(nx, ny, orig_x, orig_y, std_ratio=.125):
     # set random point in each patch of the new grid
     points_x = center_x + dx
     points_y = center_y + dy
+    # TODO: Validate that each point of (points_x,points_y) is in the relevant patch, otherwise resample the point
+    #  location. See example of resampling and the the usage of gen_utils.valid_box_domain in KDE_estimation_sample.py
 
     new_grid = {'x': center_x.flatten(), 'y': center_y.flatten()}
     sample_points = {'x': points_x.flatten(), 'y': points_y.flatten()}
@@ -102,13 +104,14 @@ def create_multi_gaussian_density(grid, nx, ny, grid_x, grid_y, std_ratio=.125, 
         center_y = sample_points['y']
 
     # 2. Define covariance and distribution to each gaussian, and calculated the total density
-    density = np.zeros((grid.shape[0], grid.shape[1]))
+    density_pdf = np.zeros((grid.shape[0], grid.shape[1]))
     for x0, y0 in zip(center_x, center_y):
         cov = cov_size * get_random_cov_mat(lbound_x=cov_r_lbounds[0], lbound_y=cov_r_lbounds[1])
         rv = multivariate_normal((x0, y0), cov)
-        density += rv.pdf(grid)
+        density_pdf += rv.pdf(grid)
     # normalizing:
-    density = proc_utils.normalize(density)
+    density_pdf = density_pdf/density_pdf.sum()
+    density = proc_utils.normalize(density_pdf)
     return density
 
 
@@ -140,7 +143,6 @@ def set_gaussian_component(nx, ny, cov_size, choose_ratio, std_ratio, cov_r_lbou
     :param cov_r_lbounds:
     :param start_bin: setting height bounds for randomizing Gaussians
     :param top_bin: setting height bounds for randomizing Gaussians
-    :param PLOT_RESULTS:
     :return:
     """
 
@@ -361,8 +363,8 @@ def merge_density_components(density_ds):
     merged = xr.zeros_like(density_ds.density[0])
 
     # Summing up the components to an aerosol density $\rho_{aer}$
-    for l in density_ds.Component:
-        merged += density_ds.density.sel(Component=l) * density_ds.weights.sel(Component=l)
+    for component_idx in density_ds.Component:
+        merged += density_ds.density.sel(Component=component_idx) * density_ds.weights.sel(Component=component_idx)
 
     merged.attrs = {'info': 'Merged density', 'name': 'Density',
                     'long_name': r'$\rho$', 'units': r'$A.U.$'}
@@ -445,7 +447,7 @@ def generate_density_components(total_time_bins, total_height_bins, time_index, 
         for t, ax in zip(times,
                          axes.ravel()):
             density_ds.density.sel(Time=t).plot.line(ax=ax, y='Height')
-            ax.set_title(pd.to_datetime(str(t)).strftime('%H:%M:%S'))
+            ax.set_title(pd.to_datetime(str(t)).strftime("%H:%M:%S"))
         plt.tight_layout()
         plt.show()
 
@@ -572,7 +574,7 @@ def calc_normalized_tau(dr, sigma_normalized):
 
 def get_LR_ds(station, day_date, day_params_ds):
     """
-    TODO add usags
+    TODO add usages
     :param station:
     :param day_date:
     :param day_params_ds:
@@ -598,7 +600,7 @@ def get_LR_ds(station, day_date, day_params_ds):
         tbins[2] = station.total_time_bins
 
     # Fit of the splines
-    cs_LR = CubicSpline(tbins, LRs)  # TODO replace to bazier interpolation
+    cs_LR = CubicSpline(tbins, LRs)  # TODO replace to bezier interpolation
 
     # Calculate the spline for day bins: meaning: 2880 bins + 1 for 00:00 on the next day
     LR = cs_LR(np.arange(station.total_time_bins))
@@ -778,7 +780,7 @@ def generate_sigma_ds(station, day_date, day_params_ds, density_ds):
         fig, axes = plt.subplots(nrows=1, ncols=3, figsize=(10, 6), sharey=True)
         for t, ax in zip(times, axes.ravel()):
             sigma_ds.sel(Time=t).plot.line(ax=ax, y='Height', hue='Wavelength')
-            ax.set_title(pd.to_datetime(str(t)).strftime('%H:%M:%S'))
+            ax.set_title(pd.to_datetime(str(t)).strftime("%H:%M:%S"))
         str_date = sigma_ds.Time[0].dt.strftime("%Y-%m-%d").values.tolist()
         plt.suptitle(fr"{sigma_ds.long_name} at different times - {str_date}")
         plt.tight_layout()
@@ -868,7 +870,7 @@ def wrap_aerosol_dataset(station, day_date, day_params_ds, sigma_ds, beta_ds, an
                     'source_file': os.path.basename(__file__),
                     'location': station.location, }
     aer_ds.Height.attrs = {'units': r'$km$', 'info': 'Measurements heights above sea level'}
-    aer_ds.Wavelength.attrs = {'units': r'$\lambda$', 'units': r'$nm$'}
+    aer_ds.Wavelength.attrs = {'long_name': r'$\lambda$', 'units': r'$nm$'}
     aer_ds = aer_ds.transpose('Wavelength', 'Height', 'Time')
     aer_ds['date'] = day_date
     return aer_ds

@@ -1,9 +1,11 @@
 import logging
 import os
+from datetime import datetime
 from itertools import repeat
 from multiprocessing import Pool, cpu_count
 
 import pandas as pd
+import xarray as xr
 
 import learning_lidar.generation.generate_density_utils as gen_den_utils
 import learning_lidar.generation.generation_utils as gen_utils
@@ -11,13 +13,13 @@ from learning_lidar.utils import utils, vis_utils, global_settings as gs
 
 
 # TODO:  add 2 flags - Debug and save figure.
-def generate_daily_aerosol_density(station, day_date, save_ds):
+def generate_daily_aerosol_density(station: gs.Station, day_date: datetime.date, save_ds: bool = True) -> (
+        xr.Dataset, xr.Dataset):
     """
-    TODO: add usage
-    :param station:
-    :param day_date:
-    :param save_ds:
-    :return:
+    Generate daily density (normalized and unit--less) , and optical density of aerosols: extinction (alpha [1/km]) ,
+    and backscatter (beta [1/km sr])) :param station: gs.station() object of the lidar station :param day_date:
+    datetime.date object of the required date :param SAVE_DS: bool. True - save the dataset :return: aer_ds,
+    density_ds : (xr.Dataset(), xr.Dataset()) - The aerosols optical density and the density datasets
     """
     logger = logging.getLogger()
     logger.debug(f"Start generate_daily_aerosol_density for {station.name} on {day_date}")
@@ -41,7 +43,7 @@ def generate_daily_aerosol_density(station, day_date, save_ds):
     return aer_ds, density_ds
 
 
-def generate_density_main(params):
+def generate_density_main(station_name='haifa', start_date=datetime(2017, 9, 1), end_date=datetime(2017, 9, 2)):
     vis_utils.set_visualization_settings()
     gen_utils.PLOT_RESULTS = params.plot_results
     logging.getLogger('PIL').setLevel(logging.ERROR)  # Fix annoying PIL logs

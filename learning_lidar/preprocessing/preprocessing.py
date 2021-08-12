@@ -138,7 +138,7 @@ def preprocessing_main(params):
         for day_date in tqdm(valid_gdas_days):
             # Generate daily range corrected
             # TODO delete the raw separated lidar measurements after creating the merge dataset
-            lidar_ds = prep_utils.get_daily_measurements(station, day_date, use_km_units=params.use_km_unit)
+            lidar_ds = prep_utils.get_daily_raw_measurements(station, day_date, use_km_units=params.use_km_unit)
 
             # Save lidar dataset
             lidar_paths = xr_utils.save_prep_dataset(station, lidar_ds, data_source='lidar', save_mode='single')
