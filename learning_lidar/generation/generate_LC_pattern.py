@@ -10,14 +10,11 @@ import torch.utils.data
 import xarray as xr
 
 import learning_lidar.generation.generation_utils as gen_utils
-import learning_lidar.utils.global_settings as gs
-import learning_lidar.utils.vis_utils as vis_utils
-import learning_lidar.utils.xr_utils as xr_utils
-from learning_lidar.utils import utils
-from learning_lidar.utils.proc_utils import Bezier
+from learning_lidar.utils import utils, xr_utils, vis_utils, proc_utils, global_settings as gs
 
 eps = np.finfo(np.float).eps
 torch.manual_seed(8318)
+
 
 # TODO:  add 2 flags - Debug and save figure.
 # TODO : organize main() to functions & comments
@@ -34,8 +31,12 @@ sns.set_theme()
 vis_utils.set_visualization_settings()
 
 
-def main(station_name, start_date, end_date):
-    # ## Load extended calibration database
+def generate_LC_pattern_main(params):
+    station_name = params.station_name
+    start_date = params.start_date
+    end_date = params.end_date
+
+    # Load extended calibration database
     station = gs.Station(station_name=station_name)
     wavelengths = gs.LAMBDA_nm().get_elastic()
 
@@ -45,35 +46,39 @@ def main(station_name, start_date, end_date):
     ds_path_extended = os.path.join(data_folder, ds_extended_name)
     ds_extended = xr_utils.load_dataset(ds_path_extended)
 
-    csv_extended_name = f"dataset_{station_name}_{start_date.strftime('%Y-%m-%d')}_{end_date.strftime('%Y-%m-%d')}_extended.csv"
-    csv_path_extended = os.path.join(data_folder, csv_extended_name)
+    if params.plot_results:
+        fig, ax = plt.subplots(ncols=1, nrows=1, figsize=(7, 5))
+        ds_extended.LC.plot(ax=ax, hue='Wavelength', linewidth=0.8)
+        ds_extended.plot.scatter(ax=ax, y='LC', x='Time',
+                                 hue='Wavelength',
+                                 s=8, hue_style='discrete', edgecolor='w')
+        ax.set_title(
+            fr"{ds_extended.LC.long_name} for {start_date.strftime('%d/%m/%Y')}--{end_date.strftime('%d/%m/%Y')}")
+        ax.ticklabel_format(axis='y', style="sci", scilimits=(0, 0))
+        plt.tight_layout()
+        plt.show()
 
-    fig, ax = plt.subplots(ncols=1, nrows=1, figsize=(7, 5))
-    ds_extended.LC.plot(ax=ax, hue='Wavelength', linewidth=0.8)
-    ds_extended.plot.scatter(ax=ax, y='LC', x='Time',
-                             hue='Wavelength',
-                             s=8, hue_style='discrete', edgecolor='w')
-    ax.set_title(fr"{ds_extended.LC.long_name} for {start_date.strftime('%d/%m/%Y')}--{end_date.strftime('%d/%m/%Y')}")
-    ax.ticklabel_format(axis='y', style="sci", scilimits=(0, 0))
-    plt.tight_layout()
-    plt.show()
-
-    fig, ax = plt.subplots(ncols=1, nrows=1, figsize=(7, 5))
-    ds_extended.sel(Time=slice(start_date, start_date + timedelta(hours=24))).LC.plot(ax=ax, hue='Wavelength', linewidth=0.5)
-    ds_extended.sel(Time=slice(start_date, start_date + timedelta(hours=24))).plot.scatter(ax=ax, y='LC', x='Time',
-                                                                                     hue='Wavelength', s=15,
-                                                                                     hue_style='discrete', edgecolor='w')
-    ax.set_title(fr"{ds_extended.LC.long_name} for {start_date.strftime('%d/%m/%Y')}")
-    ax.ticklabel_format(axis='y', style="sci", scilimits=(0, 0))
-    plt.tight_layout()
-    plt.show()
+        fig, ax = plt.subplots(ncols=1, nrows=1, figsize=(7, 5))
+        # TODO requires - conda install -c conda-forge nc-time-axis
+        ds_extended.sel(Time=slice(start_date, start_date + timedelta(hours=24))).LC.plot(ax=ax, hue='Wavelength',
+                                                                                          linewidth=0.5)
+        ds_extended.sel(Time=slice(start_date, start_date + timedelta(hours=24))).plot.scatter(ax=ax, y='LC', x='Time',
+                                                                                               hue='Wavelength', s=15,
+                                                                                               hue_style='discrete',
+                                                                                               edgecolor='w')
+        ax.set_title(fr"{ds_extended.LC.long_name} for {start_date.strftime('%d/%m/%Y')}")
+        ax.ticklabel_format(axis='y', style="sci", scilimits=(0, 0))
+        plt.tight_layout()
+        plt.show()
 
     # ### Creating pattern of laser power through days
     # #### 1. The lidar factor is dependent on optical and geometrical values of the system.
     # #### 2. From the LC retrieved by TROPOS it seems as it has an exponential decay through the period.
     # #### 3. Therefore, first generating decay power $p(t)=p_0\cdot\exp(-\frac{t-t_0}{t_{decay}})$
-    # #### 4. Then calculating upper and lower bounding curves of interval of confidence. The interval of confidence is  set as $[\pm5\%,\pm25\% ]$. Higher confidence is for higher power values (meaning small interval of confidence).
-    # #### 4. Then the new power is randomly generated withing the interval of confidence per time $t$
+    # #### 4. Then calculating upper and lower bounding curves of interval of confidence.
+    # The interval of confidence is  set as $[\pm5\%,\pm25\% ]$.
+    # Higher confidence is for higher power values (meaning small interval of confidence).
+    # #### 5. Then the new power is randomly generated withing the interval of confidence per time $t$
 
     # Set the times for generating random powers.
     freq_H = 5  # choose some hourly frequency e.g. 3,4,7 hrs...
@@ -99,10 +104,12 @@ def main(station_name, start_date, end_date):
     max_powers = [25000, 70000, 60000]
     ds_chans = []
     for wavelength, p0 in zip(wavelengths, max_powers):
-        c1 = df_times[period1].apply(lambda row: decay_p(row.t_day, peak_days[0], p0, days_decay), axis=1, result_type='expand')
-        c2 = df_times[period2].apply(lambda row: decay_p(row.t_day, peak_days[1], p0, days_decay), axis=1, result_type='expand')
+        c1 = df_times[period1].apply(lambda row: decay_p(row.t_day, peak_days[0], p0, days_decay), axis=1,
+                                     result_type='expand')
+        c2 = df_times[period2].apply(lambda row: decay_p(row.t_day, peak_days[1], p0, days_decay), axis=1,
+                                     result_type='expand')
         ds_chans.append(xr.Dataset(
-            data_vars={'p': (('Time'), pd.concat([c1, c2])),
+            data_vars={'p': ('Time', pd.concat([c1, c2])),
                        'lambda_nm': ('Wavelength', np.uint16([wavelength]))
                        },
             coords={'Time': df_times.date.values,
@@ -126,37 +133,39 @@ def main(station_name, start_date, end_date):
                                                     ds_gen_p.p_lbound, ds_gen_p.p_ubound,
                                                     np.random.rand(3, ds_gen_p.Time.size), keep_attrs=True))
 
-    fig, ax = plt.subplots(ncols=1, nrows=1, figsize=(7, 5))
-    ds_gen_p.p.plot(ax=ax, hue='Wavelength', linewidth=0.8)
-    ax.set_title(fr"{ds_gen_p.p.long_name} for {start_date.strftime('%d/%m/%Y')}--{end_date.strftime('%d/%m/%Y')}")
-    ax.ticklabel_format(axis='y', style="sci", scilimits=(0, 0))
-    plt.tight_layout()
-    plt.show()
+    if params.plot_results:
+        fig, ax = plt.subplots(ncols=1, nrows=1, figsize=(7, 5))
+        ds_gen_p.p.plot(ax=ax, hue='Wavelength', linewidth=0.8)
+        ax.set_title(fr"{ds_gen_p.p.long_name} for {start_date.strftime('%d/%m/%Y')}--{end_date.strftime('%d/%m/%Y')}")
+        ax.ticklabel_format(axis='y', style="sci", scilimits=(0, 0))
+        plt.tight_layout()
+        plt.show()
 
-    fig, ax = plt.subplots(ncols=1, nrows=1, figsize=(7, 5))
-    ds_gen_p.p.plot(ax=ax, hue='Wavelength', linewidth=0.5)
-    for wavelength, c in zip(wavelengths, vis_utils.COLORS):
-        ax.fill_between(ds_gen_p.Time.values,
-                        ds_gen_p.p_lbound.sel(Wavelength=wavelength).values,
-                        ds_gen_p.p_ubound.sel(Wavelength=wavelength).values,
-                        color=c, alpha=.1)
-    ax.set_title(fr"{ds_gen_p.p.long_name} for {start_date.strftime('%d/%m/%Y')}--{end_date.strftime('%d/%m/%Y')}")
-    ax.ticklabel_format(axis='y', style="sci", scilimits=(0, 0))
-    plt.tight_layout()
-    plt.show()
+        fig, ax = plt.subplots(ncols=1, nrows=1, figsize=(7, 5))
+        ds_gen_p.p.plot(ax=ax, hue='Wavelength', linewidth=0.5)
+        for wavelength, c in zip(wavelengths, vis_utils.COLORS):
+            ax.fill_between(ds_gen_p.Time.values,
+                            ds_gen_p.p_lbound.sel(Wavelength=wavelength).values,
+                            ds_gen_p.p_ubound.sel(Wavelength=wavelength).values,
+                            color=c, alpha=.1)
+        ax.set_title(fr"{ds_gen_p.p.long_name} for {start_date.strftime('%d/%m/%Y')}--{end_date.strftime('%d/%m/%Y')}")
+        ax.ticklabel_format(axis='y', style="sci", scilimits=(0, 0))
+        plt.tight_layout()
+        plt.show()
 
-    fig, ax = plt.subplots(ncols=1, nrows=1, figsize=(7, 5))
-    ds_gen_p.p.plot(ax=ax, hue='Wavelength', linewidth=0.5)
-    ds_gen_p.plot.scatter(ax=ax, y='p_new', x='Time', hue='Wavelength', s=8, hue_style='discrete', edgecolor='w')
-    for wavelength, c in zip(wavelengths, vis_utils.COLORS):
-        ax.fill_between(ds_gen_p.Time.values,
-                        ds_gen_p.p_lbound.sel(Wavelength=wavelength).values,
-                        ds_gen_p.p_ubound.sel(Wavelength=wavelength).values,
-                        color=c, alpha=.1)
-    ax.set_title(fr"Random {ds_gen_p.p.long_name} for {start_date.strftime('%d/%m/%Y')}--{end_date.strftime('%d/%m/%Y')}")
-    ax.ticklabel_format(axis='y', style="sci", scilimits=(0, 0))
-    plt.tight_layout()
-    plt.show()
+        fig, ax = plt.subplots(ncols=1, nrows=1, figsize=(7, 5))
+        ds_gen_p.p.plot(ax=ax, hue='Wavelength', linewidth=0.5)
+        ds_gen_p.plot.scatter(ax=ax, y='p_new', x='Time', hue='Wavelength', s=8, hue_style='discrete', edgecolor='w')
+        for wavelength, c in zip(wavelengths, vis_utils.COLORS):
+            ax.fill_between(ds_gen_p.Time.values,
+                            ds_gen_p.p_lbound.sel(Wavelength=wavelength).values,
+                            ds_gen_p.p_ubound.sel(Wavelength=wavelength).values,
+                            color=c, alpha=.1)
+        ax.set_title(
+            fr"Random {ds_gen_p.p.long_name} for {start_date.strftime('%d/%m/%Y')}--{end_date.strftime('%d/%m/%Y')}")
+        ax.ticklabel_format(axis='y', style="sci", scilimits=(0, 0))
+        plt.tight_layout()
+        plt.show()
 
     # #### 5. Calculate interpolated lidar power per each wavelength for the period from the randomized powers.
     # - The calculation is based on a fit of randomised powers $p_t, t \in [0,t_{np}]$, with Bezier interpolation.
@@ -164,7 +173,8 @@ def main(station_name, start_date, end_date):
     # - $dn$ is set according to lidar measuring frequency of $\delta_t = 30[s]$
     # - For a period starting at $t_0$, ending at $t_{np}$, there are $np$ randomised points
     # 	-  The total measurements bins will be $n_{total}=\frac {t_1 - t_0 [s]}{\delta_t[s]}$
-    # 	-  The amount of interpolated bins between each couple is $dn = \frac{n_{total}}{np-1}$, where $np-1$ is the number of cubic curves to evaluate.
+    # 	-  The amount of interpolated bins between each couple is $dn = \frac{n_{total}}{np-1}$,
+    # 	where $np-1$ is the number of cubic curves to evaluate.
     #
     # #### 6. Converting Bezier paths to LC(t) and creating dataset of generated lidar power.
 
@@ -189,9 +199,9 @@ def main(station_name, start_date, end_date):
     paths_chan = []
     for wavelength in wavelengths:
         points[:, 1] = ds_gen_p.p_new.sel(Wavelength=wavelength, Time=tslice).values
-        path = Bezier.evaluate_bezier(points, dn_t)
+        path = proc_utils.Bezier.evaluate_bezier(points, dn_t)
         paths_chan.append(xr.Dataset(
-            data_vars={'p': (('Time'), path[:, 1]),
+            data_vars={'p': ('Time', path[:, 1]),
                        'lambda_nm': ('Wavelength', np.uint16([wavelength]))
                        },
             coords={'Time': power_time_index.values,
@@ -203,50 +213,44 @@ def main(station_name, start_date, end_date):
                      'info': 'LC - Lidar constant - from generation'}
     new_p.Wavelength.attrs = {'long_name': r'$\lambda$', 'units': r'$nm$'}
 
-    fig, ax = plt.subplots(ncols=1, nrows=1, figsize=(10, 5))
-    for wavelength, c in zip(wavelengths, vis_utils.COLORS):
-        ax.fill_between(ds_gen_p.Time.values,
-                        ds_gen_p.p_lbound.sel(Wavelength=wavelength).values,
-                        ds_gen_p.p_ubound.sel(Wavelength=wavelength).values,
-                        color=c, alpha=.1)
-    ds_gen_p.plot.scatter(ax=ax, y='p_new', x='Time', hue='Wavelength', s=10, hue_style='discrete', edgecolor='w')
-    new_p.p.plot(ax=ax, hue='Wavelength', linewidth=0.8)
-    ax.set_title(
-        fr"B\'ezier interpolation of {new_p.p.long_name} for {start_date.strftime('%d/%m/%Y')}-- {end_date.strftime('%d/%m/%Y')}")
-    ax.ticklabel_format(axis='y', style="sci", scilimits=(0, 0))
-    plt.tight_layout()
-    plt.show()
-
-    curdays = [start_date + timedelta(days=1 * n * 8) for n in range(8)]
-    for cur_day in curdays:
-        day_slice = slice(cur_day, cur_day + timedelta(hours=24) - timedelta(seconds=30))
-        fig, ax = plt.subplots(ncols=1, nrows=1, figsize=(8, 5))
-        new_p.p.sel(Time=day_slice).plot(ax=ax, hue='Wavelength', linewidth=0.8)
-        ds_gen_p.sel(Time=day_slice).plot.scatter(ax=ax, y='p_new', x='Time', hue='Wavelength', s=15, hue_style='discrete',
-                                                  edgecolor='w')
+    if params.plot_results:
+        fig, ax = plt.subplots(ncols=1, nrows=1, figsize=(10, 5))
+        for wavelength, c in zip(wavelengths, vis_utils.COLORS):
+            ax.fill_between(ds_gen_p.Time.values,
+                            ds_gen_p.p_lbound.sel(Wavelength=wavelength).values,
+                            ds_gen_p.p_ubound.sel(Wavelength=wavelength).values,
+                            color=c, alpha=.1)
+        ds_gen_p.plot.scatter(ax=ax, y='p_new', x='Time', hue='Wavelength', s=10, hue_style='discrete', edgecolor='w')
+        new_p.p.plot(ax=ax, hue='Wavelength', linewidth=0.8)
+        ax.set_title(fr"B\'ezier interpolation of {new_p.p.long_name} for "
+                     fr"{start_date.strftime('%d/%m/%Y')}-- {end_date.strftime('%d/%m/%Y')}")
         ax.ticklabel_format(axis='y', style="sci", scilimits=(0, 0))
-        ax.set_title(fr"B\'ezier interpolation of {new_p.p.long_name} - for {cur_day.strftime('%d/%m/%Y')}")
         plt.tight_layout()
         plt.show()
 
-    # %% Save monthly LC dataset
-    year = start_date.year
-    for month in range(start_date.month, end_date.month + 1):
-        _, monthdays = calendar.monthrange(year, month)
-        start_dt = datetime(year, month, 1)
-        end_dt = datetime(year, month, monthdays) + timedelta(days=1) - timedelta(seconds=station.freq)
-        gen_source_path = gen_utils.get_month_gen_params_path(station, start_dt, type_='LC')
-        month_slice = slice(start_dt, end_dt)
-        xr_utils.save_dataset(dataset=new_p.sel(Time=month_slice), nc_path=gen_source_path)
-        print(gen_source_path)  # TODO:  log
+        curdays = [start_date + timedelta(days=1 * n * 8) for n in range(8)]
+        for cur_day in curdays:
+            day_slice = slice(cur_day, cur_day + timedelta(hours=24) - timedelta(seconds=30))
+            fig, ax = plt.subplots(ncols=1, nrows=1, figsize=(8, 5))
+            new_p.p.sel(Time=day_slice).plot(ax=ax, hue='Wavelength', linewidth=0.8)
+            ds_gen_p.sel(Time=day_slice).plot.scatter(ax=ax, y='p_new', x='Time', hue='Wavelength', s=15,
+                                                      hue_style='discrete',
+                                                      edgecolor='w')
+            ax.ticklabel_format(axis='y', style="sci", scilimits=(0, 0))
+            ax.set_title(fr"B\'ezier interpolation of {new_p.p.long_name} - for {cur_day.strftime('%d/%m/%Y')}")
+            plt.tight_layout()
+            plt.show()
 
-    folder_name = station.generation_folder
-    nc_name = f"generated_LC_{station.name}_{start_date.strftime('%Y-%m-%d')}_{end_date.strftime('%Y-%m-%d')}.nc"
-    xr_utils.save_dataset(new_p, folder_name, nc_name)
+    # %% Save monthly LC dataset
+    if params.save_ds:
+        for month in range(start_date.month, end_date.month + 1):
+            gen_utils.save_monthly_params_dataset(station, start_date.year, month, new_p, type_="LC")
+
+        gen_utils.save_full_params_dataset(station, start_date, end_date, new_p, type_="LC")
 
 
 if __name__ == '__main__':
-    station_name = 'haifa'
-    start_date = datetime(2017, 9, 1)
-    end_date = datetime(2017, 10, 31, 23, 59, 30)
-    main(station_name, start_date, end_date)
+    parser = utils.get_base_arguments()
+    args = parser.parse_args()
+
+    generate_LC_pattern_main(args)

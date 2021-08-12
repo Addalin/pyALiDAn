@@ -14,23 +14,22 @@ import pandas as pd
 import xarray as xr
 
 # %% Local modules imports
+
 import learning_lidar.preprocessing.preprocessing_utils as prep_utils
-import learning_lidar.utils.global_settings as gs
 import learning_lidar.dataseting.dataseting_utils as ds_utils
-import learning_lidar.utils.xr_utils as xr_utils
 from learning_lidar.generation.daily_signals_generations_utils import get_daily_bg
-from learning_lidar.utils.utils import create_and_configer_logger, get_base_arguments
 import learning_lidar.generation.generation_utils as gen_utils
+from learning_lidar.utils import utils, xr_utils, global_settings as gs
 
 
-def dataseting_main(args, log_level=logging.DEBUG):
+def dataseting_main(params, log_level=logging.DEBUG):
     logging.getLogger('matplotlib').setLevel(logging.ERROR)  # Fix annoying matplotlib logs
     logging.getLogger('PIL').setLevel(logging.ERROR)  # Fix annoying PIL logs
-    logger = create_and_configer_logger(f"{os.path.basename(__file__)}.log", level=log_level)
-    logger.info(args)
-    station_name = args.station_name
-    start_date = args.start_date
-    end_date = args.end_date
+    logger = utils.create_and_configer_logger(f"{os.path.basename(__file__)}.log", level=log_level)
+    logger.info(params)
+    station_name = params.station_name
+    start_date = params.start_date
+    end_date = params.end_date
 
     # Load data of station
     station = gs.Station(station_name=station_name)
@@ -49,7 +48,7 @@ def dataseting_main(args, log_level=logging.DEBUG):
     csv_gen_path = os.path.join(data_folder, f"dataset_gen_{station_name}_"
                                              f"{start_date.strftime('%Y-%m-%d')}_{end_date.strftime('%Y-%m-%d')}.csv")
 
-    if args.DO_DATASET:
+    if params.do_dataset:
         logger.info(
             f"\nStart generating dataset for period: "
             f"[{start_date.strftime('%Y-%m-%d')},{end_date.strftime('%Y-%m-%d')}]")
@@ -59,7 +58,7 @@ def dataseting_main(args, log_level=logging.DEBUG):
                             end_date=end_date, sample_size=sample_size)
 
         # Convert m to km
-        if args.USE_KM_UNITS:
+        if params.use_km_unit:
             df = ds_utils.convert_Y_features_units(df)
 
         df.to_csv(csv_path, index=False)
@@ -67,7 +66,7 @@ def dataseting_main(args, log_level=logging.DEBUG):
         # TODO: add creation of dataset statistics following its creation.
         #         adapt calc_data_statistics(station, start_date, end_date)
 
-    if args.create_train_test_splits:
+    if params.create_train_test_splits:
         logger.info(
             f"Splitting to train-test the dataset for period: [{start_date.strftime('%Y-%m-%d')},"
             f"{end_date.strftime('%Y-%m-%d')}]")
@@ -75,7 +74,7 @@ def dataseting_main(args, log_level=logging.DEBUG):
         logger.info(f"Done splitting train-test dataset for {csv_path}")
 
     # Create extended dataset and save to csv - recalculation of Lidar Constant (currently this is a naive calculation)
-    if args.EXTEND_DATASET:
+    if params.extend_dataset:
         logger.info(
             f"Start extending dataset for period: [{start_date.strftime('%Y-%m-%d')},{end_date.strftime('%Y-%m-%d')}]")
         if 'df' not in globals():
@@ -87,7 +86,7 @@ def dataseting_main(args, log_level=logging.DEBUG):
 
     # Create calibration dataset from the extended df (or csv) = by splitting df to A dataset according to wavelengths
     # and time coordinates.
-    if args.do_calibration_dataset:
+    if params.do_calibration_dataset:
         logger.info(
             f"Start creating calibration dataset for period: [{start_date.strftime('%Y-%m-%d')},"
             f"{end_date.strftime('%Y-%m-%d')}]")
@@ -99,7 +98,7 @@ def dataseting_main(args, log_level=logging.DEBUG):
         xr_utils.save_dataset(ds_calibration, os.path.curdir, ds_path_extended)
         logger.info(f"The calibration dataset saved to :{ds_path_extended}")
 
-    if args.do_generated_dataset:
+    if params.do_generated_dataset:
         logger.info(
             f"\nStart creating generated dataset for period:"
             f" [{start_date.strftime('%Y-%m-%d')},{end_date.strftime('%Y-%m-%d')}]")
@@ -107,25 +106,25 @@ def dataseting_main(args, log_level=logging.DEBUG):
         generated_df.to_csv(csv_gen_path, index=False)
         logger.info(f"\nDone generated database creation, saving to: {csv_gen_path}")
 
-    if args.SPLIT_GENERATED_DATASET:
+    if params.split_generated_dataset:
         logger.info(
             f"\nSplitting to train-test the dataset for period: [{start_date.strftime('%Y-%m-%d')},"
             f"{end_date.strftime('%Y-%m-%d')}]")
         ds_utils.split_save_train_test_ds(csv_path=csv_gen_path)
         logger.info(f"\nDone splitting train-test dataset for {csv_gen_path}")
 
-    if args.create_generated_time_split_samples:
+    if params.create_generated_time_split_samples:
         prepare_samples(station, start_date, end_date, top_height=15.3, generated=True)
 
-    if args.create_time_split_samples:
+    if params.create_time_split_samples:
         prepare_samples(station, start_date, end_date, top_height=15.3, generated=False)
 
-    if args.CALC_GENERATED_STATS:
+    if params.calc_generated_stats:
         logger.info(f"\nStart calculating generated dataset statistics")
         _, csv_stats_path = calc_data_statistics(station, start_date, end_date)
         logger.info(f"\nDone calculating generated dataset statistics. saved to:{csv_stats_path}")
 
-    if args.CALC_STATS:
+    if params.calc_stats:
         logger.info(f"\nStart calculating dataset statistics")
         _, csv_stats_path = calc_data_statistics(station, start_date, end_date, mode='raw')
         logger.info(f"\nDone calculating dataset statistics. saved to:{csv_stats_path}")
@@ -193,8 +192,8 @@ def create_dataset(station_name='haifa', start_date=datetime(2017, 9, 1),
                 query = ds_utils.get_query(wavelength, cali_method, day_date)
                 df = ds_utils.query_database(query=query, database_path=db_path)
                 if df.empty:
-                    raise ds_utils.EmptyDataFrameError(
-                        f"\n Not existing data for {station.location} station, during {day_date.strftime('%Y-%m-%d')} in '{db_path}'")
+                    raise ds_utils.EmptyDataFrameError(f"\n Not existing data for {station.location} station, "
+                                                       f"during {day_date.strftime('%Y-%m-%d')} in '{db_path}'")
                 df['date'] = day_date.strftime('%Y-%m-%d')
 
                 df = ds_utils.add_profiles_values(df, station, day_date, file_type='profiles')
@@ -285,10 +284,8 @@ def extend_calibration_info(df):
         logger.debug("Issue with ds_utils.recalc_LC. Possibly due to missing lidar/molecular paths. Inserting NaNs")
         df[['LC_recalc', 'LCp_recalc']] = None
     logger.info(f"Start mid-reference range calculations")
-    df['bin_rm'] = df[['bin_r0', 'bin_r1']].progress_apply(np.mean, axis=1,
-                                                           result_type='expand').astype(int)
-    df['rm'] = df[['r0', 'r1']].progress_apply(np.mean, axis=1, result_type='expand').astype(
-        float)
+    df['bin_rm'] = df[['bin_r0', 'bin_r1']].progress_apply(np.mean, axis=1, result_type='expand').astype(int)
+    df['rm'] = df[['r0', 'r1']].progress_apply(np.mean, axis=1, result_type='expand').astype(float)
 
     logger.info(f"\nDone database extension")
     return df
@@ -443,6 +440,7 @@ def create_generated_dataset(station, start_date, end_date, sample_size='30min',
 def calc_data_statistics(station, start_date, end_date, top_height=15.3, mode='gen'):
     """
     Calculated statistics for the period of the dataset of the given station during start_date, end_date
+    :param mode: str, 'gen' or 'raw'. if 'gen' this works on the generated dataset.
     :param station:  gs.station() object of the lidar station
     :param start_date: datetime.date object of the initial period date
     :param end_date:  datetime.date object of the end period date
@@ -523,9 +521,9 @@ def calc_day_statistics(station, day_date, top_height=15.3):
 
     logger = logging.getLogger()
     wavelengths = gs.LAMBDA_nm().get_elastic()
-    molsource = 'molecular'
-    sigsource = 'signal'
-    lidsource = 'lidar'
+    mol_source = 'molecular'
+    sig_source = 'signal'
+    lid_source = 'lidar'
 
     df_stats = pd.DataFrame(index=pd.Index(wavelengths, name='wavelength'))
     logger.debug(f'\nCalculating stats for {day_date}')
@@ -536,10 +534,10 @@ def calc_day_statistics(station, day_date, top_height=15.3):
 
     # File names
     signal_nc_name = os.path.join(signal_folder,
-                                  gen_utils.get_gen_dataset_file_name(station, day_date, data_source=sigsource))
+                                  gen_utils.get_gen_dataset_file_name(station, day_date, data_source=sig_source))
     lidar_nc_name = os.path.join(lidar_folder,
-                                 gen_utils.get_gen_dataset_file_name(station, day_date, data_source=lidsource))
-    mol_nc_name = os.path.join(mol_folder, xr_utils.get_prep_dataset_file_name(station, day_date, data_source=molsource,
+                                 gen_utils.get_gen_dataset_file_name(station, day_date, data_source=lid_source))
+    mol_nc_name = os.path.join(mol_folder, xr_utils.get_prep_dataset_file_name(station, day_date, data_source=mol_source,
                                                                                lambda_nm='all'))
 
     # Load datasets
@@ -549,12 +547,12 @@ def calc_day_statistics(station, day_date, top_height=15.3):
     p_bg = get_daily_bg(station, day_date)  # daily background: p_bg
 
     # update daily profiles stats
-    datasets_with_names_time_height = [(signal_ds.p, f'p_{sigsource}'),
-                                       (signal_ds.range_corr, f'range_corr_{sigsource}'),
-                                       (signal_ds.range_corr_p, f'range_corr_p_{sigsource}'),
-                                       (lidar_ds.p, f'p_{lidsource}'),
-                                       (lidar_ds.range_corr, f'range_corr_{lidsource}'),
-                                       (mol_ds.attbsc, f'attbsc_{molsource}')]
+    datasets_with_names_time_height = [(signal_ds.p, f'p_{sig_source}'),
+                                       (signal_ds.range_corr, f'range_corr_{sig_source}'),
+                                       (signal_ds.range_corr_p, f'range_corr_p_{sig_source}'),
+                                       (lidar_ds.p, f'p_{lid_source}'),
+                                       (lidar_ds.range_corr, f'range_corr_{lid_source}'),
+                                       (mol_ds.attbsc, f'attbsc_{mol_source}')]
 
     for ds, ds_name in datasets_with_names_time_height:
         height_slice = slice(ds.Height.min().values.tolist(), ds.Height.min().values.tolist() + top_height)
@@ -694,30 +692,40 @@ def prepare_samples(station, start_date, end_date, top_height=15.3, generated=Fa
 
 
 if __name__ == '__main__':
-    parser = get_base_arguments()
+    parser = utils.get_base_arguments()
 
     # TODO change modes to options instead of true\false?
     #  or generation true\false then only one do and split?
-    parser.add_argument('--DO_DATASET', action='store_true',
+    parser.add_argument('--do_dataset', action='store_true',
                         help='Whether to create a dataset')
-    parser.add_argument('--EXTEND_DATASET', action='store_true',
-                        help='Whether to EXTEND_DATASET')
+
+    parser.add_argument('--extend_dataset', action='store_true',
+                        help='Whether to extend_dataset')
+
     parser.add_argument('--do_calibration_dataset', action='store_true',
                         help='Whether to do_calibration_dataset')
-    parser.add_argument('--USE_KM_UNITS', action='store_true',
-                        help='Whether to USE_KM_UNITS')
+
+    parser.add_argument('--use_km_unit', action='store_true',
+                        help='Whether to use_km_unit')
+
     parser.add_argument('--do_generated_dataset', action='store_true',
                         help='Whether to create do_generated_dataset')
+
     parser.add_argument('--create_train_test_splits', action='store_true',
                         help='Whether to create train test splits')
-    parser.add_argument('--SPLIT_GENERATED_DATASET', action='store_true',
-                        help='Whether to create SPLIT_GENERATED_DATASET')
-    parser.add_argument('--CALC_GENERATED_STATS', action='store_true',
-                        help='Whether to CALC_GENERATED_STATS')
-    parser.add_argument('--CALC_STATS', action='store_true',
-                        help='Whether to CALC_STATS')
+
+    parser.add_argument('--split_generated_dataset', action='store_true',
+                        help='Whether to create split_generated_dataset')
+
+    parser.add_argument('--calc_generated_stats', action='store_true',
+                        help='Whether to calc_generated_stats')
+
+    parser.add_argument('--calc_stats', action='store_true',
+                        help='Whether to calc_stats')
+
     parser.add_argument('--create_generated_time_split_samples', action='store_true',
                         help='Whether to create_generated_time_split_samples')
+
     parser.add_argument('--create_time_split_samples', action='store_true',
                         help='Whether to create time split samples')
 

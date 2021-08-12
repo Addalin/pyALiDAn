@@ -9,9 +9,7 @@ from tqdm import tqdm
 import xarray as xr
 
 import learning_lidar.preprocessing.preprocessing_utils as prep_utils
-import learning_lidar.utils.xr_utils as xr_utils
-from learning_lidar.utils.global_settings import eps
-import learning_lidar.utils.global_settings as gs
+from learning_lidar.utils import xr_utils, global_settings as gs
 
 PLOT_RESULTS = False
 
@@ -64,7 +62,7 @@ def save_generated_dataset(station: gs.Station, dataset: xr.Dataset, data_source
     :param profiles: The name of profile desired to be saved separately.
     :return: ncpaths - the paths of the saved dataset/s . None - for failure.
     """
-    # TODO: merge save_prep_dataset() &  save_generated_dataset() --> save_daily_dataset() with a flag of 'gen' or 'prep'
+    # TODO: merge save_prep_dataset() &  save_generated_dataset() -> save_daily_dataset() with a flag of 'gen' or 'prep'
     date_datetime = xr_utils.get_daily_ds_date(dataset)
     if data_source == 'lidar':
         base_folder = station.gen_lidar_dataset
@@ -214,21 +212,21 @@ def get_daily_gen_ds(station: gs.Station, day_date: datetime.date, type_: str) -
     return ds
 
 
-def get_daily_overlap(station: gs.Station, day_date: datetime.date, height_indx: xr.DataArray) -> xr.Dataset:
+def get_daily_overlap(station: gs.Station, day_date: datetime.date, height_index: xr.DataArray) -> xr.Dataset:
     """
     Generates overlap values per height index, from overlap params
 
     :param station: gs.station() object of the lidar station
     :param day_date: datetime.date object of the required date
-    :param height_indx: xr.DataArray, stores the height index per Height
+    :param height_index: xr.DataArray, stores the height index per Height
 
     :return: xr.Dataset with the overlap values per height index
     """
 
     overlap_params = get_month_gen_params_ds(station, day_date, type_='overlap')
-    overlap = sigmoid(height_indx, *overlap_params.to_array().values)
+    overlap = sigmoid(height_index, *overlap_params.to_array().values)
     overlap_ds = xr.Dataset(data_vars={'overlap': ('Height', overlap)},
-                            coords={'Height': height_indx.values},
+                            coords={'Height': height_index.values},
                             attrs={'name': 'Overlap Function'})
 
     return overlap_ds
@@ -240,13 +238,13 @@ def dt2binscale(dt_time: datetime.date, res_sec: int = 30) -> np.ndarray:
     Returns the bin index corresponds to dt_time
     binscale - is the time scale [0,2880], of a daily lidar bin index from 00:00:00 to 23:59:30.
     The lidar has a bin measure every 30 sec, in total 2880 bins per day.
-    :param res_sec:
+    :param res_sec: TODO
     :param dt_time: datetime.datetime object
     :return: binscale - float in [0,2880]
     """
     res_minute = 60 / res_sec
     res_hour = 60 * res_minute
-    res_musec = (1e-6) / res_sec
+    res_musec = 1e-6 / res_sec
     tind = dt_time.hour * res_hour + \
            dt_time.minute * res_minute + \
            dt_time.second / res_sec + \
@@ -303,9 +301,23 @@ def create_ratio(total_bins, mode='ones', start_height=0.3, ref_height=2.5, ref_
 
 
 def sigmoid(x, x0=0, A=0, K=1, B=1, v=0.4, C=1, Q=1):
-    y = A + (K - A) / (eps + (C + Q * np.exp(-B * (x - x0))) ** (v))
-    return (y)
+    y = A + (K - A) / (gs.eps + (C + Q * np.exp(-B * (x - x0))) ** v)
+    return y
 
+
+def save_monthly_params_dataset(station, year, month, data, type_):
+    last = (calendar.monthrange(year, month)[1])
+    start_dt = datetime(year, month, 1)
+    end_dt = datetime(year, month, last) + timedelta(days=1) - timedelta(seconds=station.freq)
+    gen_source_path = get_month_gen_params_path(station, start_dt, type_=type_)
+    month_slice = slice(start_dt, end_dt)
+    xr_utils.save_dataset(dataset=data.sel(Time=month_slice), nc_path=gen_source_path)
+
+
+def save_full_params_dataset(station, start_date, end_date, data, type_):
+    folder_name = station.generation_folder
+    nc_name = f"generated_{type_}_{station.name}_{start_date.strftime('%Y-%m-%d')}_{end_date.strftime('%Y-%m-%d')}.nc"
+    xr_utils.save_dataset(data, folder_name, nc_name)
 
 def valid_box_domain(x, y, bounds_x, bounds_y):
     return bounds_x[0] <= x <= bounds_x[1] and bounds_y[0] <= y <= bounds_y[1]

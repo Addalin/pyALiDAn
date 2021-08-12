@@ -96,6 +96,7 @@ class Station:
         self.gen_aerosol_dataset = station_df['gen_aerosol_dataset']
         self.gen_bg_dataset = station_df['gen_bg_dataset']
         self.gen_density_dataset = station_df['gen_density_dataset']
+        self.Angstrom_LidarRatio = station_df['Angstrom_LidarRatio']
 
     def __str__(self):
         return ("\n " + str(self.__class__) + ": " + str(self.__dict__)).replace(" {", "\n  {").replace(",", ",\n  ")

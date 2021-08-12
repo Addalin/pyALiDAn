@@ -14,8 +14,7 @@ from sklearn.model_selection import train_test_split
 
 import learning_lidar.generation.generation_utils as gen_utils
 import learning_lidar.preprocessing.preprocessing_utils as prep_utils
-import learning_lidar.utils.xr_utils as xr_utils
-from learning_lidar.utils.global_settings import eps
+from learning_lidar.utils import xr_utils, global_settings as gs
 
 
 def get_query(wavelength, cali_method, day_date):
@@ -119,10 +118,10 @@ def add_X_path(df, station, day_date, lambda_nm=532, data_source='molecular', fi
     """
     logger = logging.getLogger()
     paths = xr_utils.get_prep_dataset_paths(station=station,
-                                                                 day_date=day_date,
-                                                                 data_source=data_source,
-                                                                 lambda_nm=lambda_nm,
-                                                                 file_type=file_type)
+                                            day_date=day_date,
+                                            data_source=data_source,
+                                            lambda_nm=lambda_nm,
+                                            file_type=file_type)
     if not paths:
         df.loc[:, f"{data_source}_path"] = ""
         logger.debug(
@@ -237,10 +236,10 @@ def get_aerBsc_profile_ds(path, profile_df):
     var_names = [f"aerBsc_klett_{wavelength}" for wavelength in [355, 532, 1064]]
     for v_name, wavelength, r in zip(var_names, [355, 532, 1064], profile_r1):
         vals = cur_profile[v_name].values
-        vals[r:] = eps
+        vals[r:] = gs.eps
         vals = gaussian_filter1d(vals, 21, mode='nearest')
         vals = vals.T.reshape(len(heights_indx), 1)
-        vals[vals < 0] = eps
+        vals[vals < 0] = gs.eps
         vals *= bsc_scale
         mat_vals = np.repeat(vals, len(time_indx), axis=1)
         aerbsc_df = pd.DataFrame(mat_vals, index=heights_indx, columns=time_indx)
@@ -308,7 +307,7 @@ def get_generated_X_path(station, parent_folder, day_date, data_source, waveleng
 def get_prep_X_path(station, parent_folder, day_date, data_source, wavelength, file_type=None, time_slice=None):
     month_folder = prep_utils.get_month_folder_name(parent_folder=parent_folder, day_date=day_date)
     nc_name = xr_utils.get_prep_dataset_file_name(station, day_date, data_source=data_source, lambda_nm=wavelength,
-                                                                       file_type=file_type, time_slice=time_slice)
+                                                  file_type=file_type, time_slice=time_slice)
     data_path = os.path.join(month_folder, nc_name)
     return data_path
 
