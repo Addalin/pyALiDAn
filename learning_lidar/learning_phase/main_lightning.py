@@ -22,8 +22,9 @@ seed_everything(8318)  # Note, for full deterministic result add deterministic=T
 # https://github.com/ray-project/ray/blob/35ec91c4e04c67adc7123aa8461cf50923a316b4/python/ray/tune/examples/mnist_pytorch_lightning.py
 
 def main(config, checkpoint_dir=None, consts=None):
-    with open('all_params.yaml', 'a') as f:
+    with open('consts.yaml', 'a') as f:
         yaml.dump(consts, f)
+    with open('config.yaml', 'a') as f:
         yaml.dump(config, f)
     config, X_features, powers = update_params(config, consts)
 
