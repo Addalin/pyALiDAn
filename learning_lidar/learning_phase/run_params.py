@@ -103,6 +103,7 @@ else:
 # Constants - should correspond to data, dataloader and model
 CONSTS = {
     'max_epochs': 12,
+    'max_steps': None,
     'num_workers': 6,
     'train_csv_path': train_csv_path,
     'test_csv_path': test_csv_path,

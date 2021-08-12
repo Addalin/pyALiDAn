@@ -55,7 +55,8 @@ def main(config, checkpoint_dir=None, consts=None):
     callbacks = [TuneReportCheckpointCallback(metrics, filename="checkpoint", on="validation_end")]
 
     # Setup the pytorch-lighting trainer and run the model
-    trainer = Trainer(max_epochs=consts['max_epochs'],
+    trainer = Trainer(max_steps=consts['max_steps'],
+                      max_epochs=consts['max_epochs'],
                       callbacks=callbacks,
                       gpus=[0] if consts['num_gpus'] > 0 else 0)
 
