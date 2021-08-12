@@ -118,10 +118,10 @@ def add_X_path(df, station, day_date, lambda_nm=532, data_source='molecular', fi
     """
     logger = logging.getLogger()
     paths = xr_utils.get_prep_dataset_paths(station=station,
-                                                                 day_date=day_date,
-                                                                 data_source=data_source,
-                                                                 lambda_nm=lambda_nm,
-                                                                 file_type=file_type)
+                                            day_date=day_date,
+                                            data_source=data_source,
+                                            lambda_nm=lambda_nm,
+                                            file_type=file_type)
     if not paths:
         df.loc[:, f"{data_source}_path"] = ""
         logger.debug(
@@ -307,7 +307,7 @@ def get_generated_X_path(station, parent_folder, day_date, data_source, waveleng
 def get_prep_X_path(station, parent_folder, day_date, data_source, wavelength, file_type=None, time_slice=None):
     month_folder = prep_utils.get_month_folder_name(parent_folder=parent_folder, day_date=day_date)
     nc_name = xr_utils.get_prep_dataset_file_name(station, day_date, data_source=data_source, lambda_nm=wavelength,
-                                                                       file_type=file_type, time_slice=time_slice)
+                                                  file_type=file_type, time_slice=time_slice)
     data_path = os.path.join(month_folder, nc_name)
     return data_path
 

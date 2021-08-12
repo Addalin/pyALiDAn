@@ -1,16 +1,19 @@
+import datetime
 import glob
 import logging
 import os
 from pathlib import Path
+from typing import Optional
 
 import numpy as np
 import xarray as xr
 from tqdm import tqdm
 
-from learning_lidar.utils import utils
+from learning_lidar.utils import utils, global_settings as gs
 
 
-def save_dataset(dataset, folder_name='', nc_name='', nc_path=None, optim_size=True):
+def save_dataset(dataset: xr.Dataset, folder_name: str = '', nc_name: str = '', nc_path: Optional[str] = None,
+                 optim_size: bool = True) -> Optional[str]:
     """
     Save the input dataset to netcdf file
 
@@ -18,7 +21,8 @@ def save_dataset(dataset, folder_name='', nc_name='', nc_path=None, optim_size=T
     :param dataset: array.Dataset()
     :param folder_name: folder name
     :param nc_name: netcdf file name
-    :param optim_size: Boolean. False: the saved dataset will be type 'float64', True: the saved dataset will be type 'float64'(default).
+    :param optim_size: Boolean. False: the saved dataset will be type 'float64',
+                                True: the saved dataset will be type 'float64'(default).
     :return: nc_path - full path to netcdf file created if succeeded, else none
 
     """
@@ -65,7 +69,7 @@ def save_dataset(dataset, folder_name='', nc_name='', nc_path=None, optim_size=T
     return nc_path
 
 
-def load_dataset(ncpath):
+def load_dataset(ncpath: str) -> xr.Dataset:
     """
     Load Dataset stored in the netcdf file path (ncpath)
     :param ncpath: a netcdf file path
@@ -82,8 +86,8 @@ def load_dataset(ncpath):
     return dataset
 
 
-def get_prep_dataset_file_name(station, day_date, data_source='molecular',
-                               lambda_nm='*', file_type='*', time_slice=None):
+def get_prep_dataset_file_name(station: gs.Station, day_date: datetime.datetime, data_source: str = 'molecular',
+                               lambda_nm: str = '*', file_type: str = '*', time_slice=None) -> str:
     """
      Retrieves file pattern name of preprocessed dataset according to
      date, station, wavelength dataset source, and profile type.
@@ -95,6 +99,7 @@ def get_prep_dataset_file_name(station, day_date, data_source='molecular',
     :param data_source: string object: 'molecular' or 'lidar'
     :param file_type: string object: e.g., 'attbsc' for molecular_dataset or 'range_corr' for a lidar_dataset, or
     'all' (meaning the dataset contains several profile types)
+    :param time_slice: TODO
 
     :return: dataset file name (netcdf) file of the data_type required per
     given day and wavelength, data_source and file_type
@@ -114,7 +119,8 @@ def get_prep_dataset_file_name(station, day_date, data_source='molecular',
     return file_name
 
 
-def get_prep_dataset_paths(station, day_date, data_source='molecular', lambda_nm='*', file_type='*'):
+def get_prep_dataset_paths(station: gs.Station, day_date: datetime.datetime, data_source: str = 'molecular',
+                           lambda_nm: str = '*', file_type: str = '*') -> list:
     """
      Retrieves file paths of preprocessed datasets according to
      date, station, wavelength dataset source, and profile type.
@@ -133,11 +139,12 @@ def get_prep_dataset_paths(station, day_date, data_source='molecular', lambda_nm
         parent_folder = station.molecular_dataset
     elif data_source == 'lidar':
         parent_folder = station.lidar_dataset
+    else:
+        raise Exception("Unsupported data_source.")
 
     month_folder = utils.get_month_folder_name(parent_folder, day_date)
     file_name = get_prep_dataset_file_name(station, day_date, data_source, lambda_nm, file_type)
 
-    # print(os.listdir(month_folder))
     file_pattern = os.path.join(month_folder, file_name)
 
     paths = sorted(glob.glob(file_pattern))
@@ -145,8 +152,8 @@ def get_prep_dataset_paths(station, day_date, data_source='molecular', lambda_nm
     return paths
 
 
-def save_prep_dataset(station, dataset, data_source='lidar', save_mode='both',
-                      profiles=None, time_slices=None):
+def save_prep_dataset(station: gs.Station, dataset: xr.Dataset, data_source: str = 'lidar',
+                      save_mode: str = 'both', profiles=None, time_slices=None):
     """
     Save the input dataset to netcdf file
     :param time_slices:
@@ -162,7 +169,7 @@ def save_prep_dataset(station, dataset, data_source='lidar', save_mode='both',
                     'both' - saving both options
     :return: ncpaths - the paths of the saved dataset/s . None - for failure.
     """
-    # TODO: merge save_prep_dataset() &  save_generated_dataset() --> save_daily_dataset() with a flag of 'gen' or 'prep'
+    # TODO: merge save_prep_dataset() &  save_generated_dataset() -> save_daily_dataset() with a flag of 'gen' or 'prep'
     date_datetime = get_daily_ds_date(dataset)
     if data_source == 'lidar':
         base_folder = station.lidar_dataset
@@ -170,6 +177,8 @@ def save_prep_dataset(station, dataset, data_source='lidar', save_mode='both',
         base_folder = station.bg_dataset
     elif data_source == 'molecular':
         base_folder = station.molecular_dataset
+    else:
+        raise Exception("Unsupported data_source.")
     month_folder = utils.get_month_folder_name(base_folder, date_datetime)
 
     get_daily_ds_date(dataset)
