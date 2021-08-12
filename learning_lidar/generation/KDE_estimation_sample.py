@@ -463,12 +463,10 @@ if __name__ == '__main__':
     DATA_DIR = os.path.join(HOME_DIR, 'data')
 
     parser = utils.get_base_arguments()
-    parser.add_argument('--save_ds', action='store_true',
-                        help='Whether to save the datasets')
+
     parser.add_argument('--extended_smoothing_bezier', action='store_true',
                         help='Whether to do extended smoothing bezier')
-    parser.add_argument('--plot_results', action='store_true',
-                        help='Whether to plot graphs')
+
     args = parser.parse_args()
 
     # start_date and end_date should correspond to the extended csv!
