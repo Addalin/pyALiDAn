@@ -471,7 +471,8 @@ def calc_data_statistics(station, start_date, end_date, top_height=15.3, mode='g
 
     profiles_sources = [('range_corr', 'lidar'),  # Pois measurement signal - p_n
                         ('attbsc', 'molecular'),  # molecular signal - attbsc
-                        ('p_bg', 'bg')]  # background signal - p_bg
+                        ('p_bg', 'bg'),  # background signal - p_bg
+                        ('p_bg_r2', 'bg')]  # background signal - p_bg_r2
 
     # TODO uncomment after correcting dataset creation
     # if mode == 'gen':
@@ -490,7 +491,8 @@ def calc_data_statistics(station, start_date, end_date, top_height=15.3, mode='g
     num_processes = min((cpu_count() - 1, len(days_list)))
     with Pool(num_processes) as p:
         #     results = p.starmap(calc_day_statistics, zip(repeat(station), days_list, repeat(top_height)))
-        results = p.starmap(ds_utils.calc_sample_statistics, zip(df.iterrows(), repeat(top_height), repeat(mode)))
+        results = p.starmap(ds_utils.calc_sample_statistics, zip(repeat(station), df.iterrows(),
+                                                                 repeat(top_height), repeat(mode)))
 
     for result in results:
         df_stats += result

@@ -347,7 +347,7 @@ class EmptyDataFrameError(Error):
     pass
 
 
-def calc_sample_statistics(row, top_height, mode='gen'):
+def calc_sample_statistics(station, row, top_height, mode='gen'):
     """
     Calculates mean & std for params in datasets_with_names_time_height and datasets_with_names_time
 
@@ -369,7 +369,8 @@ def calc_sample_statistics(row, top_height, mode='gen'):
 
     datasets_with_names_time_height = [(lidar_ds.range_corr, f'range_corr_lidar'),
                                        (mol_ds.attbsc, f'attbsc_molecular'),
-                                       (p_bg, f'p_bg_bg')]
+                                       (p_bg.p_bg, f'p_bg_bg'),
+                                       (p_bg.p_bg_r2, f'p_bg_r2_bg')]
 
     # TODO uncomment after correcting dataset creation
     # if mode == 'gen':
@@ -386,5 +387,19 @@ def calc_sample_statistics(row, top_height, mode='gen'):
         df_stats[f'{ds_name}_std'] = ds.sel(Height=height_slice).std(dim={'Height', 'Time'}).values
         df_stats[f'{ds_name}_min'] = ds.sel(Height=height_slice).min(dim={'Height', 'Time'}).values
         df_stats[f'{ds_name}_max'] = ds.sel(Height=height_slice).max(dim={'Height', 'Time'}).values
+
+    day_date = row_data.date.date()
+    signal_folder = prep_utils.get_month_folder_name(station.gen_signal_dataset, day_date)
+    signal_nc_name = os.path.join(signal_folder,
+                                  gen_utils.get_gen_dataset_file_name(station, day_date, data_source='signal'))
+    signal_ds = xr_utils.load_dataset(signal_nc_name)
+
+    datasets_with_names_time = [(signal_ds.LC, f'LC')]
+    for ds, ds_name in datasets_with_names_time:
+        time_slice = slice(row_data.start_time_period, row_data.end_time_period)
+        df_stats[f'{ds_name}_mean'] = ds.sel(Time=time_slice).mean(dim={'Time'}).values
+        df_stats[f'{ds_name}_std'] = ds.sel(Time=time_slice).std(dim={'Time'}).values
+        df_stats[f'{ds_name}_min'] = ds.sel(Time=time_slice).min(dim={'Time'}).values
+        df_stats[f'{ds_name}_max'] = ds.sel(Time=time_slice).max(dim={'Time'}).values
 
     return df_stats
