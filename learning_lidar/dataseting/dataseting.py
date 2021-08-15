@@ -490,7 +490,7 @@ def calc_data_statistics(station, start_date, end_date, top_height=15.3, mode='g
     num_processes = min((cpu_count() - 1, len(days_list)))
     with Pool(num_processes) as p:
         #     results = p.starmap(calc_day_statistics, zip(repeat(station), days_list, repeat(top_height)))
-        results = p.starmap(calc_sample_statistics, zip(df.iterrows(), repeat(top_height), repeat(mode)))
+        results = p.starmap(ds_utils.calc_sample_statistics, zip(df.iterrows(), repeat(top_height), repeat(mode)))
 
     for result in results:
         df_stats += result
@@ -567,49 +567,6 @@ def calc_day_statistics(station, day_date, top_height=15.3):
         df_stats[f'{ds_name}_min'] = ds.min(dim={'Time'}).values
         df_stats[f'{ds_name}_max'] = ds.max(dim={'Time'}).values
     #  TODO Mean std min max LC from extended csv, per wavelength, instead of second for loop in calc_day_statistics
-
-    return df_stats
-
-
-def calc_sample_statistics(row, top_height, mode):
-    """
-    Calculates mean & std for params in datasets_with_names_time_height and datasets_with_names_time
-
-    :param row: row from raw database table (pandas.Dataframe())
-    :param top_height: np.float(). The Height[km] **above** ground (Lidar) level - up to which slice the samples.
-    Note: default is 15.3 [km]. IF ONE CHANGES IT - THAN THIS WILL AFFECT THE INPUT DIMENSIONS AND STATISTICS !!!
-    :param mode:
-    :return: dataframe, each row corresponds to a wavelength
-    """
-    _, row_data = row
-    # Load datasets
-    mol_ds = xr_utils.load_dataset(row_data['molecular_path'])
-    lidar_ds = xr_utils.load_dataset(row_data['lidar_path'])
-    p_bg = xr_utils.load_dataset(row_data['bg_path'])
-    # TODO uncomment after correcting dataset creation
-    # signal_range_corr_ds = xr_utils.load_dataset(row_data['signal_path'])
-    # signal_range_corr_p_ds = xr_utils.load_dataset(row_data['signal_p_path'])
-    # signal_p_ds = xr_utils.load_dataset(row_data['signal_p_only_path'])
-
-    datasets_with_names_time_height = [(lidar_ds.range_corr, f'range_corr_lidar'),
-                                       (mol_ds.attbsc, f'attbsc_molecular'),
-                                       (p_bg, f'p_bg_bg')]
-
-    # TODO uncomment after correcting dataset creation
-    # if mode == 'gen':
-    #     datasets_with_names_time_height = [(signal_p_ds.p, 'p_signal'),
-    #                                        (signal_range_corr_ds.range_corr, 'range_corr_signal'),
-    #                                        (signal_range_corr_p_ds.range_corr_p, 'range_corr_p_signal')] + datasets_with_names_time_height
-
-    # update profiles stats
-    wavelengths = gs.LAMBDA_nm().get_elastic()
-    df_stats = pd.DataFrame(index=pd.Index(wavelengths, name='wavelength'))
-    for ds, ds_name in datasets_with_names_time_height:
-        height_slice = slice(ds.Height.min().values.tolist(), ds.Height.min().values.tolist() + top_height)
-        df_stats[f'{ds_name}_mean'] = ds.sel(Height=height_slice).mean(dim={'Height', 'Time'}).values
-        df_stats[f'{ds_name}_std'] = ds.sel(Height=height_slice).std(dim={'Height', 'Time'}).values
-        df_stats[f'{ds_name}_min'] = ds.sel(Height=height_slice).min(dim={'Height', 'Time'}).values
-        df_stats[f'{ds_name}_max'] = ds.sel(Height=height_slice).max(dim={'Height', 'Time'}).values
 
     return df_stats
 
