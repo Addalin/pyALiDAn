@@ -411,6 +411,16 @@ def create_generated_dataset(station, start_date, end_date, sample_size='30min',
                                                                            row['end_time_period'])),
                 axis=1, result_type='expand')
 
+            # TODO uncomment and test that this works - signal p (not range_corr)
+            # # add signal path - p only
+            # df['signal_p_only_path'] = df.apply(
+            #     lambda row: ds_utils.get_generated_X_path(station=station, parent_folder=station.gen_signal_dataset,
+            #                                               day_date=row['start_time_period'], data_source='signal',
+            #                                               wavelength=wavelength, file_type='p',
+            #                                               time_slice=slice(row['start_time_period'],
+            #                                                                row['end_time_period'])),
+            #     axis=1, result_type='expand')
+
             # Add molecular path
             df['molecular_path'] = df.apply(
                 lambda row: ds_utils.get_prep_X_path(station=station, parent_folder=station.molecular_dataset,
@@ -449,22 +459,10 @@ def calc_data_statistics(station, start_date, end_date, top_height=15.3, mode='g
     :return: df_stats: pd.Dataframe, containing statistics of mean and std values for generation signals during
      the desired period [start_date, end_date]. Note: one should previously save the generated dataset for this period.
     """
-    # TODO
-    """    
-        Changes for non generated data:
-            change dataset path (without gen)
-            profiles_sources = [('range_corr', 'lidar'),  # Pois measurement signal - p_n
-                                ('attbsc', 'molecular'),  # molecular signal - attbsc
-                                ('p_bg', 'bg')] 
-            iterate over df rows and for each run calc_day(sample)_statistics
-            change calc_day(sample)_statistics()
-            Mean std min max LC from csv, per wavelength, instead of second for loop in calc_day_statistics
-            
-            change save path
-    """
+
     data_folder = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))), 'data')
     csv_gen_fname = f"dataset_{'gen_' if mode == 'gen' else ''}{station.name}" \
-                    f"_{start_date.strftime('%Y-%m-%d')}_{end_date.strftime('%Y-%m-%d')}.csv"
+                    f"_{start_date.strftime('%Y-%m-%d')}_{end_date.strftime('%Y-%m-%d')}_train.csv"
     csv_gen_path = os.path.join(data_folder, csv_gen_fname)
     df = pd.read_csv(csv_gen_path, parse_dates=['date', 'start_time_period', 'end_time_period'])
     days_groups = df.groupby('date').groups
@@ -475,10 +473,11 @@ def calc_data_statistics(station, start_date, end_date, top_height=15.3, mode='g
                         ('attbsc', 'molecular'),  # molecular signal - attbsc
                         ('p_bg', 'bg')]  # background signal - p_bg
 
-    if mode == 'gen':
-        profiles_sources = [('p', 'signal'),  # clean signal - p
-                            ('range_corr', 'signal'),  # clean signal - range_corr (pr2)
-                            ('range_corr_p', 'signal')] + profiles_sources  # signal-range_corr (pr2) with poiss (no bg)
+    # TODO uncomment after correcting dataset creation
+    # if mode == 'gen':
+    #     profiles_sources = [('p', 'signal'),  # clean signal - p
+    #                         ('range_corr', 'signal'),  # clean signal - range_corr (pr2)
+    #                         ('range_corr_p', 'signal')] + profiles_sources  # signal-range_corr (pr2) with poiss (no bg)
 
     columns = []
     for profile, source in profiles_sources:
@@ -490,19 +489,18 @@ def calc_data_statistics(station, start_date, end_date, top_height=15.3, mode='g
     df_stats = pd.DataFrame(0, index=pd.Index(wavelengths, name='wavelength'), columns=columns)
     num_processes = min((cpu_count() - 1, len(days_list)))
     with Pool(num_processes) as p:
-        if mode == 'gen':
-            results = p.starmap(calc_day_statistics, zip(repeat(station), days_list, repeat(top_height)))
-        else:
-            results = p.starmap(calc_raw_sample_statistics, zip(df.iterrows(), repeat(top_height)))
+        #     results = p.starmap(calc_day_statistics, zip(repeat(station), days_list, repeat(top_height)))
+        results = p.starmap(calc_sample_statistics, zip(df.iterrows(), repeat(top_height), repeat(mode)))
+
     for result in results:
         df_stats += result
 
-    norm_scale = 1 / len(days_list)
+    norm_scale = 1 / len(days_list) # TODO divide by len(df) instead?
     df_stats *= norm_scale  # normalize by number of days
 
     # Save stats
     stats_fname = f"stats_{'gen_' if mode == 'gen' else ''}{station.name}_" \
-                  f"{start_date.strftime('%Y-%m-%d')}_{end_date.strftime('%Y-%m-%d')}.csv"
+                  f"{start_date.strftime('%Y-%m-%d')}_{end_date.strftime('%Y-%m-%d')}_train.csv"
     csv_stats_path = os.path.join(data_folder, stats_fname)
     df_stats.to_csv(csv_stats_path)
     return df_stats, csv_stats_path
@@ -537,8 +535,9 @@ def calc_day_statistics(station, day_date, top_height=15.3):
                                   gen_utils.get_gen_dataset_file_name(station, day_date, data_source=sig_source))
     lidar_nc_name = os.path.join(lidar_folder,
                                  gen_utils.get_gen_dataset_file_name(station, day_date, data_source=lid_source))
-    mol_nc_name = os.path.join(mol_folder, xr_utils.get_prep_dataset_file_name(station, day_date, data_source=mol_source,
-                                                                               lambda_nm='all'))
+    mol_nc_name = os.path.join(mol_folder,
+                               xr_utils.get_prep_dataset_file_name(station, day_date, data_source=mol_source,
+                                                                   lambda_nm='all'))
 
     # Load datasets
     mol_ds = xr_utils.load_dataset(mol_nc_name)
@@ -572,30 +571,34 @@ def calc_day_statistics(station, day_date, top_height=15.3):
     return df_stats
 
 
-def calc_raw_sample_statistics(row, top_height=15.3):
+def calc_sample_statistics(row, top_height, mode):
     """
     Calculates mean & std for params in datasets_with_names_time_height and datasets_with_names_time
 
     :param row: row from raw database table (pandas.Dataframe())
     :param top_height: np.float(). The Height[km] **above** ground (Lidar) level - up to which slice the samples.
     Note: default is 15.3 [km]. IF ONE CHANGES IT - THAN THIS WILL AFFECT THE INPUT DIMENSIONS AND STATISTICS !!!
+    :param mode:
     :return: dataframe, each row corresponds to a wavelength
     """
-    # TODO
-    """
-        from row (in csv format) lidar_nc_name (lidar_path), mol_nc_name (molecular_path), bg_ds (bg_path), 
-        datasets_with_names_time_height without signal, move (p_bg, f'p_bg_bg') to first call
-    """
-    row_index, row_data = row
+    _, row_data = row
     # Load datasets
     mol_ds = xr_utils.load_dataset(row_data['molecular_path'])
     lidar_ds = xr_utils.load_dataset(row_data['lidar_path'])
     p_bg = xr_utils.load_dataset(row_data['bg_path'])
+    signal_range_corr_ds = xr_utils.load_dataset(row_data['signal_path'])
+    signal_range_corr_p_ds = xr_utils.load_dataset(row_data['signal_p_path'])
+    signal_p_ds = xr_utils.load_dataset(row_data['signal_p_only_path'])
 
-    datasets_with_names_time_height = [(lidar_ds.p, f'p_lidar'),
-                                       (lidar_ds.range_corr, f'range_corr_lidar'),
+    datasets_with_names_time_height = [(lidar_ds.range_corr, f'range_corr_lidar'),
                                        (mol_ds.attbsc, f'attbsc_molecular'),
                                        (p_bg, f'p_bg_bg')]
+
+    # TODO uncomment after correcting dataset creation
+    # if mode == 'gen':
+    #     datasets_with_names_time_height = [(signal_p_ds.p, 'p_signal'),
+    #                                        (signal_range_corr_ds.range_corr, 'range_corr_signal'),
+    #                                        (signal_range_corr_p_ds.range_corr_p, 'range_corr_p_signal')]
 
     # update profiles stats
     wavelengths = gs.LAMBDA_nm().get_elastic()
