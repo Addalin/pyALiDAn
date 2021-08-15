@@ -495,8 +495,8 @@ def calc_data_statistics(station, start_date, end_date, top_height=15.3, mode='g
     for result in results:
         df_stats += result
 
-    norm_scale = 1 / len(days_list) # TODO divide by len(df) instead?
-    df_stats *= norm_scale  # normalize by number of days
+    norm_scale = 1 / len(df)
+    df_stats *= norm_scale  # normalize by number of samples in the csv
 
     # Save stats
     stats_fname = f"stats_{'gen_' if mode == 'gen' else ''}{station.name}_" \
