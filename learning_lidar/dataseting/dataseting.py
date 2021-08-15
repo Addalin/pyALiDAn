@@ -586,9 +586,10 @@ def calc_sample_statistics(row, top_height, mode):
     mol_ds = xr_utils.load_dataset(row_data['molecular_path'])
     lidar_ds = xr_utils.load_dataset(row_data['lidar_path'])
     p_bg = xr_utils.load_dataset(row_data['bg_path'])
-    signal_range_corr_ds = xr_utils.load_dataset(row_data['signal_path'])
-    signal_range_corr_p_ds = xr_utils.load_dataset(row_data['signal_p_path'])
-    signal_p_ds = xr_utils.load_dataset(row_data['signal_p_only_path'])
+    # TODO uncomment after correcting dataset creation
+    # signal_range_corr_ds = xr_utils.load_dataset(row_data['signal_path'])
+    # signal_range_corr_p_ds = xr_utils.load_dataset(row_data['signal_p_path'])
+    # signal_p_ds = xr_utils.load_dataset(row_data['signal_p_only_path'])
 
     datasets_with_names_time_height = [(lidar_ds.range_corr, f'range_corr_lidar'),
                                        (mol_ds.attbsc, f'attbsc_molecular'),
@@ -598,7 +599,7 @@ def calc_sample_statistics(row, top_height, mode):
     # if mode == 'gen':
     #     datasets_with_names_time_height = [(signal_p_ds.p, 'p_signal'),
     #                                        (signal_range_corr_ds.range_corr, 'range_corr_signal'),
-    #                                        (signal_range_corr_p_ds.range_corr_p, 'range_corr_p_signal')]
+    #                                        (signal_range_corr_p_ds.range_corr_p, 'range_corr_p_signal')] + datasets_with_names_time_height
 
     # update profiles stats
     wavelengths = gs.LAMBDA_nm().get_elastic()
