@@ -332,21 +332,20 @@ def get_mean_lc(df, station, day_date):
     # Add mean LC values for each time slice
     df.loc[day_indices, ['LC']] = df.loc[day_indices]. \
         apply(lambda row: LC_day.sel(Time=slice(row['start_time_period'], row['end_time_period']))
-              .mean(dim='Time').sel(Wavelength=row['wavelength']).values,
-              axis=1, result_type='expand')
+              .mean(dim='Time').sel(Wavelength=row['wavelength']).values, axis=1, result_type='expand')
+
     # TODO: check that LC_std, LC_min,LC_max are calculated and added to the csv
     df.loc[day_indices, ['LC_std']] = df.loc[day_indices]. \
         apply(lambda row: LC_day.sel(Time=slice(row['start_time_period'], row['end_time_period']))
-              .std(dim='Time').sel(Wavelength=row['wavelength']).values,
-              axis=1, result_type='expand')
+              .std(dim='Time').sel(Wavelength=row['wavelength']).values, axis=1, result_type='expand')
+
     df.loc[day_indices, ['LC_min']] = df.loc[day_indices]. \
         apply(lambda row: LC_day.sel(Time=slice(row['start_time_period'], row['end_time_period']))
-              .min(dim='Time').sel(Wavelength=row['wavelength']).values,
-              axis=1, result_type='expand')
+              .min(dim='Time').sel(Wavelength=row['wavelength']).values, axis=1, result_type='expand')
+
     df.loc[day_indices, ['LC_max']] = df.loc[day_indices]. \
         apply(lambda row: LC_day.sel(Time=slice(row['start_time_period'], row['end_time_period']))
-              .max(dim='Time').sel(Wavelength=row['wavelength']).values,
-              axis=1, result_type='expand')
+              .max(dim='Time').sel(Wavelength=row['wavelength']).values, axis=1, result_type='expand')
     return df
 
 
@@ -360,14 +359,15 @@ class EmptyDataFrameError(Error):
     pass
 
 
-def calc_sample_statistics(station, row, top_height, mode='gen'):
+def calc_sample_statistics(station: gs.Station, row: pd.Series, top_height: int, mode: str='gen'):
     """
     Calculates mean & std for params in datasets_with_names_time_height and datasets_with_names_time
 
+    :param station:
     :param row: row from raw database table (pandas.Dataframe())
     :param top_height: np.float(). The Height[km] **above** ground (Lidar) level - up to which slice the samples.
     Note: default is 15.3 [km]. IF ONE CHANGES IT - THAN THIS WILL AFFECT THE INPUT DIMENSIONS AND STATISTICS !!!
-    :param mode:
+    :param mode: 'gen' for generated data. If so, adds p_signal,range_corr_signal and range_corr_p_signal to stats
     :return: dataframe, each row corresponds to a wavelength
     """
     _, row_data = row
@@ -396,23 +396,30 @@ def calc_sample_statistics(station, row, top_height, mode='gen'):
     df_stats = pd.DataFrame(index=pd.Index(wavelengths, name='wavelength'))
     for ds, ds_name in datasets_with_names_time_height:
         height_slice = slice(ds.Height.min().values.tolist(), ds.Height.min().values.tolist() + top_height)
-        df_stats[f'{ds_name}_mean'] = ds.sel(Height=height_slice).mean(dim={'Height', 'Time'}).values
-        df_stats[f'{ds_name}_std'] = ds.sel(Height=height_slice).std(dim={'Height', 'Time'}).values
-        df_stats[f'{ds_name}_min'] = ds.sel(Height=height_slice).min(dim={'Height', 'Time'}).values
-        df_stats[f'{ds_name}_max'] = ds.sel(Height=height_slice).max(dim={'Height', 'Time'}).values
+        df_stats.loc[row_data['wavelength'], f'{ds_name}_mean'] = ds.sel(Height=height_slice).mean(dim={'Height', 'Time'}).values
+        df_stats.loc[row_data['wavelength'], f'{ds_name}_std'] = ds.sel(Height=height_slice).std(dim={'Height', 'Time'}).values
+        df_stats.loc[row_data['wavelength'], f'{ds_name}_min'] = ds.sel(Height=height_slice).min(dim={'Height', 'Time'}).values
+        df_stats.loc[row_data['wavelength'], f'{ds_name}_max'] = ds.sel(Height=height_slice).max(dim={'Height', 'Time'}).values
 
-    day_date = row_data.date.date()
-    signal_folder = prep_utils.get_month_folder_name(station.gen_signal_dataset, day_date)
-    signal_nc_name = os.path.join(signal_folder,
-                                  gen_utils.get_gen_dataset_file_name(station, day_date, data_source='signal'))
-    signal_ds = xr_utils.load_dataset(signal_nc_name)
+    # If LC stats are available from the CSV - load them directly, otherwise - Compute.
+    try:
+        df_stats.loc[row_data['wavelength'], f'LC_mean'] = row_data['LC']
+        df_stats.loc[row_data['wavelength'], f'LC_std'] = row_data['LC_std']
+        df_stats.loc[row_data['wavelength'], f'LC_min'] = row_data['LC_min']
+        df_stats.loc[row_data['wavelength'], f'LC_max'] = row_data['LC_max']
+    except KeyError:
+        day_date = row_data.date.date()
+        signal_folder = prep_utils.get_month_folder_name(station.gen_signal_dataset, day_date)
+        signal_nc_name = os.path.join(signal_folder,
+                                      gen_utils.get_gen_dataset_file_name(station, day_date, data_source='signal'))
+        signal_ds = xr_utils.load_dataset(signal_nc_name)
 
-    datasets_with_names_time = [(signal_ds.LC, f'LC')]
-    for ds, ds_name in datasets_with_names_time:
-        time_slice = slice(row_data.start_time_period, row_data.end_time_period)
-        df_stats[f'{ds_name}_mean'] = ds.sel(Time=time_slice).mean(dim={'Time'}).values
-        df_stats[f'{ds_name}_std'] = ds.sel(Time=time_slice).std(dim={'Time'}).values
-        df_stats[f'{ds_name}_min'] = ds.sel(Time=time_slice).min(dim={'Time'}).values
-        df_stats[f'{ds_name}_max'] = ds.sel(Time=time_slice).max(dim={'Time'}).values
-
+        datasets_with_names_time = [(signal_ds.LC, f'LC')]
+        for ds, ds_name in datasets_with_names_time:
+            time_slice = slice(row_data.start_time_period, row_data.end_time_period)
+            df_stats[f'{ds_name}_mean'] = ds.sel(Time=time_slice).mean(dim={'Time'}).values
+            df_stats[f'{ds_name}_std'] = ds.sel(Time=time_slice).std(dim={'Time'}).values
+            df_stats[f'{ds_name}_min'] = ds.sel(Time=time_slice).min(dim={'Time'}).values
+            df_stats[f'{ds_name}_max'] = ds.sel(Time=time_slice).max(dim={'Time'}).values
+    df_stats.fillna(0, inplace=True)
     return df_stats
