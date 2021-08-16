@@ -296,9 +296,8 @@ def split_save_train_test_ds(csv_path='', train_size=0.8, df=None):
     return train_set, test_set
 
 
-
-
-def get_X_path(station, parent_folder, day_date, data_source, wavelength, generated_mode, file_type=None, time_slice=None):
+def get_X_path(station, parent_folder, day_date, data_source, wavelength, generated_mode, file_type=None,
+               time_slice=None):
     month_folder = prep_utils.get_month_folder_name(parent_folder=parent_folder, day_date=day_date)
 
     if generated_mode:
@@ -408,25 +407,20 @@ def calc_sample_statistics(station: gs.Station, row: pd.Series, top_height: int,
     #                                        (signal_range_corr_p_ds.range_corr_p, 'range_corr_p_signal')] + datasets_with_names_time_height
 
     # update profiles stats
-    wavelengths = gs.LAMBDA_nm().get_elastic()
-    df_stats = pd.DataFrame(index=pd.Index(wavelengths, name='wavelength'))
+    df_stats = pd.DataFrame(index=pd.Index([row_data['wavelength']], name='wavelength'))
     for ds, ds_name in datasets_with_names_time_height:
         height_slice = slice(ds.Height.min().values.tolist(), ds.Height.min().values.tolist() + top_height)
-        df_stats.loc[row_data['wavelength'], f'{ds_name}_mean'] = ds.sel(Height=height_slice).mean(
-            dim={'Height', 'Time'}).values
-        df_stats.loc[row_data['wavelength'], f'{ds_name}_std'] = ds.sel(Height=height_slice).std(
-            dim={'Height', 'Time'}).values
-        df_stats.loc[row_data['wavelength'], f'{ds_name}_min'] = ds.sel(Height=height_slice).min(
-            dim={'Height', 'Time'}).values
-        df_stats.loc[row_data['wavelength'], f'{ds_name}_max'] = ds.sel(Height=height_slice).max(
-            dim={'Height', 'Time'}).values
+        df_stats[f'{ds_name}_mean'] = ds.sel(Height=height_slice).mean(dim={'Height', 'Time'}).values
+        df_stats[f'{ds_name}_std'] = ds.sel(Height=height_slice).std(dim={'Height', 'Time'}).values
+        df_stats[f'{ds_name}_min'] = ds.sel(Height=height_slice).min(dim={'Height', 'Time'}).values
+        df_stats[f'{ds_name}_max'] = ds.sel(Height=height_slice).max(dim={'Height', 'Time'}).values
 
     # If LC stats are available from the CSV - load them directly, otherwise - Compute.
     try:
-        df_stats.loc[row_data['wavelength'], f'LC_mean'] = row_data['LC']
-        df_stats.loc[row_data['wavelength'], f'LC_std'] = row_data['LC_std']
-        df_stats.loc[row_data['wavelength'], f'LC_min'] = row_data['LC_min']
-        df_stats.loc[row_data['wavelength'], f'LC_max'] = row_data['LC_max']
+        df_stats['LC_mean'] = row_data['LC']
+        df_stats['LC_std'] = row_data['LC_std']
+        df_stats['LC_min'] = row_data['LC_min']
+        df_stats['LC_max'] = row_data['LC_max']
     except KeyError:
         day_date = row_data.date.date()
         signal_folder = prep_utils.get_month_folder_name(station.gen_signal_dataset, day_date)
@@ -437,9 +431,12 @@ def calc_sample_statistics(station: gs.Station, row: pd.Series, top_height: int,
         datasets_with_names_time = [(signal_ds.LC, f'LC')]
         for ds, ds_name in datasets_with_names_time:
             time_slice = slice(row_data.start_time_period, row_data.end_time_period)
-            df_stats[f'{ds_name}_mean'] = ds.sel(Time=time_slice).mean(dim={'Time'}).values
-            df_stats[f'{ds_name}_std'] = ds.sel(Time=time_slice).std(dim={'Time'}).values
-            df_stats[f'{ds_name}_min'] = ds.sel(Time=time_slice).min(dim={'Time'}).values
-            df_stats[f'{ds_name}_max'] = ds.sel(Time=time_slice).max(dim={'Time'}).values
-    df_stats.fillna(0, inplace=True)
+            df_stats[f'{ds_name}_mean'] = ds.sel(Time=time_slice, Wavelength=row_data['wavelength']).mean(
+                dim={'Time'}).values
+            df_stats[f'{ds_name}_std'] = ds.sel(Time=time_slice, Wavelength=row_data['wavelength']).std(
+                dim={'Time'}).values
+            df_stats[f'{ds_name}_min'] = ds.sel(Time=time_slice, Wavelength=row_data['wavelength']).min(
+                dim={'Time'}).values
+            df_stats[f'{ds_name}_max'] = ds.sel(Time=time_slice, Wavelength=row_data['wavelength']).max(
+                dim={'Time'}).values
     return df_stats

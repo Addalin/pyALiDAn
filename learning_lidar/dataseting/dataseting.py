@@ -468,8 +468,7 @@ def calc_data_statistics(station, start_date, end_date, top_height=15.3, mode='g
                     f"_{start_date.strftime('%Y-%m-%d')}_{end_date.strftime('%Y-%m-%d')}{dataset_type_str}.csv"
     csv_gen_path = os.path.join(data_folder, csv_gen_fname)
     df = pd.read_csv(csv_gen_path, parse_dates=['date', 'start_time_period', 'end_time_period'])
-    # days_groups = df.groupby('date').groups
-    # days_list = [timestamp2datetime(key) for key in days_groups.keys()]
+
     wavelengths = gs.LAMBDA_nm().get_elastic()
 
     profiles_sources = [('range_corr', 'lidar'),  # Pois measurement signal - p_n
@@ -491,17 +490,18 @@ def calc_data_statistics(station, start_date, end_date, top_height=15.3, mode='g
     columns.extend(['LC_mean', 'LC_std', 'LC_min', 'LC_max'])  # Lidar calibration value - LC
 
     df_stats = pd.DataFrame(0, index=pd.Index(wavelengths, name='wavelength'), columns=columns)
-    num_processes = min((cpu_count() - 1, len(df)))
-    with Pool(num_processes) as p:
-        #     results = p.starmap(calc_day_statistics, zip(repeat(station), days_list, repeat(top_height)))
-        results = p.starmap(ds_utils.calc_sample_statistics, zip(repeat(station), df.iterrows(),
-                                                                 repeat(top_height), repeat(mode)))
 
-    for result in results:
-        df_stats += result
+    for wavelen, df_indices in df.groupby('wavelength').groups.items():
+        df_wavelen = df.iloc[df_indices]
+        num_processes = min((cpu_count() - 1, len(df_wavelen)))
+        with Pool(num_processes) as p:
+            results = p.starmap(ds_utils.calc_sample_statistics, zip(repeat(station), df_wavelen.iterrows(),
+                                                                     repeat(top_height), repeat(mode)))
+        res = results[0]
+        for result in results[1:]:
+            res += result
 
-    norm_scale = 1 / len(df)
-    df_stats *= norm_scale  # normalize by number of samples in the dataset
+        df_stats.loc[wavelen] = (res/len(results)).iloc[0]  # normalize by number of samples in the dataset
 
     # Save stats to csv
     stats_fname = f"stats_{'gen_' if mode == 'gen' else ''}{station.name}_" \
@@ -513,6 +513,12 @@ def calc_data_statistics(station, start_date, end_date, top_height=15.3, mode='g
 
 def calc_day_statistics(station, day_date, top_height=15.3):
     """
+    NOTE - This function is not currently updated. Proceed with caution.
+    example:
+    days_groups = df.groupby('date').groups
+    days_list = [timestamp2datetime(key) for key in days_groups.keys()]
+    results = p.starmap(calc_day_statistics, zip(repeat(station), days_list, repeat(top_height)))
+
     Calculates mean & std for params in datasets_with_names_time_height and datasets_with_names_time
 
     :param station: gs.station() object of the lidar station
