@@ -296,6 +296,22 @@ def split_save_train_test_ds(csv_path='', train_size=0.8, df=None):
     return train_set, test_set
 
 
+
+
+def get_X_path(station, parent_folder, day_date, data_source, wavelength, generated_mode, file_type=None, time_slice=None):
+    month_folder = prep_utils.get_month_folder_name(parent_folder=parent_folder, day_date=day_date)
+
+    if generated_mode:
+        nc_name = gen_utils.get_gen_dataset_file_name(station, day_date, data_source=data_source, wavelength=wavelength,
+                                                      file_type=file_type, time_slice=time_slice)
+    else:
+        nc_name = xr_utils.get_prep_dataset_file_name(station, day_date, data_source=data_source, lambda_nm=wavelength,
+                                                      file_type=file_type, time_slice=time_slice)
+
+    nc_path = os.path.join(month_folder, nc_name)
+    return nc_path
+
+
 def get_generated_X_path(station, parent_folder, day_date, data_source, wavelength, file_type=None, time_slice=None):
     month_folder = prep_utils.get_month_folder_name(parent_folder=parent_folder, day_date=day_date)
     nc_name = gen_utils.get_gen_dataset_file_name(station, day_date, data_source=data_source, wavelength=wavelength,
@@ -312,12 +328,12 @@ def get_prep_X_path(station, parent_folder, day_date, data_source, wavelength, f
     return data_path
 
 
-def get_mean_lc(df, station, day_date):
+def get_mean_lc(df: pd.DataFrame, station: gs.Station, day_date: datetime.date):
     """
     TODO: update usage
+    :param day_date:
     :param df:
     :param station:
-    :param wavelength:
     :return:
     """
     day_indices = df['date'] == day_date  # indices of current day in df
@@ -359,7 +375,7 @@ class EmptyDataFrameError(Error):
     pass
 
 
-def calc_sample_statistics(station: gs.Station, row: pd.Series, top_height: int, mode: str='gen'):
+def calc_sample_statistics(station: gs.Station, row: pd.Series, top_height: int, mode: str = 'gen') -> pd.DataFrame:
     """
     Calculates mean & std for params in datasets_with_names_time_height and datasets_with_names_time
 
@@ -396,10 +412,14 @@ def calc_sample_statistics(station: gs.Station, row: pd.Series, top_height: int,
     df_stats = pd.DataFrame(index=pd.Index(wavelengths, name='wavelength'))
     for ds, ds_name in datasets_with_names_time_height:
         height_slice = slice(ds.Height.min().values.tolist(), ds.Height.min().values.tolist() + top_height)
-        df_stats.loc[row_data['wavelength'], f'{ds_name}_mean'] = ds.sel(Height=height_slice).mean(dim={'Height', 'Time'}).values
-        df_stats.loc[row_data['wavelength'], f'{ds_name}_std'] = ds.sel(Height=height_slice).std(dim={'Height', 'Time'}).values
-        df_stats.loc[row_data['wavelength'], f'{ds_name}_min'] = ds.sel(Height=height_slice).min(dim={'Height', 'Time'}).values
-        df_stats.loc[row_data['wavelength'], f'{ds_name}_max'] = ds.sel(Height=height_slice).max(dim={'Height', 'Time'}).values
+        df_stats.loc[row_data['wavelength'], f'{ds_name}_mean'] = ds.sel(Height=height_slice).mean(
+            dim={'Height', 'Time'}).values
+        df_stats.loc[row_data['wavelength'], f'{ds_name}_std'] = ds.sel(Height=height_slice).std(
+            dim={'Height', 'Time'}).values
+        df_stats.loc[row_data['wavelength'], f'{ds_name}_min'] = ds.sel(Height=height_slice).min(
+            dim={'Height', 'Time'}).values
+        df_stats.loc[row_data['wavelength'], f'{ds_name}_max'] = ds.sel(Height=height_slice).max(
+            dim={'Height', 'Time'}).values
 
     # If LC stats are available from the CSV - load them directly, otherwise - Compute.
     try:
