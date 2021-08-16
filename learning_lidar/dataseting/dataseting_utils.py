@@ -334,6 +334,19 @@ def get_mean_lc(df, station, day_date):
         apply(lambda row: LC_day.sel(Time=slice(row['start_time_period'], row['end_time_period']))
               .mean(dim='Time').sel(Wavelength=row['wavelength']).values,
               axis=1, result_type='expand')
+    # TODO: check that LC_std, LC_min,LC_max are calculated and added to the csv
+    df.loc[day_indices, ['LC_std']] = df.loc[day_indices]. \
+        apply(lambda row: LC_day.sel(Time=slice(row['start_time_period'], row['end_time_period']))
+              .std(dim='Time').sel(Wavelength=row['wavelength']).values,
+              axis=1, result_type='expand')
+    df.loc[day_indices, ['LC_min']] = df.loc[day_indices]. \
+        apply(lambda row: LC_day.sel(Time=slice(row['start_time_period'], row['end_time_period']))
+              .min(dim='Time').sel(Wavelength=row['wavelength']).values,
+              axis=1, result_type='expand')
+    df.loc[day_indices, ['LC_max']] = df.loc[day_indices]. \
+        apply(lambda row: LC_day.sel(Time=slice(row['start_time_period'], row['end_time_period']))
+              .max(dim='Time').sel(Wavelength=row['wavelength']).values,
+              axis=1, result_type='expand')
     return df
 
 
