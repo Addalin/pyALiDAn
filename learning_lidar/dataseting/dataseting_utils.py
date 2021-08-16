@@ -314,7 +314,7 @@ def get_prep_X_path(station, parent_folder, day_date, data_source, wavelength, f
 
 def get_mean_lc(df, station, day_date):
     """
-
+    TODO: update usage
     :param df:
     :param station:
     :param wavelength:
