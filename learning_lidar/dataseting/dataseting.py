@@ -121,8 +121,10 @@ def dataseting_main(params, log_level=logging.DEBUG):
 
     if params.calc_generated_stats:
         logger.info(f"\nStart calculating generated dataset statistics")
-        _, csv_stats_path = calc_data_statistics(station, start_date, end_date)
-        logger.info(f"\nDone calculating generated dataset statistics. saved to:{csv_stats_path}")
+        _, csv_stats_path = calc_data_statistics(station, start_date, end_date, dataset_type='train')
+        logger.info(f"\nDone calculating generated train dataset statistics. saved to:{csv_stats_path}")
+        _, csv_stats_path = calc_data_statistics(station, start_date, end_date, dataset_type='test')
+        logger.info(f"\nDone calculating generated test dataset statistics. saved to:{csv_stats_path}")
 
     if params.calc_stats:
         logger.info(f"\nStart calculating dataset statistics")
@@ -447,9 +449,10 @@ def create_generated_dataset(station, start_date, end_date, sample_size='30min',
     return gen_df
 
 
-def calc_data_statistics(station, start_date, end_date, top_height=15.3, mode='gen'):
+def calc_data_statistics(station, start_date, end_date, top_height=15.3, mode='gen', dataset_type= 'train'):
     """
     Calculated statistics for the period of the dataset of the given station during start_date, end_date
+    :param dataset_type:
     :param mode: str, 'gen' or 'raw'. if 'gen' this works on the generated dataset.
     :param station:  gs.station() object of the lidar station
     :param start_date: datetime.date object of the initial period date
@@ -459,14 +462,14 @@ def calc_data_statistics(station, start_date, end_date, top_height=15.3, mode='g
     :return: df_stats: pd.Dataframe, containing statistics of mean and std values for generation signals during
      the desired period [start_date, end_date]. Note: one should previously save the generated dataset for this period.
     """
-
+    dataset_type_str = '_'+dataset_type if dataset_type in ['train', 'test'] else ''
     data_folder = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))), 'data')
     csv_gen_fname = f"dataset_{'gen_' if mode == 'gen' else ''}{station.name}" \
-                    f"_{start_date.strftime('%Y-%m-%d')}_{end_date.strftime('%Y-%m-%d')}_train.csv"
+                    f"_{start_date.strftime('%Y-%m-%d')}_{end_date.strftime('%Y-%m-%d')}{dataset_type_str}.csv"
     csv_gen_path = os.path.join(data_folder, csv_gen_fname)
     df = pd.read_csv(csv_gen_path, parse_dates=['date', 'start_time_period', 'end_time_period'])
-    days_groups = df.groupby('date').groups
-    days_list = [timestamp2datetime(key) for key in days_groups.keys()]
+    # days_groups = df.groupby('date').groups
+    # days_list = [timestamp2datetime(key) for key in days_groups.keys()]
     wavelengths = gs.LAMBDA_nm().get_elastic()
 
     profiles_sources = [('range_corr', 'lidar'),  # Pois measurement signal - p_n
@@ -488,7 +491,7 @@ def calc_data_statistics(station, start_date, end_date, top_height=15.3, mode='g
     columns.extend(['LC_mean', 'LC_std', 'LC_min', 'LC_max'])  # Lidar calibration value - LC
 
     df_stats = pd.DataFrame(0, index=pd.Index(wavelengths, name='wavelength'), columns=columns)
-    num_processes = min((cpu_count() - 1, len(days_list)))
+    num_processes = min((cpu_count() - 1, len(df)))
     with Pool(num_processes) as p:
         #     results = p.starmap(calc_day_statistics, zip(repeat(station), days_list, repeat(top_height)))
         results = p.starmap(ds_utils.calc_sample_statistics, zip(repeat(station), df.iterrows(),
@@ -498,11 +501,11 @@ def calc_data_statistics(station, start_date, end_date, top_height=15.3, mode='g
         df_stats += result
 
     norm_scale = 1 / len(df)
-    df_stats *= norm_scale  # normalize by number of samples in the csv
+    df_stats *= norm_scale  # normalize by number of samples in the dataset
 
-    # Save stats
+    # Save stats to csv
     stats_fname = f"stats_{'gen_' if mode == 'gen' else ''}{station.name}_" \
-                  f"{start_date.strftime('%Y-%m-%d')}_{end_date.strftime('%Y-%m-%d')}_train.csv"
+                  f"{start_date.strftime('%Y-%m-%d')}_{end_date.strftime('%Y-%m-%d')}{dataset_type_str}.csv"
     csv_stats_path = os.path.join(data_folder, stats_fname)
     df_stats.to_csv(csv_stats_path)
     return df_stats, csv_stats_path
