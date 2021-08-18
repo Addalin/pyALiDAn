@@ -45,20 +45,23 @@ def dataseting_main(params, log_level=logging.DEBUG):
                                              f"{start_date.strftime('%Y-%m-%d')}_{end_date.strftime('%Y-%m-%d')}.csv")
 
     if params.do_dataset:
-        logger.info(
-            f"\nStart generating dataset for period: "
-            f"[{start_date.strftime('%Y-%m-%d')},{end_date.strftime('%Y-%m-%d')}]")
+        df_csv_path = csv_gen_path if params.generated_mode else csv_path
+        logger.info(f"\nStart doing {mode} dataset for period: "
+                    f"[{start_date.strftime('%Y-%m-%d')},{end_date.strftime('%Y-%m-%d')}]")
         # Generate dataset for learning
-        sample_size = '29.5min'
-        df = create_dataset(station_name=station_name, start_date=start_date,
-                            end_date=end_date, sample_size=sample_size)
+        if params.generated_mode:
+            df = create_generated_dataset(station=station, start_date=start_date, end_date=end_date)
+        else:
+            sample_size = '29.5min'
+            df = create_dataset(station_name=station_name, start_date=start_date,
+                                end_date=end_date, sample_size=sample_size)
 
-        # Convert m to km
-        if params.use_km_unit:
-            df = ds_utils.convert_Y_features_units(df)
+            # Convert m to km
+            if params.use_km_unit:
+                df = ds_utils.convert_Y_features_units(df)
 
-        df.to_csv(csv_path, index=False)
-        logger.info(f"\nDone database creation, saving to: {csv_path}")
+        df.to_csv(df_csv_path, index=False)
+        logger.info(f"\nDone database {mode} creation, saving to: {df_csv_path}")
         # TODO: add creation of dataset statistics following its creation.
         #         adapt calc_data_statistics(station, start_date, end_date)
 
@@ -93,14 +96,6 @@ def dataseting_main(params, log_level=logging.DEBUG):
         # Save the calibration dataset
         xr_utils.save_dataset(ds_calibration, os.path.curdir, ds_path_extended)
         logger.info(f"The calibration dataset saved to :{ds_path_extended}")
-
-    if params.do_generated_dataset:
-        logger.info(
-            f"\nStart creating generated dataset for period:"
-            f" [{start_date.strftime('%Y-%m-%d')},{end_date.strftime('%Y-%m-%d')}]")
-        generated_df = create_generated_dataset(station=station, start_date=start_date, end_date=end_date)
-        generated_df.to_csv(csv_gen_path, index=False)
-        logger.info(f"\nDone generated database creation, saving to: {csv_gen_path}")
 
     if params.create_time_split_samples:
         logger.info(f"\nStart preparing {mode} samples")
@@ -496,7 +491,7 @@ def calc_data_statistics(station, start_date, end_date, top_height=15.3, mode='g
 
 def calc_day_statistics(station, day_date, top_height=15.3):
     """
-    NOTE - This function is not currently updated. Proceed with caution.
+    ********NOTE******* - This function is not currently updated. Proceed with caution.
     example:
     days_groups = df.groupby('date').groups
     days_list = [timestamp2datetime(key) for key in days_groups.keys()]
@@ -649,12 +644,12 @@ def prepare_samples(station, start_date, end_date, top_height=15.3, generated=Fa
 if __name__ == '__main__':
     parser = utils.get_base_arguments()
 
-    # TODO merge do_dataset and do_generated_dataset, use generated_mode flag
     parser.add_argument('--do_dataset', action='store_true',
                         help='Whether to create a dataset')
 
     parser.add_argument('--generated_mode', action='store_true',
-                        help='Whether to do the generated mode action. Otherwise, Raw mode.')
+                        help='Whether to do the generated mode action. Otherwise, Raw mode. '
+                             'Affects do_dataset, create_train_test_splits, calc_stats, create_time_split_samples')
 
     parser.add_argument('--extend_dataset', action='store_true',
                         help='Whether to extend_dataset')
@@ -664,9 +659,6 @@ if __name__ == '__main__':
 
     parser.add_argument('--use_km_unit', action='store_true',
                         help='Whether to use_km_unit')
-
-    parser.add_argument('--do_generated_dataset', action='store_true',
-                        help='Whether to create do_generated_dataset')
 
     parser.add_argument('--create_train_test_splits', action='store_true',
                         help='Whether to create train test splits')
