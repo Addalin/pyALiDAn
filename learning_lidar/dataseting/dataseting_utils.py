@@ -296,7 +296,7 @@ def split_save_train_test_ds(csv_path='', train_size=0.8, df=None):
     return train_set, test_set
 
 
-def get_X_path(station, parent_folder, day_date, data_source, wavelength, generated_mode, file_type=None,
+def get_X_path(station, parent_folder, day_date, data_source, wavelength, generated_mode: bool, file_type=None,
                time_slice=None):
     month_folder = prep_utils.get_month_folder_name(parent_folder=parent_folder, day_date=day_date)
 
@@ -311,22 +311,6 @@ def get_X_path(station, parent_folder, day_date, data_source, wavelength, genera
     return nc_path
 
 
-def get_generated_X_path(station, parent_folder, day_date, data_source, wavelength, file_type=None, time_slice=None):
-    month_folder = prep_utils.get_month_folder_name(parent_folder=parent_folder, day_date=day_date)
-    nc_name = gen_utils.get_gen_dataset_file_name(station, day_date, data_source=data_source, wavelength=wavelength,
-                                                  file_type=file_type, time_slice=time_slice)
-    nc_path = os.path.join(month_folder, nc_name)
-    return nc_path
-
-
-def get_prep_X_path(station, parent_folder, day_date, data_source, wavelength, file_type=None, time_slice=None):
-    month_folder = prep_utils.get_month_folder_name(parent_folder=parent_folder, day_date=day_date)
-    nc_name = xr_utils.get_prep_dataset_file_name(station, day_date, data_source=data_source, lambda_nm=wavelength,
-                                                  file_type=file_type, time_slice=time_slice)
-    data_path = os.path.join(month_folder, nc_name)
-    return data_path
-
-
 def get_mean_lc(df: pd.DataFrame, station: gs.Station, day_date: datetime.date):
     """
     TODO: update usage
@@ -338,8 +322,8 @@ def get_mean_lc(df: pd.DataFrame, station: gs.Station, day_date: datetime.date):
     day_indices = df['date'] == day_date  # indices of current day in df
 
     # path to signal_dataset of current day
-    nc_path = get_generated_X_path(station=station, parent_folder=station.gen_signal_dataset, day_date=day_date,
-                                   data_source='signal', wavelength='*')
+    nc_path = get_X_path(station=station, parent_folder=station.gen_signal_dataset, day_date=day_date,
+                         generated_mode=True, data_source='signal', wavelength='*')
 
     # Load the LC of current day
     LC_day = xr_utils.load_dataset(nc_path).LC
@@ -403,6 +387,7 @@ def calc_sample_statistics(station: gs.Station, row: pd.Series, top_height: int,
     # TODO uncomment after correcting dataset creation
     # if mode == 'gen':
     #     datasets_with_names_time_height = [(signal_p_ds.p, 'p_signal'),
+    #
     #                                        (signal_range_corr_ds.range_corr, 'range_corr_signal'),
     #                                        (signal_range_corr_p_ds.range_corr_p, 'range_corr_p_signal')] + datasets_with_names_time_height
 
