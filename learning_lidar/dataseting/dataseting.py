@@ -109,7 +109,6 @@ def dataseting_main(params, log_level=logging.DEBUG):
         _, csv_stats_path = calc_data_statistics(station, start_date, end_date, dataset_type='test', mode=mode)
         logger.info(f"\nDone calculating {mode} test dataset statistics. saved to:{csv_stats_path}")
 
-
 # %% Dataset creating helper functions
 def create_dataset(station_name='haifa', start_date=datetime(2017, 9, 1),
                    end_date=datetime(2017, 9, 2), sample_size='29.5min', list_dates=[]):
@@ -475,11 +474,16 @@ def calc_data_statistics(station, start_date, end_date, top_height=15.3, mode='g
         with Pool(num_processes) as p:
             results = p.starmap(ds_utils.calc_sample_statistics, zip(repeat(station), df_wavelen.iterrows(),
                                                                      repeat(top_height), repeat(mode)))
-        res = results[0]
-        for result in results[1:]:
-            res += result
+        res = pd.concat(results)
+        df_stats.loc[wavelen, res.filter(regex=("_max$")).columns] = res.filter(regex=("_max$")).max(axis=0)
+        df_stats.loc[wavelen, res.filter(regex=("_min$")).columns] = res.filter(regex=("_min$")).min(axis=0)
+        df_stats.loc[wavelen, res.filter(regex=("_mean$")).columns] = res.filter(regex=("_mean$")).mean(axis=0)
 
-        df_stats.loc[wavelen] = (res / len(results)).iloc[0]  # normalize by number of samples in the dataset
+        with Pool(num_processes) as p:
+            results = p.starmap(ds_utils.calc_data_std, zip(repeat(station), df_wavelen.iterrows(),
+                                                                     repeat(top_height), repeat(df_stats.loc[wavelen]), repeat(mode)))
+        res = pd.concat(results)
+        df_stats.loc[wavelen, res.filter(regex=("_std$")).columns] = res.filter(regex=("_std$")).mean(axis=0)
 
     # Save stats to csv
     stats_fname = f"stats_{'gen_' if mode == 'gen' else ''}{station.name}_" \
