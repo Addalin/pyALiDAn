@@ -1,4 +1,3 @@
-# %% #General Imports
 import os
 from datetime import datetime, timedelta
 from IPython.display import display
@@ -8,12 +7,9 @@ from tqdm import tqdm
 from itertools import repeat
 from multiprocessing import Pool, cpu_count
 
-# %% Scientific and data imports
 import numpy as np
 import pandas as pd
 import xarray as xr
-
-# %% Local modules imports
 
 import learning_lidar.preprocessing.preprocessing_utils as prep_utils
 import learning_lidar.dataseting.dataseting_utils as ds_utils
@@ -30,7 +26,7 @@ def dataseting_main(params, log_level=logging.DEBUG):
     station_name = params.station_name
     start_date = params.start_date
     end_date = params.end_date
-
+    mode = 'gen' if params.generated_mode else 'raw'
     # Load data of station
     station = gs.Station(station_name=station_name)
 
@@ -67,11 +63,11 @@ def dataseting_main(params, log_level=logging.DEBUG):
         #         adapt calc_data_statistics(station, start_date, end_date)
 
     if params.create_train_test_splits:
-        logger.info(
-            f"Splitting to train-test the dataset for period: [{start_date.strftime('%Y-%m-%d')},"
-            f"{end_date.strftime('%Y-%m-%d')}]")
-        ds_utils.split_save_train_test_ds(csv_path=csv_path)
-        logger.info(f"Done splitting train-test dataset for {csv_path}")
+        csv_path_to_split = csv_gen_path if params.generated_mode else csv_path
+        logger.info(f"Splitting to train-test the {mode} dataset for period: [{start_date.strftime('%Y-%m-%d')},"
+                    f"{end_date.strftime('%Y-%m-%d')}]")
+        ds_utils.split_save_train_test_ds(csv_path=csv_path_to_split)
+        logger.info(f"Done splitting train-test dataset for {csv_path_to_split}")
 
     # Create extended dataset and save to csv - recalculation of Lidar Constant (currently this is a naive calculation)
     if params.extend_dataset:
@@ -106,30 +102,17 @@ def dataseting_main(params, log_level=logging.DEBUG):
         generated_df.to_csv(csv_gen_path, index=False)
         logger.info(f"\nDone generated database creation, saving to: {csv_gen_path}")
 
-    if params.split_generated_dataset:
-        logger.info(
-            f"\nSplitting to train-test the dataset for period: [{start_date.strftime('%Y-%m-%d')},"
-            f"{end_date.strftime('%Y-%m-%d')}]")
-        ds_utils.split_save_train_test_ds(csv_path=csv_gen_path)
-        logger.info(f"\nDone splitting train-test dataset for {csv_gen_path}")
-
-    if params.create_generated_time_split_samples:
-        prepare_samples(station, start_date, end_date, top_height=15.3, generated=True)
-
     if params.create_time_split_samples:
-        prepare_samples(station, start_date, end_date, top_height=15.3, generated=False)
-
-    if params.calc_generated_stats:
-        logger.info(f"\nStart calculating generated dataset statistics")
-        _, csv_stats_path = calc_data_statistics(station, start_date, end_date, dataset_type='train')
-        logger.info(f"\nDone calculating generated train dataset statistics. saved to:{csv_stats_path}")
-        _, csv_stats_path = calc_data_statistics(station, start_date, end_date, dataset_type='test')
-        logger.info(f"\nDone calculating generated test dataset statistics. saved to:{csv_stats_path}")
+        logger.info(f"\nStart preparing {mode} samples")
+        prepare_samples(station, start_date, end_date, top_height=15.3, generated=params.generated_mode)
+        logger.info(f"\nDone preparing {mode} samples")
 
     if params.calc_stats:
-        logger.info(f"\nStart calculating dataset statistics")
-        _, csv_stats_path = calc_data_statistics(station, start_date, end_date, mode='raw')
-        logger.info(f"\nDone calculating dataset statistics. saved to:{csv_stats_path}")
+        logger.info(f"\nStart calculating {mode} dataset statistics")
+        _, csv_stats_path = calc_data_statistics(station, start_date, end_date, dataset_type='train', mode=mode)
+        logger.info(f"\nDone calculating {mode} train dataset statistics. saved to:{csv_stats_path}")
+        _, csv_stats_path = calc_data_statistics(station, start_date, end_date, dataset_type='test', mode=mode)
+        logger.info(f"\nDone calculating {mode} test dataset statistics. saved to:{csv_stats_path}")
 
 
 # %% Dataset creating helper functions
@@ -208,29 +191,29 @@ def create_dataset(station_name='haifa', start_date=datetime(2017, 9, 1),
 
                 # Add molecular path
                 expanded_df['molecular_path'] = expanded_df.apply(
-                    lambda row: ds_utils.get_prep_X_path(station=station, parent_folder=station.molecular_dataset,
-                                                         day_date=row['start_time_period'], data_source='molecular',
-                                                         wavelength=wavelength, file_type='attbsc',
-                                                         time_slice=slice(row['start_time_period'],
-                                                                          row['end_time_period'])),
+                    lambda row: ds_utils.get_X_path(station=station, parent_folder=station.molecular_dataset,
+                                                    day_date=row['start_time_period'], data_source='molecular',
+                                                    wavelength=wavelength, file_type='attbsc', generated_mode=False,
+                                                    time_slice=slice(row['start_time_period'],
+                                                                     row['end_time_period'])),
                     axis=1, result_type='expand')
 
                 # Add bg path
                 expanded_df['bg_path'] = expanded_df.apply(
-                    lambda row: ds_utils.get_prep_X_path(station=station, parent_folder=station.bg_dataset,
-                                                         day_date=row['start_time_period'], data_source='bg',
-                                                         wavelength=wavelength, file_type='p_bg',
-                                                         time_slice=slice(row['start_time_period'],
-                                                                          row['end_time_period'])),
+                    lambda row: ds_utils.get_X_path(station=station, parent_folder=station.bg_dataset,
+                                                    day_date=row['start_time_period'], data_source='bg',
+                                                    wavelength=wavelength, file_type='p_bg', generated_mode=False,
+                                                    time_slice=slice(row['start_time_period'],
+                                                                     row['end_time_period'])),
                     axis=1, result_type='expand')
 
                 # Add lidar path
                 expanded_df['lidar_path'] = expanded_df.apply(
-                    lambda row: ds_utils.get_prep_X_path(station=station, parent_folder=station.lidar_dataset,
-                                                         day_date=row['start_time_period'], data_source='lidar',
-                                                         wavelength=wavelength, file_type='range_corr',
-                                                         time_slice=slice(row['start_time_period'],
-                                                                          row['end_time_period'])),
+                    lambda row: ds_utils.get_X_path(station=station, parent_folder=station.lidar_dataset,
+                                                    day_date=row['start_time_period'], data_source='lidar',
+                                                    wavelength=wavelength, file_type='range_corr', generated_mode=False,
+                                                    time_slice=slice(row['start_time_period'],
+                                                                     row['end_time_period'])),
                     axis=1, result_type='expand')
 
                 # reorder the columns
@@ -379,57 +362,57 @@ def create_generated_dataset(station, start_date, end_date, sample_size='30min',
 
             # add bg path
             df['bg_path'] = df.apply(
-                lambda row: ds_utils.get_generated_X_path(station=station, parent_folder=station.gen_bg_dataset,
-                                                          day_date=row['start_time_period'], data_source='bg',
-                                                          wavelength=wavelength, file_type='p_bg',
-                                                          time_slice=slice(row['start_time_period'],
-                                                                           row['end_time_period'])),
+                lambda row: ds_utils.get_X_path(station=station, parent_folder=station.gen_bg_dataset,
+                                                day_date=row['start_time_period'], data_source='bg',
+                                                wavelength=wavelength, file_type='p_bg', generated_mode=True,
+                                                time_slice=slice(row['start_time_period'],
+                                                                 row['end_time_period'])),
                 axis=1, result_type='expand')
 
             # add lidar path
             df['lidar_path'] = df.apply(
-                lambda row: ds_utils.get_generated_X_path(station=station, parent_folder=station.gen_lidar_dataset,
-                                                          day_date=row['start_time_period'], data_source='lidar',
-                                                          wavelength=wavelength, file_type='range_corr',
-                                                          time_slice=slice(row['start_time_period'],
-                                                                           row['end_time_period'])),
+                lambda row: ds_utils.get_X_path(station=station, parent_folder=station.gen_lidar_dataset,
+                                                day_date=row['start_time_period'], data_source='lidar',
+                                                wavelength=wavelength, file_type='range_corr', generated_mode=True,
+                                                time_slice=slice(row['start_time_period'],
+                                                                 row['end_time_period'])),
                 axis=1, result_type='expand')
 
             # add signal path
             df['signal_path'] = df.apply(
-                lambda row: ds_utils.get_generated_X_path(station=station, parent_folder=station.gen_signal_dataset,
-                                                          day_date=row['start_time_period'], data_source='signal',
-                                                          wavelength=wavelength, file_type='range_corr',
-                                                          time_slice=slice(row['start_time_period'],
-                                                                           row['end_time_period'])),
+                lambda row: ds_utils.get_X_path(station=station, parent_folder=station.gen_signal_dataset,
+                                                day_date=row['start_time_period'], data_source='signal',
+                                                wavelength=wavelength, file_type='range_corr', generated_mode=True,
+                                                time_slice=slice(row['start_time_period'],
+                                                                 row['end_time_period'])),
                 axis=1, result_type='expand')
 
             # add signal path - poisson without bg
             df['signal_p_path'] = df.apply(
-                lambda row: ds_utils.get_generated_X_path(station=station, parent_folder=station.gen_signal_dataset,
-                                                          day_date=row['start_time_period'], data_source='signal',
-                                                          wavelength=wavelength, file_type='range_corr_p',
-                                                          time_slice=slice(row['start_time_period'],
-                                                                           row['end_time_period'])),
+                lambda row: ds_utils.get_X_path(station=station, parent_folder=station.gen_signal_dataset,
+                                                day_date=row['start_time_period'], data_source='signal',
+                                                wavelength=wavelength, file_type='range_corr_p', generated_mode=True,
+                                                time_slice=slice(row['start_time_period'],
+                                                                 row['end_time_period'])),
                 axis=1, result_type='expand')
 
             # TODO uncomment and test that this works - signal p (not range_corr)
             # # add signal path - p only
             # df['signal_p_only_path'] = df.apply(
-            #     lambda row: ds_utils.get_generated_X_path(station=station, parent_folder=station.gen_signal_dataset,
+            #     lambda row: ds_utils.get_X_path(station=station, parent_folder=station.gen_signal_dataset,
             #                                               day_date=row['start_time_period'], data_source='signal',
-            #                                               wavelength=wavelength, file_type='p',
+            #                                               wavelength=wavelength, file_type='p', generated_mode=True,
             #                                               time_slice=slice(row['start_time_period'],
             #                                                                row['end_time_period'])),
             #     axis=1, result_type='expand')
 
             # Add molecular path
             df['molecular_path'] = df.apply(
-                lambda row: ds_utils.get_prep_X_path(station=station, parent_folder=station.molecular_dataset,
-                                                     day_date=row['start_time_period'], data_source='molecular',
-                                                     wavelength=wavelength, file_type='attbsc',
-                                                     time_slice=slice(row['start_time_period'],
-                                                                      row['end_time_period'])),
+                lambda row: ds_utils.get_X_path(station=station, parent_folder=station.molecular_dataset,
+                                                day_date=row['start_time_period'], data_source='molecular',
+                                                wavelength=wavelength, file_type='attbsc', generated_mode=False,
+                                                time_slice=slice(row['start_time_period'],
+                                                                 row['end_time_period'])),
                 axis=1, result_type='expand')
 
             if calc_mean_lc:
@@ -449,7 +432,7 @@ def create_generated_dataset(station, start_date, end_date, sample_size='30min',
     return gen_df
 
 
-def calc_data_statistics(station, start_date, end_date, top_height=15.3, mode='gen', dataset_type= 'train'):
+def calc_data_statistics(station, start_date, end_date, top_height=15.3, mode='gen', dataset_type='train'):
     """
     Calculated statistics for the period of the dataset of the given station during start_date, end_date
     :param dataset_type:
@@ -462,7 +445,7 @@ def calc_data_statistics(station, start_date, end_date, top_height=15.3, mode='g
     :return: df_stats: pd.Dataframe, containing statistics of mean and std values for generation signals during
      the desired period [start_date, end_date]. Note: one should previously save the generated dataset for this period.
     """
-    dataset_type_str = '_'+dataset_type if dataset_type in ['train', 'test'] else ''
+    dataset_type_str = '_' + dataset_type if dataset_type in ['train', 'test'] else ''
     data_folder = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))), 'data')
     csv_gen_fname = f"dataset_{'gen_' if mode == 'gen' else ''}{station.name}" \
                     f"_{start_date.strftime('%Y-%m-%d')}_{end_date.strftime('%Y-%m-%d')}{dataset_type_str}.csv"
@@ -501,7 +484,7 @@ def calc_data_statistics(station, start_date, end_date, top_height=15.3, mode='g
         for result in results[1:]:
             res += result
 
-        df_stats.loc[wavelen] = (res/len(results)).iloc[0]  # normalize by number of samples in the dataset
+        df_stats.loc[wavelen] = (res / len(results)).iloc[0]  # normalize by number of samples in the dataset
 
     # Save stats to csv
     stats_fname = f"stats_{'gen_' if mode == 'gen' else ''}{station.name}_" \
@@ -666,10 +649,12 @@ def prepare_samples(station, start_date, end_date, top_height=15.3, generated=Fa
 if __name__ == '__main__':
     parser = utils.get_base_arguments()
 
-    # TODO change modes to options instead of true\false?
-    #  or generation true\false then only one do and split?
+    # TODO merge do_dataset and do_generated_dataset, use generated_mode flag
     parser.add_argument('--do_dataset', action='store_true',
                         help='Whether to create a dataset')
+
+    parser.add_argument('--generated_mode', action='store_true',
+                        help='Whether to do the generated mode action. Otherwise, Raw mode.')
 
     parser.add_argument('--extend_dataset', action='store_true',
                         help='Whether to extend_dataset')
@@ -686,17 +671,8 @@ if __name__ == '__main__':
     parser.add_argument('--create_train_test_splits', action='store_true',
                         help='Whether to create train test splits')
 
-    parser.add_argument('--split_generated_dataset', action='store_true',
-                        help='Whether to create split_generated_dataset')
-
-    parser.add_argument('--calc_generated_stats', action='store_true',
-                        help='Whether to calc_generated_stats')
-
     parser.add_argument('--calc_stats', action='store_true',
                         help='Whether to calc_stats')
-
-    parser.add_argument('--create_generated_time_split_samples', action='store_true',
-                        help='Whether to create_generated_time_split_samples')
 
     parser.add_argument('--create_time_split_samples', action='store_true',
                         help='Whether to create time split samples')
