@@ -18,6 +18,13 @@ from learning_lidar.utils import xr_utils, global_settings as gs
 
 
 def get_query(wavelength, cali_method, day_date):
+    """
+    Note: the database given to this function is assumed to contain 'liconst' values in [photons⋅sr⋅ m^𝟑]
+    :param wavelength:
+    :param cali_method:
+    :param day_date:
+    :return:
+    """
     start_time = datetime.combine(date=day_date.date(), time=day_date.time().min)
     end_time = datetime.combine(date=day_date.date(), time=day_date.time().max)
     query = f"""
@@ -88,6 +95,7 @@ def add_profiles_values(df, station, day_date, file_type='profiles'):
     def _get_info_from_profile_nc(row):
         """
         Get the r_0,r_1, and delta_r of the selected row. The values are following rebasing according to sea-level height.
+        Note: reference_height in each row should be in meters units
         :param row:
         :return:
         """
@@ -95,7 +103,7 @@ def add_profiles_values(df, station, day_date, file_type='profiles'):
         wavelen = row.wavelength
         # get altitude to rebase the reference heights according to sea-level-height
         altitude = data.altitude.item()
-        [r0, r1] = data[f'reference_height_{wavelen}'].values
+        [r0, r1] = data[f'reference_height_{wavelen}'].values #
         [bin_r0, bin_r1] = [np.argmin(abs(data.height.values - r)) for r in [r0, r1]]
         delta_r = r1 - r0
         return r0 + altitude, r1 + altitude, delta_r, bin_r0, bin_r1
@@ -296,35 +304,34 @@ def split_save_train_test_ds(csv_path='', train_size=0.8, df=None):
     return train_set, test_set
 
 
-def get_generated_X_path(station, parent_folder, day_date, data_source, wavelength, file_type=None, time_slice=None):
+def get_X_path(station, parent_folder, day_date, data_source, wavelength, generated_mode: bool, file_type=None,
+               time_slice=None):
     month_folder = prep_utils.get_month_folder_name(parent_folder=parent_folder, day_date=day_date)
-    nc_name = gen_utils.get_gen_dataset_file_name(station, day_date, data_source=data_source, wavelength=wavelength,
-                                                  file_type=file_type, time_slice=time_slice)
+
+    if generated_mode:
+        nc_name = gen_utils.get_gen_dataset_file_name(station, day_date, data_source=data_source, wavelength=wavelength,
+                                                      file_type=file_type, time_slice=time_slice)
+    else:
+        nc_name = xr_utils.get_prep_dataset_file_name(station, day_date, data_source=data_source, lambda_nm=wavelength,
+                                                      file_type=file_type, time_slice=time_slice)
+
     nc_path = os.path.join(month_folder, nc_name)
     return nc_path
 
 
-def get_prep_X_path(station, parent_folder, day_date, data_source, wavelength, file_type=None, time_slice=None):
-    month_folder = prep_utils.get_month_folder_name(parent_folder=parent_folder, day_date=day_date)
-    nc_name = xr_utils.get_prep_dataset_file_name(station, day_date, data_source=data_source, lambda_nm=wavelength,
-                                                  file_type=file_type, time_slice=time_slice)
-    data_path = os.path.join(month_folder, nc_name)
-    return data_path
-
-
-def get_mean_lc(df, station, day_date):
+def get_mean_lc(df: pd.DataFrame, station: gs.Station, day_date: datetime.date):
     """
-
+    TODO: update usage
+    :param day_date:
     :param df:
     :param station:
-    :param wavelength:
     :return:
     """
     day_indices = df['date'] == day_date  # indices of current day in df
 
     # path to signal_dataset of current day
-    nc_path = get_generated_X_path(station=station, parent_folder=station.gen_signal_dataset, day_date=day_date,
-                                   data_source='signal', wavelength='*')
+    nc_path = get_X_path(station=station, parent_folder=station.gen_signal_dataset, day_date=day_date,
+                         generated_mode=True, data_source='signal', wavelength='*')
 
     # Load the LC of current day
     LC_day = xr_utils.load_dataset(nc_path).LC
@@ -332,8 +339,20 @@ def get_mean_lc(df, station, day_date):
     # Add mean LC values for each time slice
     df.loc[day_indices, ['LC']] = df.loc[day_indices]. \
         apply(lambda row: LC_day.sel(Time=slice(row['start_time_period'], row['end_time_period']))
-              .mean(dim='Time').sel(Wavelength=row['wavelength']).values,
-              axis=1, result_type='expand')
+              .mean(dim='Time').sel(Wavelength=row['wavelength']).values, axis=1, result_type='expand')
+
+    # TODO: check that LC_std, LC_min,LC_max are calculated and added to the csv
+    df.loc[day_indices, ['LC_std']] = df.loc[day_indices]. \
+        apply(lambda row: LC_day.sel(Time=slice(row['start_time_period'], row['end_time_period']))
+              .std(dim='Time').sel(Wavelength=row['wavelength']).values, axis=1, result_type='expand')
+
+    df.loc[day_indices, ['LC_min']] = df.loc[day_indices]. \
+        apply(lambda row: LC_day.sel(Time=slice(row['start_time_period'], row['end_time_period']))
+              .min(dim='Time').sel(Wavelength=row['wavelength']).values, axis=1, result_type='expand')
+
+    df.loc[day_indices, ['LC_max']] = df.loc[day_indices]. \
+        apply(lambda row: LC_day.sel(Time=slice(row['start_time_period'], row['end_time_period']))
+              .max(dim='Time').sel(Wavelength=row['wavelength']).values, axis=1, result_type='expand')
     return df
 
 
@@ -345,3 +364,91 @@ class Error(Exception):
 class EmptyDataFrameError(Error):
     """Raised when the data frame is empty and should not have been"""
     pass
+
+
+def calc_sample_statistics(row: pd.Series, top_height: int, mode: str = 'gen') -> pd.DataFrame:
+    """
+    Calculates mean, min & max for params in datasets_with_names_time_height
+
+    :param row: row from raw database table (pandas.Dataframe())
+    :param top_height: np.float(). The Height[km] **above** ground (Lidar) level - up to which slice the samples.
+    Note: default is 15.3 [km]. IF ONE CHANGES IT - THAN THIS WILL AFFECT THE INPUT DIMENSIONS AND STATISTICS !!!
+    :param mode: 'gen' for generated data. If so, adds p_signal,range_corr_signal and range_corr_p_signal to stats
+    :return: dataframe, each row corresponds to a wavelength
+    """
+    _, row_data = row
+    # Load datasets
+    mol_ds = xr_utils.load_dataset(ncpath=row_data['molecular_path'])
+    lidar_ds = xr_utils.load_dataset(ncpath=row_data['lidar_path'])
+    p_bg = xr_utils.load_dataset(ncpath=row_data['bg_path'])
+    # TODO uncomment after correcting dataset creation
+    # signal_range_corr_ds = xr_utils.load_dataset(row_data['signal_path'])
+    # signal_range_corr_p_ds = xr_utils.load_dataset(row_data['signal_p_path'])
+    # signal_p_ds = xr_utils.load_dataset(row_data['signal_p_only_path'])
+
+    datasets_with_names_time_height = [(lidar_ds.range_corr, f'range_corr_lidar'),
+                                       (mol_ds.attbsc, f'attbsc_molecular'),
+                                       (p_bg.p_bg, f'p_bg_bg'),
+                                       (p_bg.p_bg_r2, f'p_bg_r2_bg')]
+
+    # TODO uncomment after correcting dataset creation
+    # if mode == 'gen':
+    #     datasets_with_names_time_height = [(signal_p_ds.p, 'p_signal'),
+    #
+    #                                        (signal_range_corr_ds.range_corr, 'range_corr_signal'),
+    #                                        (signal_range_corr_p_ds.range_corr_p, 'range_corr_p_signal')] + datasets_with_names_time_height
+
+    # update profiles stats
+    df_stats = pd.DataFrame(index=pd.Index([row_data['wavelength']], name='wavelength'))
+    for ds, ds_name in datasets_with_names_time_height:
+        height_slice = slice(ds.Height.min().values.tolist(), ds.Height.min().values.tolist() + top_height)
+        df_stats[f'{ds_name}_mean'] = ds.sel(Height=height_slice).mean(dim={'Height', 'Time'}).values
+        df_stats[f'{ds_name}_min'] = ds.sel(Height=height_slice).min(dim={'Height', 'Time'}).values
+        df_stats[f'{ds_name}_max'] = ds.sel(Height=height_slice).max(dim={'Height', 'Time'}).values
+
+    return df_stats
+
+
+def calc_data_std(row: pd.Series, top_height: int, means: pd.Series, mode: str = 'gen') -> pd.DataFrame:
+    """
+    Calculates std for params in datasets_with_names_time_height
+    std is computed pixel-wise
+
+    :param row: row from raw database table (pandas.Dataframe())
+    :param top_height: np.float(). The Height[km] **above** ground (Lidar) level - up to which slice the samples.
+    Note: default is 15.3 [km]. IF ONE CHANGES IT - THAN THIS WILL AFFECT THE INPUT DIMENSIONS AND STATISTICS !!!
+    :param means: series of precalculated means, for the same profiles
+    :param mode: 'gen' for generated data. If so, adds p_signal,range_corr_signal and range_corr_p_signal to stats
+    :return: dataframe, each row corresponds to a wavelength
+    """
+    _, row_data = row
+    # Load datasets
+    mol_ds = xr_utils.load_dataset(ncpath=row_data['molecular_path'])
+    lidar_ds = xr_utils.load_dataset(ncpath=row_data['lidar_path'])
+    p_bg = xr_utils.load_dataset(ncpath=row_data['bg_path'])
+    # TODO uncomment after correcting dataset creation
+    # signal_range_corr_ds = xr_utils.load_dataset(row_data['signal_path'])
+    # signal_range_corr_p_ds = xr_utils.load_dataset(row_data['signal_p_path'])
+    # signal_p_ds = xr_utils.load_dataset(row_data['signal_p_only_path'])
+
+    datasets_with_names_time_height = [(lidar_ds.range_corr, f'range_corr_lidar'),
+                                       (mol_ds.attbsc, f'attbsc_molecular'),
+                                       (p_bg.p_bg, f'p_bg_bg'),
+                                       (p_bg.p_bg_r2, f'p_bg_r2_bg')]
+
+    # TODO uncomment after correcting dataset creation
+    # if mode == 'gen':
+    #     datasets_with_names_time_height = [(signal_p_ds.p, 'p_signal'),
+    #
+    #                                        (signal_range_corr_ds.range_corr, 'range_corr_signal'),
+    #                                        (signal_range_corr_p_ds.range_corr_p, 'range_corr_p_signal')] + datasets_with_names_time_height
+
+    # update profiles stats
+    df_stats = pd.DataFrame(index=pd.Index([row_data['wavelength']], name='wavelength'))
+    for ds, ds_name in datasets_with_names_time_height:
+        height_slice = slice(ds.Height.min().values.tolist(), ds.Height.min().values.tolist() + top_height)
+        # Average (pixel-wise) square difference between value and the mean
+        df_stats[f'{ds_name}_std'] = (np.linalg.norm(
+            ds.sel(Height=height_slice).values - means[f'{ds_name}_mean']) ** 2) / ds.sel(Height=height_slice).size
+
+    return df_stats

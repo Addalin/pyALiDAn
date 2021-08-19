@@ -17,7 +17,7 @@ def get_paths(station_name, start_date, end_date):
                     f"{end_date.strftime('%Y-%m-%d')}"
     train_csv_path = os.path.join(base_path, 'data', "dataset_" + csv_base_name + '_train.csv')
     test_csv_path = os.path.join(base_path, 'data', "dataset_" + csv_base_name + '_test.csv')
-    stats_csv_path = os.path.join(base_path, 'data', "stats_" + csv_base_name + '.csv')
+    stats_csv_path = os.path.join(base_path, 'data', "stats_" + csv_base_name + '_train.csv')
     results_path = os.path.join(base_path, 'results')  # TODO: save in D or E
 
     return train_csv_path, test_csv_path, stats_csv_path, results_path
