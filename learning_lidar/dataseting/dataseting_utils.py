@@ -358,11 +358,10 @@ class EmptyDataFrameError(Error):
     pass
 
 
-def calc_sample_statistics(station: gs.Station, row: pd.Series, top_height: int, mode: str = 'gen') -> pd.DataFrame:
+def calc_sample_statistics(row: pd.Series, top_height: int, mode: str = 'gen') -> pd.DataFrame:
     """
-    Calculates mean & std for params in datasets_with_names_time_height and datasets_with_names_time
+    Calculates mean, min & max for params in datasets_with_names_time_height
 
-    :param station:
     :param row: row from raw database table (pandas.Dataframe())
     :param top_height: np.float(). The Height[km] **above** ground (Lidar) level - up to which slice the samples.
     Note: default is 15.3 [km]. IF ONE CHANGES IT - THAN THIS WILL AFFECT THE INPUT DIMENSIONS AND STATISTICS !!!
@@ -399,41 +398,18 @@ def calc_sample_statistics(station: gs.Station, row: pd.Series, top_height: int,
         df_stats[f'{ds_name}_min'] = ds.sel(Height=height_slice).min(dim={'Height', 'Time'}).values
         df_stats[f'{ds_name}_max'] = ds.sel(Height=height_slice).max(dim={'Height', 'Time'}).values
 
-    # If LC stats are available from the CSV - load them directly, otherwise - Compute.
-    try:
-        df_stats['LC_mean'] = row_data['LC']
-        df_stats['LC_std'] = row_data['LC_std']
-        df_stats['LC_min'] = row_data['LC_min']
-        df_stats['LC_max'] = row_data['LC_max']
-    except KeyError:
-        day_date = row_data.date.date()
-        signal_folder = prep_utils.get_month_folder_name(station.gen_signal_dataset, day_date)
-        signal_nc_name = os.path.join(signal_folder,
-                                      gen_utils.get_gen_dataset_file_name(station, day_date, data_source='signal'))
-        signal_ds = xr_utils.load_dataset(signal_nc_name)
-
-        datasets_with_names_time = [(signal_ds.LC, f'LC')]
-        for ds, ds_name in datasets_with_names_time:
-            time_slice = slice(row_data.start_time_period, row_data.end_time_period)
-            df_stats[f'{ds_name}_mean'] = ds.sel(Time=time_slice, Wavelength=row_data['wavelength']).mean(
-                dim={'Time'}).values
-            df_stats[f'{ds_name}_std'] = ds.sel(Time=time_slice, Wavelength=row_data['wavelength']).std(
-                dim={'Time'}).values
-            df_stats[f'{ds_name}_min'] = ds.sel(Time=time_slice, Wavelength=row_data['wavelength']).min(
-                dim={'Time'}).values
-            df_stats[f'{ds_name}_max'] = ds.sel(Time=time_slice, Wavelength=row_data['wavelength']).max(
-                dim={'Time'}).values
     return df_stats
 
 
-def calc_data_std(station: gs.Station, row: pd.Series, top_height: int, means, mode: str = 'gen') -> pd.DataFrame:
+def calc_data_std(row: pd.Series, top_height: int, means: pd.Series, mode: str = 'gen') -> pd.DataFrame:
     """
-    Calculates mean & std for params in datasets_with_names_time_height and datasets_with_names_time
+    Calculates std for params in datasets_with_names_time_height
+    std is computed pixel-wise
 
-    :param station:
     :param row: row from raw database table (pandas.Dataframe())
     :param top_height: np.float(). The Height[km] **above** ground (Lidar) level - up to which slice the samples.
     Note: default is 15.3 [km]. IF ONE CHANGES IT - THAN THIS WILL AFFECT THE INPUT DIMENSIONS AND STATISTICS !!!
+    :param means: series of precalculated means, for the same profiles
     :param mode: 'gen' for generated data. If so, adds p_signal,range_corr_signal and range_corr_p_signal to stats
     :return: dataframe, each row corresponds to a wavelength
     """
@@ -463,31 +439,8 @@ def calc_data_std(station: gs.Station, row: pd.Series, top_height: int, means, m
     df_stats = pd.DataFrame(index=pd.Index([row_data['wavelength']], name='wavelength'))
     for ds, ds_name in datasets_with_names_time_height:
         height_slice = slice(ds.Height.min().values.tolist(), ds.Height.min().values.tolist() + top_height)
+        # Average (pixel-wise) square difference between value and the mean
         df_stats[f'{ds_name}_std'] = (np.linalg.norm(
             ds.sel(Height=height_slice).values - means[f'{ds_name}_mean']) ** 2) / ds.sel(Height=height_slice).size
 
-    # If LC stats are available from the CSV - load them directly, otherwise - Compute.
-    try:
-        df_stats['LC_mean'] = row_data['LC']
-        df_stats['LC_std'] = row_data['LC_std']
-        df_stats['LC_min'] = row_data['LC_min']
-        df_stats['LC_max'] = row_data['LC_max']
-    except KeyError:
-        day_date = row_data.date.date()
-        signal_folder = prep_utils.get_month_folder_name(station.gen_signal_dataset, day_date)
-        signal_nc_name = os.path.join(signal_folder,
-                                      gen_utils.get_gen_dataset_file_name(station, day_date, data_source='signal'))
-        signal_ds = xr_utils.load_dataset(signal_nc_name)
-
-        datasets_with_names_time = [(signal_ds.LC, f'LC')]
-        for ds, ds_name in datasets_with_names_time:
-            time_slice = slice(row_data.start_time_period, row_data.end_time_period)
-            df_stats[f'{ds_name}_mean'] = ds.sel(Time=time_slice, Wavelength=row_data['wavelength']).mean(
-                dim={'Time'}).values
-            df_stats[f'{ds_name}_std'] = ds.sel(Time=time_slice, Wavelength=row_data['wavelength']).std(
-                dim={'Time'}).values
-            df_stats[f'{ds_name}_min'] = ds.sel(Time=time_slice, Wavelength=row_data['wavelength']).min(
-                dim={'Time'}).values
-            df_stats[f'{ds_name}_max'] = ds.sel(Time=time_slice, Wavelength=row_data['wavelength']).max(
-                dim={'Time'}).values
     return df_stats

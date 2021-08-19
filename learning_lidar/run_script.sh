@@ -4,5 +4,5 @@
 
 cd dataseting || exit
 python dataseting.py --start_date 2017-04-01 --end_date 2017-05-31 --use_km_unit --calc_stats --generated_mode
-#python dataseting.py --start_date 2017-04-01 --end_date 2017-10-31 --use_km_unit --calc_stats --generated_mode
+python dataseting.py --start_date 2017-04-01 --end_date 2017-10-31 --use_km_unit --calc_stats --generated_mode
 

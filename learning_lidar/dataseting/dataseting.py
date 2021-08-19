@@ -469,21 +469,29 @@ def calc_data_statistics(station, start_date, end_date, top_height=15.3, mode='g
     df_stats = pd.DataFrame(0, index=pd.Index(wavelengths, name='wavelength'), columns=columns)
 
     for wavelen, df_indices in df.groupby('wavelength').groups.items():
+        # Compute & save Mean, Min and Max per wavelength, for each profile
         df_wavelen = df.iloc[df_indices]
         num_processes = min((cpu_count() - 1, len(df_wavelen)))
         with Pool(num_processes) as p:
-            results = p.starmap(ds_utils.calc_sample_statistics, zip(repeat(station), df_wavelen.iterrows(),
-                                                                     repeat(top_height), repeat(mode)))
+            results = p.starmap(ds_utils.calc_sample_statistics, zip(df_wavelen.iterrows(), repeat(top_height),
+                                                                     repeat(mode)))
         res = pd.concat(results)
-        df_stats.loc[wavelen, res.filter(regex=("_max$")).columns] = res.filter(regex=("_max$")).max(axis=0)
-        df_stats.loc[wavelen, res.filter(regex=("_min$")).columns] = res.filter(regex=("_min$")).min(axis=0)
-        df_stats.loc[wavelen, res.filter(regex=("_mean$")).columns] = res.filter(regex=("_mean$")).mean(axis=0)
+        df_stats.loc[wavelen, res.filter(regex="_max$").columns] = res.filter(regex="_max$").max(axis=0)
+        df_stats.loc[wavelen, res.filter(regex="_min$").columns] = res.filter(regex="_min$").min(axis=0)
+        df_stats.loc[wavelen, res.filter(regex="_mean$").columns] = res.filter(regex="_mean$").mean(axis=0)
 
+        # Compute STD per wavelength of each profile
         with Pool(num_processes) as p:
-            results = p.starmap(ds_utils.calc_data_std, zip(repeat(station), df_wavelen.iterrows(),
-                                                                     repeat(top_height), repeat(df_stats.loc[wavelen]), repeat(mode)))
-        res = pd.concat(results)
-        df_stats.loc[wavelen, res.filter(regex=("_std$")).columns] = res.filter(regex=("_std$")).mean(axis=0)
+            std_results = p.starmap(ds_utils.calc_data_std, zip(df_wavelen.iterrows(), repeat(top_height),
+                                                                repeat(df_stats.loc[wavelen]), repeat(mode)))
+        std_res = pd.concat(std_results)
+        df_stats.loc[wavelen, std_res.filter(regex="_std$").columns] = std_res.filter(regex="_std$").mean(axis=0)
+
+        # Compute LC stats per wavelength directly from dataset csv
+        df_stats.loc[wavelen, 'LC_mean'] = df_wavelen.LC.mean()
+        df_stats.loc[wavelen, 'LC_std'] = df_wavelen.LC.std()
+        df_stats.loc[wavelen, 'LC_min'] = df_wavelen.LC.min()
+        df_stats.loc[wavelen, 'LC_max'] = df_wavelen.LC.max()
 
     # Save stats to csv
     stats_fname = f"stats_{'gen_' if mode == 'gen' else ''}{station.name}_" \
