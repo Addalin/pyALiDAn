@@ -18,6 +18,13 @@ from learning_lidar.utils import xr_utils, global_settings as gs
 
 
 def get_query(wavelength, cali_method, day_date):
+    """
+    Note: the database given to this function is assumed to contain 'liconst' values in [photons⋅sr⋅ m^𝟑]
+    :param wavelength:
+    :param cali_method:
+    :param day_date:
+    :return:
+    """
     start_time = datetime.combine(date=day_date.date(), time=day_date.time().min)
     end_time = datetime.combine(date=day_date.date(), time=day_date.time().max)
     query = f"""
@@ -88,6 +95,7 @@ def add_profiles_values(df, station, day_date, file_type='profiles'):
     def _get_info_from_profile_nc(row):
         """
         Get the r_0,r_1, and delta_r of the selected row. The values are following rebasing according to sea-level height.
+        Note: reference_height in each row should be in meters units
         :param row:
         :return:
         """
@@ -95,7 +103,7 @@ def add_profiles_values(df, station, day_date, file_type='profiles'):
         wavelen = row.wavelength
         # get altitude to rebase the reference heights according to sea-level-height
         altitude = data.altitude.item()
-        [r0, r1] = data[f'reference_height_{wavelen}'].values
+        [r0, r1] = data[f'reference_height_{wavelen}'].values #
         [bin_r0, bin_r1] = [np.argmin(abs(data.height.values - r)) for r in [r0, r1]]
         delta_r = r1 - r0
         return r0 + altitude, r1 + altitude, delta_r, bin_r0, bin_r1

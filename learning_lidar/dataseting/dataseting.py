@@ -56,7 +56,7 @@ def dataseting_main(params, log_level=logging.DEBUG):
             df = create_dataset(station_name=station_name, start_date=start_date,
                                 end_date=end_date, sample_size=sample_size)
 
-            # Convert m to km
+            # Convert m to km (assume `liconst` and `r1`,`r0` given in meter units)
             if params.use_km_unit:
                 df = ds_utils.convert_Y_features_units(df)
 
