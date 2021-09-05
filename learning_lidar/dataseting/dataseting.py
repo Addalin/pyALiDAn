@@ -10,7 +10,8 @@ from multiprocessing import Pool, cpu_count
 import numpy as np
 import pandas as pd
 import xarray as xr
-
+# import sys
+# sys.path.append('/home/liam/PycharmProjects/adi')
 import learning_lidar.preprocessing.preprocessing_utils as prep_utils
 import learning_lidar.dataseting.dataseting_utils as ds_utils
 from learning_lidar.generation.daily_signals_generations_utils import get_daily_bg

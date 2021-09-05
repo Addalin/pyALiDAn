@@ -1,4 +1,4 @@
-name: learning_lidar
+name: lidar
 channels:
   - pytorch
   - defaults
@@ -6,27 +6,31 @@ channels:
   - pro
 dependencies:
   - netcdf4
-  - xarray
+  - xarray=0.19
   - tensorboard
   - pip
+  - sphinx
+  - multiprocess
+  - pytictoc
   - pyyaml
   - torchvision
   - seaborn
-  - ray-tune
+  - ray-tune=1.4
   - opencv
   - astral
-  - numpy
+  - numpy=1.20
   - pandas
   - tqdm
   - openpyxl
   - matplotlib
-  - pytorch
+  - pytorch=1.7
   - astropy
-  - pytorch-lightning
+  - pytorch-lightning=1.4
   - jupyter
   - jupyterlab
   - scikit-learn
   - scipy
   - nb_conda
   - nc-time-axis
+  - python=3.7
 
