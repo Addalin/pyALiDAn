@@ -9,7 +9,7 @@ Then, to setup the environment -
 - `conda env create -f environment.yml`
 
 Activate it by -
-`conda activate learning_lidar`
+`conda activate lidar`
 
 
 Lidar molecular setup (place in project root directory):

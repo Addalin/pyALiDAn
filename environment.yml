@@ -33,4 +33,7 @@ dependencies:
   - nb_conda
   - nc-time-axis
   - python=3.7
+  - sqlite
+  - pip:
+      - git+https://github.com/scaperex/ARLreader.git
 
