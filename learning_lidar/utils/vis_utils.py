@@ -38,7 +38,7 @@ def set_visualization_settings():
     plt.rc('figure', titlesize=SUPTITLE_FONT_SIZE)  # fontsize of the figure title
 
 
-def plot_daily_profile(profile_ds, height_slice=None, figsize=(16, 6)):
+def plot_daily_profile(profile_ds, height_slice=None, figsize=(16, 6), save_fig=False):
     # TODO: add scintific ticks on colorbar
     wavelengths = profile_ds.Wavelength.values
     if height_slice is None:
@@ -56,9 +56,13 @@ def plot_daily_profile(profile_ds, height_slice=None, figsize=(16, 6)):
         profile_ds.sel(Height=height_slice).plot(cmap='turbo', ax=ax)
         ax.xaxis.set_major_formatter(TIMEFORMAT)
         ax.xaxis.set_tick_params(rotation=0)
-    plt.suptitle(f"{profile_ds.info} - {str_date}")
+    suptitle = f"{profile_ds.info} - {str_date}"
+    plt.suptitle(suptitle)
     plt.ticklabel_format(axis="y", style="sci", scilimits=(0, 0))
     plt.tight_layout()
+    if save_fig:
+        plt.savefig(f"{suptitle}.pdf")
+        print(f"saved fig to {suptitle}")
     plt.show()
 
 
