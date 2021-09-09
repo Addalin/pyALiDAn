@@ -1,3 +1,4 @@
+import random
 from datetime import timedelta
 
 import pandas as pd
@@ -61,8 +62,9 @@ def plot_daily_profile(profile_ds, height_slice=None, figsize=(16, 6), save_fig=
     plt.ticklabel_format(axis="y", style="sci", scilimits=(0, 0))
     plt.tight_layout()
     if save_fig:
-        plt.savefig(f"{suptitle}.pdf")
-        print(f"saved fig to {suptitle}")
+        clean_title = ''.join(char for char in suptitle if char.isalnum())
+        plt.savefig(f"{clean_title}.pdf")
+        print(f"saved fig {clean_title}")
     plt.show()
 
 
