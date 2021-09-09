@@ -63,7 +63,7 @@ def plot_daily_profile(profile_ds, height_slice=None, figsize=(16, 6), save_fig=
     plt.tight_layout()
     if save_fig:
         clean_title = ''.join(char for char in suptitle if char.isalnum())
-        plt.savefig(f"{clean_title}.pdf")
+        plt.savefig(f"{clean_title}.jpeg")
         print(f"saved fig {clean_title}")
     plt.show()
 
