@@ -442,15 +442,15 @@ def create_density_params_ds(station, rm_new, ang_355_532, ang_532_1064, LR_samp
         aeronet_source=xr.Variable(dims=(), data=os.path.join(station.aeronet_folder, nc_aeronet_name),
                                    attrs={'info': 'netcdf file name, processed from AERONET retrievals,'
                                                   ' using: read_AERONET_data.py.'}))
-    ds_month.rm.attrs = {'units': r'$km$', 'long_name': r'$r_m$',
+    ds_month.rm.attrs = {'units': r'$\rm km$', 'long_name': r'$r_m$',
                          'info': 'Reference range'}
     ds_month.ang355532.attrs = {'long_name': r'$\AA_{355,532}$',
                                 'info': 'Angstrom Exponent 355,532'}
     ds_month.ang5321064.attrs = {'long_name': r'$\AA_{532,1064}$',
                                  'info': 'Angstrom Exponent 532,1064'}
-    ds_month.LR.attrs = {'units': r'$sr$', 'long_name': r'$LR$',
+    ds_month.LR.attrs = {'units': r'$\rm sr$', 'long_name': r'$LR$',
                          'info': 'Lidar Ratio'}
-    ds_month.beta532.attrs = {'units': r'$km^{{-1}} sr^{-1}$',
+    ds_month.beta532.attrs = {'units': r'$\rm km^{{-1}} sr^{-1}$',
                               'long_name': r'$\beta$',
                               'info': '$Aerosol Backscatter'}
 

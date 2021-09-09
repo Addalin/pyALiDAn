@@ -156,7 +156,7 @@ class BackgroundGenerator:
         bgmean.Wavelength.attrs = {'long_name': r'$\lambda$', 'units': r'$\rm nm$'}
         bgmean.attrs = {'info': 'Background Mean Signal',
                         'long_name': r'$<p_{bg}>$',
-                        'units': r'$photons$',
+                        'units': r'$\rm photons$',
                         'name': 'pbg'}
 
         bg_mean = bgmean.copy(deep=True).assign_attrs({'info': 'Mean Background Signal'})

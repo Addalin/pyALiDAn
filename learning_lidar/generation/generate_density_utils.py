@@ -432,7 +432,7 @@ def generate_density_components(total_time_bins, total_height_bins, time_index, 
                     'Component': [ind]})
         components_ds.append(component_ds)
     density_ds = xr.concat(components_ds, dim='Component')
-    density_ds.Height.attrs = {'units': r'$km$', 'info': 'Measurements heights above sea level'}
+    density_ds.Height.attrs = {'units': r'$\rm km$', 'info': 'Measurements heights above sea level'}
 
     if PLOT_RESULTS:
 
@@ -608,7 +608,7 @@ def get_LR_ds(station, day_date, day_params_ds):
                                          {'info': r'A generation parameter. The lidar ratio, corresponds to Angstroms '
                                                   r'values',
                                           'long_name': r'$\rm LR$',
-                                          'units': r'$sr$'}),
+                                          'units': r'$\rm sr$'}),
                                   'date': ((), day_date)},
                        coords={'Time': station.calc_daily_time_index(day_date).values},
                        attrs={'info': "Daily Lidar Ratio", 'location': station.location})
@@ -759,7 +759,7 @@ def generate_sigma_ds(station, day_date, day_params_ds, density_ds):
     # convert sigma to 1064 or 355 from 532
     sigma_max = xr.apply_ufunc(lambda tau, tau_norm: tau / tau_norm, tau_ds, tau_normalized, keep_attrs=True)
     sigma_max.attrs = {'info': r"Daily $\sigma_{\rm max}$",
-                       'long_name': r'$\sigma$', 'units': r'$1/km$', 'name': 'sigma',
+                       'long_name': r'$\sigma$', 'units': r'$\rm 1/km$', 'name': 'sigma',
                        'source_file': os.path.basename(__file__),
                        'location': station.location, }
     sigma_ir = density_ds.rho_tnorm * sigma_max.sel(Wavelength=1064)
@@ -768,7 +768,7 @@ def generate_sigma_ds(station, day_date, day_params_ds, density_ds):
     # Creating Daily Lidar Aerosols' sigma dataset
     sigma_ds = xr.concat([sigma_uv, sigma_g, sigma_ir], dim='Wavelength')
     sigma_ds.attrs = {'info': "Daily aerosols' generated extinction coefficient",
-                      'long_name': r'$\sigma$', 'units': r'$1/km$', 'name': 'sigma',
+                      'long_name': r'$\sigma$', 'units': r'$\rm 1/km$', 'name': 'sigma',
                       'source_file': os.path.basename(__file__),
                       'location': station.location, }
     sigma_ds['date'] = day_date
@@ -805,7 +805,7 @@ def generate_beta_ds(station, day_date, day_params_ds, sigma_ds):
     beta_ds.attrs = {'info': "Daily aerosols' generated backscatter coefficient",
                      'long_name': r'$\beta$',
                      'name': 'beta',
-                     'units': r'$1/km \cdot sr$',
+                     'units': r'$\rm 1/km \cdot sr$',
                      'source_file': os.path.basename(__file__),
                      'location': station.location, }
     beta_ds = beta_ds.transpose('Wavelength', 'Height', 'Time')
@@ -853,12 +853,12 @@ def wrap_aerosol_dataset(station, day_date, day_params_ds, sigma_ds, beta_ds, an
                            max_sigma_g=xr.Variable(dims=(),
                                                    data=np.float(
                                                        day_params_ds.sel(Time=day_date).beta532.values) * LR_tropos,
-                                                   attrs={'long_name': r'$\sigma_{532}^{max}$', 'units': r'$1/km$',
+                                                   attrs={'long_name': r'$\sigma_{532}^{max}$', 'units': r'$\rm 1/km$',
                                                           'info': r'A generation parameter. A typical maximum '
                                                                   r'extinction value, calculated as: '
                                                                   r'$\beta_{532}^{max}\cdot LR$, $LR=55sr$'}),
                            r_max=xr.Variable(dims=(), data=np.float(day_params_ds.rm.sel(Time=day_date).values),
-                                             attrs={'long_name': r'$r_{max}$', 'units': r'$km$',
+                                             attrs={'long_name': r'$r_{max}$', 'units': r'$\rm km$',
                                                     'info': r'A generation parameter. The top height of aerosol layer.'}),
                            params_source=xr.Variable(dims=(),
                                                      data=gen_utils.get_month_gen_params_path(station, day_date),
@@ -869,8 +869,8 @@ def wrap_aerosol_dataset(station, day_date, day_params_ds, sigma_ds, beta_ds, an
     aer_ds.attrs = {'info': 'Daily generated aerosol profiles',
                     'source_file': os.path.basename(__file__),
                     'location': station.location, }
-    aer_ds.Height.attrs = {'units': r'$km$', 'info': 'Measurements heights above sea level'}
-    aer_ds.Wavelength.attrs = {'long_name': r'$\lambda$', 'units': r'$nm$'}
+    aer_ds.Height.attrs = {'units': r'$\rm km$', 'info': 'Measurements heights above sea level'}
+    aer_ds.Wavelength.attrs = {'long_name': r'$\lambda$', 'units': r'$\rm nm$'}
     aer_ds = aer_ds.transpose('Wavelength', 'Height', 'Time')
     aer_ds['date'] = day_date
     return aer_ds

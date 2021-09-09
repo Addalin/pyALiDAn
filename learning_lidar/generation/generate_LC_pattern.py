@@ -116,7 +116,7 @@ def generate_LC_pattern_main(params):
                     'Wavelength': np.uint16([wavelength])
                     }))
     ds_gen_p = xr.concat(ds_chans, dim='Wavelength')
-    ds_gen_p.Wavelength.attrs = {'long_name': r'$\lambda$', 'units': r'$nm$'}
+    ds_gen_p.Wavelength.attrs = {'long_name': r'$\lambda$', 'units': r'$\rm nm$'}
     ds_gen_p.p.attrs = {'units': r'$\rm{photons\,sr\,km^3}$', 'long_name': r'$\rm{ LC_{generated}}$',
                         'info': 'LC - Lidar constant - from generation'}
     ds_gen_p = ds_gen_p.assign(
@@ -211,7 +211,7 @@ def generate_LC_pattern_main(params):
     new_p.p.attrs = {'units': r'$\rm{photons\,sr\,km^3}$',
                      'long_name': r'$\rm{ LC_{generated}}$',
                      'info': 'LC - Lidar constant - from generation'}
-    new_p.Wavelength.attrs = {'long_name': r'$\lambda$', 'units': r'$nm$'}
+    new_p.Wavelength.attrs = {'long_name': r'$\lambda$', 'units': r'$\rm nm$'}
 
     if params.plot_results:
         fig, ax = plt.subplots(ncols=1, nrows=1, figsize=(10, 5))
