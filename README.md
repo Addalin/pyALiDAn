@@ -12,11 +12,6 @@ Activate it by -
 `conda activate lidar`
 
 
-Lidar molecular setup (place in project root directory):
-
-    cd lidar_molecular    
-    python setup.py install
-
 # Project Structure
 
 - [Source Code](code-structure)
