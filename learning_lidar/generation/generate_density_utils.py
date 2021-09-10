@@ -622,8 +622,12 @@ def get_LR_ds(station, day_date, day_params_ds):
         ax.xaxis.set_major_formatter(vis_utils.TIMEFORMAT)
         ax.xaxis.set_tick_params(rotation=0)
         str_date = LR_ds.Time[0].dt.strftime("%Y-%m-%d").values.tolist()
-        plt.suptitle(f"{LR_ds.attrs['info']} - {str_date}")
+        title = f"{LR_ds.attrs['info']} - {str_date}"
         plt.tight_layout()
+        fig_path = os.path.join('figures', title + '.pdf')
+        print(f"Saving fig to {fig_path}")
+        plt.savefig(fig_path)
+        plt.suptitle(title)
         plt.show()
 
     return LR_ds
@@ -696,9 +700,13 @@ def get_angstrom_ds(station, day_date, day_params_ds):
         ax.xaxis.set_tick_params(rotation=0)
         ax.set_ylabel(r'$\AA$')
         str_date = ang_ds.Time[0].dt.strftime("%Y-%m-%d").values.tolist()
-        plt.suptitle(f"{ang_ds.attrs['info']} - {str_date}")
+        title = f"{ang_ds.attrs['info']} - {str_date}"
         plt.legend()
         plt.tight_layout()
+        fig_path = os.path.join('figures', title+'.pdf')
+        print(f"Saving fig to {fig_path}")
+        plt.savefig(fig_path)
+        plt.suptitle(title)
         plt.show()
 
     return ang_ds

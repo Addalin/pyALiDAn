@@ -1,3 +1,4 @@
+import os
 import random
 from datetime import timedelta
 
@@ -58,13 +59,14 @@ def plot_daily_profile(profile_ds, height_slice=None, figsize=(16, 6), save_fig=
         ax.xaxis.set_major_formatter(TIMEFORMAT)
         ax.xaxis.set_tick_params(rotation=0)
     suptitle = f"{profile_ds.info} - {str_date}"
-    plt.suptitle(suptitle)
     plt.ticklabel_format(axis="y", style="sci", scilimits=(0, 0))
     plt.tight_layout()
     if save_fig:
-        clean_title = ''.join(char for char in suptitle if char.isalnum())
-        plt.savefig(f"{clean_title}.jpeg")
-        print(f"saved fig {clean_title}")
+        # clean_title = ''.join(char for char in suptitle if char.isalnum())
+        fig_path = os.path.join('figures', suptitle + '.jpeg')
+        print(f"Saving fig to {fig_path}")
+        plt.savefig(fig_path)
+    plt.suptitle(suptitle)
     plt.show()
 
 

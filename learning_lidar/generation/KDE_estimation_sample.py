@@ -24,8 +24,10 @@ def plot_angstrom_exponent_distribution(x, y, x_label, y_label, date_):
     ax.scatter(x=x, y=y, s=5)
     ax.set_xlabel(x_label)
     ax.set_ylabel(y_label)
-    ax.set_title(f"Angstrom Exponent distribution {date_}")
+    title = f"Angstrom Exponent distribution {date_}"
     plt.tight_layout()
+    plt.savefig(os.path.join('figures', title+'.pdf'))
+    ax.set_title(title)
     plt.show()
 
 
@@ -88,11 +90,14 @@ def kde_estimation_main(args, month, year, DATA_DIR):
         ax.plot(ang_355_532, ang_532_1064, 'w*', markersize=4, label='new samples')
         ax.set_xlabel(couple_0)
         ax.set_ylabel(couple_1)
-        ax.set_title(f"Sampling from Angstrom Exponent distribution {t_slice.start.strftime('%Y-%m')}")
+        title = f"Sampling from Angstrom Exponent distribution {t_slice.start.strftime('%Y-%m')}"
         fig.colorbar(im, ax=ax)
         plt.legend()
-        plt.tight_layout()
+        plt.savefig(os.path.join('figures', title+'.pdf'))
+        ax.set_title(title)
         plt.show()
+
+
 
     # ## Angstrom - Lidar Ratio
 
@@ -174,10 +179,12 @@ def kde_estimation_main(args, month, year, DATA_DIR):
         plt.ylabel(r'$\rm A$')
         plt.xlim([xmin, xmax])
         plt.ylim([ymin, ymax])
-        ax.set_title(f"Angstrom Exponent - Lidar Ratio distribution {t_slice.start.strftime('%Y-%m')}")
+        title = f"Angstrom Exponent - Lidar Ratio distribution {t_slice.start.strftime('%Y-%m')}"
+        ax.set_title(title)
         fig.colorbar(im, ax=ax)
         plt.legend()
         plt.tight_layout()
+        # plt.savefig(os.path.join('figures', title+' 1'))
         plt.show()
 
     # Joint distribution weighted in favor of urban industrial and desert dust
@@ -208,10 +215,13 @@ def kde_estimation_main(args, month, year, DATA_DIR):
         plt.ylabel(r'$\rm A$')
         plt.xlim([xmin, xmax])
         plt.ylim([ymin, ymax])
-        ax.set_title(f"Angstrom Exponent - Lidar Ratio distribution {t_slice.start.strftime('%Y-%m')}")
+
+        title = f"Angstrom Exponent - Lidar Ratio distribution {t_slice.start.strftime('%Y-%m')}"
+        ax.set_title(title)
         fig.colorbar(im, ax=ax)
         plt.legend()
         plt.tight_layout()
+        # plt.savefig(os.path.join('figures', title+' 2'))
         plt.show()
 
     # 3. Sampling $LR$ from 1D conditioned probability $P(x=LR|y=A)$
@@ -240,12 +250,16 @@ def kde_estimation_main(args, month, year, DATA_DIR):
         plt.xlabel(r'$\rm \, LR_{355[nm]}$')
         plt.ylabel(r'$\rm A 355-532$')
 
-        ax.set_title(f"Sampling from conditioned distribution $P(x=LR|y=A)$ {t_slice.start.strftime('%Y-%m')}")
-        plt.tight_layout()
         ax.grid(color='darkgray', linestyle='--', linewidth=0.5, alpha=0.3)
         plt.xlim([xmin, xmax])
         plt.ylim([ymin, Z.max()])
+
+        title = f"Sampling from conditioned distribution $P(x=LR|y=A)$ {t_slice.start.strftime('%Y-%m')}"
+        ax.set_title(title)
+        plt.tight_layout()
+        # plt.savefig(os.path.join('figures', title+'.pdf'))
         plt.show()
+
 
     LR_samp = np.array(LR_samp).reshape(2 * monthdays)
 
@@ -270,11 +284,14 @@ def kde_estimation_main(args, month, year, DATA_DIR):
         plt.ylabel(r'$\rm A$')
         plt.xlim([xmin, xmax])
         plt.ylim([ymin, ymax])
-        ax.set_title(f"Sampling from $P(x=LR|y=A)$ {t_slice.start.strftime('%Y-%m')}")
         plt.legend()
         fig.colorbar(im, ax=ax)
         ax.grid(color='w', linestyle='--', linewidth=0.5, alpha=0.3)
         plt.tight_layout()
+
+        title = f"Sampling from $P(x=LR|y=A)$ {t_slice.start.strftime('%Y-%m')}"
+        plt.savefig(os.path.join('figures', title+'.pdf'))
+        ax.set_title(title)
         plt.show()
 
     # ### Sampling $r_m$ and $\beta_{532}^{max}$ for current month
@@ -363,11 +380,16 @@ def kde_estimation_main(args, month, year, DATA_DIR):
         ax.plot(rm_new, beta_532_new, 'w*', markersize=4, label='new samples')
         ax.set_xlabel(r'$r_m$')
         ax.set_ylabel(r'$\beta_{532}^{max}$')
-        ax.set_title(r"Sampling from $r_m$ - $ \beta_{532}^{max}$  " + f"{t_slice.start.strftime('%Y-%m')}")
         fig.colorbar(im, ax=ax)
         plt.legend()
         plt.tight_layout()
         plt.show()
+
+        title = r"Sampling from $r_m$ - $ \beta_{532}^{max}$  " + f"{t_slice.start.strftime('%Y-%m')}"
+        plt.savefig(os.path.join('figures', title+'.pdf'))
+        ax.set_title(title)
+        plt.show()
+
 
     # Create dataset of parameters for generating month signals
 
