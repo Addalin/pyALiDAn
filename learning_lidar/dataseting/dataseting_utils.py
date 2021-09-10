@@ -260,12 +260,12 @@ def get_aerBsc_profile_ds(path, profile_df):
                     'Wavelength': [wavelength]
                     })
         aerBsc_ds_chan.aerBsc.attrs = {'long_name': r'$\beta$',  # _{{a}}$' ,
-                                       'units': r'$km^{{-1}} sr^{-1}$',
+                                       'units': r'$\rm km^{{-1}} sr^{-1}$',
                                        'info': r'$Aerosol backscatter$'}
         # set attributes of coordinates
         aerBsc_ds_chan.Height.attrs = {'units': '{}'.format('{}'.format(height_units)),
                                        'info': 'Measurements heights above sea level'}
-        aerBsc_ds_chan.Wavelength.attrs = {'long_name': r'$\lambda$', 'units': r'$nm$'}
+        aerBsc_ds_chan.Wavelength.attrs = {'long_name': r'$\lambda$', 'units': r'$\rm nm$'}
         ds_chans.append(aerBsc_ds_chan)
     return xr.concat(ds_chans, dim='Wavelength')
 

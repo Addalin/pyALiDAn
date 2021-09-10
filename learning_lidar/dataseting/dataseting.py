@@ -306,10 +306,10 @@ def create_calibration_ds(df, station, source_file):
                                  'info': 'LC - Lidar constant - recalculated'}
         ds_cur.LCprecalc.attrs = {'units': r'$\rm{photons\,sr\,km^3}$', 'long_name': r'$\rm{LC_{pos-recalc}}$',
                                   'info': 'LC - Lidar constant - recalculated on non negative range corrected dignal'}
-        ds_cur.r0.attrs = {'units': r'$km$', 'long_name': r'$r_0$', 'info': 'Lower calibration height'}
-        ds_cur.r1.attrs = {'units': r'$km$', 'long_name': r'$r_1$', 'info': 'Upper calibration height'}
-        ds_cur.rm.attrs = {'units': r'$km$', 'long_name': r'$r_m$', 'info': 'Mid calibration height'}
-        ds_cur.Wavelength.attrs = {'units': r'$nm$', 'long_name': r'$\lambda$'}
+        ds_cur.r0.attrs = {'units': r'$\rm km$', 'long_name': r'$r_0$', 'info': 'Lower calibration height'}
+        ds_cur.r1.attrs = {'units': r'$\rm km$', 'long_name': r'$r_1$', 'info': 'Upper calibration height'}
+        ds_cur.rm.attrs = {'units': r'$\rm km$', 'long_name': r'$r_m$', 'info': 'Mid calibration height'}
+        ds_cur.Wavelength.attrs = {'units': r'$\rm nm$', 'long_name': r'$\lambda$'}
         ds_chan.append(ds_cur)
 
     ds_calibration = xr.concat(ds_chan, dim='Wavelength')

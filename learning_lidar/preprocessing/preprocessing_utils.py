@@ -475,13 +475,13 @@ def create_range_corr_ds_chan(rangecorr_df: pd.DataFrame, lambda_nm: int, height
                 }
     )
     range_corr_ds_chan.range_corr.attrs = {'long_name': r'$LC \beta \cdot \exp(-2\tau)$',
-                                           'units': r'$photons$' + r'$\cdot$' + r'$m^2$',
+                                           'units': r'$\rm photons$' + r'$\cdot$' + r'$m^2$',
                                            'info': 'Range corrected lidar signal from attenuated backscatter '
                                                    'multiplied by LC'}
     # set attributes of coordinates
-    range_corr_ds_chan.Height.attrs = {'units': fr'${height_units}$',
+    range_corr_ds_chan.Height.attrs = {'units': fr'$\rm {height_units}$',
                                        'info': 'Measurements heights above sea level'}
-    range_corr_ds_chan.Wavelength.attrs = {'long_name': r'$\lambda$', 'units': r'$nm$'}
+    range_corr_ds_chan.Wavelength.attrs = {'long_name': r'$\lambda$', 'units': r'$\rm nm$'}
 
     return range_corr_ds_chan
 
@@ -559,15 +559,15 @@ def generate_daily_molecular_chan(station, day_date, lambda_nm, time_res='30S',
     )
 
     # set attributes of data variables
-    ds_chan.beta.attrs = {'long_name': r'$\beta$', 'units': r'$1/m \cdot sr$',
+    ds_chan.beta.attrs = {'long_name': r'$\beta$', 'units': r'$\rm 1/m \cdot sr$',
                           'info': 'Molecular backscatter coefficient'}
-    ds_chan.sigma.attrs = {'long_name': r'$\sigma$', 'units': r'$1/m $',
+    ds_chan.sigma.attrs = {'long_name': r'$\sigma$', 'units': r'$\rm 1/m $',
                            'info': 'Molecular attenuation coefficient'}
-    ds_chan.attbsc.attrs = {'long_name': r'$\beta \cdot \exp(-2\tau)$', 'units': r'$1/m \cdot sr$',
+    ds_chan.attbsc.attrs = {'long_name': r'$\beta \cdot \exp(-2\tau)$', 'units': r'$\rm 1/m \cdot sr$',
                             'info': 'Molecular attenuated backscatter coefficient'}
     # set attributes of coordinates
-    ds_chan.Height.attrs = {'units': fr'${height_units}$', 'info': 'Measurements heights above sea level'}
-    ds_chan.Wavelength.attrs = {'long_name': r'$\lambda$', 'units': r'$nm$'}
+    ds_chan.Height.attrs = {'units': fr'\rm ${height_units}$', 'info': 'Measurements heights above sea level'}
+    ds_chan.Wavelength.attrs = {'long_name': r'$\lambda$', 'units': r'$\rm nm$'}
 
     return ds_chan
 
@@ -587,11 +587,11 @@ def calc_r2_da(station, day_date):
     r2_ds = xr.Dataset(data_vars={'r': (['Wavelength', 'Height', 'Time'], r_im,
                                         {'info': 'The heights bins',
                                          'name': 'r', 'long_name': r'$r$',
-                                         'units': r'$km$'}),
+                                         'units': r'$\rm km$'}),
                                   'r2': (['Wavelength', 'Height', 'Time'], rr_im,
                                          {'info': 'The heights bins squared',
                                           'name': 'r2', 'long_name': r'$r^2$',
-                                          'units': r'$km^2$'})},
+                                          'units': r'$\rm km^2$'})},
                        coords={'Wavelength': wavelengths,
                                'Height': station.calc_height_index(),
                                'Time': station.calc_daily_time_index(day_date).values})
@@ -803,8 +803,8 @@ def get_raw_lidar_signal(station: gs.Station, day_date: datetime, height_slice: 
     ds = ds.reindex({"Time": all_times}, fill_value=0)
 
     ds.p.attrs = ds_attr
-    ds.Height.attrs = {'units': r'$km$', 'info': 'Measurements heights above sea level'}
-    ds.Wavelength.attrs = {'long_name': r'$\lambda$', 'units': r'$nm$'}
+    ds.Height.attrs = {'units': r'$\rm km$', 'info': 'Measurements heights above sea level'}
+    ds.Wavelength.attrs = {'long_name': r'$\lambda$', 'units': r'$\rm nm$'}
 
     ds['date'] = day_date
 
@@ -868,7 +868,7 @@ def get_daily_raw_measurements(station: gs.Station, day_date: Union[datetime.dat
                   'units': r'$\rm$' + r'$photons$' + r'$\cdot km^2$',
                   'location': station.location, }
     pr2n.Height.attrs = {'units': r'$\rm km$', 'info': 'Measurements heights above sea level'}
-    pr2n.Wavelength.attrs = {'long_name': r'$\lambda$', 'units': r'$nm$'}
+    pr2n.Wavelength.attrs = {'long_name': r'$\lambda$', 'units': r'$\rm nm$'}
 
     # Daily raw lidar measurement from TROPOS.
     lidar_ds = xr.Dataset().assign(p=pn_ds.p, range_corr=pr2n, p_bg=p_bg)

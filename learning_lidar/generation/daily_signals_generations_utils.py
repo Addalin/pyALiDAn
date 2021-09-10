@@ -49,18 +49,18 @@ def calc_total_optical_density(station: gs.Station, day_date: datetime.date) -> 
 
     # %% 3. Calculate total densities
     total_sigma = (aer_ds.sigma + ds_mol.sigma).assign_attrs({'info': "Daily total extinction coefficient",
-                                                              'long_name': r'$\sigma$', 'units': r'$1/km$',
+                                                              'long_name': r'$\sigma$', 'units': r'$\rm 1/km$',
                                                               'name': 'sigma'})
     total_beta = (aer_ds.beta + ds_mol.beta).assign_attrs({'info': "Daily total backscatter coefficient",
-                                                           'long_name': r'$\beta$', 'units': r'$1/km$',
+                                                           'long_name': r'$\beta$', 'units': r'$\rm 1/km$',
                                                            'name': 'beta'})
 
     total_ds = xr.Dataset().assign(sigma=total_sigma, beta=total_beta)
     total_ds.attrs = {'info': 'Daily generated atmosphere profiles',
                       'source_file': os.path.basename(__file__),
                       'location': station.location, }
-    total_ds.Height.attrs = {'units': r'$km$', 'info': 'Measurements heights above sea level'}
-    total_ds.Wavelength.attrs = {'units': r'$\lambda$', 'units': r'$nm$'}
+    total_ds.Height.attrs = {'units': r'$\rm km$', 'info': 'Measurements heights above sea level'}
+    total_ds.Wavelength.attrs = {'long_name': r'$\lambda$', 'units': r'$\rm nm$'}
     total_ds = total_ds.transpose('Wavelength', 'Height', 'Time')
     total_ds['date'] = day_date
 
@@ -103,8 +103,8 @@ def calc_attbsc_da(station: gs.Station, day_date: datetime.date, total_ds: xr.Da
                        'long_name': r'$\beta \cdot \exp(-2\tau)$',
                        'units': r'$1/km$', 'name': 'attbsc',
                        'location': station.location, }
-    attbsc_da.Height.attrs = {'units': r'$km$', 'info': 'Measurements heights above sea level'}
-    attbsc_da.Wavelength.attrs = {'units': r'$\lambda$', 'units': r'$nm$'}
+    attbsc_da.Height.attrs = {'units': r'$\rm km$', 'info': 'Measurements heights above sea level'}
+    attbsc_da.Wavelength.attrs = {'long_name': r'$\lambda$', 'units': r'$\rm nm$'}
     attbsc_da['date'] = day_date
 
     if PLOT_RESULTS:
@@ -192,8 +192,8 @@ def calc_range_corr_signal_da(station: gs.Station, day_date: datetime.date, attb
                     'long_name': r'$LC \beta \cdot \exp(-2\tau)$', 'name': 'range_corr',
                     'units': r'$\rm$' + r'$photons$' + r'$\cdot km^2$',
                     'location': station.location, }
-    attbsc_da.Height.attrs = {'units': r'$km$', 'info': 'Measurements heights above sea level'}
-    attbsc_da.Wavelength.attrs = {'units': r'$\lambda$', 'units': r'$nm$'}
+    attbsc_da.Height.attrs = {'units': r'$\rm km$', 'info': 'Measurements heights above sea level'}
+    attbsc_da.Wavelength.attrs = {'long_name': r'$\lambda$', 'units': r'$\rm nm$'}
     attbsc_da['date'] = day_date
     if PLOT_RESULTS:
         vis_utils.plot_daily_profile(profile_ds=pr2_da, figsize=(16, 8))
@@ -217,8 +217,8 @@ def calc_lidar_signal_da(station: gs.Station, day_date: datetime.date, r2_da: xr
                   'long_name': r'$p$', 'name': 'p',
                   'units': r'$\rm$' + r'$photons$',
                   'location': station.location, }
-    p_da.Height.attrs = {'units': r'$km$', 'info': 'Measurements heights above sea level'}
-    p_da.Wavelength.attrs = {'units': r'$\lambda$', 'units': r'$nm$'}
+    p_da.Height.attrs = {'units': r'$\rm km$', 'info': 'Measurements heights above sea level'}
+    p_da.Wavelength.attrs = {'long_name': r'$\lambda$', 'units': r'$\rm nm$'}
     p_da['date'] = day_date
     # sanity check:
     # TODO : Does this test require try/catch outside the function?
@@ -277,8 +277,8 @@ def calc_mean_measurement(station: gs.Station, day_date: datetime.date, p_da: xr
                     'long_name': r'$\mu_{p}$', 'name': 'pmean',
                     'units': r'$\rm$' + r'$photons$',
                     'location': station.location, }
-    p_mean.Height.attrs = {'units': r'$km$', 'info': 'Measurements heights above sea level'}
-    p_mean.Wavelength.attrs = {'units': r'$\lambda$', 'units': r'$nm$'}
+    p_mean.Height.attrs = {'units': r'$\rm km$', 'info': 'Measurements heights above sea level'}
+    p_mean.Wavelength.attrs = {'long_name': r'$\lambda$', 'units': r'$\rm nm$'}
     p_mean['date'] = day_date
     if PLOT_RESULTS:
         vis_utils.plot_daily_profile(p_mean.where(p_mean < 20), height_slice=slice(0, 10))
@@ -313,7 +313,7 @@ def calc_poiss_measurement(station: gs.Station, day_date: datetime.date, p_mean:
                    'units': r'$\rm$' + r'$photons$',
                    'location': station.location, }
     pn_da.Height.attrs = {'units': r'$km$', 'info': 'Measurements heights above sea level'}
-    pn_da.Wavelength.attrs = {'units': r'$\lambda$', 'units': r'$nm$'}
+    pn_da.Wavelength.attrs = {'long_name': r'$\lambda$', 'units': r'$\rm nm$'}
     pn_da['date'] = day_date
 
     if PLOT_RESULTS:
@@ -346,8 +346,8 @@ def calc_range_corr_measurement(station: gs.Station, day_date: datetime.date, pn
                      'long_name': r'$p$' + r'$\cdot r^2$', 'name': 'range_corr',
                      'units': r'$\rm$' + r'$photons$' + r'$\cdot km^2$',
                      'location': station.location, }
-    pr2n_da.Height.attrs = {'units': r'$km$', 'info': 'Measurements heights above sea level'}
-    pr2n_da.Wavelength.attrs = {'units': r'$\lambda$', 'units': r'$nm$'}
+    pr2n_da.Height.attrs = {'units': r'$\rm km$', 'info': 'Measurements heights above sea level'}
+    pr2n_da.Wavelength.attrs = {'long_name': r'$\lambda$', 'units': r'$\rm nm$'}
     pr2n_da['date'] = day_date
 
     if PLOT_RESULTS:
