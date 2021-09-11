@@ -8,6 +8,7 @@ import sklearn as sns
 import xarray as xr
 from scipy import stats
 from scipy.stats import multivariate_normal
+import matplotlib.ticker as mticker
 
 import learning_lidar.generation.generation_utils as gen_utils
 from learning_lidar.utils import utils, xr_utils, vis_utils, proc_utils, global_settings as gs
@@ -26,7 +27,7 @@ def plot_angstrom_exponent_distribution(x, y, x_label, y_label, date_):
     ax.set_ylabel(y_label)
     title = f"Angstrom Exponent distribution {date_}"
     plt.tight_layout()
-    plt.savefig(os.path.join('figures', title+'.pdf'))
+    # plt.savefig(os.path.join('figures', title+'.pdf'))
     ax.set_title(title)
     plt.show()
 
@@ -88,12 +89,17 @@ def kde_estimation_main(args, month, year, DATA_DIR):
                        extent=[xmin, xmax, ymin, ymax])
         ax.plot(ang_355_532, ang_532_1064, 'k*', markersize=6)
         ax.plot(ang_355_532, ang_532_1064, 'w*', markersize=4, label='new samples')
-        ax.set_xlabel(couple_0)
-        ax.set_ylabel(couple_1)
+        # ax.set_xlabel(couple_0)
+        # ax.set_ylabel(couple_1)
+        ax.set_xlabel(r"${\rm \AA}_{355, 532}$")
+        ax.set_ylabel(r"${\rm \AA}_{532, 1064}$")
         title = f"Sampling from Angstrom Exponent distribution {t_slice.start.strftime('%Y-%m')}"
         fig.colorbar(im, ax=ax)
         plt.legend()
-        plt.savefig(os.path.join('figures', title+'.pdf'))
+        plt.tight_layout()
+        clean_title = f"pdf_angstrom_{t_slice.start.strftime('%B_%Y')}"
+        plt.savefig(os.path.join('figures', clean_title+'.svg'))
+        plt.savefig(os.path.join('figures', clean_title+'.jpeg'))
         ax.set_title(title)
         plt.show()
 
@@ -266,7 +272,7 @@ def kde_estimation_main(args, month, year, DATA_DIR):
     if args.plot_results:
         # 4. Show the joint density, and the new samples of LR
         # Show density, and the new chosen samples
-        fig, ax = plt.subplots(nrows=1, ncols=1)
+        fig, ax = plt.subplots(nrows=1, ncols=1, figsize=(9, 6))
         for type in ['red', 'black', 'green']:
             x_type, y_type, label_type, x_err, y_err = df_a_lr[df_a_lr['type'] == type]['x'], \
                                                        df_a_lr[df_a_lr['type'] == type]['y'], \
@@ -280,8 +286,8 @@ def kde_estimation_main(args, month, year, DATA_DIR):
                        extent=[xmin, xmax, ymin, ymax], aspect="auto")
         ax.plot(LR_samp, ang_355_532, 'k*', markersize=6)
         ax.plot(LR_samp, ang_355_532, 'w*', markersize=4, label='new samples')
-        plt.xlabel(r'$\rm \, LR_{355[nm]}$')
-        plt.ylabel(r'$\rm A$')
+        plt.xlabel(r'$\rm \, LR[sr]$')
+        plt.ylabel(r'${\rm \AA}$')
         plt.xlim([xmin, xmax])
         plt.ylim([ymin, ymax])
         plt.legend()
@@ -290,7 +296,9 @@ def kde_estimation_main(args, month, year, DATA_DIR):
         plt.tight_layout()
 
         title = f"Sampling from $P(x=LR|y=A)$ {t_slice.start.strftime('%Y-%m')}"
-        plt.savefig(os.path.join('figures', title+'.pdf'))
+        clean_title = f"pdf_LR_angstrom_" + f"{t_slice.start.strftime('%B_%Y')}"
+        plt.savefig(os.path.join('figures', clean_title+'.svg'))
+        plt.savefig(os.path.join('figures', clean_title+'.jpeg'))
         ax.set_title(title)
         plt.show()
 
@@ -373,20 +381,27 @@ def kde_estimation_main(args, month, year, DATA_DIR):
     if args.plot_results:
         # Show density and the new chosen samples
         fig, ax = plt.subplots(nrows=1, ncols=1, figsize=(8, 5))
-        df_rm_beta.plot.scatter(x='rm', y='beta-532', ax=ax, c='k')
+        df_rm_beta.plot.scatter(x='rm', y='beta-532', ax=ax, c='k', label='PICASO')
         im = ax.imshow(np.rot90(Z), cmap='turbo',
-                       extent=[xmin, xmax, ymin, ymax], aspect="auto")
+                       extent=[round(xmin), round(xmax), ymin, ymax], aspect="auto")
         ax.plot(rm_new, beta_532_new, 'k*', markersize=6)
         ax.plot(rm_new, beta_532_new, 'w*', markersize=4, label='new samples')
-        ax.set_xlabel(r'$r_m$')
-        ax.set_ylabel(r'$\beta_{532}^{max}$')
+        # ax.set_xlabel(r'$r_m$')
+        # ax.set_ylabel(r'$\beta_{532}^{max}$')
+        ax.set_xlabel(r'$r_{\rm ref} [{\rm km}]$')
+        ax.set_ylabel(r'$\alpha_{532}^{max} [\frac{1}{\rm km}]$')
+        ticks_loc = ax.get_yticks().tolist()
+        ax.yaxis.set_major_locator(mticker.FixedLocator(ticks_loc))
+        ax.set_yticklabels([round(tick_label, 1) for tick_label in ax.get_yticks()*55])  # Beta to Alpha!
+        plt.locator_params(axis='y', nbins=6)
+        plt.locator_params(axis='x', nbins=5)
         fig.colorbar(im, ax=ax)
         plt.legend()
         plt.tight_layout()
-        plt.show()
-
-        title = r"Sampling from $r_m$ - $ \beta_{532}^{max}$  " + f"{t_slice.start.strftime('%Y-%m')}"
-        plt.savefig(os.path.join('figures', title+'.pdf'))
+        title = r"Sampling from $r_m$ - $ \alpha_{532}^{max}$  " + f"{t_slice.start.strftime('%Y-%m')}"
+        clean_title = r"pdf_alpha_refHeight_" + f"{t_slice.start.strftime('%B_%Y')}"
+        plt.savefig(os.path.join('figures', clean_title+'.svg'))
+        plt.savefig(os.path.join('figures', clean_title+'.jpeg'))
         ax.set_title(title)
         plt.show()
 

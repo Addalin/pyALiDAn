@@ -63,9 +63,10 @@ def plot_daily_profile(profile_ds, height_slice=None, figsize=(16, 6), save_fig=
     plt.tight_layout()
     if save_fig:
         # clean_title = ''.join(char for char in suptitle if char.isalnum())
-        fig_path = os.path.join('figures', suptitle + '.jpeg')
+        fig_path = os.path.join('figures', suptitle)
         print(f"Saving fig to {fig_path}")
-        plt.savefig(fig_path)
+        plt.savefig(fig_path + '.jpeg')
+        plt.savefig(fig_path + '.svg')
     plt.suptitle(suptitle)
     plt.show()
 

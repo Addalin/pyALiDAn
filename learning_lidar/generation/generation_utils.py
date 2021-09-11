@@ -204,9 +204,9 @@ def get_daily_gen_param_ds(station: gs.Station, day_date: datetime.date, type_: 
 
 def get_daily_gen_ds(station: gs.Station, day_date: datetime.date, type_: str) -> xr.Dataset:
     """
-    Returns the daily parameters of measures (lidar), signal or aerosol  creation as a dataset.
+    Returns the daily parameters of measures (lidar), signal, density or aerosol  creation as a dataset.
 
-    :param type_: str, should be one of 'signal' / 'lidar' / 'aerosol
+    :param type_: str, should be one of 'signal' / 'lidar' / 'aerosol' / 'density'
     :param station: gs.station() object of the lidar station
     :param day_date: datetime.date object of the required date
     :return: day_params_ds: xarray.Dataset(). Daily dataset of generation parameters.
