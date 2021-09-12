@@ -217,10 +217,10 @@ class BackgroundGenerator:
         csv_name = os.path.join(self.bg_signal_folder, csv_iradiance_elevation)
         df_iradiance_solar = pd.read_csv(csv_name)
         df_iradiance_solar.rename(columns={'X_vector_irradiance': r'$\alpha_{\rm sun}$',
-                                           'Y_vector_irradiance': 'vector-irradiance'},
+                                           'Y_vector_irradiance': 'horizontal-irradiance'},
                                   inplace=True)
         X = df_iradiance_solar[r'$\alpha_{\rm sun}$'].values.reshape(-1, 1)
-        Y = df_iradiance_solar['vector-irradiance'].values.reshape(-1, 1)
+        Y = df_iradiance_solar['horizontal-irradiance'].values.reshape(-1, 1)
         # %% Linear fit :
         linear_regressor = LinearRegression()  # create object for the class
         linear_regressor.fit(X[:], Y[:])  # perform linear regression
@@ -236,7 +236,7 @@ class BackgroundGenerator:
             # ax.plot(X, Y_pred, color='magenta', label='linear-fit', linestyle='--')
             ax.plot(angles, cos_fit, color='c', label='cos-fit')
             df_iradiance_solar.plot(x=r'$\alpha_{\rm sun}$',
-                                    y='vector-irradiance',
+                                    y='horizontal-irradiance',
                                     style='o',
                                     c="darkblue",
                                     ax=ax)
