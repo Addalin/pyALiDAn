@@ -704,11 +704,10 @@ def get_angstrom_ds(station, day_date, day_params_ds):
         title = f"{ang_ds.attrs['info']} - {str_date}"
         plt.legend()
         plt.tight_layout()
-        fig_path = os.path.join('figures', title+'.svg')
-        plt.savefig(fig_path)
+        fig_path = os.path.join('figures', title)
         print(f"Saving fig to {fig_path}")
-        fig_path = os.path.join('figures', title+'.jpeg')
-        plt.savefig(fig_path)
+        plt.savefig(fig_path+'.svg')
+        plt.savefig(fig_path+'.jpeg')
         plt.suptitle(title)
         plt.show()
 

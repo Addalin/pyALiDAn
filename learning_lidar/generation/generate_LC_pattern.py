@@ -52,14 +52,19 @@ def generate_LC_pattern_main(params):
         ds_extended.plot.scatter(ax=ax, y='LC', x='Time',
                                  hue='Wavelength',
                                  s=8, hue_style='discrete', edgecolor='w')
-        ax.set_title(
-            fr"{ds_extended.LC.long_name} for {start_date.strftime('%d/%m/%Y')}--{end_date.strftime('%d/%m/%Y')}")
         ax.ticklabel_format(axis='y', style="sci", scilimits=(0, 0))
         plt.tight_layout()
+        title = fr"{ds_extended.LC.long_name} for {start_date.strftime('%d/%m/%Y')}--{end_date.strftime('%d/%m/%Y')}"
+        clean_title = f"pLC_PICASSO_{start_date.strftime('%m')}-{end_date.strftime('%m_%Y')}"
+        # fig_path = os.path.join('figures', clean_title)
+        # print(f"Saving fig to {fig_path}")
+        # plt.savefig(fig_path + '.jpeg')
+        # plt.savefig(fig_path + '.svg')
+        ax.set_title(title)
         plt.show()
 
         fig, ax = plt.subplots(ncols=1, nrows=1, figsize=(7, 5))
-        # TODO requires - conda install -c conda-forge nc-time-axis
+        # requires - conda install -c conda-forge nc-time-axis
         ds_extended.sel(Time=slice(start_date, start_date + timedelta(hours=24))).LC.plot(ax=ax, hue='Wavelength',
                                                                                           linewidth=0.5)
         ds_extended.sel(Time=slice(start_date, start_date + timedelta(hours=24))).plot.scatter(ax=ax, y='LC', x='Time',
@@ -213,7 +218,9 @@ def generate_LC_pattern_main(params):
                      'info': 'LC - Lidar constant - from generation'}
     new_p.Wavelength.attrs = {'long_name': r'$\lambda$', 'units': r'$\rm nm$'}
 
+
     if params.plot_results:
+        # Single plot of generated bezier interpolation
         fig, ax = plt.subplots(ncols=1, nrows=1, figsize=(10, 5))
         for wavelength, c in zip(wavelengths, vis_utils.COLORS):
             ax.fill_between(ds_gen_p.Time.values,
@@ -222,13 +229,25 @@ def generate_LC_pattern_main(params):
                             color=c, alpha=.1)
         ds_gen_p.plot.scatter(ax=ax, y='p_new', x='Time', hue='Wavelength', s=10, hue_style='discrete', edgecolor='w')
         new_p.p.plot(ax=ax, hue='Wavelength', linewidth=0.8)
-        ax.set_title(fr"B\'ezier interpolation of {new_p.p.long_name} for "
-                     fr"{start_date.strftime('%d/%m/%Y')}-- {end_date.strftime('%d/%m/%Y')}")
+        title = fr"B\'ezier interpolation of {new_p.p.long_name} for " \
+                fr"{start_date.strftime('%d/%m/%Y')}-- {end_date.strftime('%d/%m/%Y')}"
+        clean_title = f"pLC_gen_{start_date.strftime('%m')}-{end_date.strftime('%m_%Y')}"
+        import matplotlib.dates as mdates
+        myFmt = mdates.DateFormatter('%m-%d')
+        ax.xaxis.set_major_formatter(myFmt)
+
         ax.ticklabel_format(axis='y', style="sci", scilimits=(0, 0))
         plt.tight_layout()
+        # fig_path = os.path.join('figures', clean_title)
+        # print(f"Saving fig to {fig_path}")
+        # plt.savefig(fig_path + '.jpeg')
+        # plt.savefig(fig_path + '.svg')
+        ax.set_title(title)
         plt.show()
 
-        curdays = [start_date + timedelta(days=1 * n * 8) for n in range(8)]
+
+
+        curdays = [] # [start_date + timedelta(days=1 * n * 8) for n in range(8)] # Uncomment to plot daily Bezier inter
         for cur_day in curdays:
             day_slice = slice(cur_day, cur_day + timedelta(hours=24) - timedelta(seconds=30))
             fig, ax = plt.subplots(ncols=1, nrows=1, figsize=(8, 5))
@@ -240,6 +259,52 @@ def generate_LC_pattern_main(params):
             ax.set_title(fr"B\'ezier interpolation of {new_p.p.long_name} - for {cur_day.strftime('%d/%m/%Y')}")
             plt.tight_layout()
             plt.show()
+
+
+    if params.plot_results:
+        # Plot both true and generated on two subplots
+        import matplotlib.dates as mdates
+        myFmt = mdates.DateFormatter('%m-%d')
+
+        fig, ax = plt.subplots(ncols=2, nrows=1, figsize=(14, 5), sharey=True)
+        ds_extended.LC.plot(ax=ax[0], hue='Wavelength', linewidth=0.8)
+        ds_extended.plot.scatter(ax=ax[0], y='LC', x='Time',
+                                 hue='Wavelength',
+                                 s=8, hue_style='discrete', edgecolor='w')
+        ax[0].ticklabel_format(axis='y', style="sci", scilimits=(0, 0))
+        plt.tight_layout()
+        title = fr"{ds_extended.LC.long_name} for {start_date.strftime('%d/%m/%Y')}--{end_date.strftime('%d/%m/%Y')}"
+        ax[0].set_title(title)
+        ax[0].set_ylabel(r'${\rm P}_{\rm LC}[{\rm photons} \cdot {\rm km}^3]$')
+        ax[0].xaxis.set_major_formatter(myFmt)
+
+
+        for wavelength, c in zip(wavelengths, vis_utils.COLORS):
+            ax[1].fill_between(ds_gen_p.Time.values,
+                            ds_gen_p.p_lbound.sel(Wavelength=wavelength).values,
+                            ds_gen_p.p_ubound.sel(Wavelength=wavelength).values,
+                            color=c, alpha=.1)
+        ds_gen_p.plot.scatter(ax=ax[1], y='p_new', x='Time', hue='Wavelength', s=10, hue_style='discrete', edgecolor='w')
+        new_p.p.plot(ax=ax[1], hue='Wavelength', linewidth=0.8)
+        title = fr"B\'ezier interpolation of {new_p.p.long_name} for " \
+                fr"{start_date.strftime('%d/%m/%Y')}-- {end_date.strftime('%d/%m/%Y')}"
+
+        ax[1].xaxis.set_major_formatter(myFmt)
+
+        ax[1].ticklabel_format(axis='y', style="sci", scilimits=(0, 0))
+        # ax[1].axes.get_yaxis().set_visible(False)
+        ax[1].set_ylabel("")
+        fig.autofmt_xdate(rotation=0)
+
+        plt.tight_layout()
+        clean_title = f"pLC_gen_PICASSO_{start_date.strftime('%m')}-{end_date.strftime('%m_%Y')}"
+        fig_path = os.path.join('figures', clean_title)
+        print(f"Saving fig to {fig_path}")
+        plt.savefig(fig_path + '.jpeg')
+        plt.savefig(fig_path + '.svg')
+        ax[1].set_title(title)
+
+        plt.show()
 
     # %% Save monthly LC dataset
     if params.save_ds:

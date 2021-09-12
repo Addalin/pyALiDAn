@@ -233,18 +233,23 @@ class BackgroundGenerator:
             cos_fit = gen_bg_utils.func_cos(angles, popt[0], popt[1], popt[2], popt[3])
             # %% Plot data + fitting curves
             fig, ax = plt.subplots(ncols=1, nrows=1)
-            ax.plot(X, Y_pred, color='magenta', label='linear-fit', linestyle='--')
+            # ax.plot(X, Y_pred, color='magenta', label='linear-fit', linestyle='--')
             ax.plot(angles, cos_fit, color='c', label='cos-fit')
             df_iradiance_solar.plot(x=r'$\alpha_{\rm sun}$',
                                     y='vector-irradiance',
                                     style='o',
                                     c="darkblue",
                                     ax=ax)
-            plt.ylabel(r'Irradiance')
+            plt.ylabel(r'Normalized Irradiance')
             plt.legend()
             plt.xlim([-1, 91])
             plt.ylim([-0.02, 1.1])
             plt.tight_layout()
+            title = 'normalized_irradiance'
+            fig_path = os.path.join('figures', title)
+            print(f"Saving fig to {fig_path}")
+            plt.savefig(fig_path + '.jpeg')
+            plt.savefig(fig_path + '.svg')
             plt.show()
 
         # ## Daily background
@@ -477,5 +482,5 @@ class BackgroundGenerator:
 
 
 if __name__ == '__main__':
-    bg_generator = BackgroundGenerator(station_name='haifa_shubi')
+    bg_generator = BackgroundGenerator(station_name='haifa')
     bg_generator.bg_signals_generation_main()

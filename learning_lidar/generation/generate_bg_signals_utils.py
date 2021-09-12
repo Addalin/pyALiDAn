@@ -1,7 +1,9 @@
+import os
 from datetime import datetime, timedelta, time
 
 import astral
 import numpy as np
+import pandas as pd
 import seaborn as sns
 from dateutil import tz
 import matplotlib.pyplot as plt
@@ -275,12 +277,21 @@ def plot_daily_bg_signal(bgmean, high_curves, low_curves, mean_curves, bins_per_
 
 
 def plot_bg_part_of_year(ds_bg_year, dslice):
+
     fig, ax = plt.subplots(ncols=1, nrows=1)
     ds_bg_year.sel(Time=dslice).bg.plot(hue='Wavelength', ax=ax, linewidth=0.1)
     ax.set_xlim([dslice.start, dslice.stop])
-    ax.set_title(f"Background signal: {dslice.start.strftime('%d/%m/%Y')}--{dslice.stop.strftime('%d/%m/%Y')}")
     ax.set_ybound([-.01, 2])
+    ax.set_ylabel(r"${\rm P_{BG}[photons]}$")
+    ax.set_xticks(pd.date_range(dslice.start, dslice.stop, freq='2MS'))
+    ax.xaxis.set_major_formatter(vis_utils.MONTHFORMAT)
+    ax.xaxis.set_tick_params(rotation=0)
     plt.tight_layout()
+    fig_path = os.path.join('figures', f"BG_{dslice.start.strftime('%Y')}")
+    print(f"Saving fig to {fig_path}")
+    plt.savefig(fig_path + '.jpeg')
+    plt.savefig(fig_path + '.svg')
+    ax.set_title(f"Background signal: {dslice.start.strftime('%d/%m/%Y')}--{dslice.stop.strftime('%d/%m/%Y')}")
     plt.show()
 
 
@@ -299,11 +310,16 @@ def plot_bg_one_day(ds_bg_year, c_day):
     fig, ax = plt.subplots(ncols=1, nrows=1)
     ds_bg_year.sel(Time=dslice).bg.plot(hue='Wavelength', ax=ax, linewidth=0.8)
     ax.set_xlim([dslice.start, dslice.stop])
-    ax.set_title(f"{ds_bg_year.bg.info} - {c_day.strftime('%d/%m/%Y')}")
     ax.xaxis.set_major_formatter(vis_utils.TIMEFORMAT)
     ax.xaxis.set_tick_params(rotation=0)
     ax.set_ybound([-.01, 2])
+    ax.set_ylabel(r"${\rm P_{BG}[photons]}$")
     plt.tight_layout()
+    fig_path = os.path.join('figures', f"BG_{c_day.strftime('%Y-%m-%d')}")
+    print(f"Saving fig to {fig_path}")
+    plt.savefig(fig_path + '.jpeg')
+    plt.savefig(fig_path + '.svg')
+    ax.set_title(f"{ds_bg_year.bg.info} - {c_day.strftime('%d/%m/%Y')}")
     plt.show()
 
 
