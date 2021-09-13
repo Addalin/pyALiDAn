@@ -10,11 +10,11 @@ import learning_lidar.utils.utils as utils
 
 FIGURE_DPI = 300
 SAVEFIG_DPI = 300
-SMALL_FONT_SIZE = 14
-MEDIUM_FONT_SIZE = 16
-BIG_FONT_SIZE = 18
-TITLE_FONT_SIZE = 18
-SUPTITLE_FONT_SIZE = 20
+SMALL_FONT_SIZE = 16
+MEDIUM_FONT_SIZE = 18
+BIG_FONT_SIZE = 20
+TITLE_FONT_SIZE = 20
+SUPTITLE_FONT_SIZE = 22
 TIMEFORMAT = mdates.DateFormatter('%H:%M')
 MONTHFORMAT = mdates.DateFormatter('%Y-%m')
 DAYFORMAT = mdates.DateFormatter('%Y-%m-%d')

@@ -169,7 +169,7 @@ class BackgroundGenerator:
         # ## Daily Sun Elevation
         # - Explore daily and yearly $\alpha_{\rm sun}$
         # TODO how to generalzied cur_day, day_0, year_days?
-        cur_day = datetime(2017, 10, 4)
+        cur_day = datetime(2017, 9, 1)
         day_0 = datetime(2017, 4, 4)
         timezone = 'UTC'
         loc = astral.LocationInfo("Haifa", 'Israel', timezone, self.station.lat, self.station.lon)
@@ -235,17 +235,17 @@ class BackgroundGenerator:
             # %% Plot data + fitting curves
             fig, ax = plt.subplots(ncols=1, nrows=1)
             # ax.plot(X, Y_pred, color='magenta', label='linear-fit', linestyle='--')
-            ax.plot(angles, cos_fit, color='c', label='cos-fit')
-            ax.plot(angles, cos_fit2, color='m', label='cos-fit2')
+            ax.plot(angles, cos_fit, color='c', label='fitted-irradiance')
+            # ax.plot(angles, cos_fit2, color='m', label='cos-fit2')
             df_iradiance_solar.plot(x=r'$\alpha_{\rm sun}$',
                                     y='horizontal-irradiance',
                                     style='o',
                                     c="darkblue",
                                     ax=ax)
-            plt.ylabel(r'Normalized Irradiance')
+            plt.ylabel(r'Normalized Irradiance $[\frac{\rm W}{\rm km^2}]$')
             plt.legend()
-            plt.xlim([-1, 91])
-            plt.ylim([-0.02, 1.1])
+            plt.xlim([0, 91])
+            plt.ylim([0, 1.05])
             plt.tight_layout()
             title = 'normalized_irradiance'
             fig_path = os.path.join('figures', title)
@@ -351,12 +351,15 @@ class BackgroundGenerator:
         bg_max_new = bgmean.copy(deep=True)
         bg_max_new.attrs['info'] = 'Background Max Signal'
         bg_max_new.data = np.array(max_new_curves).reshape((3, self.bins_per_day))
+
         bg_min_new = bgmean.copy(deep=True)
         bg_min_new.attrs['info'] = 'Background Min Signal'
         bg_min_new.data = np.array(min_new_curves).reshape((3, self.bins_per_day))
+
         bg_mean_new = bgmean.copy(deep=True)
         bg_mean_new.attrs['info'] = 'Background Mean Signal'
         bg_mean_new.data = np.array(mean_new_curves).reshape((3, self.bins_per_day))
+
         bg_signal_new = bgmean.copy(deep=True)
         bg_signal_new.attrs['info'] = 'Background Mean Signal'
         bg_signal_new.data = np.array(mean_new_signal).reshape((3, self.bins_per_day))
@@ -457,8 +460,7 @@ class BackgroundGenerator:
 
         if plot_results:
             # Plot current day
-            gen_bg_utils.plot_bg_one_day(ds_bg_year, c_day=cur_day)
-
+            gen_bg_utils.plot_bg_one_day(ds_bg_year, c_day=datetime.fromisoformat('2017-02-21'), mean=bg_mean_new)
             c_day = datetime(2017, 1, 1)
             # Plot 1st half of the year
             gen_bg_utils.plot_bg_part_of_year(ds_bg_year,

@@ -103,10 +103,10 @@ def generate_LC_pattern_main(params):
 
     # Set parameters for generating a decay power pattern p(t)
     days_decay = 70
-    peak_days = np.array([-1, 50])
+    peak_days = np.array([-10, 40]) # september values. values for may -  # [-1, 50]
     period1 = (df_times.t_day >= peak_days[0]) & (df_times.t_day < peak_days[1])
     period2 = (df_times.t_day >= peak_days[1])
-    max_powers = [25000, 70000, 60000]
+    max_powers = [15000, 40000, 30000] # september values. values for may - [25000, 70000, 60000]
     ds_chans = []
     for wavelength, p0 in zip(wavelengths, max_powers):
         c1 = df_times[period1].apply(lambda row: decay_p(row.t_day, peak_days[0], p0, days_decay), axis=1,
@@ -274,7 +274,6 @@ def generate_LC_pattern_main(params):
         ax[0].ticklabel_format(axis='y', style="sci", scilimits=(0, 0))
         plt.tight_layout()
         title = fr"{ds_extended.LC.long_name} for {start_date.strftime('%d/%m/%Y')}--{end_date.strftime('%d/%m/%Y')}"
-        ax[0].set_title(title)
         ax[0].set_ylabel(r'${\rm P}_{\rm LC}[{\rm photons} \cdot {\rm km}^3]$')
         ax[0].xaxis.set_major_formatter(myFmt)
         ax[0].legend(markerscale=6)
@@ -302,6 +301,8 @@ def generate_LC_pattern_main(params):
         print(f"Saving fig to {fig_path}")
         plt.savefig(fig_path + '.jpeg')
         plt.savefig(fig_path + '.svg')
+
+        ax[0].set_title(title)
         ax[1].set_title(title)
 
         plt.show()

@@ -83,7 +83,7 @@ def kde_estimation_main(args, month, year, DATA_DIR):
 
     # Show density and the new chosen samples
     if args.plot_results:
-        fig, ax = plt.subplots(nrows=1, ncols=1, figsize=(8, 5))
+        fig, ax = plt.subplots(nrows=1, ncols=1)
         ax.scatter(x=x, y=y, s=1, c='k', label='AERONET')
         im = ax.imshow(np.rot90(Z), cmap='turbo',
                        extent=[xmin, xmax, ymin, ymax])
@@ -96,6 +96,7 @@ def kde_estimation_main(args, month, year, DATA_DIR):
         title = f"Sampling from Angstrom Exponent distribution {t_slice.start.strftime('%Y-%m')}"
         fig.colorbar(im, ax=ax)
         plt.legend()
+        ax.grid(color='w', linestyle='--', linewidth=0.5, alpha=0.3)
         plt.tight_layout()
         clean_title = f"pdf_angstrom_{t_slice.start.strftime('%B_%Y')}"
         plt.savefig(os.path.join('figures', clean_title+'.svg'))
@@ -397,6 +398,7 @@ def kde_estimation_main(args, month, year, DATA_DIR):
         plt.locator_params(axis='x', nbins=5)
         fig.colorbar(im, ax=ax)
         plt.legend()
+        ax.grid(color='w', linestyle='--', linewidth=0.5, alpha=0.3)
         plt.tight_layout()
         title = r"Sampling from $r_m$ - $ \alpha_{532}^{max}$  " + f"{t_slice.start.strftime('%Y-%m')}"
         clean_title = r"pdf_alpha_refHeight_" + f"{t_slice.start.strftime('%B_%Y')}"
