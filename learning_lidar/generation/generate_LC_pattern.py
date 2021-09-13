@@ -277,7 +277,7 @@ def generate_LC_pattern_main(params):
         ax[0].set_title(title)
         ax[0].set_ylabel(r'${\rm P}_{\rm LC}[{\rm photons} \cdot {\rm km}^3]$')
         ax[0].xaxis.set_major_formatter(myFmt)
-
+        ax[0].legend(markerscale=6)
 
         for wavelength, c in zip(wavelengths, vis_utils.COLORS):
             ax[1].fill_between(ds_gen_p.Time.values,
@@ -290,7 +290,7 @@ def generate_LC_pattern_main(params):
                 fr"{start_date.strftime('%d/%m/%Y')}-- {end_date.strftime('%d/%m/%Y')}"
 
         ax[1].xaxis.set_major_formatter(myFmt)
-
+        ax[1].get_legend().remove()
         ax[1].ticklabel_format(axis='y', style="sci", scilimits=(0, 0))
         # ax[1].axes.get_yaxis().set_visible(False)
         ax[1].set_ylabel("")

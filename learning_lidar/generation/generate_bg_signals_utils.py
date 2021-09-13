@@ -8,7 +8,7 @@ import seaborn as sns
 from dateutil import tz
 import matplotlib.pyplot as plt
 from scipy.optimize import curve_fit
-
+from matplotlib import dates as mdates
 from learning_lidar.utils import utils, vis_utils, global_settings as gs
 from learning_lidar.utils.misc_lidar import calc_gauss_curve
 
@@ -33,9 +33,12 @@ def func_log(x, a, b, c, d):
 
 
 def func_cos(x, a, b, c, d):
-    """Return values from a general log function."""
+    """Return values from a general cos function."""
     return a * np.cos(np.deg2rad(b * x) + c) + d
 
+def func_cos2(x, a, b, c):
+    """Return values from a general cos function."""
+    return a + b * np.cos(np.deg2rad(x)) + c*(np.cos(np.deg2rad(x))**2)
 
 def calc_gauss_width(min_val, max_val, rel_val, FWRM):
     max_rel_ratio = (rel_val - min_val) / (max_val - min_val)
@@ -283,10 +286,11 @@ def plot_bg_part_of_year(ds_bg_year, dslice):
     ax.set_xlim([dslice.start, dslice.stop])
     ax.set_ybound([-.01, 2])
     ax.set_ylabel(r"${\rm P_{BG}[photons]}$")
-    ax.set_xticks(pd.date_range(dslice.start, dslice.stop, freq='2MS'))
-    ax.xaxis.set_major_formatter(vis_utils.MONTHFORMAT)
+    ax.set_xticks(pd.date_range(dslice.start, dslice.stop, periods=6))
+    ax.xaxis.set_major_formatter(mdates.DateFormatter('%m-%d'))
     ax.xaxis.set_tick_params(rotation=0)
     plt.tight_layout()
+
     fig_path = os.path.join('figures', f"BG_{dslice.start.strftime('%Y')}")
     print(f"Saving fig to {fig_path}")
     plt.savefig(fig_path + '.jpeg')
@@ -312,6 +316,8 @@ def plot_bg_one_day(ds_bg_year, c_day):
     ax.set_xlim([dslice.start, dslice.stop])
     ax.xaxis.set_major_formatter(vis_utils.TIMEFORMAT)
     ax.xaxis.set_tick_params(rotation=0)
+    for tick in ax.xaxis.get_majorticklabels():
+        tick.set_horizontalalignment("left")
     ax.set_ybound([-.01, 2])
     ax.set_ylabel(r"${\rm P_{BG}[photons]}$")
     plt.tight_layout()

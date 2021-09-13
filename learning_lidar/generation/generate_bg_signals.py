@@ -227,14 +227,16 @@ class BackgroundGenerator:
         Y_pred = linear_regressor.predict(X)  # make predictions
         # %% Cos() - fit :
         popt, pcov = curve_fit(gen_bg_utils.func_cos, X[:, 0], Y[:, 0])
-
+        popt2, pcov2 = curve_fit(gen_bg_utils.func_cos2, X[:, 0], Y[:, 0])
         if plot_results:
             angles = np.linspace(0, 90, 100, endpoint=True)
             cos_fit = gen_bg_utils.func_cos(angles, popt[0], popt[1], popt[2], popt[3])
+            cos_fit2 = gen_bg_utils.func_cos2(angles,popt2[0], popt2[1], popt2[2])
             # %% Plot data + fitting curves
             fig, ax = plt.subplots(ncols=1, nrows=1)
             # ax.plot(X, Y_pred, color='magenta', label='linear-fit', linestyle='--')
             ax.plot(angles, cos_fit, color='c', label='cos-fit')
+            ax.plot(angles, cos_fit2, color='m', label='cos-fit2')
             df_iradiance_solar.plot(x=r'$\alpha_{\rm sun}$',
                                     y='horizontal-irradiance',
                                     style='o',
