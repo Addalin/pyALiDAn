@@ -83,7 +83,7 @@ def kde_estimation_main(args, month, year, DATA_DIR):
 
     # Show density and the new chosen samples
     if args.plot_results:
-        fig, ax = plt.subplots(nrows=1, ncols=1)
+        fig, ax = plt.subplots(nrows=1, ncols=1, figsize=(7,5))
         ax.scatter(x=x, y=y, s=1, c='k', label='AERONET')
         im = ax.imshow(np.rot90(Z), cmap='turbo',
                        extent=[xmin, xmax, ymin, ymax])
@@ -99,8 +99,8 @@ def kde_estimation_main(args, month, year, DATA_DIR):
         ax.grid(color='w', linestyle='--', linewidth=0.5, alpha=0.3)
         plt.tight_layout()
         clean_title = f"pdf_angstrom_{t_slice.start.strftime('%B_%Y')}"
-        plt.savefig(os.path.join('figures', clean_title+'.svg'))
-        plt.savefig(os.path.join('figures', clean_title+'.jpeg'))
+        plt.savefig(os.path.join('figures', clean_title+'.svg'), bbox_inches = 'tight')
+        plt.savefig(os.path.join('figures', clean_title+'.jpeg'), bbox_inches = 'tight')
         ax.set_title(title)
         plt.show()
 
@@ -298,8 +298,8 @@ def kde_estimation_main(args, month, year, DATA_DIR):
 
         title = f"Sampling from $P(x=LR|y=A)$ {t_slice.start.strftime('%Y-%m')}"
         clean_title = f"pdf_LR_angstrom_" + f"{t_slice.start.strftime('%B_%Y')}"
-        plt.savefig(os.path.join('figures', clean_title+'.svg'))
-        plt.savefig(os.path.join('figures', clean_title+'.jpeg'))
+        plt.savefig(os.path.join('figures', clean_title+'.svg'), bbox_inches = 'tight')
+        plt.savefig(os.path.join('figures', clean_title+'.jpeg'), bbox_inches = 'tight')
         ax.set_title(title)
         plt.show()
 
@@ -381,20 +381,20 @@ def kde_estimation_main(args, month, year, DATA_DIR):
 
     if args.plot_results:
         # Show density and the new chosen samples
-        fig, ax = plt.subplots(nrows=1, ncols=1, figsize=(8, 5))
+        fig, ax = plt.subplots(nrows=1, ncols=1, figsize=(8, 6))
         df_rm_beta.plot.scatter(x='rm', y='beta-532', ax=ax, c='k', label='PICASO')
         im = ax.imshow(np.rot90(Z), cmap='turbo',
-                       extent=[round(xmin), round(xmax), ymin, ymax], aspect="auto")
+                       extent=[round(xmin), round(xmax), 0, ymax], aspect="auto")
         ax.plot(rm_new, beta_532_new, 'k*', markersize=6)
         ax.plot(rm_new, beta_532_new, 'w*', markersize=4, label='new samples')
         # ax.set_xlabel(r'$r_m$')
         # ax.set_ylabel(r'$\beta_{532}^{max}$')
         ax.set_xlabel(r'$r_{\rm ref} [{\rm km}]$')
-        ax.set_ylabel(r'$\alpha_{532}^{max} [\frac{1}{\rm km}]$')
+        ax.set_ylabel(r'$\alpha_{532}^{\rm max} [\frac{1}{\rm km}]$')
         ticks_loc = ax.get_yticks().tolist()
         ax.yaxis.set_major_locator(mticker.FixedLocator(ticks_loc))
         ax.set_yticklabels([round(tick_label, 1) for tick_label in ax.get_yticks()*55])  # Beta to Alpha!
-        plt.locator_params(axis='y', nbins=6)
+        plt.locator_params(axis='y', nbins=5)
         plt.locator_params(axis='x', nbins=5)
         fig.colorbar(im, ax=ax)
         plt.legend()
@@ -402,8 +402,8 @@ def kde_estimation_main(args, month, year, DATA_DIR):
         plt.tight_layout()
         title = r"Sampling from $r_m$ - $ \alpha_{532}^{max}$  " + f"{t_slice.start.strftime('%Y-%m')}"
         clean_title = r"pdf_alpha_refHeight_" + f"{t_slice.start.strftime('%B_%Y')}"
-        plt.savefig(os.path.join('figures', clean_title+'.svg'))
-        plt.savefig(os.path.join('figures', clean_title+'.jpeg'))
+        plt.savefig(os.path.join('figures', clean_title+'.svg'), bbox_inches = 'tight')
+        plt.savefig(os.path.join('figures', clean_title+'.jpeg'), bbox_inches = 'tight')
         ax.set_title(title)
         plt.show()
 

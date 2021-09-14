@@ -267,7 +267,7 @@ def generate_LC_pattern_main(params):
         myFmt = mdates.DateFormatter('%m-%d')
 
         fig, ax = plt.subplots(ncols=2, nrows=1, figsize=(14, 5), sharey=True)
-        ds_extended.LC.plot(ax=ax[0], hue='Wavelength', linewidth=0.8)
+        lines = ds_extended.LC.plot(ax=ax[0], hue='Wavelength', linewidth=0.8)
         ds_extended.plot.scatter(ax=ax[0], y='LC', x='Time',
                                  hue='Wavelength',
                                  s=8, hue_style='discrete', edgecolor='w')
@@ -276,7 +276,7 @@ def generate_LC_pattern_main(params):
         title = fr"{ds_extended.LC.long_name} for {start_date.strftime('%d/%m/%Y')}--{end_date.strftime('%d/%m/%Y')}"
         ax[0].set_ylabel(r'${\rm P}_{\rm LC}[{\rm photons} \cdot {\rm km}^3]$')
         ax[0].xaxis.set_major_formatter(myFmt)
-        ax[0].legend(markerscale=6)
+        ax[0].legend(lines, wavelengths)
 
         for wavelength, c in zip(wavelengths, vis_utils.COLORS):
             ax[1].fill_between(ds_gen_p.Time.values,
@@ -291,7 +291,6 @@ def generate_LC_pattern_main(params):
         ax[1].xaxis.set_major_formatter(myFmt)
         ax[1].get_legend().remove()
         ax[1].ticklabel_format(axis='y', style="sci", scilimits=(0, 0))
-        # ax[1].axes.get_yaxis().set_visible(False)
         ax[1].set_ylabel("")
         fig.autofmt_xdate(rotation=0)
 

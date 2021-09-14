@@ -325,7 +325,7 @@ def plot_bg_one_day(ds_bg_year, c_day, mean=None):
         aligned_mean = xr.zeros_like(ds)
         aligned_mean.values = mean.values
         aligned_mean.plot(hue='Wavelength', ax=ax, linewidth=2)
-    # ax.set_xlim([dslice.start, dslice.stop])
+    ax.set_xlim([dslice.start, dslice.stop])
     ax.xaxis.set_major_formatter(vis_utils.TIMEFORMAT)
     ax.xaxis.set_tick_params(rotation=0)
     for tick in ax.xaxis.get_majorticklabels():
