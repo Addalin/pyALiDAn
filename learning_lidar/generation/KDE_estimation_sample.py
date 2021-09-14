@@ -21,7 +21,7 @@ vis_utils.set_visualization_settings()
 
 
 def plot_angstrom_exponent_distribution(x, y, x_label, y_label, date_):
-    fig, ax = plt.subplots(nrows=1, ncols=1)
+    fig, ax = plt.subplots(nrows=1, ncols=1, figsize = (8,6))
     ax.scatter(x=x, y=y, s=5)
     ax.set_xlabel(x_label)
     ax.set_ylabel(y_label)
@@ -93,7 +93,7 @@ def kde_estimation_main(args, month, year, DATA_DIR):
         # ax.set_ylabel(couple_1)
         ax.set_xlabel(r"${\rm \AA}_{355, 532}$")
         ax.set_ylabel(r"${\rm \AA}_{532, 1064}$")
-        title = f"Sampling from Angstrom Exponent distribution {t_slice.start.strftime('%Y-%m')}"
+        title = "" #f"Sampling from Angstrom Exponent distribution {t_slice.start.strftime('%Y-%m')}"
         fig.colorbar(im, ax=ax)
         plt.legend()
         ax.grid(color='w', linestyle='--', linewidth=0.5, alpha=0.3)
