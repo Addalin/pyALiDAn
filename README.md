@@ -11,6 +11,7 @@ Then, to setup the environment -
 Activate it by -
 `conda activate lidar`
 
+Run `python setup.py develop` to locally install the lidar learning package.
 
 ## Running the scripts
 
