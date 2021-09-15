@@ -450,5 +450,5 @@ def calc_data_std(row: pd.Series, top_height: int, means: pd.Series, mode: str =
         # Average (pixel-wise) square difference between value and the mean
         df_stats[f'{ds_name}_std'] = (np.linalg.norm(
             ds.sel(Height=height_slice).values - means[f'{ds_name}_mean']) ** 2) / ds.sel(Height=height_slice).size
-
+        # TODO apply sqrt to get std from the variance!!!
     return df_stats
