@@ -34,12 +34,14 @@ Under `learning_lidar`:
 
 - [learning_phase](learning_phase)
 
-In general, each standalone script is in a different file, and has a corresponding `<script_name>_utils`
-file for subroutines.
+In general, each subfolder corresponds to a process, and each standalone script is in a different file, and has a corresponding `<script_name>_utils`
+file for subroutines
+
+There is a general `utils` folder, and additional minor scripts and notebooks not mentioned here.
 
 ### generation
 
-- Generates the different properties. `generation_main.py` is a wrappper for the different parts of the process and
+- Generates the different properties. `generation/generation_main.py` is a wrappper for the different parts of the process and
 and can be used to to run everything at once for a given period. It includes:
   - Background Signal
   - Angstrom Exponent and optical depth
@@ -50,7 +52,7 @@ and can be used to to run everything at once for a given period. It includes:
 
 
 ### dataseting
-
+- Main script is `dataseting/dataseting.py`
 - Used to create a csv of the records - `do_dataset`
 - `extend_dataset` to add additional info to the dataset
 - Create calibration dataset from the extended df - `do_calibration_dataset`
@@ -61,7 +63,7 @@ and can be used to to run everything at once for a given period. It includes:
 
 
 ### preprocessing
-
+- Main script is `preprocessing/preprocessing.py`
 - converts raw data into clean format. 
 - Specifically can be used to:
   - download and convert gdas files with the `download_gdas` and `convert_gdas` flags
@@ -69,7 +71,6 @@ and can be used to to run everything at once for a given period. It includes:
   - `unzip_lidar_tropos` to automatically unzip downloaded tropos lidar data.
 
 ### learning_phase
-
 - deep learning module to predict y
 - Makes use of parameters from `run_params.py`. 
 - Configure the params as desired, then run the network with `python main_lightning.py` 
