@@ -390,7 +390,7 @@ def kde_estimation_main(args, month, year, DATA_DIR):
         # ax.set_xlabel(r'$r_m$')
         # ax.set_ylabel(r'$\beta_{532}^{max}$')
         ax.set_xlabel(r'$r_{\rm ref} [{\rm km}]$')
-        ax.set_ylabel(r'$\alpha_{532}^{\rm max} [\frac{1}{\rm km}]$')
+        ax.set_ylabel(r'$\alpha_{532}^{\rm max} \left[\frac{1}{\rm km}\right]$')
         ticks_loc = ax.get_yticks().tolist()
         ax.yaxis.set_major_locator(mticker.FixedLocator(ticks_loc))
         ax.set_yticklabels([round(tick_label, 1) for tick_label in ax.get_yticks()*55])  # Beta to Alpha!

@@ -242,7 +242,7 @@ class BackgroundGenerator:
                                     style='o',
                                     c="darkblue",
                                     ax=ax)
-            plt.ylabel(r'Normalized Irradiance $[\frac{\rm W}{\rm km^2}]$')
+            plt.ylabel(r'Normalized Irradiance $\left[\frac{\rm W}{\rm km^2}\right]$')
             plt.legend()
             plt.xlim([0, 91])
             plt.ylim([0, 1.05])
