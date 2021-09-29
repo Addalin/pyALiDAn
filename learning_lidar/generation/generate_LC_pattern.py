@@ -264,7 +264,7 @@ def generate_LC_pattern_main(params):
     if params.plot_results:
         # Plot both true and generated on two subplots
         import matplotlib.dates as mdates
-        myFmt = mdates.DateFormatter('%m-%d')
+        myFmt = mdates.DateFormatter(r'\textbf{%m-%d}')
 
         fig, ax = plt.subplots(ncols=2, nrows=1, figsize=(14, 5), sharey=True)
         lines = ds_extended.LC.plot(ax=ax[0], hue='Wavelength', linewidth=0.8)

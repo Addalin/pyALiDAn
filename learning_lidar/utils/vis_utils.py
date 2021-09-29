@@ -15,8 +15,8 @@ MEDIUM_FONT_SIZE = 18
 BIG_FONT_SIZE = 20
 TITLE_FONT_SIZE = 20
 SUPTITLE_FONT_SIZE = 22
-TIMEFORMAT = mdates.DateFormatter('%H:%M')
-MONTHFORMAT = mdates.DateFormatter('%Y-%m')
+TIMEFORMAT = mdates.DateFormatter(r'\textbf{%H:%M}')
+MONTHFORMAT = mdates.DateFormatter(r'\textbf{%Y-%m}')
 DAYFORMAT = mdates.DateFormatter('%Y-%m-%d')
 COLORS = ["darkblue", "darkgreen", "darkred"]
 
@@ -34,10 +34,15 @@ def set_visualization_settings():
     plt.rc('font', size=SMALL_FONT_SIZE)  # controls default text sizes
     plt.rc('axes', titlesize=TITLE_FONT_SIZE)  # fontsize of the axes title
     plt.rc('axes', labelsize=BIG_FONT_SIZE)  # fontsize of the x and y labels
+    plt.rc('axes', labelweight='bold')  # weight of the x and y labels
     plt.rc('xtick', labelsize=SMALL_FONT_SIZE)  # fontsize of the tick labels
     plt.rc('ytick', labelsize=SMALL_FONT_SIZE)  # fontsize of the tick labels
     plt.rc('legend', fontsize=MEDIUM_FONT_SIZE)  # legend fontsize
     plt.rc('figure', titlesize=SUPTITLE_FONT_SIZE)  # fontsize of the figure title
+
+    # plt.rc('text', usetex=True)
+    plt.rc('font', weight='bold')
+    plt.rcParams['text.latex.preamble'] = r'\boldmath'
 
 
 def plot_daily_profile(profile_ds, height_slice=None, figsize=(16, 6), save_fig=False):
