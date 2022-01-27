@@ -98,7 +98,7 @@ class BackgroundGenerator:
             """Calculating mean curves & generating new averaged bg signal """
             mean_new = (0.5 * (max_new + min_new))
             mean_new_curves.append(mean_new)
-            std_val = (0.5 * (max_new - min_new))
+            std_val = (0.25 * (max_new - min_new))
             bg_new_sig = np.zeros((len(ds_year.Time), self.bins_per_day))
             for day in range(len(ds_year.Time)):
                 bg_new_sig[day, :] = (mean_new[day].reshape(self.bins_per_day, 1) + np.diagflat(std_val[day])
@@ -172,7 +172,7 @@ class BackgroundGenerator:
         cur_day = datetime(2017, 9, 1)
         day_0 = datetime(2017, 4, 4)
         timezone = 'UTC'
-        loc = astral.LocationInfo("Haifa", 'Israel', timezone, self.station.lat, self.station.lon)
+        loc = astral.LocationInfo(self.station.location, self.station.state, timezone, self.station.lat, self.station.lon)
         loc.observer.elevation = self.station.altitude
 
         # #### 1. Sun elevation during the year :
@@ -184,7 +184,7 @@ class BackgroundGenerator:
         sun_elevations = [astral.sun.elevation(loc.observer, dt) for dt in sun_noons]
         ds_year = xr.Dataset(data_vars={'sunelevation': ('Time', sun_elevations)},
                              coords={'Time': year_days.values})
-        ds_year.sunelevation.attrs = {'long_name': r'$\alpha_{sun}$', 'units': r'$^{\circ}$'}
+        ds_year.sunelevation.attrs = {'long_name': r'$\theta$', 'units': r'$^{\circ}$'}
         ds_year.Time.attrs = {"units": fr"{timezone}"}
 
         if plot_results:
@@ -460,7 +460,7 @@ class BackgroundGenerator:
 
         if plot_results:
             # Plot current day
-            gen_bg_utils.plot_bg_one_day(ds_bg_year, c_day=datetime.fromisoformat('2017-02-21'), mean=bg_mean_new)
+            gen_bg_utils.plot_bg_one_day(ds_bg_year, c_day=datetime.fromisoformat('2017-04-04'), mean=bg_mean_new)
             c_day = datetime(2017, 1, 1)
             # Plot 1st half of the year
             gen_bg_utils.plot_bg_part_of_year(ds_bg_year,
@@ -487,4 +487,5 @@ class BackgroundGenerator:
 
 if __name__ == '__main__':
     bg_generator = BackgroundGenerator(station_name='haifa')
+
     bg_generator.bg_signals_generation_main()

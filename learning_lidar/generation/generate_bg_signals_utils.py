@@ -206,7 +206,7 @@ def fit_curve_and_plot_sun_elevation_during_day(loc, day_sun, day_0, ds_day, bin
 
     #  Plot curve and fit
     sns.set_palette(sns.color_palette("tab10"))
-    fig, ax = plt.subplots(ncols=1, nrows=1)
+    fig, ax = plt.subplots(ncols=1, nrows=1, figsize=(8,5))
     ds_day.sunelevation.plot(ax=ax, label=r'$\alpha_{\rm sun}$', color='darkblue', linewidth=2.0)
     ax.fill_between(ds_day.Time, day_light_sun, ds_day.sunelevation, alpha=0.2)
     ax.fill_between(ds_day.Time, day_light_sun, dawn_dusk_angle, alpha=0.2)
@@ -246,9 +246,13 @@ def fit_curve_and_plot_sun_elevation_during_day(loc, day_sun, day_0, ds_day, bin
                 xytext=(left_x - timedelta(minutes=50), y.min()))
     ax.xaxis.set_major_formatter(vis_utils.TIMEFORMAT)
     ax.xaxis.set_tick_params(rotation=0)
-    plt.title(f"Sun elevation during {cur_day.strftime('%Y-%m-%d')}")
     plt.legend()
     plt.tight_layout()
+    fig_path = os.path.join('figures', f"theta_sun_{cur_day.strftime('%Y-%m-%d')}")
+    print(f"Saving fig to {fig_path}")
+    plt.savefig(fig_path + '.jpeg')
+    plt.savefig(fig_path + '.svg')
+    plt.title(f"Sun elevation during {cur_day.strftime('%Y-%m-%d')}")
     plt.show()
 
 
