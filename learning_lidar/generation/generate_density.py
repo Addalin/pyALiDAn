@@ -46,6 +46,7 @@ def generate_daily_aerosol_density(station: gs.Station, day_date: datetime.date,
 def generate_density_main(params):
     vis_utils.set_visualization_settings()
     gen_utils.PLOT_RESULTS = params.plot_results
+    gen_den_utils.PLOT_RESULTS = params.plot_results
     logging.getLogger('PIL').setLevel(logging.ERROR)  # Fix annoying PIL logs
     logging.getLogger('matplotlib').setLevel(logging.ERROR)  # Fix annoying matplotlib logs
     logger = utils.create_and_configer_logger(f"{os.path.basename(__file__)}.log", level=logging.INFO)

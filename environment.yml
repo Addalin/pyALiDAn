@@ -1,0 +1,40 @@
+name: lidar
+channels:
+  - pytorch
+  - defaults
+  - conda-forge
+  - pro
+dependencies:
+  - netcdf4
+  - xarray=0.19
+  - tensorboard
+  - pip
+  - sphinx
+  - multiprocess
+  - pyyaml
+  - torchvision
+  - seaborn
+  - ray-tune=1.4
+  - opencv
+  - astral
+  - numpy=1.20
+  - pandas
+  - tqdm
+  - openpyxl
+  - matplotlib
+  - pytorch=1.7
+  - astropy
+  - pytorch-lightning=1.4
+  - jupyter
+  - jupyterlab
+  - scikit-learn
+  - scipy
+  - nb_conda
+  - nc-time-axis
+  - python=3.7
+  - sqlite
+  - pip:
+      - pytictoc
+      - git+https://github.com/scaperex/ARLreader.git
+      - git+https://gitlab.com/ioannis_binietoglou/lidar_molecular.git
+

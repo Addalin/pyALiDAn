@@ -192,8 +192,9 @@ class LidarDataModule(LightningDataModule):
 
         # Step 1. Load Dataset
         # TODO: add option - y = {bin(r0),bin(r1)}
-        transformations_list = [PowTransform(self.Y_features, self.profiles, self.powers), SampleXR2Tensor()] \
-            if self.powers else [SampleXR2Tensor()]
+        #transformations_list = [SampleXR2Tensor(), PowTransform(self.Y_features, self.profiles, self.powers)] \
+        #    if self.powers else [SampleXR2Tensor()]
+        transformations_list = [SampleXR2Tensor()]
         lidar_transforms = torchvision.transforms.Compose(transformations_list)
         torch_transforms = torchvision.transforms.Normalize(mean=tuple(self.stats['x']['mean']),
                                                             std=tuple(self.stats['x']['std'])) \

@@ -1,3 +1,4 @@
+import numpy as np
 import torch
 from pytorch_lightning.core.lightning import LightningModule
 from torch import nn
@@ -6,12 +7,29 @@ from torch.optim import Adam
 from learning_lidar.learning_phase.utils_.custom_losses import MARELoss
 
 
+class Gamma(LightningModule):
+    def __init__(self, in_channels, X_features_profiles, powers):
+        super().__init__()
+        X_features, profiles = map(list, zip(*X_features_profiles))
+        self.x_powers = nn.Parameter(torch.tensor([powers[profile] for profile in profiles])) if powers else None
+        self.eps = torch.tensor(np.finfo(float).eps)
+        self.gamma = nn.Parameter(torch.tensor(powers))
+
+
+    def forward(self, input):
+        return input.sign() * (input.abs() + self.eps) ** self.gamma
+
 class DefaultCNN(LightningModule):
 
-    def __init__(self, in_channels, output_size, hidden_sizes, fc_size, loss_type, learning_rate):
+    def __init__(self, in_channels, output_size, hidden_sizes, fc_size, loss_type, learning_rate, X_features_profiles,
+                 powers):
         super().__init__()
         self.save_hyperparameters()
         self.lr = learning_rate
+        X_features, profiles = map(list, zip(*X_features_profiles))
+        self.x_powers = nn.Parameter(torch.tensor([powers[profile] for profile in profiles])) if powers else None
+        # self.x_powers = [powers[profile] for profile in profiles] if powers else None
+        self.eps = torch.tensor(np.finfo(float).eps)
 
         self.conv_layer = nn.Sequential(
             # Conv layer 1
@@ -73,15 +91,19 @@ class DefaultCNN(LightningModule):
 
     def forward(self, x):
         batch_size, channels, width, height = x.size()
+        x = x.float()
+        if not (self.x_powers is None):
+            for c_i in range(channels):
+                x[:, c_i, :, :] = (x[:, c_i, :, :] + self.eps) ** self.x_powers[c_i]
+
         # conv layers
-        x = self.conv_layer(x.float())
+        x = self.conv_layer(x)
 
         # flatten
         x = x.view(batch_size, -1)
 
         # fc layer
         out = self.fc_layer(x)
-
         return out
 
     def training_step(self, batch, batch_idx):
@@ -94,6 +116,7 @@ class DefaultCNN(LightningModule):
         self.log(f"loss/{self.loss_type}_train", loss)
         rel_loss = self.rel_loss(y, y_pred)
         self.log(f"rel_loss/{self.rel_loss_type}_train", rel_loss)
+
         return loss
 
     def validation_step(self, batch, batch_idx):
@@ -106,6 +129,8 @@ class DefaultCNN(LightningModule):
         #     self.log(f"{"MARE_{feature_num}_val", loss_mare)
         rel_loss = self.rel_loss(y, y_pred)
         self.log(f"rel_loss/{self.rel_loss_type}_val", rel_loss)
+        for c_i in range(x.size()[1]):
+            self.log(f"gamma_x/channel_{c_i}", self.x_powers[c_i])
         return loss
 
     def configure_optimizers(self):

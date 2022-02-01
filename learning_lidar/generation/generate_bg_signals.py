@@ -98,7 +98,7 @@ class BackgroundGenerator:
             """Calculating mean curves & generating new averaged bg signal """
             mean_new = (0.5 * (max_new + min_new))
             mean_new_curves.append(mean_new)
-            std_val = (0.5 * (max_new - min_new))
+            std_val = (0.25 * (max_new - min_new))
             bg_new_sig = np.zeros((len(ds_year.Time), self.bins_per_day))
             for day in range(len(ds_year.Time)):
                 bg_new_sig[day, :] = (mean_new[day].reshape(self.bins_per_day, 1) + np.diagflat(std_val[day])
@@ -169,10 +169,10 @@ class BackgroundGenerator:
         # ## Daily Sun Elevation
         # - Explore daily and yearly $\alpha_{\rm sun}$
         # TODO how to generalzied cur_day, day_0, year_days?
-        cur_day = datetime(2017, 10, 4)
+        cur_day = datetime(2017, 9, 1)
         day_0 = datetime(2017, 4, 4)
         timezone = 'UTC'
-        loc = astral.LocationInfo("Haifa", 'Israel', timezone, self.station.lat, self.station.lon)
+        loc = astral.LocationInfo(self.station.location, self.station.state, timezone, self.station.lat, self.station.lon)
         loc.observer.elevation = self.station.altitude
 
         # #### 1. Sun elevation during the year :
@@ -184,7 +184,7 @@ class BackgroundGenerator:
         sun_elevations = [astral.sun.elevation(loc.observer, dt) for dt in sun_noons]
         ds_year = xr.Dataset(data_vars={'sunelevation': ('Time', sun_elevations)},
                              coords={'Time': year_days.values})
-        ds_year.sunelevation.attrs = {'long_name': r'$\alpha_{sun}$', 'units': r'$^{\circ}$'}
+        ds_year.sunelevation.attrs = {'long_name': r'$\theta$', 'units': r'$^{\circ}$'}
         ds_year.Time.attrs = {"units": fr"{timezone}"}
 
         if plot_results:
@@ -217,34 +217,41 @@ class BackgroundGenerator:
         csv_name = os.path.join(self.bg_signal_folder, csv_iradiance_elevation)
         df_iradiance_solar = pd.read_csv(csv_name)
         df_iradiance_solar.rename(columns={'X_vector_irradiance': r'$\alpha_{\rm sun}$',
-                                           'Y_vector_irradiance': 'vector-irradiance'},
+                                           'Y_vector_irradiance': 'horizontal-irradiance'},
                                   inplace=True)
         X = df_iradiance_solar[r'$\alpha_{\rm sun}$'].values.reshape(-1, 1)
-        Y = df_iradiance_solar['vector-irradiance'].values.reshape(-1, 1)
+        Y = df_iradiance_solar['horizontal-irradiance'].values.reshape(-1, 1)
         # %% Linear fit :
         linear_regressor = LinearRegression()  # create object for the class
         linear_regressor.fit(X[:], Y[:])  # perform linear regression
         Y_pred = linear_regressor.predict(X)  # make predictions
         # %% Cos() - fit :
         popt, pcov = curve_fit(gen_bg_utils.func_cos, X[:, 0], Y[:, 0])
-
+        popt2, pcov2 = curve_fit(gen_bg_utils.func_cos2, X[:, 0], Y[:, 0])
         if plot_results:
             angles = np.linspace(0, 90, 100, endpoint=True)
             cos_fit = gen_bg_utils.func_cos(angles, popt[0], popt[1], popt[2], popt[3])
+            cos_fit2 = gen_bg_utils.func_cos2(angles,popt2[0], popt2[1], popt2[2])
             # %% Plot data + fitting curves
             fig, ax = plt.subplots(ncols=1, nrows=1)
-            ax.plot(X, Y_pred, color='magenta', label='linear-fit', linestyle='--')
-            ax.plot(angles, cos_fit, color='c', label='cos-fit')
+            # ax.plot(X, Y_pred, color='magenta', label='linear-fit', linestyle='--')
+            ax.plot(angles, cos_fit, color='c', label='fitted-irradiance')
+            # ax.plot(angles, cos_fit2, color='m', label='cos-fit2')
             df_iradiance_solar.plot(x=r'$\alpha_{\rm sun}$',
-                                    y='vector-irradiance',
+                                    y='horizontal-irradiance',
                                     style='o',
                                     c="darkblue",
                                     ax=ax)
-            plt.ylabel(r'Irradiance')
+            plt.ylabel(r'Normalized Irradiance $\left[\frac{\rm W}{\rm km^2}\right]$')
             plt.legend()
-            plt.xlim([-1, 91])
-            plt.ylim([-0.02, 1.1])
+            plt.xlim([0, 91])
+            plt.ylim([0, 1.05])
             plt.tight_layout()
+            title = 'normalized_irradiance'
+            fig_path = os.path.join('figures', title)
+            print(f"Saving fig to {fig_path}")
+            plt.savefig(fig_path + '.jpeg')
+            plt.savefig(fig_path + '.svg')
             plt.show()
 
         # ## Daily background
@@ -344,12 +351,15 @@ class BackgroundGenerator:
         bg_max_new = bgmean.copy(deep=True)
         bg_max_new.attrs['info'] = 'Background Max Signal'
         bg_max_new.data = np.array(max_new_curves).reshape((3, self.bins_per_day))
+
         bg_min_new = bgmean.copy(deep=True)
         bg_min_new.attrs['info'] = 'Background Min Signal'
         bg_min_new.data = np.array(min_new_curves).reshape((3, self.bins_per_day))
+
         bg_mean_new = bgmean.copy(deep=True)
         bg_mean_new.attrs['info'] = 'Background Mean Signal'
         bg_mean_new.data = np.array(mean_new_curves).reshape((3, self.bins_per_day))
+
         bg_signal_new = bgmean.copy(deep=True)
         bg_signal_new.attrs['info'] = 'Background Mean Signal'
         bg_signal_new.data = np.array(mean_new_signal).reshape((3, self.bins_per_day))
@@ -450,8 +460,7 @@ class BackgroundGenerator:
 
         if plot_results:
             # Plot current day
-            gen_bg_utils.plot_bg_one_day(ds_bg_year, c_day=cur_day)
-
+            gen_bg_utils.plot_bg_one_day(ds_bg_year, c_day=datetime.fromisoformat('2017-04-04'), mean=bg_mean_new)
             c_day = datetime(2017, 1, 1)
             # Plot 1st half of the year
             gen_bg_utils.plot_bg_part_of_year(ds_bg_year,
@@ -477,5 +486,6 @@ class BackgroundGenerator:
 
 
 if __name__ == '__main__':
-    bg_generator = BackgroundGenerator(station_name='haifa_shubi')
+    bg_generator = BackgroundGenerator(station_name='haifa')
+
     bg_generator.bg_signals_generation_main()

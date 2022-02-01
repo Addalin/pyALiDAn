@@ -1,9 +1,28 @@
-# Project Structure
+# Installation
 
-- [Source Code](code-structure)
-- [Data]()
+To get the code simply clone it - 
 
+`git clone https://github.com/Addalin/learning_lidar.git`
 
+Then, to setup the environment - 
+- `cd learning_lidar`
+- `conda env create -f environment.yml`
+
+Activate it by -
+`conda activate lidar`
+
+Run `python setup.py develop` to locally install the lidar learning package - 
+this is not currently necessary but can assist with missing paths when running scripts from command line. 
+
+## Running the scripts
+
+Each script can be run separately. They all use the command line format, with the base arguments of 
+`--station_name, --start_date, --end_date, --plot_results, --save_ds`, and additional agruments based on the specific script.
+
+For example to run generation main:
+`python generation_main.py --station_name haifa --start_date 2017-09-01 --end_date 2017-10-31 --plot_results --save_ds`
+
+Where relevant, use the `--use_km_unit` flag to use km units vs m units.
 
 ## Code Structure
 
@@ -17,22 +36,75 @@ Under `learning_lidar`:
 
 - [learning_phase](learning_phase)
 
+In general, each subfolder corresponds to a process, and each standalone script is in a different file, and has a corresponding `<script_name>_utils`
+file for subroutines
 
+There is a general `utils` folder, and additional minor scripts and notebooks not mentioned here.
 
 ### generation
 
-- Generates data
+- Generates the different properties. `generation/generation_main.py` is a wrappper for the different parts of the process and
+and can be used to to run everything at once for a given period. It includes:
+  - Background Signal (`genage_bg_signals`)
+  - Angstrom Exponent and optical depth (`read_AERONET_data`)
+  - KDE Estimation (`KDE_estimation_sample`)
+  - Lidar Constant (`generate_LC_pattern`)
+  - Density generation (`generate_density`)
+  - signal generation (`daily_signals_generation`)
 
-
+- Additional code:
+  - `Opex_results` - notebook with graphs for the paper
+  - Large parts of the code were initially written as notebooks, then manually converted to py files. 
+    - For example under `generation/legacy` are the original notebooks.
+    - `generate_bg_signals` has been converted to py, 
+     but not yet generalized to any time period, thus the original notebook is still in the main generation folder.
+    - `overlap.ipynb` hasn't been converted to py yet. Overlap is an additional part of the generation process
+    - Figures that were necessary for the paper are saved under the `figures` subdirectory. 
+    Only relevant if the `--plot_results` flag is present.
+  
 ### dataseting
-
-- ?
+- Main script is `dataseting/dataseting.py`
+- Flags:
+  - Used to create a csv of the records - `--do_dataset`
+  - `--extend_dataset` to add additional info to the dataset
+  - Create calibration dataset from the extended df - `--do_calibration_dataset`
+  - `--create_train_test_splits` to create train test splits
+  - `--calc_stats` to calculate mean, min, max, std statistics
+  - `--create_time_split_samples` to split up the dataset into small intervals.
+  - Note, use `--generated_mode` to apply the operations on the generated data (vs the raw tropos data)
 
 
 ### preprocessing
-
-- converts raw data into clean format
+- Main script is `preprocessing/preprocessing.py`
+- converts raw data into clean format. 
+- Specifically can be used to:
+  - download and convert gdas files with the `--download_gdas` and `--convert_gdas` flags
+  - generate molecular `--generate_molecular_ds`, lidar `--generate_lidar_ds` or raw lidar `--generate_raw_lidar_ds`
+  - `--unzip_lidar_tropos` to automatically unzip downloaded tropos lidar data.
 
 ### learning_phase
+- deep learning module to predict 'Y' given 'X'
+- Makes use of parameters from `run_params.py`. 
+- Configure the params as desired, then run the network with `python main_lightning.py` 
+- The models are implemented with pytorch lighting, currently only `models/defaultCNN.py`.
+- `analysis_LCNet_results` extracts the raw the results from a results folder and displays many comparisons of the different trials.
+NOTE: currently `analysis_LCNet_results.ipynb` is old results with messy code. Updated code is at `analysis_LCNet_results_no_overlap.ipynb`
+and this is the notebook that should be used!
+- `model_validation.py` is a script that was barely used yet but is meant to be used to load a pretrained model and 
+use it to reproduce results.
+- 
+### Notes 
 
-- deep learning module to predict y
+1. [workflow.md](workflow.md) contains information about the flow of data between the modules, 
+such as what is the input and ouput of each stage. 
+   1. It is not fully updated or clear but can provide useful information.
+2. There are many todos in the code, some of which are crucial for certain stages, and some 'nice to have'.
+3. The [run_script.sh](learning_lidar/run_script.sh) can be used as an example of how to run parts of the code from the terminal with the commandline arguments,
+for example for different dates.
+4. [Paths_lidar_learning.pptx](Paths_lidar_learning.pptx) is for the planned changes to the data paths - which
+are meant to be much more organized, easier to maintain and less dependent.
+5. [Analysis](Analysis) contains different notebooks for exploring the data.
+6. The [data](data) folder contains both data necessary for the generation, and csv files that are created in the dataseting stage,
+and needed as input for learning phase. Specifically -
+   1. `stations.csv` defines stations, currently also relevent when working on a different computer.
+   2. `dataset_<station_name>_<start_date>_<end_date>.csv` contain links to the actual data paths. Each row is a record.

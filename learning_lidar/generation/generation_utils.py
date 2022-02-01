@@ -143,9 +143,9 @@ def get_month_gen_params_path(station: gs.Station, day_date: datetime.date, type
 
 def get_daily_ds_path(station: gs.Station, day_date: datetime.date, type_: str) -> str:
     """
-    Get the path to the daily generated measure (lidar) or signal ds
+    Get the path to the daily generated measure (lidar), signal ds, 'density' or aerosol
 
-    :param type_: str, 'lidar' for measure dataset. 'signal' for signal dataset
+    :param type_: str, 'lidar' for measure dataset. 'signal' for signal dataset ,'aerosol' for aerosol dataset, density
     :param station: gs.station() object of the lidar station
     :param day_date: datetime.date object of the required date
     :return: str. Path to monthly dataset of generation parameters.
@@ -154,8 +154,12 @@ def get_daily_ds_path(station: gs.Station, day_date: datetime.date, type_: str) 
         parent_folder = station.gen_lidar_dataset
     elif type_ == 'signal':
         parent_folder = station.gen_signal_dataset
+    elif type_ == 'aerosol':
+        parent_folder = station.gen_aerosol_dataset
+    elif type_ == 'density':
+        parent_folder = station.gen_density_dataset
     else:
-        raise Exception("Unsupported type. Should by 'lidar' or 'signal'")
+        raise Exception("Unsupported type. Should by 'lidar', 'signal', 'density' or 'aerosol")
 
     month_folder = prep_utils.get_month_folder_name(parent_folder, day_date)
     file_name = get_gen_dataset_file_name(station, day_date, wavelength='*', data_source=type_)
@@ -200,9 +204,9 @@ def get_daily_gen_param_ds(station: gs.Station, day_date: datetime.date, type_: 
 
 def get_daily_gen_ds(station: gs.Station, day_date: datetime.date, type_: str) -> xr.Dataset:
     """
-    Returns the daily parameters of measures (lidar) or signal creation as a dataset.
+    Returns the daily parameters of measures (lidar), signal, density or aerosol  creation as a dataset.
 
-    :param type_: str, should be one of 'signal' / 'lidar'
+    :param type_: str, should be one of 'signal' / 'lidar' / 'aerosol' / 'density'
     :param station: gs.station() object of the lidar station
     :param day_date: datetime.date object of the required date
     :return: day_params_ds: xarray.Dataset(). Daily dataset of generation parameters.

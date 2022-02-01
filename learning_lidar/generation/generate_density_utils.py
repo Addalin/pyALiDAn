@@ -622,8 +622,13 @@ def get_LR_ds(station, day_date, day_params_ds):
         ax.xaxis.set_major_formatter(vis_utils.TIMEFORMAT)
         ax.xaxis.set_tick_params(rotation=0)
         str_date = LR_ds.Time[0].dt.strftime("%Y-%m-%d").values.tolist()
-        plt.suptitle(f"{LR_ds.attrs['info']} - {str_date}")
+        title = f"{LR_ds.attrs['info']} - {str_date}"
         plt.tight_layout()
+        fig_path = os.path.join('figures', title)
+        print(f"Saving fig to {fig_path}")
+        plt.savefig(fig_path + '.svg')
+        plt.savefig(fig_path + '.jpeg')
+        plt.suptitle(title)
         plt.show()
 
     return LR_ds
@@ -694,11 +699,16 @@ def get_angstrom_ds(station, day_date, day_params_ds):
         ax.scatter(times, ang5321064s, label=ang_ds.ang_532_1064.long_name)
         ax.xaxis.set_major_formatter(vis_utils.TIMEFORMAT)
         ax.xaxis.set_tick_params(rotation=0)
-        ax.set_ylabel(r'$\AA$')
+        ax.set_ylabel(r'${\rm \AA}$')
         str_date = ang_ds.Time[0].dt.strftime("%Y-%m-%d").values.tolist()
-        plt.suptitle(f"{ang_ds.attrs['info']} - {str_date}")
+        title = f"{ang_ds.attrs['info']} - {str_date}"
         plt.legend()
         plt.tight_layout()
+        fig_path = os.path.join('figures', title)
+        print(f"Saving fig to {fig_path}")
+        plt.savefig(fig_path+'.svg')
+        plt.savefig(fig_path+'.jpeg')
+        plt.suptitle(title)
         plt.show()
 
     return ang_ds

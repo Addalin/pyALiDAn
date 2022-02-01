@@ -1,3 +1,5 @@
+import os
+import random
 from datetime import timedelta
 
 import pandas as pd
@@ -8,13 +10,13 @@ import learning_lidar.utils.utils as utils
 
 FIGURE_DPI = 300
 SAVEFIG_DPI = 300
-SMALL_FONT_SIZE = 14
-MEDIUM_FONT_SIZE = 16
-BIG_FONT_SIZE = 18
-TITLE_FONT_SIZE = 18
-SUPTITLE_FONT_SIZE = 20
-TIMEFORMAT = mdates.DateFormatter('%H:%M')
-MONTHFORMAT = mdates.DateFormatter('%Y-%m')
+SMALL_FONT_SIZE = 16
+MEDIUM_FONT_SIZE = 18
+BIG_FONT_SIZE = 20
+TITLE_FONT_SIZE = 20
+SUPTITLE_FONT_SIZE = 22
+TIMEFORMAT = mdates.DateFormatter(r'\textbf{%H:%M}')
+MONTHFORMAT = mdates.DateFormatter(r'\textbf{%Y-%m}')
 DAYFORMAT = mdates.DateFormatter('%Y-%m-%d')
 COLORS = ["darkblue", "darkgreen", "darkred"]
 
@@ -32,13 +34,18 @@ def set_visualization_settings():
     plt.rc('font', size=SMALL_FONT_SIZE)  # controls default text sizes
     plt.rc('axes', titlesize=TITLE_FONT_SIZE)  # fontsize of the axes title
     plt.rc('axes', labelsize=BIG_FONT_SIZE)  # fontsize of the x and y labels
+    plt.rc('axes', labelweight='bold')  # weight of the x and y labels
     plt.rc('xtick', labelsize=SMALL_FONT_SIZE)  # fontsize of the tick labels
     plt.rc('ytick', labelsize=SMALL_FONT_SIZE)  # fontsize of the tick labels
     plt.rc('legend', fontsize=MEDIUM_FONT_SIZE)  # legend fontsize
     plt.rc('figure', titlesize=SUPTITLE_FONT_SIZE)  # fontsize of the figure title
 
+    # plt.rc('text', usetex=True)
+    plt.rc('font', weight='bold')
+    plt.rcParams['text.latex.preamble'] = r'\boldmath'
 
-def plot_daily_profile(profile_ds, height_slice=None, figsize=(16, 6)):
+
+def plot_daily_profile(profile_ds, height_slice=None, figsize=(16, 6), save_fig=False):
     # TODO: add scintific ticks on colorbar
     wavelengths = profile_ds.Wavelength.values
     if height_slice is None:
@@ -56,9 +63,16 @@ def plot_daily_profile(profile_ds, height_slice=None, figsize=(16, 6)):
         profile_ds.sel(Height=height_slice).plot(cmap='turbo', ax=ax)
         ax.xaxis.set_major_formatter(TIMEFORMAT)
         ax.xaxis.set_tick_params(rotation=0)
-    plt.suptitle(f"{profile_ds.info} - {str_date}")
+    suptitle = f"{profile_ds.info} - {str_date}"
     plt.ticklabel_format(axis="y", style="sci", scilimits=(0, 0))
     plt.tight_layout()
+    if save_fig:
+        # clean_title = ''.join(char for char in suptitle if char.isalnum())
+        fig_path = os.path.join('figures', suptitle)
+        print(f"Saving fig to {fig_path}")
+        plt.savefig(fig_path + '.jpeg')
+        plt.savefig(fig_path + '.svg')
+    plt.suptitle(suptitle)
     plt.show()
 
 

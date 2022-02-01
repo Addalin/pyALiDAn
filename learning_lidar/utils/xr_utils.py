@@ -138,7 +138,7 @@ def get_prep_dataset_paths(station: gs.Station, day_date: datetime.datetime, dat
     if data_source == 'molecular':
         parent_folder = station.molecular_dataset
     elif data_source == 'lidar':
-        parent_folder = station.lidar_dataset
+        parent_folder = station.lidar_dataset #TODO: make sure if this should not be station.lidar_dataset_calib ?
     else:
         raise Exception("Unsupported data_source.")
 

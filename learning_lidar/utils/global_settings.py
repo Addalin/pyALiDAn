@@ -65,6 +65,7 @@ class Station:
             raise e
         self.name = station_name
         self.location = station_df['location']
+        self.state = station_df['state']
         self.lon = float(station_df['longitude'])
         self.lat = float(station_df['latitude'])
         self.altitude = float(
