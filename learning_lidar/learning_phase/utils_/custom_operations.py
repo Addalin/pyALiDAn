@@ -16,11 +16,10 @@ class PowTransform(object):
 
     def __call__(self, sample):
         X, Y = sample['x'], sample['y']
-        X = [self.pow_X(x_i, pow_i) for (x_i, pow_i) in zip(X, self.X_powers)]
-        Y = self.pow_Y(Y)
+        # X = [self.pow_X(x_i, pow_i) for (x_i, pow_i) in zip(X, self.X_powers)] # moved to model
         return {'x': X, 'y': Y}
 
-    def pow_X(self, x_i, pow_i):
+    def pow_X_XR(self, x_i, pow_i):
         """
 
         :param x_i: xr.dataset: a lidar or a molecular dataset
@@ -33,7 +32,7 @@ class PowTransform(object):
         x_i = xr.apply_ufunc(lambda x: x ** pow_i, x_i, keep_attrs=True)
         return x_i
 
-    def pow_Y(self, Y):
+    def pow_Y_XR(self, Y):
         """
 
         :param Y: pandas.core.series.Series of np.float values to be estimates (as LC, ro, r1)

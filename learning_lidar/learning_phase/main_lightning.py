@@ -37,7 +37,9 @@ def main(config, checkpoint_dir=None, consts=None):
                            hidden_sizes=eval(config['hsizes']),
                            fc_size=eval(config['fc_size']),
                            loss_type=config['ltype'],
-                           learning_rate=config['lr'])
+                           learning_rate=config['lr'],
+                           X_features_profiles = X_features,
+                           powers = powers)
 
     # Define Data
     lidar_dm = LidarDataModule(train_csv_path=consts["train_csv_path"],
