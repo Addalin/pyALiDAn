@@ -1,9 +1,9 @@
 import logging
 import os.path
-import yaml
 from datetime import datetime
 
 import ray
+import yaml
 from pytorch_lightning import Trainer, seed_everything
 from ray import tune
 from ray.tune import CLIReporter
@@ -59,11 +59,21 @@ def main(config, checkpoint_dir=None, consts=None):
     callbacks = [TuneReportCheckpointCallback(metrics, filename="checkpoint", on="validation_end")]
 
     # Setup the pytorch-lighting trainer and run the model
-    trainer = Trainer(max_steps=consts['max_steps'],
-                      max_epochs=consts['max_epochs'],
-                      callbacks=callbacks,
-                      gpus=[0] if consts['num_gpus'] > 0 else 0)
-
+    if config['overfit']:
+        trainer = Trainer(max_steps=None,
+                          max_epochs=10000,
+                          callbacks=callbacks,
+                          gpus=[0] if consts['num_gpus'] > 0 else 0,
+                          # auto_lr_find=True,
+                          # fast_dev_run=True,
+                          overfit_batches=1
+                          )
+    else:
+        trainer = Trainer(max_steps=consts['max_steps'],
+                          max_epochs=consts['max_epochs'],
+                          callbacks=callbacks,
+                          gpus=[0] if consts['num_gpus'] > 0 else 0,
+                          auto_lr_find=True)
     lidar_dm.setup('fit')
     trainer.fit(model=model, datamodule=lidar_dm)
 
@@ -71,14 +81,13 @@ def main(config, checkpoint_dir=None, consts=None):
 if __name__ == '__main__':
     # Override number of workers if debugging
     CONSTS['num_workers'] = 0 if DEBUG_RAY else CONSTS['num_workers']
+    LOG_RAY = not (RAY_HYPER_PARAMS['overfit'])
 
     logger = create_and_configer_logger(
         log_name=f"{os.path.dirname(__file__)}_{datetime.now().strftime('%Y-%m-%d %H_%M_%S')}.log", level=logging.INFO)
 
-    if DEBUG_RAY:
-        ray.init(local_mode=True)
-
     if USE_RAY:
+        ray.init(local_mode=DEBUG_RAY)
         reporter = CLIReporter(
             metric_columns=["loss", "MARELoss", "training_iteration"],
             max_progress_rows=50,
@@ -92,7 +101,7 @@ if __name__ == '__main__':
             metric="MARELoss",
             mode="min",
             progress_reporter=reporter,
-            log_to_file=True,
+            log_to_file=LOG_RAY,
             resources_per_trial={"cpu": 7, "gpu": NUM_AVAILABLE_GPU},
             resume=RESUME_EXP, name=EXP_NAME,
             restore=CHECKPOINT_PATH

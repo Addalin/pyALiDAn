@@ -111,7 +111,7 @@ else:
 
 # Constants - should correspond to data, dataloader and model
 CONSTS = {
-    'max_epochs': 30,
+    'max_epochs': 10000,
     'max_steps': None,
     'num_workers': 6,
     'train_csv_path': train_csv_path,
@@ -131,8 +131,8 @@ RAY_HYPER_PARAMS = {
     "hsizes": tune.grid_search(['[6, 6, 6, 6]', '[8, 8, 8, 8]']),
     "fc_size": tune.grid_search(['[16]']),  # '[4]','[1]' , '[32]'
     "lr": tune.grid_search([2 * 1e-3]),
-    "bsize": tune.grid_search([32]),
-    "ltype": tune.choice(['MAELoss']),  # , 'MSELoss']),  # ['MARELoss']
+    "bsize": tune.grid_search([10]),
+    "ltype": tune.grid_search(['MAELoss']),  # , 'MSELoss']),  # ['MARELoss']
     # "use_power": tune.grid_search([False, '([0.5,1,1], [0.5])', '([0.5,1,0.5], [0.5])']),
     # "use_power": tune.grid_search(['([0.5,-0.27,1], [0.5])', '([0.5,1,0.5], [0.5])']),
     # "use_power": tune.grid_search([False]),
@@ -155,6 +155,8 @@ RAY_HYPER_PARAMS = {
     # 'dfilter': tune.grid_search([None, ('wavelength', [355]), ('wavelength', [532]), ('wavelength', [1064])]),
     'dfilter': tune.grid_search(["wavelength [355]"]),
     'dnorm': tune.grid_search([False]),  # data_norm True - only for the best results achieved.
+    'overfit': tune.grid_search([True]),
+    # overfit flag - for sanity check. The NN will test a single batch. Note: Use e.g., bsize=10
 }
 
 NON_RAY_HYPER_PARAMS = {
