@@ -26,7 +26,7 @@ def main(config, checkpoint_dir=None, consts=None):
         yaml.dump(consts, f)
     with open('config.yaml', 'a') as f:
         yaml.dump(config, f)
-    config, X_features, powers = update_params(config, consts)
+    config, X_features, powers, dfilter = update_params(config, consts)
 
     # Define Model
     if checkpoint_dir:
@@ -50,7 +50,7 @@ def main(config, checkpoint_dir=None, consts=None):
                                top_height=consts["top_height"], X_features_profiles=X_features,
                                Y_features=consts['Y_features'], batch_size=config['bsize'],
                                num_workers=consts['num_workers'],
-                               data_filter=config['dfilter'],
+                               data_filter=dfilter,
                                data_norm=config['dnorm'])
 
     # Define minimization parameter

@@ -59,8 +59,13 @@ def update_params(config, consts):
 
         config.update({'power_in': str(power_in), 'power_out': str(power_out), 'use_power': True})
 
-    return config, X_features, powers
+    if config['dfilter']:
+        dfilter = config['dfilter'].split(' ')
+        dfilter[1] = eval(dfilter[1])
+    else:
+        dfilter = False
 
+    return config, X_features, powers, dfilter
 
 # ######## RESUME EXPERIMENT #########
 RESUME_EXP = False# Can be "LOCAL" to continue experiment when it was disrupted # TODO change to False
@@ -147,8 +152,8 @@ RAY_HYPER_PARAMS = {
     "use_bg": tune.grid_search([False]),  # True,  'range_corr' False, True,True, , 'range_corr'
     # True - bg is relevant for 'lidar' case # TODO if lidar - bg T\F, if signal - bg F
     "source": tune.grid_search(['lidar']),  # , 'lidar','signal_p'
-    #'dfilter': tune.grid_search([None, ('wavelength', [355]), ('wavelength', [532]), ('wavelength', [1064])]),
-    'dfilter': tune.grid_search([('wavelength', [355])]), # TODO 532
+    # 'dfilter': tune.grid_search([None, ('wavelength', [355]), ('wavelength', [532]), ('wavelength', [1064])]),
+    'dfilter': tune.grid_search(["wavelength [355]"]),
     'dnorm': tune.grid_search([False]),  # data_norm True - only for the best results achieved.
 }
 
