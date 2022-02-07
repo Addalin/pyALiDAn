@@ -15,7 +15,7 @@ setup(
                 '2. Preprocessing of lidar data'
                 '2. Learning pipeline for lidar analysis'
                 'This project uses data from several databases:'
-                '1. Lidar database produced by the PollyNet Processing chain  by TROPOS: '
+                '1. Lidar database produced by the PollyNet Processing chain by TROPOS:'
                 '    https://github.com/PollyNET/Pollynet_Processing_Chain '
                 ' 2. AERONET by NASA: https://aeronet.gsfc.nasa.gov/new_web/data.html'
                 ' 3. GDAS by NOAA: https://www.ncei.noaa.gov/products/weather-climate-models/global-data-assimilation'

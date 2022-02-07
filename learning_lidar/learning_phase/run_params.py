@@ -56,7 +56,6 @@ def update_params(config, consts):
         for yf, pow_y in zip(consts['Y_features'], power_out):
             powers[yf] = pow_y
 
-
         config.update({'power_in': str(power_in), 'power_out': str(power_out), 'use_power': True})
 
     if config['dfilter']:
@@ -67,26 +66,33 @@ def update_params(config, consts):
 
     return config, X_features, powers, dfilter
 
-# ######## RESUME EXPERIMENT #########
-RESUME_EXP = False# Can be "LOCAL" to continue experiment when it was disrupted # TODO change to False
+
+# ######## RESUME EXPERIMENT ######### ---> Make sure RESTORE_TRIAL = False
+RESUME_EXP = 'ERRORED_ONLY'  # False | True
+# Can be "LOCAL" to continue experiment when it was disrupted
 # (trials that were completed seem to continue training),
 # or "ERRORED_ONLY" to reset and rerun ERRORED trials (not tested). Otherwise False to start a new experiment.
 # Note: if fail_fast was 'True' in the the folder of 'EXP_NAME', then tune will not be able to load trials that didn't store any folder
 
-EXP_NAME =None # If 'resume' is not False, must enter experiment path. # TODO change to None
+EXP_NAME = 'main_2022-02-06_18-09-56'  # None
+# If 'resume' is not False, must enter experiment path.
 # e.g. - "main_2021-05-19_21-50-40". Path is relative to RESULTS_PATH. Otherwise can keep it None.
 # And it is generated automatically.
 
 
 # ######## RESTORE or VALIDATE TRIAL PARAMS #########
-experiment_dir = 'main_2022-01-31_15-24-20'
-trial_dir = r"main_18fe8_00000_0_bsize=32,dfilter=('wavelength', [355]),dnorm=False,fc_size=[16]," \
-            r"hsizes=[6,6,6,6],lr=0.002,ltype=MAELoss,source=_2022-01-31_15-24-20"
-#r'main_39b80_00000_0_bsize=32,dfilter=None,dnorm=True,fc_size=[16],hsizes=[3, 3, 3, 3],lr=0.001,' \
+experiment_dir = 'main_2022-02-04_20-14-28'
+trial_dir = r"C:\Users\addalin\Dropbox\Lidar\lidar_learning\results\main_2022-02-04_20-14-28\main_4b099_00000_0_bsize" \
+            r"=32,dfilter=wavelength [355],dnorm=False,fc_size=[16],hsizes=[4,4,4,4]," \
+            r"lr=0.002,ltype=MAELoss,opt_powers=T_2022-02-04_20-14-29"
+# r'main_39b80_00000_0_bsize=32,dfilter=None,dnorm=True,fc_size=[16],hsizes=[3, 3, 3, 3],lr=0.001,' \
 #            r'ltype=MAELoss,source=lidar,use_bg=Tr_2021-05-19_23-17-25'
-check_point_name = 'checkpoint_epoch=18-step=1120'#'checkpoint_epoch=0-step=175'
+check_point_name = 'checkpoint_epoch=999-step=999'  # 'checkpoint_epoch=0-step=175'
 
 
+# TODO: Load Trainer chekpoint  https://pytorch-lightning.readthedocs.io/en/stable/common/weights_loading.html#restoring-training-state
+# name of trainer : epoch=29-step=3539.ckpt
+# found under C:...\main_2022-01-31_23-24-22\main_28520_00024_24_bsize=32,dfilter=('wavelength', [355]),dnorm=False,fc_size=[16],hsizes=[6, 6, 6, 6],lr=0.002,ltype=MAELoss,sou_2022-02-01_11-49-31\lightning_logs\version_0
 def get_trial_params_and_checkpoint(experiment_dir, trial_dir, check_point_name):
     trial_params_path = os.path.join(RESULTS_PATH, experiment_dir, trial_dir, 'params.json')
     with open(trial_params_path) as params_file:
@@ -102,7 +108,7 @@ if VALIDATE_TRIAL:
     PRETRAINED_MODEL_PATH, MODEL_PARAMS = get_trial_params_and_checkpoint(experiment_dir, trial_dir, check_point_name)
 
 # ######## RESTORE TRIAL #########
-RESTORE_TRIAL = True  # If true restores the given trial
+RESTORE_TRIAL = False  # If true restores the given trial
 if RESTORE_TRIAL:
     CHECKPOINT_PATH, TRIAL_PARAMS = get_trial_params_and_checkpoint(experiment_dir, trial_dir, check_point_name)
 else:
@@ -127,8 +133,8 @@ CONSTS = {
 
 # Note, replace tune.choice with grid_search if want all possible combinations
 RAY_HYPER_PARAMS = {
-    #"hsizes": tune.grid_search(['[4, 4, 4, 4]','[5,5,5,5]','[6, 6, 6, 6]']),  # '[3, 3, 3, 3]','[4, 4, 4, 4]','[4, 4, 4, 4]',
-    "hsizes": tune.grid_search(['[6, 6, 6, 6]', '[8, 8, 8, 8]']),
+    # "hsizes": tune.grid_search(['[4, 4, 4, 4]','[5,5,5,5]','[6, 6, 6, 6]']),  # '[3, 3, 3, 3]','[4, 4, 4, 4]','[4, 4, 4, 4]',
+    "hsizes": tune.grid_search(['[4,4,4,4]']),  # '[6, 6, 6, 6]', '[8, 8, 8, 8]']),
     "fc_size": tune.grid_search(['[16]']),  # '[4]','[1]' , '[32]'
     "lr": tune.grid_search([2 * 1e-3]),
     "bsize": tune.grid_search([10]),
@@ -136,16 +142,16 @@ RAY_HYPER_PARAMS = {
     # "use_power": tune.grid_search([False, '([0.5,1,1], [0.5])', '([0.5,1,0.5], [0.5])']),
     # "use_power": tune.grid_search(['([0.5,-0.27,1], [0.5])', '([0.5,1,0.5], [0.5])']),
     # "use_power": tune.grid_search([False]),
-    #"use_power": tune.grid_search(['([0.4,-0.26], [1.0])']),
-    "use_power": tune.grid_search(['([0.5, -0.3, 1.0], [1.0])', '([0.5, 0.3, 1.0], [1.0])', '([0.5,1.0, 1.0], [1.0])',
-                                   '([0.5, -0.3, 0.5], [0.1])', '([0.5, 0.3, 0.5],[1.0])']),
+    "use_power": tune.grid_search(['([0.5, -0.30, 0.5], [1.0])']),
+    # "use_power": tune.grid_search(['([0.5, -0.3, 1.0], [1.0])', '([0.5, 0.3, 1.0], [1.0])', '([0.5,1.0, 1.0], [1.0])',
+    #                               '([0.5, -0.3, 0.5], [0.1])', '([0.5, 0.3, 0.5],[1.0])']),
     #                               '([0.5,0.25, 1.0],[1.0])', '([0.5,0.25, 0.5],[1.0])',
     #                              '([0.5,-0.27,1], [1.0])', '([0.5,1,0.5], [1.0])']),
-    #"use_power": tune.grid_search(['([0.5, 1], [1.0])', '([0.5,0.5], [1.0])',
+    # "use_power": tune.grid_search(['([0.5, 1], [1.0])', '([0.5,0.5], [1.0])',
     #                               '([0.5,-0.25],[1.0])', '([0.5,0.25],[1.0])',
     #                               '([0.5,-0.265], [1.0])',
     #                               '([0.5,0.125], [1.0])', '([0.5,-0.125], [1.0])']),
-    #'([0.5,-0.11,1], [0.5])',  '([0.5,-0.11,0.5], [0.5])']),
+    # '([0.5,-0.11,1], [0.5])',  '([0.5,-0.11,0.5], [0.5])']),
     # "([0.5, -0.11, 0.5], [0.5])"]),
     # UV : -0.27 , G: -0.263 , IR: -0.11
     "opt_powers": tune.grid_search([True, False]),  # , False

@@ -1,12 +1,12 @@
-name: lidar
+name: lidar_test_upgrade
 channels:
-  - pytorch
-  - defaults
   - conda-forge
+  - defaults
+  - pytorch
   - pro
 dependencies:
   - netcdf4
-  - xarray=0.19
+  - xarray =0.19
   - tensorboard
   - pip
   - sphinx
@@ -14,24 +14,24 @@ dependencies:
   - pyyaml
   - torchvision
   - seaborn
-  - ray-tune=1.4
+  - ray-tune #=1.4
   - opencv
   - astral
-  - numpy=1.20
+  - numpy =1.20
   - pandas
   - tqdm
   - openpyxl
   - matplotlib
-  - pytorch=1.7
+  - pytorch #=1.7
   - astropy
-  - pytorch-lightning=1.4
+  - pytorch-lightning #=1.4
   - jupyter
   - jupyterlab
   - scikit-learn
   - scipy
   - nb_conda
   - nc-time-axis
-  - python=3.7
+  - python =3.8
   - sqlite
   - pip:
       - pytictoc
