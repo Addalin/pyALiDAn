@@ -7,29 +7,17 @@ from torch.optim import Adam
 from learning_lidar.learning_phase.utils_.custom_losses import MARELoss
 
 
-class Gamma(LightningModule):
-    def __init__(self, in_channels, X_features_profiles, powers):
-        super().__init__()
-        X_features, profiles = map(list, zip(*X_features_profiles))
-        self.x_powers = nn.Parameter(torch.tensor([powers[profile] for profile in profiles])) if powers else None
-        self.eps = torch.tensor(np.finfo(float).eps)
-        self.gamma = nn.Parameter(torch.tensor(powers))
-
-
-    def forward(self, input):
-        return input.sign() * (input.abs() + self.eps) ** self.gamma
-
 class DefaultCNN(LightningModule):
 
     def __init__(self, in_channels, output_size, hidden_sizes, fc_size, loss_type, learning_rate, X_features_profiles,
-                 powers):
+                 powers, do_opt_powers: bool = False):
         super().__init__()
         self.save_hyperparameters()
         self.lr = learning_rate
+        self.eps = torch.tensor(np.finfo(float).eps)
         X_features, profiles = map(list, zip(*X_features_profiles))
         self.x_powers = nn.Parameter(torch.tensor([powers[profile] for profile in profiles])) if powers else None
-        # self.x_powers = [powers[profile] for profile in profiles] if powers else None
-        self.eps = torch.tensor(np.finfo(float).eps)
+        self.train_powers(do_opt_powers)
 
         self.conv_layer = nn.Sequential(
             # Conv layer 1
@@ -84,15 +72,23 @@ class DefaultCNN(LightningModule):
             self.criterion = nn.L1Loss()
         elif loss_type == 'MARELoss':
             self.criterion = MARELoss()
+        elif loss_type == 'MAESmooth':
+            self.criterion = nn.SmoothL1Loss()
 
         # Step 4. Instantiate Relative Loss - for accuracy
         self.rel_loss_type = 'MARELoss'
         self.rel_loss = MARELoss()
 
+    def train_powers(self, do_opt_powers: bool = False):
+        if self.x_powers is not None:
+            self.x_powers.requires_grad = do_opt_powers
+        else:
+            pass
+
     def forward(self, x):
         batch_size, channels, width, height = x.size()
         x = x.float()
-        if not (self.x_powers is None):
+        if self.x_powers is not None:
             for c_i in range(channels):
                 x[:, c_i, :, :] = (x[:, c_i, :, :] + self.eps) ** self.x_powers[c_i]
 
@@ -109,6 +105,9 @@ class DefaultCNN(LightningModule):
     def training_step(self, batch, batch_idx):
         x = batch['x']
         y = batch['y']
+        # Uncomment if you wish to stop training the powers at some point of training process
+        # cond_opt_pow = (self.current_epoch <= self.trainer.max_epochs)
+        # self.train_powers(do_opt_powers = cond_opt_pow)
         y_pred = self(x)
         loss = self.criterion(y, y_pred)
         if torch.isnan(loss):

@@ -39,7 +39,8 @@ def main(config, checkpoint_dir=None, consts=None):
                            loss_type=config['ltype'],
                            learning_rate=config['lr'],
                            X_features_profiles = X_features,
-                           powers = powers)
+                           powers = powers,
+                           do_opt_powers=config['opt_powers'])
 
     # Define Data
     lidar_dm = LidarDataModule(train_csv_path=consts["train_csv_path"],

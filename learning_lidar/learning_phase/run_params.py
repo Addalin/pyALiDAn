@@ -143,7 +143,8 @@ RAY_HYPER_PARAMS = {
     #'([0.5,-0.11,1], [0.5])',  '([0.5,-0.11,0.5], [0.5])']),
     # "([0.5, -0.11, 0.5], [0.5])"]),
     # UV : -0.27 , G: -0.263 , IR: -0.11
-    "use_bg": tune.grid_search([False, True,  'range_corr']), #True,  'range_corr'
+    "opt_powers": tune.grid_search([True, False]),  # , False
+    "use_bg": tune.grid_search([False]),  # True,  'range_corr' False, True,True, , 'range_corr'
     # True - bg is relevant for 'lidar' case # TODO if lidar - bg T\F, if signal - bg F
     "source": tune.grid_search(['lidar']),  # , 'lidar','signal_p'
     #'dfilter': tune.grid_search([None, ('wavelength', [355]), ('wavelength', [532]), ('wavelength', [1064])]),
