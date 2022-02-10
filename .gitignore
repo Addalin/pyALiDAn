@@ -265,3 +265,12 @@ cython_debug/
 /data/dataset_haifa_2017-09-01_2017-10-31_extended.csv
 /data/dataset_haifa_2017-09-01_2017-10-31_extended.nc
 /data/dataset_haifa_2017-09-01_2017-10-31_on_D.csv
+/data/Angstrom_LidarRatio/
+/data/archive/
+/data/overlap/
+/data/data_haifa.lnk
+/data/dataset*
+/data/overlap.zip
+/data/stats*
+/20_05_2021_env.yml
+/torch
