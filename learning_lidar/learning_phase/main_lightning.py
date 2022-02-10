@@ -110,6 +110,6 @@ if __name__ == '__main__':
         logger.info(f"best_checkpoint {analysis.best_checkpoint}")
         logger.info(f"best_result {analysis.best_result}")
         results_df = analysis.dataframe(metric="MARELoss", mode="min", )
-        results_df.to_csv(os.path.join(analysis._experiment_dir, f'output_table.csv'))
+        results_df.to_csv(os.path.join(analysis.trials[0].local_dir, f'output_table.csv'))
     else:
         main(config=NON_RAY_HYPER_PARAMS, consts=CONSTS)
