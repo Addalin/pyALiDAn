@@ -58,13 +58,17 @@ def main(config, checkpoint_dir=None, consts=None):
     # Setup the pytorch-lighting trainer and run the model
     if config['overfit']:
         trainer = Trainer(max_steps=None,
-                          max_epochs=10000,
+                          max_epochs=2000,
                           callbacks=callbacks,
                           gpus=[0] if consts['num_gpus'] > 0 else 0,
-                          # auto_lr_find=True,
-                          # fast_dev_run=True,
                           overfit_batches=1
                           )
+    elif config['debug']:
+            trainer = Trainer(max_steps=None,
+                              callbacks=callbacks,
+                              gpus=[0] if consts['num_gpus'] > 0 else 0,
+                              fast_dev_run=8,
+                              )
     else:
         trainer = Trainer(max_steps=consts['max_steps'],
                           max_epochs=consts['max_epochs'],
