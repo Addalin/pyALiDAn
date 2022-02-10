@@ -12,22 +12,19 @@ from learning_lidar.utils.utils import create_and_configer_logger
 
 seed_everything(8318)  # Note, for full deterministic result add deterministic=True to trainer
 
-def main(config, checkpoint_dir=None, consts=None):
 
+def main(config, checkpoint_dir=None, consts=None):
     config, X_features, powers = update_params(config, consts)
 
     model = DefaultCNN.load_from_checkpoint(os.path.join(checkpoint_dir, "checkpoint"))
 
     # Define Data
-    lidar_dm = LidarDataModule(train_csv_path=consts["train_csv_path"],
-                               test_csv_path=consts["test_csv_path"],
-                               stats_csv_path=consts["stats_csv_path"],
-                               powers=powers if config['use_power'] else None,
-                               top_height=consts["top_height"], X_features_profiles=X_features,
-                               Y_features=consts['Y_features'], batch_size=config['bsize'],
-                               num_workers=consts['num_workers'],
-                               data_filter=config['dfilter'],
-                               data_norm=config['dnorm'])
+    lidar_dm = LidarDataModule(nn_data_folder=consts['nn_source_data'], train_csv_path=consts["train_csv_path"],
+                               test_csv_path=consts["test_csv_path"], stats_csv_path=consts["stats_csv_path"],
+                               powers=powers if config['use_power'] else None, top_height=consts["top_height"],
+                               X_features_profiles=X_features, Y_features=consts['Y_features'],
+                               batch_size=config['bsize'], num_workers=consts['num_workers'],
+                               data_filter=config['dfilter'], data_norm=config['dnorm'])
 
     # Setup the pytorch-lighting trainer and run the model
     trainer = Trainer(max_epochs=consts['max_epochs'],

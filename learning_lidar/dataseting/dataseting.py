@@ -102,6 +102,12 @@ def dataseting_main(params, log_level=logging.DEBUG):
         logger.info(f"\nStart preparing {mode} samples")
         prepare_samples(station, start_date, end_date, top_height=15.3, generated=params.generated_mode)
         logger.info(f"\nDone preparing {mode} samples")
+    # TODO: To allow running the NN with the samples on several platforms create flag SET_NN_DATA
+    #  1. move/copy split samples under directory station.nn_source_data
+    #  2. update paths in DB csv without parent folder station.nn_source_data
+    #  In this case all the samples will be under station.nn_source_data at each platform
+
+    # TODO: create separated DB csv files for full days and split samples
 
     if params.calc_stats:
         logger.info(f"\nStart calculating {mode} dataset statistics")

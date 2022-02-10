@@ -1,31 +1,34 @@
 import json
-import os
+import os, sys
 from datetime import datetime
-
 import torch
 from ray import tune
+from learning_lidar.utils import global_settings as gs
 
 NUM_AVAILABLE_GPU = torch.cuda.device_count()
 START_DATE = datetime(2017, 4, 1)
 END_DATE = datetime(2017, 10, 31)
+station_name = 'haifa'
+station_name = station_name + '_remote' if (sys.platform in ['linux', 'ubuntu']) else station_name
+station = gs.Station(station_name)
 
 
-def get_paths(station_name, start_date, end_date):
+def get_paths(station: gs.Station, start_date: datetime, end_date: datetime):
     base_path = os.path.dirname(os.path.dirname(os.path.dirname(__file__)))
-
-    csv_base_name = f"gen_{station_name}_{start_date.strftime('%Y-%m-%d')}_" \
+    nn_source_data = station.nn_source_data
+    csv_base_name = f"gen_{station.location.lower()}_{start_date.strftime('%Y-%m-%d')}_" \
                     f"{end_date.strftime('%Y-%m-%d')}"
     train_csv_path = os.path.join(base_path, 'data', "dataset_" + csv_base_name + '_train.csv')
     test_csv_path = os.path.join(base_path, 'data', "dataset_" + csv_base_name + '_test.csv')
     stats_csv_path = os.path.join(base_path, 'data', "stats_" + csv_base_name + '_train.csv')
-    results_path = os.path.join(base_path, 'results')  # TODO: save in D or E
+    results_path = os.path.join(station.nn_output_results)  # TODO: save in D or E
 
-    return train_csv_path, test_csv_path, stats_csv_path, results_path
+    return train_csv_path, test_csv_path, stats_csv_path, results_path, nn_source_data
 
 
-train_csv_path, test_csv_path, stats_csv_path, RESULTS_PATH = get_paths(station_name='haifa',
-                                                                        start_date=START_DATE,
-                                                                        end_date=END_DATE)
+train_csv_path, test_csv_path, stats_csv_path, RESULTS_PATH, nn_source_data = get_paths(station,
+                                                                                        start_date=START_DATE,
+                                                                                        end_date=END_DATE)
 
 
 # TODO - update dates to change between datasets
@@ -123,6 +126,7 @@ CONSTS = {
     'train_csv_path': train_csv_path,
     'test_csv_path': test_csv_path,
     'stats_csv_path': stats_csv_path,
+    'nn_source_data': nn_source_data,
     'powers': {'range_corr': 0.5, 'range_corr_p': 0.5, 'attbsc': 0.5,
                'p_bg': 0.5, 'p_bg_r2': 0.5,
                'LC': 1.0, 'LC_std': 1.0, 'r0': 1.0, 'r1': 1.0, 'dr': 1.0},

@@ -43,14 +43,11 @@ def main(config, checkpoint_dir=None, consts=None):
                            do_opt_powers=config['opt_powers'])
 
     # Define Data
-    lidar_dm = LidarDataModule(train_csv_path=consts["train_csv_path"],
-                               test_csv_path=consts["test_csv_path"],
-                               stats_csv_path=consts["stats_csv_path"],
-                               powers=powers if config['use_power'] else None,
-                               top_height=consts["top_height"], X_features_profiles=X_features,
-                               Y_features=consts['Y_features'], batch_size=config['bsize'],
-                               num_workers=consts['num_workers'],
-                               data_filter=dfilter,
+    lidar_dm = LidarDataModule(nn_data_folder=consts['nn_source_data'], train_csv_path=consts["train_csv_path"],
+                               test_csv_path=consts["test_csv_path"], stats_csv_path=consts["stats_csv_path"],
+                               powers=powers if config['use_power'] else None, top_height=consts["top_height"],
+                               X_features_profiles=X_features, Y_features=consts['Y_features'],
+                               batch_size=config['bsize'], num_workers=consts['num_workers'], data_filter=dfilter,
                                data_norm=config['dnorm'])
 
     # Define minimization parameter

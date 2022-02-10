@@ -1,3 +1,4 @@
+import os
 import numpy as np
 import pandas as pd
 import torch
@@ -14,7 +15,7 @@ class LidarDataSet(torch.utils.data.Dataset):
     TODO: add usage
     """
 
-    def __init__(self, dataset_csv_file, transform, torch_transforms, top_height,
+    def __init__(self, dataset_csv_file, data_folder, transform, torch_transforms, top_height,
                  X_features, profiles, Y_features, filter_by, filter_values):
         """
 
@@ -32,6 +33,7 @@ class LidarDataSet(torch.utils.data.Dataset):
         """
 
         self.data = pd.read_csv(dataset_csv_file)
+        self.data_folder = data_folder
         self.key = list(self.data.keys())
         if filter_by:
             if filter_by not in self.key:
@@ -88,7 +90,8 @@ class LidarDataSet(torch.utils.data.Dataset):
 
         # Load X datasets
         X_paths = row[self.X_features]
-        datasets = [xr_utils.load_dataset(path) for path in X_paths]
+
+        datasets = [xr_utils.load_dataset(os.path.join(self.data_folder, path)) for path in X_paths]
 
         # Calc sample height and time slices
         hslices = [
@@ -126,10 +129,11 @@ class LidarDataSet(torch.utils.data.Dataset):
 
 
 class LidarDataModule(LightningDataModule):
-    def __init__(self, train_csv_path, test_csv_path, stats_csv_path,
+    def __init__(self, nn_data_folder, train_csv_path, test_csv_path, stats_csv_path,
                  powers, top_height, X_features_profiles, Y_features, batch_size, num_workers,
                  val_length=0.2, test_length=0.2, data_filter=None, data_norm=False):
         super().__init__()
+        self.nn_data_folder = nn_data_folder
         self.train_csv_path = train_csv_path
         self.test_csv_path = test_csv_path
         self.stats_csv_path = stats_csv_path
@@ -192,7 +196,7 @@ class LidarDataModule(LightningDataModule):
 
         # Step 1. Load Dataset
         # TODO: add option - y = {bin(r0),bin(r1)}
-        #transformations_list = [SampleXR2Tensor(), PowTransform(self.Y_features, self.profiles, self.powers)] \
+        # transformations_list = [SampleXR2Tensor(), PowTransform(self.Y_features, self.profiles, self.powers)] \
         #    if self.powers else [SampleXR2Tensor()]
         transformations_list = [SampleXR2Tensor()]
         lidar_transforms = torchvision.transforms.Compose(transformations_list)
@@ -201,7 +205,7 @@ class LidarDataModule(LightningDataModule):
             if self.data_norm else None
 
         if stage == 'fit' or stage is None:
-            trainable_dataset = LidarDataSet(dataset_csv_file=self.train_csv_path,
+            trainable_dataset = LidarDataSet(dataset_csv_file=self.train_csv_path, data_folder=self.nn_data_folder,
                                              transform=lidar_transforms, torch_transforms=torch_transforms,
                                              top_height=self.top_height, X_features=self.X_features,
                                              profiles=self.profiles, Y_features=self.Y_features,
@@ -210,7 +214,7 @@ class LidarDataModule(LightningDataModule):
             self.train, self.val = trainable_dataset.get_splits(n_val=self.val_length, n_test=0)
 
         if stage == 'test' or stage is None:
-            self.test = LidarDataSet(dataset_csv_file=self.test_csv_path,
+            self.test = LidarDataSet(dataset_csv_file=self.test_csv_path, data_folder=self.nn_data_folder,
                                      transform=lidar_transforms, torch_transforms=torch_transforms,
                                      top_height=self.top_height, X_features=self.X_features, profiles=self.profiles,
                                      Y_features=self.Y_features, filter_by=self.filter_by,

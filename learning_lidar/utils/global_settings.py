@@ -98,6 +98,8 @@ class Station:
         self.gen_bg_dataset = station_df['gen_bg_dataset']
         self.gen_density_dataset = station_df['gen_density_dataset']
         self.Angstrom_LidarRatio = station_df['Angstrom_LidarRatio']
+        self.nn_source_data = station_df['nn_source_data']
+        self.nn_output_results = station_df['nn_output_results']
 
     def __str__(self):
         return ("\n " + str(self.__class__) + ": " + str(self.__dict__)).replace(" {", "\n  {").replace(",", ",\n  ")
