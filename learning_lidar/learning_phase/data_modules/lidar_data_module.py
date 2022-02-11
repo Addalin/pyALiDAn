@@ -1,4 +1,5 @@
 import os
+
 import numpy as np
 import pandas as pd
 import torch
@@ -7,7 +8,7 @@ from pytorch_lightning import LightningDataModule
 from torch.utils.data import DataLoader, random_split
 
 import learning_lidar.utils.xr_utils as xr_utils
-from learning_lidar.learning_phase.utils_.custom_operations import PowTransform, SampleXR2Tensor
+from learning_lidar.learning_phase.utils_.custom_operations import SampleXR2Tensor
 
 
 class LidarDataSet(torch.utils.data.Dataset):
@@ -152,7 +153,7 @@ class LidarDataModule(LightningDataModule):
             self.filter_by = None
             self.filter_values = None
         self.data_norm = data_norm
-        self.stats = self.calc_stats()
+        self.stats = self.calc_stats() if self.data_norm else None  # avoid loading stats if data_norm is disabled
 
     def calc_stats(self):
         stats_df = pd.read_csv(self.stats_csv_path)
@@ -211,7 +212,8 @@ class LidarDataModule(LightningDataModule):
                                              profiles=self.profiles, Y_features=self.Y_features,
                                              filter_by=self.filter_by, filter_values=self.filter_values)
 
-            self.train, self.val = trainable_dataset.get_splits(n_val=self.val_length, n_test=0)
+            self.train, self.val = trainable_dataset.get_splits(n_val=self.val_length,
+                                                                n_test=0)  # from train csv taking n_val as validation set.
 
         if stage == 'test' or stage is None:
             self.test = LidarDataSet(dataset_csv_file=self.test_csv_path, data_folder=self.nn_data_folder,
