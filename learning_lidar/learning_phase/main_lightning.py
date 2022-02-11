@@ -12,7 +12,8 @@ from ray.tune.integration.pytorch_lightning import TuneReportCheckpointCallback
 from learning_lidar.learning_phase.data_modules.lidar_data_module import LidarDataModule
 from learning_lidar.learning_phase.models.defaultCNN import DefaultCNN
 from learning_lidar.learning_phase.run_params import USE_RAY, DEBUG_RAY, CONSTS, RAY_HYPER_PARAMS, RESULTS_PATH, \
-    NUM_AVAILABLE_GPU, NON_RAY_HYPER_PARAMS, update_params, RESUME_EXP, EXP_NAME, TRIAL_PARAMS, CHECKPOINT_PATH
+    NUM_AVAILABLE_GPU, NUM_AVILABLE_CPU, NON_RAY_HYPER_PARAMS, update_params, RESUME_EXP, EXP_NAME, TRIAL_PARAMS, \
+    CHECKPOINT_PATH
 from learning_lidar.utils.utils import create_and_configer_logger
 
 seed_everything(8318)  # Note, for full deterministic result add deterministic=True to trainer
@@ -57,18 +58,16 @@ def main(config, checkpoint_dir=None, consts=None):
 
     # Setup the pytorch-lighting trainer and run the model
     if config['overfit']:
-        trainer = Trainer(max_steps=None,
-                          max_epochs=2000,
+        trainer = Trainer(max_epochs=2000,
                           callbacks=callbacks,
                           gpus=[0] if consts['num_gpus'] > 0 else 0,
                           overfit_batches=1
                           )
     elif config['debug']:
-            trainer = Trainer(max_steps=None,
-                              callbacks=callbacks,
-                              gpus=[0] if consts['num_gpus'] > 0 else 0,
-                              fast_dev_run=8,
-                              )
+        trainer = Trainer(callbacks=callbacks,
+                          gpus=[0] if consts['num_gpus'] > 0 else 0,
+                          fast_dev_run=8,
+                          )
     else:
         trainer = Trainer(max_steps=consts['max_steps'],
                           max_epochs=consts['max_epochs'],
@@ -88,7 +87,7 @@ if __name__ == '__main__':
         log_name=f"{os.path.dirname(__file__)}_{datetime.now().strftime('%Y-%m-%d %H_%M_%S')}.log", level=logging.INFO)
 
     if USE_RAY:
-        ray.init(local_mode=DEBUG_RAY)
+        ray.init(local_mode=DEBUG_RAY, num_gpus=NUM_AVAILABLE_GPU, num_cpus=NUM_AVILABLE_CPU)
         reporter = CLIReporter(
             metric_columns=["loss", "MARELoss", "training_iteration"],
             max_progress_rows=50,
@@ -103,7 +102,7 @@ if __name__ == '__main__':
             mode="min",
             progress_reporter=reporter,
             log_to_file=LOG_RAY,
-            resources_per_trial={"cpu": 7, "gpu": NUM_AVAILABLE_GPU},
+            resources_per_trial={"cpu": int(NUM_AVILABLE_CPU * 0.8), "gpu": NUM_AVAILABLE_GPU},
             resume=RESUME_EXP, name=EXP_NAME,
             restore=CHECKPOINT_PATH
         )

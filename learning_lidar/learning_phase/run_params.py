@@ -1,8 +1,11 @@
 import json
-import os, sys
+import os
+import sys
 from datetime import datetime
+
 import torch
 from ray import tune
+
 from learning_lidar.utils import global_settings as gs
 
 NUM_AVILABLE_CPU = os.cpu_count()
@@ -23,7 +26,7 @@ def get_paths(station: gs.Station, start_date: datetime, end_date: datetime):
     test_csv_path = os.path.join(base_path, 'data', "dataset_" + csv_base_name + '_test.csv')
     stats_csv_path = os.path.join(base_path, 'data', "stats_" + csv_base_name + '_train.csv')
     results_path = os.path.join(station.nn_output_results)  # TODO: save in D or E
-
+    # TODO: Add exception in case paths are invalid
     return train_csv_path, test_csv_path, stats_csv_path, results_path, nn_source_data
 
 
@@ -162,7 +165,7 @@ RAY_HYPER_PARAMS = {
     "opt_powers": tune.grid_search([False, True]),  # , False
     "use_bg": tune.grid_search([False]),  # True,  'range_corr' False, True,True, , 'range_corr'
     # True - bg is relevant for 'lidar' case # TODO if lidar - bg T\F, if signal - bg F
-    "source": tune.grid_search(['lidar']),  # , 'lidar','signal_p'
+    "source": tune.grid_search(['signal']),  # options: 'lidar'| 'signal_p' | 'signal'
     # 'dfilter': tune.grid_search([None, ('wavelength', [355]), ('wavelength', [532]), ('wavelength', [1064])]),
     'dfilter': tune.grid_search(["wavelength [355]"]),
     'dnorm': tune.grid_search([False]),  # data_norm True - only for the best results achieved.

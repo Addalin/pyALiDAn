@@ -28,7 +28,7 @@ def main(config, checkpoint_dir=None, consts=None):
 
     # Setup the pytorch-lighting trainer and run the model
     trainer = Trainer(max_epochs=consts['max_epochs'],
-                      gpus=[1] if consts['num_gpus'] > 0 else 0)
+                      gpus=[0] if consts['num_gpus'] > 0 else 0)
 
     lidar_dm.setup('fit')
     trainer.validate(model=model, datamodule=lidar_dm)
