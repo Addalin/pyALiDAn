@@ -12,7 +12,7 @@ from ray.tune.integration.pytorch_lightning import TuneReportCheckpointCallback
 from learning_lidar.learning_phase.data_modules.lidar_data_module import LidarDataModule
 from learning_lidar.learning_phase.models.defaultCNN import DefaultCNN
 from learning_lidar.learning_phase.run_params import USE_RAY, DEBUG_RAY, CONSTS, RAY_HYPER_PARAMS, RESULTS_PATH, \
-    NUM_AVAILABLE_GPU, NUM_AVILABLE_CPU, NON_RAY_HYPER_PARAMS, update_params, RESUME_EXP, EXP_NAME, TRIAL_PARAMS, \
+     NON_RAY_HYPER_PARAMS, update_params, RESUME_EXP, EXP_NAME, TRIAL_PARAMS, \
     CHECKPOINT_PATH
 from learning_lidar.utils.utils import create_and_configer_logger
 
