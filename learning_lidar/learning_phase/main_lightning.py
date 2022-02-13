@@ -18,7 +18,6 @@ from learning_lidar.utils.utils import create_and_configer_logger
 
 seed_everything(8318)  # Note, for full deterministic result add deterministic=True to trainer
 
-
 # for pytorch lightning and Ray integration see example at
 # https://github.com/ray-project/ray/blob/35ec91c4e04c67adc7123aa8461cf50923a316b4/python/ray/tune/examples/mnist_pytorch_lightning.py
 
@@ -87,7 +86,7 @@ if __name__ == '__main__':
         log_name=f"{os.path.dirname(__file__)}_{datetime.now().strftime('%Y-%m-%d %H_%M_%S')}.log", level=logging.INFO)
 
     if USE_RAY:
-        ray.init(local_mode=DEBUG_RAY, num_gpus=NUM_AVAILABLE_GPU, num_cpus=NUM_AVILABLE_CPU)
+        ray.init(local_mode=DEBUG_RAY)
         reporter = CLIReporter(
             metric_columns=["loss", "MARELoss", "training_iteration"],
             max_progress_rows=50,
@@ -102,7 +101,7 @@ if __name__ == '__main__':
             mode="min",
             progress_reporter=reporter,
             log_to_file=LOG_RAY,
-            resources_per_trial={"cpu": int(NUM_AVILABLE_CPU * 0.8), "gpu": NUM_AVAILABLE_GPU},
+            resources_per_trial={"cpu": CONSTS['num_workers'], "gpu": CONSTS['num_gpus']},
             resume=RESUME_EXP, name=EXP_NAME,
             restore=CHECKPOINT_PATH
         )
