@@ -79,6 +79,11 @@ class DefaultCNN(LightningModule):
         self.rel_loss_type = 'MARELoss'
         self.rel_loss = MARELoss()
 
+    # step 5. Set Regularize Loss
+    def regulizer_weights(self, alpha=0.01, ord=1):
+        params = torch.cat([p[1].view(-1) for p in self.named_parameters()])
+        return alpha * torch.linalg.norm(params, ord=ord)
+
     def train_powers(self, do_opt_powers: bool = False):
         if self.x_powers is not None:
             self.x_powers.requires_grad = do_opt_powers
@@ -109,7 +114,7 @@ class DefaultCNN(LightningModule):
         # cond_opt_pow = (self.current_epoch <= self.trainer.max_epochs)
         # self.train_powers(do_opt_powers = cond_opt_pow)
         y_pred = self(x)
-        loss = self.criterion(y, y_pred)
+        loss = self.criterion(y, y_pred)  # + self.regulizer_weights()
         if torch.isnan(loss):
             raise ValueError('Val loss is NaN!')
         self.log(f"loss/{self.loss_type}_train", loss)
