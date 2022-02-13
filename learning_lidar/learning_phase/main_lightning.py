@@ -57,7 +57,7 @@ def main(config, checkpoint_dir=None, consts=None):
 
     # Setup the pytorch-lighting trainer and run the model
     if config['overfit']:
-        trainer = Trainer(max_epochs=2000,
+        trainer = Trainer(max_epochs=5000,
                           callbacks=callbacks,
                           gpus=[0] if consts['num_gpus'] > 0 else 0,
                           overfit_batches=1

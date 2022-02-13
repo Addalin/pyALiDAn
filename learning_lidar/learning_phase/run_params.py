@@ -124,7 +124,7 @@ else:
 
 # Constants - should correspond to data, dataloader and model
 CONSTS = {
-    'max_epochs': 1,
+    'max_epochs': 20,
     'max_steps': None,
     'num_workers': int(NUM_AVILABLE_CPU*0.8),
     'train_csv_path': train_csv_path,
@@ -145,12 +145,12 @@ RAY_HYPER_PARAMS = {
     "hsizes": tune.grid_search(['[4,4,4,4]']),  # '[6, 6, 6, 6]', '[8, 8, 8, 8]']),
     "fc_size": tune.grid_search(['[16]']),  # '[4]','[1]' , '[32]'
     "lr": tune.grid_search([2 * 1e-3]),
-    "bsize": tune.grid_search([32]),
+    "bsize": tune.grid_search([10]),
     "ltype": tune.grid_search(['MAELoss']),  # , 'MSELoss']),  # ['MARELoss']
     # "use_power": tune.grid_search([False, '([0.5,1,1], [0.5])', '([0.5,1,0.5], [0.5])']),
     # "use_power": tune.grid_search(['([0.5,-0.27,1], [0.5])', '([0.5,1,0.5], [0.5])']),
     # "use_power": tune.grid_search([False]),
-    "use_power": tune.grid_search(['([0.5, -0.30, 0.5], [1.0])']),
+    "use_power": tune.grid_search(['([0.5, -0.30, 0.5], [1.0])']), # False
     # "use_power": tune.grid_search(['([0.5, -0.3, 1.0], [1.0])', '([0.5, 0.3, 1.0], [1.0])', '([0.5,1.0, 1.0], [1.0])',
     #                               '([0.5, -0.3, 0.5], [0.1])', '([0.5, 0.3, 0.5],[1.0])']),
     #                               '([0.5,0.25, 1.0],[1.0])', '([0.5,0.25, 0.5],[1.0])',
@@ -165,7 +165,7 @@ RAY_HYPER_PARAMS = {
     "opt_powers": tune.grid_search([False, True]),  # , False
     "use_bg": tune.grid_search([False]),  # True,  'range_corr' False, True,True, , 'range_corr'
     # True - bg is relevant for 'lidar' case # TODO if lidar - bg T\F, if signal - bg F
-    "source": tune.grid_search(['signal']),  # options: 'lidar'| 'signal_p' | 'signal'
+    "source": tune.grid_search(['signal', 'lidar']),  # options: 'lidar'| 'signal_p' | 'signal'
     # 'dfilter': tune.grid_search([None, ('wavelength', [355]), ('wavelength', [532]), ('wavelength', [1064])]),
     'dfilter': tune.grid_search(["wavelength [355]"]),
     'dnorm': tune.grid_search([False]),  # data_norm True - only for the best results achieved.
@@ -187,4 +187,4 @@ NON_RAY_HYPER_PARAMS = {
     'dnorm': True,  # data_norm
 }
 USE_RAY = True
-DEBUG_RAY = True
+DEBUG_RAY = False
