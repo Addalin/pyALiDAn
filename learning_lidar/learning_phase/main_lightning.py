@@ -12,7 +12,7 @@ from ray.tune.integration.pytorch_lightning import TuneReportCheckpointCallback
 from learning_lidar.learning_phase.data_modules.lidar_data_module import LidarDataModule
 from learning_lidar.learning_phase.models.defaultCNN import DefaultCNN
 from learning_lidar.learning_phase.run_params import USE_RAY, DEBUG_RAY, CONSTS, RAY_HYPER_PARAMS, RESULTS_PATH, \
-    NUM_AVAILABLE_GPU, NUM_AVILABLE_CPU, NON_RAY_HYPER_PARAMS, update_params, RESUME_EXP, EXP_NAME, TRIAL_PARAMS, \
+    NON_RAY_HYPER_PARAMS, update_params, RESUME_EXP, EXP_NAME, TRIAL_PARAMS, \
     CHECKPOINT_PATH
 from learning_lidar.utils.utils import create_and_configer_logger
 
@@ -40,7 +40,8 @@ def main(config, checkpoint_dir=None, consts=None):
                            learning_rate=config['lr'],
                            X_features_profiles = X_features,
                            powers = powers,
-                           do_opt_powers=config['opt_powers'])
+                           do_opt_powers=config['opt_powers'],
+                           conv_bias=config['cbias'])
 
     # Define Data
     lidar_dm = LidarDataModule(nn_data_folder=consts['nn_source_data'], train_csv_path=consts["train_csv_path"],

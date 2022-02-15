@@ -124,7 +124,7 @@ else:
 CONSTS = {
     'max_epochs': 20,
     'max_steps': None,
-    'num_workers': int(NUM_AVILABLE_CPU*0.8),
+    'num_workers': int(NUM_AVILABLE_CPU * 0.8),
     'train_csv_path': train_csv_path,
     'test_csv_path': test_csv_path,
     'stats_csv_path': stats_csv_path,
@@ -152,7 +152,9 @@ RAY_HYPER_PARAMS = {
     'dfilter': tune.grid_search(["wavelength [355]"]),  # Options: None | '(wavelength, [lambda])' - lambda=355,532,1064
     'dnorm': tune.grid_search([False]),  # Options: False | True
     'overfit': tune.grid_search([False]),  # Apply over fit mode of pytorch lightening. Note: Change bsize to 10
-    'debug': tune.choice([False])  # Apply debug mode of pytorch lightening
+    'debug': tune.choice([False]),  # Apply debug mode of pytorch lightening
+    'cbias': tune.grid_search([False, True])  # Calc convolution biases. This may be redundant if using batchnorm
+    # afterwards
 }
 
 NON_RAY_HYPER_PARAMS = {
@@ -167,7 +169,8 @@ NON_RAY_HYPER_PARAMS = {
     'dfilter': None,  # data_filter
     'dnorm': True,  # Data normalization
     'overfit': False,  # Apply over fit mode of pytorch lightening. Note: Change bsize to 10
-    'debug': False  # Apply debug mode of pytorch lightening
+    'debug': False,  # Apply debug mode of pytorch lightening
+    'cbias': True   # Calc convolution biases
 }
 USE_RAY = True
-DEBUG_RAY = True
+DEBUG_RAY = False

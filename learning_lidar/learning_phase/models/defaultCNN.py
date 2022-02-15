@@ -10,39 +10,40 @@ from learning_lidar.learning_phase.learn_utils.custom_losses import MARELoss
 class DefaultCNN(LightningModule):
 
     def __init__(self, in_channels, output_size, hidden_sizes, fc_size, loss_type, learning_rate, X_features_profiles,
-                 powers, do_opt_powers: bool = False):
+                 powers, do_opt_powers: bool = False, conv_bias:bool = True):
         super().__init__()
         self.save_hyperparameters()
         self.lr = learning_rate
         self.eps = torch.tensor(np.finfo(float).eps)
+        self.cov_bias = conv_bias
         X_features, profiles = map(list, zip(*X_features_profiles))
         self.x_powers = nn.Parameter(torch.tensor([powers[profile] for profile in profiles])) if powers else None
         self.train_powers(do_opt_powers)
 
         self.conv_layer = nn.Sequential(
             # Conv layer 1
-            nn.Conv2d(in_channels=in_channels, out_channels=hidden_sizes[0], kernel_size=(5, 3), padding=3),
+            nn.Conv2d(in_channels=in_channels, out_channels=hidden_sizes[0], kernel_size=(5, 3), padding=3, bias=self.cov_bias),
             nn.BatchNorm2d(hidden_sizes[0]),
             nn.ReLU(inplace=True),
             nn.Dropout2d(p=0.15),
             nn.MaxPool2d(kernel_size=(4, 2), stride=(4, 2)),
 
             # Conv layer 2
-            nn.Conv2d(in_channels=hidden_sizes[0], out_channels=hidden_sizes[1], kernel_size=3, padding=1),
+            nn.Conv2d(in_channels=hidden_sizes[0], out_channels=hidden_sizes[1], kernel_size=3, padding=1, bias=self.cov_bias),
             nn.BatchNorm2d(hidden_sizes[1]),
             nn.ReLU(inplace=True),
             nn.Dropout2d(p=0.15),
             nn.MaxPool2d(kernel_size=(4, 2), stride=(4, 2)),
 
             # Conv layer 3
-            nn.Conv2d(in_channels=hidden_sizes[1], out_channels=hidden_sizes[2], kernel_size=3, padding=1),
+            nn.Conv2d(in_channels=hidden_sizes[1], out_channels=hidden_sizes[2], kernel_size=3, padding=1, bias=self.cov_bias),
             nn.BatchNorm2d(hidden_sizes[2]),
             nn.ReLU(inplace=True),
             nn.Dropout2d(p=0.15),
             nn.MaxPool2d(kernel_size=(4, 2), stride=(4, 2)),
 
             # Conv layer 4
-            nn.Conv2d(in_channels=hidden_sizes[2], out_channels=hidden_sizes[3], kernel_size=3, padding=1),
+            nn.Conv2d(in_channels=hidden_sizes[2], out_channels=hidden_sizes[3], kernel_size=3, padding=1, bias=self.cov_bias),
             nn.BatchNorm2d(hidden_sizes[3]),
             nn.ReLU(inplace=True),
             nn.Dropout2d(p=0.15),
