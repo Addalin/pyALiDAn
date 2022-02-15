@@ -8,8 +8,8 @@ from typing import Union
 import numpy as np
 import pandas as pd
 import xarray as xr
+from lidar_molecular import rayleigh_scattering
 from matplotlib import dates as mdates, pyplot as plt
-from molecular import rayleigh_scattering
 from pandas.core.dtypes.common import is_numeric_dtype
 
 from learning_lidar.utils import misc_lidar, vis_utils, xr_utils, global_settings as gs

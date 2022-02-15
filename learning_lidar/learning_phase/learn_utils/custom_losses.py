@@ -1,12 +1,18 @@
+import warnings
+from typing import Optional
+
 import torch
+from torch import Tensor
 from torch import nn
 from torch.nn.modules.loss import _Loss, _Reduction
 from torch.overrides import has_torch_function, handle_torch_function
-from torch import Tensor
-import warnings
+
 from learning_lidar.utils.global_settings import eps
+
 warnings.filterwarnings("ignore")
 torch.nn.L1Loss
+
+
 def mare_loss(input, target, size_average=None, reduce=None, reduction='mean'):
     # type: (Tensor, Tensor, Optional[bool], Optional[bool], str) -> Tensor
 

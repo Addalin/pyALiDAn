@@ -4,7 +4,7 @@ from pytorch_lightning.core.lightning import LightningModule
 from torch import nn
 from torch.optim import Adam
 
-from learning_lidar.learning_phase.utils_.custom_losses import MARELoss
+from learning_lidar.learning_phase.learn_utils.custom_losses import MARELoss
 
 
 class DefaultCNN(LightningModule):
@@ -94,6 +94,7 @@ class DefaultCNN(LightningModule):
         batch_size, channels, width, height = x.size()
         x = x.float()
         if self.x_powers is not None:
+            # https://github.com/torch/nn/blob/872682558c48ee661ebff693aa5a41fcdefa7873/Power.lua
             for c_i in range(channels):
                 x[:, c_i, :, :] = (x[:, c_i, :, :] + self.eps) ** self.x_powers[c_i]
 

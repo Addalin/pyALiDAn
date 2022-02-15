@@ -92,9 +92,7 @@ experiment_dir = 'main_2022-02-04_20-14-28'
 trial_dir = r"C:\Users\addalin\Dropbox\Lidar\lidar_learning\results\main_2022-02-04_20-14-28\main_4b099_00000_0_bsize" \
             r"=32,dfilter=wavelength [355],dnorm=False,fc_size=[16],hsizes=[4,4,4,4]," \
             r"lr=0.002,ltype=MAELoss,opt_powers=T_2022-02-04_20-14-29"
-# r'main_39b80_00000_0_bsize=32,dfilter=None,dnorm=True,fc_size=[16],hsizes=[3, 3, 3, 3],lr=0.001,' \
-#            r'ltype=MAELoss,source=lidar,use_bg=Tr_2021-05-19_23-17-25'
-check_point_name = 'checkpoint_epoch=999-step=999'  # 'checkpoint_epoch=0-step=175'
+check_point_name = 'checkpoint_epoch=999-step=999'
 
 
 # TODO: Load Trainer chekpoint  https://pytorch-lightning.readthedocs.io/en/stable/common/weights_loading.html#restoring-training-state
@@ -141,37 +139,20 @@ CONSTS = {
 
 # Note, replace tune.choice with grid_search if want all possible combinations
 RAY_HYPER_PARAMS = {
-    # "hsizes": tune.grid_search(['[4, 4, 4, 4]','[5,5,5,5]','[6, 6, 6, 6]']),  # '[3, 3, 3, 3]','[4, 4, 4, 4]','[4, 4, 4, 4]',
-    "hsizes": tune.grid_search(['[4,4,4,4]']),  # '[6, 6, 6, 6]', '[8, 8, 8, 8]']),
-    "fc_size": tune.grid_search(['[16]']),  # '[4]','[1]' , '[32]'
+    "hsizes": tune.grid_search(['[4,4,4,4]']),  # Options: '[4,4,4,4]' | '[5,5,5,5]' | '[6, 6, 6, 6]' ...etc.
+    "fc_size": tune.grid_search(['[16]']),  # Options: '[4]' | '[16]' | '[32]' ...etc.
     "lr": tune.grid_search([2 * 1e-3]),
-    "bsize": tune.grid_search([10]),
-    "ltype": tune.grid_search(['MAELoss']),  # , 'MSELoss']),  # ['MARELoss']
-    # "use_power": tune.grid_search([False, '([0.5,1,1], [0.5])', '([0.5,1,0.5], [0.5])']),
-    # "use_power": tune.grid_search(['([0.5,-0.27,1], [0.5])', '([0.5,1,0.5], [0.5])']),
-    # "use_power": tune.grid_search([False]),
-    "use_power": tune.grid_search(['([0.5, -0.30, 0.5], [1.0])']),
-    # "use_power": tune.grid_search(['([0.5, -0.3, 1.0], [1.0])', '([0.5, 0.3, 1.0], [1.0])', '([0.5,1.0, 1.0], [1.0])',
-    #                               '([0.5, -0.3, 0.5], [0.1])', '([0.5, 0.3, 0.5],[1.0])']),
-    #                               '([0.5,0.25, 1.0],[1.0])', '([0.5,0.25, 0.5],[1.0])',
-    #                              '([0.5,-0.27,1], [1.0])', '([0.5,1,0.5], [1.0])']),
-    # "use_power": tune.grid_search(['([0.5, 1], [1.0])', '([0.5,0.5], [1.0])',
-    #                               '([0.5,-0.25],[1.0])', '([0.5,0.25],[1.0])',
-    #                               '([0.5,-0.265], [1.0])',
-    #                               '([0.5,0.125], [1.0])', '([0.5,-0.125], [1.0])']),
-    # '([0.5,-0.11,1], [0.5])',  '([0.5,-0.11,0.5], [0.5])']),
-    # "([0.5, -0.11, 0.5], [0.5])"]),
+    "bsize": tune.grid_search([32]),
+    "ltype": tune.grid_search(['MAELoss']),  # Options: 'MAELoss' | 'MSELoss' | 'MARELoss'. See 'custom_losses.py'
+    "use_power": tune.grid_search(['([0.5, -0.30, 0.5], [1.0])']),  # Options: False | '([0.5,1,1], [0.5])' ...etc.
     # UV : -0.27 , G: -0.263 , IR: -0.11
-    "opt_powers": tune.grid_search([False, True]),  # , False
-    "use_bg": tune.grid_search([False]),  # True,  'range_corr' False, True,True, , 'range_corr'
-    # True - bg is relevant for 'lidar' case # TODO if lidar - bg T\F, if signal - bg F
-    "source": tune.grid_search(['signal', 'lidar']),  # options: 'lidar'| 'signal_p' | 'signal'
-    # 'dfilter': tune.grid_search([None, ('wavelength', [355]), ('wavelength', [532]), ('wavelength', [1064])]),
-    'dfilter': tune.grid_search(["wavelength [355]"]),
-    'dnorm': tune.grid_search([False]),  # data_norm True - only for the best results achieved.
-    'overfit': tune.grid_search([True]),
-    'debug': tune.choice([False])
-    # overfit flag - for sanity check. The NN will test a single batch. Note: Use e.g., bsize=10
+    "opt_powers": tune.grid_search([False]),  # Options: False | True
+    "use_bg": tune.grid_search([False]),  # Options: False | True | 'range_corr'. Not relevant for 'signal' as source
+    "source": tune.grid_search(['lidar']),  # Options: 'lidar'| 'signal_p' | 'signal'
+    'dfilter': tune.grid_search(["wavelength [355]"]),  # Options: None | '(wavelength, [lambda])' - lambda=355,532,1064
+    'dnorm': tune.grid_search([False]),  # Options: False | True
+    'overfit': tune.grid_search([False]),  # Apply over fit mode of pytorch lightening. Note: Change bsize to 10
+    'debug': tune.choice([False])  # Apply debug mode of pytorch lightening
 }
 
 NON_RAY_HYPER_PARAMS = {
@@ -184,7 +165,9 @@ NON_RAY_HYPER_PARAMS = {
     "hsizes": '[3, 3, 3, 3]',  # hidden_sizes
     "fc_size": '[16]',
     'dfilter': None,  # data_filter
-    'dnorm': True,  # data_norm
+    'dnorm': True,  # Data normalization
+    'overfit': False,  # Apply over fit mode of pytorch lightening. Note: Change bsize to 10
+    'debug': False  # Apply debug mode of pytorch lightening
 }
 USE_RAY = True
-DEBUG_RAY = False
+DEBUG_RAY = True

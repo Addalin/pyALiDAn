@@ -8,7 +8,7 @@ from pytorch_lightning import LightningDataModule
 from torch.utils.data import DataLoader, random_split
 
 import learning_lidar.utils.xr_utils as xr_utils
-from learning_lidar.learning_phase.utils_.custom_operations import SampleXR2Tensor
+from learning_lidar.learning_phase.learn_utils.custom_operations import SampleXR2Tensor
 
 
 class LidarDataSet(torch.utils.data.Dataset):
