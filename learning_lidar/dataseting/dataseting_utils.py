@@ -103,7 +103,7 @@ def add_profiles_values(df, station, day_date, file_type='profiles'):
         wavelen = row.wavelength
         # get altitude to rebase the reference heights according to sea-level-height
         altitude = data.altitude.item()
-        [r0, r1] = data[f'reference_height_{wavelen}'].values #
+        [r0, r1] = data[f'reference_height_{wavelen}'].values
         [bin_r0, bin_r1] = [np.argmin(abs(data.height.values - r)) for r in [r0, r1]]
         delta_r = r1 - r0
         return r0 + altitude, r1 + altitude, delta_r, bin_r0, bin_r1

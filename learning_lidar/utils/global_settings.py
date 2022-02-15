@@ -61,25 +61,24 @@ class Station:
         try:
             station_df = stations_df.loc[station_name.lower()]
         except KeyError as e:
-            print(f"{station_name.lower()} not in {stations_csv_path}. Available stations: {stations_df.index.values}")
+            print(
+                f"Name '{station_name.lower()}' not in {stations_csv_path}. Available stations: {stations_df.index.values}")
             raise e
         self.name = station_name
         self.location = station_df['location']
         self.state = station_df['state']
         self.lon = float(station_df['longitude'])
         self.lat = float(station_df['latitude'])
-        self.altitude = float(
-            station_df['altitude'])  # [m] The Lidar's altitude   ( above sea level, see 'altitude' in ' *_att_bsc.nc)
-        self.start_bin_height = float(station_df[
-                                          'start_bin_height'])  # [m] The first bin's height ( above ground level - a.k.a above the lidar, see height[0]  in *_att_bsc.nc)
-        self.end_bin_height = float(
-            station_df['end_bin_height'])  # [m] The last bin's height  ( see height[-1] in *_att_bsc.nc)
-        self.n_bins = int(
-            station_df['n_bins'])  # [#] Number of height bins         ( see height.shape  in  *_att_bsc.nc)
-        self.dt = float(eval(station_df['dt']))  # [sec] temporal pulse width of the lidar note: dr = C*dt/2
-        self.freq = 30  # [sec] Frequency of measurments, currently every 30 sec, if this value changes, add it to the stations.csv
-        self.total_time_bins = 2880  # Total measurment per day, currently 2880 time bins, if this value changes, add it to the stations.csv
-        self.pt_bin = station_df['pt_bin']  # number of pre trigger bins
+        self.altitude = float(station_df['altitude'])  # [m] The Lidar's altitude   ( above sea level )
+        self.start_bin_height = float(station_df['start_bin_height'])  # [m] The 1st bin's height ( above ground level)
+        self.end_bin_height = float(station_df['end_bin_height'])  # [m] The last bin's height
+        self.n_bins = int(station_df['n_bins'])  # [#] Number of height bins
+        self.dt = float(eval(station_df['dt']))  # [sec] Temporal pulse width of the lidar note: dr = C*dt/2
+        self.freq = 30  # [sec] Frequency of measurements, currently every 30 sec, if this value changes, add it to
+        # the stations.csv
+        self.total_time_bins = 2880  # Total measurement per day, currently 2880 time bins, if this value changes,
+        # add it to the stations.csv
+        self.pt_bin = station_df['pt_bin']  # The number of pre-trigger bins
         self.gdas1_folder = station_df['gdas1_folder']
         self.gdastxt_folder = station_df['gdastxt_folder']
         self.lidar_src_calib_folder = station_df['lidar_src_calib_folder']
