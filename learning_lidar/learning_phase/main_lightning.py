@@ -18,6 +18,7 @@ from learning_lidar.utils.utils import create_and_configer_logger
 
 seed_everything(8318)  # Note, for full deterministic result add deterministic=True to trainer
 
+
 # for pytorch lightning and Ray integration see example at
 # https://github.com/ray-project/ray/blob/35ec91c4e04c67adc7123aa8461cf50923a316b4/python/ray/tune/examples/mnist_pytorch_lightning.py
 
@@ -32,16 +33,11 @@ def main(config, checkpoint_dir=None, consts=None):
     if checkpoint_dir:
         model = DefaultCNN.load_from_checkpoint(os.path.join(checkpoint_dir, "checkpoint"))
     else:
-        model = DefaultCNN(in_channels=len(X_features),
-                           output_size=len(consts['Y_features']),
-                           hidden_sizes=eval(config['hsizes']),
-                           fc_size=eval(config['fc_size']),
-                           loss_type=config['ltype'],
-                           learning_rate=config['lr'],
-                           X_features_profiles = X_features,
-                           powers = powers,
-                           do_opt_powers=config['opt_powers'],
-                           conv_bias=config['cbias'])
+        model = DefaultCNN(in_channels=len(X_features), output_size=len(consts['Y_features']),
+                           hidden_sizes=eval(config['hsizes']), fc_size=eval(config['fc_size']),
+                           loss_type=config['ltype'], learning_rate=config['lr'], weight_decay=config['wdecay'],
+                           X_features_profiles=X_features, powers=powers,
+                           do_opt_powers=config['opt_powers'], conv_bias=config['cbias'])
 
     # Define Data
     lidar_dm = LidarDataModule(nn_data_folder=consts['nn_source_data'], train_csv_path=consts["train_csv_path"],

@@ -81,7 +81,7 @@ RESUME_EXP = False  # 'ERRORED_ONLY'  # False | True
 # or "ERRORED_ONLY" to reset and rerun ERRORED trials (not tested). Otherwise False to start a new experiment.
 # Note: if fail_fast was 'True' in the the folder of 'EXP_NAME', then tune will not be able to load trials that didn't store any folder
 
-EXP_NAME = None  # None
+EXP_NAME = None  # 'main_2022-02-13_19-10-30'  #
 # If 'resume' is not False, must enter experiment path.
 # e.g. - "main_2021-05-19_21-50-40". Path is relative to RESULTS_PATH. Otherwise can keep it None.
 # And it is generated automatically.
@@ -153,7 +153,9 @@ RAY_HYPER_PARAMS = {
     'dnorm': tune.grid_search([False]),  # Options: False | True
     'overfit': tune.grid_search([False]),  # Apply over fit mode of pytorch lightening. Note: Change bsize to 10
     'debug': tune.choice([False]),  # Apply debug mode of pytorch lightening
-    'cbias': tune.grid_search([False, True])  # Calc convolution biases. This may be redundant if using batchnorm
+    'cbias': tune.grid_search([False, True]),  # Calc convolution biases. This may be redundant if using batch norm
+    'wdecay': tune.choise([0])  # Weight decay algorithm to test l2 regularization of NN weights.
+    # Apply l2 regularization on model weights. parameter weight_decay of Adam optimiser
     # afterwards
 }
 
@@ -170,7 +172,8 @@ NON_RAY_HYPER_PARAMS = {
     'dnorm': True,  # Data normalization
     'overfit': False,  # Apply over fit mode of pytorch lightening. Note: Change bsize to 10
     'debug': False,  # Apply debug mode of pytorch lightening
-    'cbias': True   # Calc convolution biases
+    'cbias': True,  # Calc convolution biases
+    'wdecay': 0  # Weight decay algorithm to test l2 regularization of NN weights.
 }
 USE_RAY = True
 DEBUG_RAY = False
