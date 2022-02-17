@@ -15,9 +15,10 @@ class PowTransform(object):
         self.X_powers = [powers[profile] for profile in self.profiles]
         self.Y_powers = [powers[feature] for feature in self.Y_features]
 
-    def __call__(self, sample):
+    def __call__(self, sample: dict):
         X, Y = sample['x'], sample['y']
-        # X = [self.pow_X(x_i, pow_i) for (x_i, pow_i) in zip(X, self.X_powers)] # moved to model
+        # X = [self.pow_X_XR(x_i, pow_i) for (x_i, pow_i) in zip(X, self.X_powers)] # moved to CNN model
+        # Y = self.pow_Y_XR(Y)
         return {'x': X, 'y': Y}
 
     def pow_X_XR(self, x_i, pow_i):
@@ -46,19 +47,17 @@ class TrimNegative(object):
     def __init__(self):
         pass
 
-    def __call__(self, sample):
+    def __call__(self, sample: dict):
         X, Y = sample['x'], sample['y']
         # trim negative values
         X = [x_i.where(x_i >= 0, np.finfo(np.float).eps) for x_i in X]
         return {'x': X, 'y': Y}
 
 
-class SampleXR2Tensor(object):
+class XR2Tensor(object):
     """Convert a lidar sample {x,y}  to Tensors."""
 
-    def __call__(self, sample):
-        X, Y = sample['x'], sample['y']
-
+    def __call__(self, X: list[xr.Dataset]):
         # convert X from xr.dataset to concatenated a np.ndarray, and then to torch.tensor
         X = torch.dstack([torch.from_numpy(X[i].values) for i in range(len(X))])
 
@@ -67,7 +66,19 @@ class SampleXR2Tensor(object):
         # torch image: C X H X W
         X = X.permute(2, 0, 1)
 
-        # convert Y from pd.Series to np.array, and then to torch.tensor
-        Y = torch.from_numpy(np.array(Y).astype(np.float32))
+        return X
 
-        return {'x': X, 'y': Y}
+
+class ApplyPoisson(object):
+    """ """
+
+    def __init__(self, channel=None):
+        self.c = channel
+        pass
+
+    def __call__(self, x):
+        if self.c is None:
+            x = torch.poisson(x)
+        else:
+            x[self.c] = torch.poisson(x[self.c])
+        return x
