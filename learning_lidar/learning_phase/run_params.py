@@ -74,8 +74,6 @@ def update_params(config, consts):
             dfilter[1] = eval(dfilter[1])
         except ValueError as e:
             print(e)
-        finally:
-            dfilter = False
 
     return config, X_features, powers, dfilter
 
@@ -145,21 +143,21 @@ CONSTS = {
 
 # Note, replace tune.choice with grid_search if want all possible combinations
 RAY_HYPER_PARAMS = {
-    "hsizes": tune.grid_search(['[6,6,6,6]', '[4,4,4,4]']),
+    "hsizes": tune.grid_search(['[4,4,4,4]']),
     # Options: '[4,4,4,4]' | '[5,5,5,5]' | '[6, 6, 6, 6]' ...etc.
-    "fc_size": tune.grid_search(['[16]']),  # Options: '[4]' | '[16]' | '[32]' ...etc.
+    "fc_size": tune.grid_search(['[16]', '[32]']),  # Options: '[4]' | '[16]' | '[32]' ...etc.
     "lr": tune.grid_search([2 * 1e-3]),
-    "bsize": tune.grid_search([64]),
+    "bsize": tune.grid_search([10]),
     "ltype": tune.grid_search(['MAELoss']),  # Options: 'MAELoss' | 'MSELoss' | 'MARELoss'. See 'custom_losses.py'
     "use_power": tune.grid_search(['([0.5, -0.30, 0.5], [1.0])']),  # Options: False | '([0.5,1,1], [0.5])' ...etc.
     # UV : -0.27 , G: -0.263 , IR: -0.11
     "opt_powers": tune.grid_search([False]),  # Options: False | True
-    "use_bg": tune.grid_search([True, 'range_corr', False]),
+    "use_bg": tune.grid_search([False, True, 'range_corr']),
     # Options: False | True | 'range_corr'. Not relevant for 'signal' as source
     "source": tune.grid_search(['lidar']),  # Options: 'lidar'| 'signal_p' | 'signal'
     'dfilter': tune.grid_search(["wavelength [355]"]),  # Options: None | '(wavelength, [lambda])' - lambda=355,532,1064
     'dnorm': tune.grid_search([False]),  # Options: False | True
-    'overfit': tune.grid_search([False]),  # Apply over fit mode of pytorch lightening. Note: Change bsize to 10
+    'overfit': tune.grid_search([True]),  # Apply over fit mode of pytorch lightening. Note: Change bsize to 10
     'debug': tune.choice([False]),  # Apply debug mode of pytorch lightening
     'cbias': tune.grid_search([True]),  # Calc convolution biases. This may be redundant if using batch norm
     'wdecay': tune.choice([0])  # Weight decay algorithm to test l2 regularization of NN weights.
