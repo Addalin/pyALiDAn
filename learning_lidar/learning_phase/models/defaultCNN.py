@@ -120,8 +120,6 @@ class DefaultCNN(LightningModule):
     def training_step(self, batch, batch_idx):
         x = batch['x']
         y = batch['y']
-        # Uncomment if you wish to stop training the powers at some point of training process
-        # cond_opt_pow = (self.current_epoch <= self.trainer.max_epochs)
         y_pred = self(x)
         loss = self.criterion(y, y_pred)
         if torch.isnan(loss):
@@ -144,6 +142,11 @@ class DefaultCNN(LightningModule):
         self.log(f"rel_loss/{self.rel_loss_type}_val", rel_loss)
         for c_i in range(x.size()[1]):
             self.log(f"gamma_x/channel_{c_i}", self.x_powers[c_i])
+        # Log Y values for overfitt test
+        if (self.trainer.overfit_batches >= 0) & (self.current_epoch % 10 == 0):
+            for ind, (y_i, y_pred_i) in enumerate(zip(y,y_pred)):
+                self.log(f"overfitt/y_{ind}/orig", y_i)
+                self.log(f"overfitt/y_{ind}/pred", y_pred_i)
         return loss
 
     def configure_optimizers(self):
