@@ -7,6 +7,22 @@ from torch.optim import Adam
 from learning_lidar.learning_phase.learn_utils.custom_losses import MARELoss
 
 
+class PowerLayer(nn.Module):
+    def __init__(self, powers=[1, 1], do_opt_powers: bool = False):
+        super(PowerLayer, self).__init__()
+        self.powers = nn.Parameter(torch.tensor(powers))
+        self.train_powers(do_opt_powers)
+
+    def train_powers(self, do_opt_powers: bool = False):
+        self.powers.requires_grad = do_opt_powers
+        self.powers.retain_grad = do_opt_powers
+
+    def forward(self, x):
+        for c_i, p_i in enumerate(self.powers):
+            x[:, c_i, :, :] = torch.pow(x[:, c_i, :, :], p_i)
+        return x
+
+
 class DefaultCNN(LightningModule):
 
     def __init__(self, in_channels, output_size, hidden_sizes, fc_size, loss_type, learning_rate, X_features_profiles,
@@ -18,9 +34,9 @@ class DefaultCNN(LightningModule):
         self.eps = torch.tensor(np.finfo(float).eps)
         self.cov_bias = conv_bias
         X_features, profiles = map(list, zip(*X_features_profiles))
-        self.x_powers = nn.Parameter(torch.tensor([powers[profile] for profile in profiles])) if powers else None
-        self.train_powers(do_opt_powers)
+        self.x_powers = [powers[profile] for profile in profiles] if powers else None
 
+        self.power_layer = PowerLayer(self.x_powers)
         self.conv_layer = nn.Sequential(
             # Conv layer 1
             nn.Conv2d(in_channels=in_channels, out_channels=hidden_sizes[0], kernel_size=(5, 3), padding=3,
@@ -85,19 +101,11 @@ class DefaultCNN(LightningModule):
         self.rel_loss_type = 'MARELoss'
         self.rel_loss = MARELoss()
 
-    def train_powers(self, do_opt_powers: bool = False):
-        if self.x_powers is not None:
-            self.x_powers.requires_grad = do_opt_powers
-        else:
-            pass
-
     def forward(self, x):
         batch_size, channels, width, height = x.size()
         x = x.float()
         if self.x_powers is not None:
-            # https://github.com/torch/nn/blob/872682558c48ee661ebff693aa5a41fcdefa7873/Power.lua
-            for c_i in range(channels):
-                x[:, c_i, :, :] = (x[:, c_i, :, :] + self.eps) ** self.x_powers[c_i]
+            x = self.power_layer(x)
 
         # conv layers
         x = self.conv_layer(x)
@@ -114,7 +122,6 @@ class DefaultCNN(LightningModule):
         y = batch['y']
         # Uncomment if you wish to stop training the powers at some point of training process
         # cond_opt_pow = (self.current_epoch <= self.trainer.max_epochs)
-        # self.train_powers(do_opt_powers = cond_opt_pow)
         y_pred = self(x)
         loss = self.criterion(y, y_pred)
         if torch.isnan(loss):

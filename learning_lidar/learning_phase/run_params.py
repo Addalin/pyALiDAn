@@ -46,6 +46,7 @@ def update_params(config, consts):
         else (f"{source_x}_path", "range_corr_p")
     mol_features = ("molecular_path", "attbsc")
     if config['use_bg']:
+        # TODO: add option to set operations on bg channel
         bg_features = ("bg_path", "p_bg_r2") if config['use_bg'] == "range_corr" else ("bg_path", "p_bg")
         X_features = (lidar_features, mol_features, bg_features)
     else:
@@ -139,22 +140,24 @@ CONSTS = {
 
 # Note, replace tune.choice with grid_search if want all possible combinations
 RAY_HYPER_PARAMS = {
-    "hsizes": tune.grid_search(['[4,4,4,4]']),  # Options: '[4,4,4,4]' | '[5,5,5,5]' | '[6, 6, 6, 6]' ...etc.
+    "hsizes": tune.grid_search(['[6,6,6,6]', '[4,4,4,4]']),
+    # Options: '[4,4,4,4]' | '[5,5,5,5]' | '[6, 6, 6, 6]' ...etc.
     "fc_size": tune.grid_search(['[16]']),  # Options: '[4]' | '[16]' | '[32]' ...etc.
     "lr": tune.grid_search([2 * 1e-3]),
-    "bsize": tune.grid_search([32]),
+    "bsize": tune.grid_search([64]),
     "ltype": tune.grid_search(['MAELoss']),  # Options: 'MAELoss' | 'MSELoss' | 'MARELoss'. See 'custom_losses.py'
     "use_power": tune.grid_search(['([0.5, -0.30, 0.5], [1.0])']),  # Options: False | '([0.5,1,1], [0.5])' ...etc.
     # UV : -0.27 , G: -0.263 , IR: -0.11
     "opt_powers": tune.grid_search([False]),  # Options: False | True
-    "use_bg": tune.grid_search([False]),  # Options: False | True | 'range_corr'. Not relevant for 'signal' as source
+    "use_bg": tune.grid_search([True, 'range_corr', False]),
+    # Options: False | True | 'range_corr'. Not relevant for 'signal' as source
     "source": tune.grid_search(['lidar']),  # Options: 'lidar'| 'signal_p' | 'signal'
     'dfilter': tune.grid_search(["wavelength [355]"]),  # Options: None | '(wavelength, [lambda])' - lambda=355,532,1064
     'dnorm': tune.grid_search([False]),  # Options: False | True
     'overfit': tune.grid_search([False]),  # Apply over fit mode of pytorch lightening. Note: Change bsize to 10
     'debug': tune.choice([False]),  # Apply debug mode of pytorch lightening
-    'cbias': tune.grid_search([False, True]),  # Calc convolution biases. This may be redundant if using batch norm
-    'wdecay': tune.choise([0])  # Weight decay algorithm to test l2 regularization of NN weights.
+    'cbias': tune.grid_search([True]),  # Calc convolution biases. This may be redundant if using batch norm
+    'wdecay': tune.choice([0])  # Weight decay algorithm to test l2 regularization of NN weights.
     # Apply l2 regularization on model weights. parameter weight_decay of Adam optimiser
     # afterwards
 }
