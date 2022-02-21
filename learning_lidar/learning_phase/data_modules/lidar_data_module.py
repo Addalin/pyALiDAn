@@ -1,4 +1,5 @@
 import os
+from typing import Optional
 
 import numpy as np
 import pandas as pd
@@ -127,7 +128,8 @@ class LidarDataSet(torch.utils.data.Dataset):
 class LidarDataModule(LightningDataModule):
     def __init__(self, nn_data_folder, train_csv_path, test_csv_path, stats_csv_path,
                  powers, top_height, X_features_profiles, Y_features, batch_size, num_workers,
-                 val_length=0.2, test_length=0.2, data_filter=None, data_norm=False):
+                 val_length=0.2, test_length=0.2, data_filter=None, data_norm: bool = False,
+                 shuffle_train: bool = True):
         super().__init__()
         self.test = None
         self.val = None
@@ -152,6 +154,7 @@ class LidarDataModule(LightningDataModule):
             self.filter_values = None
         self.data_norm = data_norm
         self.stats = self.calc_stats() if self.data_norm else None  # avoid loading stats if data_norm is disabled
+        self.shffle_train = shuffle_train
 
     def calc_stats(self):
         stats_df = pd.read_csv(self.stats_csv_path)
@@ -190,7 +193,7 @@ class LidarDataModule(LightningDataModule):
         # called only on 1 GPU
         pass
 
-    def setup(self, stage=None):
+    def setup(self, stage: Optional[str] = None):
         # called on every GPU
 
         # Step 1. Set transforms to be applied on the data
@@ -221,7 +224,8 @@ class LidarDataModule(LightningDataModule):
                                      filter_values=self.filter_values)
 
     def train_dataloader(self):
-        return DataLoader(self.train, batch_size=self.batch_size, shuffle=True, num_workers=self.num_workers)
+        return DataLoader(self.train, batch_size=self.batch_size, shuffle=self.shffle_train,
+                          num_workers=self.num_workers)
 
     def val_dataloader(self):
         return DataLoader(self.val, batch_size=self.batch_size, shuffle=False, num_workers=self.num_workers)

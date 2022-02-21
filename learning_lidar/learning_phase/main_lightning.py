@@ -54,6 +54,9 @@ def main(config, checkpoint_dir=None, consts=None):
 
     # Setup the pytorch-lighting trainer and run the model
     if config['overfit']:
+        overfit_path = os.path.join(os.path.dirname(consts['train_csv_path']), 'overfit_dataset.csv')
+        lidar_dm.__setattr__('train_csv_path', overfit_path)
+        lidar_dm.__setattr__('shffle_train', False)  # Not sure this is working well
         trainer = Trainer(max_epochs=5000,
                           callbacks=callbacks,
                           gpus=[0] if consts['num_gpus'] > 0 else 0,

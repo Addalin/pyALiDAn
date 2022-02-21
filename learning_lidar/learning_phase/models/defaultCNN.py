@@ -143,8 +143,8 @@ class DefaultCNN(LightningModule):
         for c_i in range(x.size()[1]):
             self.log(f"gamma_x/channel_{c_i}", self.x_powers[c_i])
         # Log Y values for overfitt test
-        if (self.trainer.overfit_batches >= 0) & (self.current_epoch % 10 == 0):
-            for ind, (y_i, y_pred_i) in enumerate(zip(y,y_pred)):
+        if (self.trainer.overfit_batches > 0) & (self.current_epoch % 10 == 0):
+            for ind, (y_i, y_pred_i) in enumerate(zip(y, y_pred)):
                 self.log(f"overfitt/y_{ind}/orig", y_i)
                 self.log(f"overfitt/y_{ind}/pred", y_pred_i)
         return loss
