@@ -66,11 +66,16 @@ def update_params(config, consts):
 
         config.update({'power_in': str(power_in), 'power_out': str(power_out), 'use_power': True})
 
-    if config['dfilter']:
-        dfilter = config['dfilter'].split(' ')
-        dfilter[1] = eval(dfilter[1])
-    else:
+    if config['dfilter'] in ['all', None]:
         dfilter = False
+    else:
+        try:
+            dfilter = config['dfilter'].split(' ')
+            dfilter[1] = eval(dfilter[1])
+        except ValueError as e:
+            print(e)
+        finally:
+            dfilter = False
 
     return config, X_features, powers, dfilter
 
