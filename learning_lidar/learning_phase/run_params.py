@@ -53,18 +53,22 @@ def update_params(config, consts):
         X_features = (lidar_features, mol_features)
 
     # Update powers
-    powers = consts['powers']
     use_power = config['use_power']
-    if use_power and type(use_power) == str:
-        power_in, power_out = eval(use_power)
-        for xf, pow_x in zip(X_features, power_in):
-            _, profile = xf
-            powers[profile] = pow_x
+    if not use_power:
+        powers = None
+    else:
+        # If powers are given in the config dict as string, then update the power values accordingly, else use the const case
+        powers = consts['powers']
+        if type(use_power) == str:
+            power_in, power_out = eval(use_power)
+            for xf, pow_x in zip(X_features, power_in):
+                _, profile = xf
+                powers[profile] = pow_x
 
-        for yf, pow_y in zip(consts['Y_features'], power_out):
-            powers[yf] = pow_y
+            for yf, pow_y in zip(consts['Y_features'], power_out):
+                powers[yf] = pow_y
 
-        config.update({'power_in': str(power_in), 'power_out': str(power_out), 'use_power': True})
+            config.update({'power_in': str(power_in), 'power_out': str(power_out), 'use_power': True})
 
     if config['dfilter'] in ['all', None]:
         dfilter = False

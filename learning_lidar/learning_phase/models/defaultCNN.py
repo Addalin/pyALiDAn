@@ -36,7 +36,7 @@ class DefaultCNN(LightningModule):
         X_features, profiles = map(list, zip(*X_features_profiles))
         self.x_powers = [powers[profile] for profile in profiles] if powers else None
 
-        self.power_layer = PowerLayer(self.x_powers)
+        self.power_layer = PowerLayer(powers=self.x_powers, do_opt_powers=do_opt_powers) if powers else None
         self.conv_layer = nn.Sequential(
             # Conv layer 1
             nn.Conv2d(in_channels=in_channels, out_channels=hidden_sizes[0], kernel_size=(5, 3), padding=3,
@@ -140,8 +140,9 @@ class DefaultCNN(LightningModule):
         #     self.log(f"{"MARE_{feature_num}_val", loss_mare)
         rel_loss = self.rel_loss(y, y_pred)
         self.log(f"rel_loss/{self.rel_loss_type}_val", rel_loss)
-        for c_i in range(x.size()[1]):
-            self.log(f"gamma_x/channel_{c_i}", self.x_powers[c_i])
+        if self.x_powers is not None:
+            for c_i in range(x.size()[1]):
+                self.log(f"gamma_x/channel_{c_i}", self.x_powers[c_i])
         # Log Y values for overfitt test
         if (self.trainer.overfit_batches > 0) & (self.current_epoch % 10 == 0):
             for ind, (y_i, y_pred_i) in enumerate(zip(y, y_pred)):
