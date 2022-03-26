@@ -28,7 +28,9 @@ from datetime import timedelta, datetime, date, time
 
 import numpy as np
 import pandas as pd
+import pkg_resources
 
+PKG_ROOT_DIR = pkg_resources.get_distribution('learning_lidar').location
 # %% Basic physics constants
 
 eps = np.finfo(float).eps
@@ -174,7 +176,7 @@ class CHANNELS:
 
 
 class LAMBDA_nm:
-    def __init__(self, scale=1):
+    def __init__(self, scale=1.0):
         # pass
         """ Class of pollyXT lidar wavelengths, values are in micro meters
         :param scale: unit scaling to [nm]
