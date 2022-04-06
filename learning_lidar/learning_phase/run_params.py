@@ -173,7 +173,8 @@ RAY_HYPER_PARAMS = {
     'overfit': tune.grid_search([False]),  # Apply over fit mode of pytorch lightening. Note: Change bsize to 10
     'debug': tune.choice([False]),  # Apply debug mode of pytorch lightening
     'cbias': tune.grid_search([True]),  # Calc convolution biases. This may be redundant if using batch norm
-    'wdecay': tune.choice([0])  # Weight decay algorithm to test l2 regularization of NN weights.
+    'wdecay': tune.choice([0]),  # Weight decay algorithm to test l2 regularization of NN weights.
+    # 'operations': tune.grid_search(["(None, None, ['poiss','r2'])"])
     # Apply l2 regularization on model weights. parameter weight_decay of Adam optimiser
     # afterwards
 }
@@ -192,7 +193,8 @@ NON_RAY_HYPER_PARAMS = {
     'overfit': False,  # Apply over fit mode of pytorch lightening. Note: Change bsize to 10
     'debug': False,  # Apply debug mode of pytorch lightening
     'cbias': True,  # Calc convolution biases
-    'wdecay': 0  # Weight decay algorithm to test l2 regularization of NN weights.
+    'wdecay': 0,  # Weight decay algorithm to test l2 regularization of NN weights.
+    # 'operations': None
 }
 USE_RAY = True
 DEBUG_RAY = False

@@ -28,7 +28,7 @@ class DefaultCNN(LightningModule):
     def __init__(self, in_channels, output_size, hidden_sizes, fc_size, loss_type, learning_rate, X_features_profiles,
                  powers, weight_decay=0, do_opt_powers: bool = False, conv_bias: bool = True):
         super().__init__()
-        self.save_hyperparameters()
+        self.save_hyperparameters()  # TODO: IS this doing anything?
         self.lr = learning_rate
         self.weight_decay = weight_decay
         self.eps = torch.tensor(np.finfo(float).eps)

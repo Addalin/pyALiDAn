@@ -49,7 +49,7 @@ n_chan = 13
 class Station:
     def __init__(self, station_name='haifa',
                  stations_csv_path=
-                 os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))),
+                 os.path.join(PKG_ROOT_DIR,
                               'data',
                               'stations.csv')):
         """
