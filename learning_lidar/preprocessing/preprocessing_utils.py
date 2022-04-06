@@ -9,10 +9,9 @@ import numpy as np
 import pandas as pd
 import xarray as xr
 from lidar_molecular import rayleigh_scattering
-from matplotlib import dates as mdates, pyplot as plt
 from pandas.core.dtypes.common import is_numeric_dtype
 
-from learning_lidar.utils import misc_lidar, vis_utils, xr_utils, global_settings as gs
+from learning_lidar.utils import misc_lidar, xr_utils, global_settings as gs
 from learning_lidar.utils.utils import write_row_to_csv
 
 
@@ -259,81 +258,6 @@ def convert_daily_gdas(station, day_date):
             converted_paths.append(converted)
 
     return converted_paths
-
-
-def visualize_ds_profile_chan(dataset, lambda_nm=532, profile_type='range_corr', USE_RANGE=None,
-                              SAVE_FIG=False, dst_folder=os.path.join('../../..', 'Figures'), format_fig='png',
-                              dpi=1000):
-    logger = logging.getLogger()
-    date_datetime = xr_utils.get_daily_ds_date(dataset)
-    sub_ds = dataset.sel(Wavelength=lambda_nm).get(profile_type)
-
-    # Currently only a dataset with range_corrected variable, has min/max plot_range values
-    USE_RANGE = None if (profile_type != 'range_corr') else USE_RANGE
-    if USE_RANGE == 'MID':
-        [maxv, minv] = [
-            dataset.sel(Wavelength=lambda_nm, drop=True).get('plot_max_range').values.tolist(),
-            dataset.sel(Wavelength=lambda_nm, drop=True).get('plot_min_range').values.tolist()]
-    elif USE_RANGE == 'LOW':
-        try:
-            maxv = dataset.sel(Wavelength=lambda_nm, drop=True).get('plot_min_range').values.tolist()
-        except:
-            logger.debug("\nThe dataset doesn't 'contain plot_min_range', setting maxv=0")
-            maxv = 0
-        minv = np.nanmin(sub_ds.values)
-    elif USE_RANGE == 'HIGH':
-        try:
-            minv = dataset.sel(Wavelength=lambda_nm, drop=True).get('plot_max_range').values.tolist()
-        except:
-            logger.debug("\nThe dataset doesn't 'contain plot_min_range', setting maxv=0")
-            minv = np.nanmin(sub_ds.values)
-        maxv = np.nanmax(sub_ds.values)
-    elif USE_RANGE is None:
-        [maxv, minv] = [np.nanmax(sub_ds.values), np.nanmin(sub_ds.values)]
-
-    dims = sub_ds.dims
-    if 'Time' not in dims:
-        logger.error(f"\nThe dataset should have a 'Time' dimension.")
-        return None
-    if 'Height' in dims:  # plot x- time, y- height
-        g = sub_ds.where(sub_ds < maxv).where(sub_ds > minv).plot(x='Time', y='Height', cmap='turbo',
-                                                                  figsize=(10, 6))  # ,robust=True)
-    elif len(dims) == 2:  # plot x- time, y- other dimension
-        g = sub_ds.where(sub_ds < maxv).where(sub_ds > minv).plot(x='Time', cmap='turbo',
-                                                                  figsize=(10, 6))
-    elif len(dims) == 1:  # plot x- time, y - values in profile type
-        g = sub_ds.plot(x='Time', figsize=(10, 6))[0]
-
-    # Set time on x-axis
-    g.axes.xaxis.set_major_formatter(vis_utils.TIMEFORMAT)
-    g.axes.xaxis_date()
-    g.axes.get_xaxis().set_major_locator(mdates.HourLocator(interval=4))
-    plt.setp(g.axes.get_xticklabels(), rotation=0, horizontalalignment='center')
-
-    # Set title description
-    date_str = date_datetime.strftime('%d/%m/%Y')
-    stitle = f"{sub_ds.attrs['info']} - {lambda_nm}nm \n {dataset.attrs['location']} {date_str}"
-    plt.title(stitle, y=1.05)
-    plt.tight_layout()
-    plt.show()
-
-    if SAVE_FIG:
-
-        fname = f"{date_datetime.strftime('%Y-%m-%d')}_{dataset.attrs['location']}_{profile_type}_" \
-                f"{lambda_nm}_source_{dataset.attrs['source_type']}" \
-                f"_plot_range_{str(USE_RANGE).lower()}.{format_fig}"
-
-        if not os.path.exists(dst_folder):
-            try:
-                os.makedirs(dst_folder, exist_ok=True)
-                logger.debug(f"\nCreating folder: {dst_folder}")
-            except Exception:
-                raise OSError(f"\nFailed to create folder: {dst_folder}")
-
-        fpath = os.path.join(dst_folder, fname)
-        g.figure.savefig(fpath, bbox_inches='tight', format=format_fig, dpi=dpi)
-
-    return g
 
 
 def get_TROPOS_dataset_file_name(start_time=None, end_time=None, file_type='profiles'):
@@ -678,7 +602,9 @@ def gen_daily_molecular_ds(day_date):
                                       optim_size=optim_size, USE_KM_UNITS=USE_KM_UNITS)
 
     # save molecular dataset
-    ncpaths = xr_utils.save_prep_dataset(station, mol_ds, data_source='molecular', save_mode=save_mode, profiles=['attbsc'])
+    ncpaths = xr_utils.save_prep_dataset(station, mol_ds,
+                                         data_source='molecular', save_mode=save_mode,
+                                         profiles=['attbsc'])
     logger.debug(f"\nDone saving molecular datasets for {day_date.strftime('%Y-%m-%d')}, to: {ncpaths}")
 
 
@@ -811,8 +737,8 @@ def get_raw_lidar_signal(station: gs.Station, day_date: datetime, height_slice: 
     return ds
 
 
-def get_daily_raw_measurements(station: gs.Station, day_date: Union[datetime.date, datetime], use_km_units: bool = True) \
-        -> xr.Dataset:
+def get_daily_raw_measurements(station: gs.Station, day_date: Union[datetime.date, datetime],
+                               use_km_units: bool = True) -> xr.Dataset:
     """
     Retrieving daily range corrected lidar signal (pr^2), background and raw lidar signal
      from attenuated_backscatter signals in three channels (355,532,1064).
@@ -833,7 +759,7 @@ def get_daily_raw_measurements(station: gs.Station, day_date: Union[datetime.dat
                   'units': r'$\rm$' + r'$photons$',
                   'location': station.location, }
 
-    # TODO: the Hight index is wrong. pn_ds Height should start at 0.3 km not 2.3...
+    # TODO: the Height index is wrong. pn_ds Height should start at 0.3 km not 2.3...
     pn_ds = get_raw_lidar_signal(station=station,
                                  day_date=day_date,
                                  height_slice=slice(station.pt_bin, station.pt_bin + station.n_bins),
