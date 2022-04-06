@@ -152,15 +152,16 @@ RAY_HYPER_PARAMS = {
     "use_power": tune.grid_search(['([0.5, -0.30, 0.5], [1.0])']),  # Options: False | '([0.5,1,1], [0.5])' ...etc.
     # UV : -0.27 , G: -0.263 , IR: -0.11
     "opt_powers": tune.grid_search([False]),  # Options: False | True
-    "use_bg": tune.grid_search([False, True, 'range_corr']),
+    "use_bg": tune.grid_search([True, 'range_corr', False]),
     # Options: False | True | 'range_corr'. Not relevant for 'signal' as source
     "source": tune.grid_search(['lidar']),  # Options: 'lidar'| 'signal_p' | 'signal'
     'dfilter': tune.grid_search(["wavelength [355]"]),  # Options: None | '(wavelength, [lambda])' - lambda=355,532,1064
     'dnorm': tune.grid_search([False]),  # Options: False | True
-    'overfit': tune.grid_search([True]),  # Apply over fit mode of pytorch lightening. Note: Change bsize to 10
+    'overfit': tune.grid_search([False]),  # Apply over fit mode of pytorch lightening. Note: Change bsize to 10
     'debug': tune.choice([False]),  # Apply debug mode of pytorch lightening
     'cbias': tune.grid_search([True]),  # Calc convolution biases. This may be redundant if using batch norm
-    'wdecay': tune.choice([0])  # Weight decay algorithm to test l2 regularization of NN weights.
+    'wdecay': tune.choice([0]),  # Weight decay algorithm to test l2 regularization of NN weights.
+    'operations': tune.grid_search(["(None, None, ['poiss','r2'])"])
     # Apply l2 regularization on model weights. parameter weight_decay of Adam optimiser
     # afterwards
 }
@@ -179,7 +180,8 @@ NON_RAY_HYPER_PARAMS = {
     'overfit': False,  # Apply over fit mode of pytorch lightening. Note: Change bsize to 10
     'debug': False,  # Apply debug mode of pytorch lightening
     'cbias': True,  # Calc convolution biases
-    'wdecay': 0  # Weight decay algorithm to test l2 regularization of NN weights.
+    'wdecay': 0,  # Weight decay algorithm to test l2 regularization of NN weights.
+    'operations': None
 }
 USE_RAY = True
-DEBUG_RAY = False
+DEBUG_RAY = True

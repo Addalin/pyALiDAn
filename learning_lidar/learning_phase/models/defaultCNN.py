@@ -28,7 +28,7 @@ class DefaultCNN(LightningModule):
     def __init__(self, in_channels, output_size, hidden_sizes, fc_size, loss_type, learning_rate, X_features_profiles,
                  powers, weight_decay=0, do_opt_powers: bool = False, conv_bias: bool = True):
         super().__init__()
-        self.save_hyperparameters()
+        self.save_hyperparameters()  # TODO: IS this doing anything?
         self.lr = learning_rate
         self.weight_decay = weight_decay
         self.eps = torch.tensor(np.finfo(float).eps)
@@ -36,7 +36,7 @@ class DefaultCNN(LightningModule):
         X_features, profiles = map(list, zip(*X_features_profiles))
         self.x_powers = [powers[profile] for profile in profiles] if powers else None
 
-        self.power_layer = PowerLayer(self.x_powers)
+        self.power_layer = PowerLayer(powers=self.x_powers, do_opt_powers=do_opt_powers)
         self.conv_layer = nn.Sequential(
             # Conv layer 1
             nn.Conv2d(in_channels=in_channels, out_channels=hidden_sizes[0], kernel_size=(5, 3), padding=3,

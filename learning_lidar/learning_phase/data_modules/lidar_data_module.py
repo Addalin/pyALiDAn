@@ -206,7 +206,7 @@ class LidarDataModule(LightningDataModule):
 
         transforms = torchvision.transforms.Compose(transforms_list)
 
-        # Step 2. Load Dataset
+        # Step 2. Load and split Datasets
         if stage == 'fit' or stage is None:
             trainable_dataset = LidarDataSet(dataset_csv_file=self.train_csv_path, data_folder=self.nn_data_folder,
                                              transforms=transforms, top_height=self.top_height,
