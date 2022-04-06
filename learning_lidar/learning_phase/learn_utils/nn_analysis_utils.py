@@ -1,6 +1,6 @@
 import glob
 import os
-
+import sys
 import matplotlib as mpl
 import matplotlib.pyplot as plt
 import numpy as np
@@ -65,11 +65,13 @@ def plot_pivot_table(pivot_table, figsize, title, ylim=None):
 
 
 def generate_results_table(results_folder: str = os.path.join(gs.PKG_ROOT_DIR, 'results'),
-                           experiments_table_fname: str = 'runs_board.xlsx'):
+                           experiments_table_fname: str = 'runs_board.xlsx',
+                           dst_fname='total_results.csv'):
     """
-    # TODO: add usage
+    # TODO add usage
     :param results_folder:
     :param experiments_table_fname:
+    :param dst_fname:
     :return:
     """
     table_fname = os.path.join(results_folder, experiments_table_fname)
@@ -127,10 +129,15 @@ def generate_results_table(results_folder: str = os.path.join(gs.PKG_ROOT_DIR, '
             results_df.drop(columns=drop_cols, inplace=True)
 
             # reorganize columns:
+            if 'opt_powers' not in results_df.keys():
+                results_df['opt_powers'] = False
+
             new_order = ['trial_id', 'date', 'time_total_s', 'training_iteration',
                          'loss', 'MARELoss',
                          'bsize', 'dfilter', 'dnorm', 'fc_size', 'hsizes', 'lr',
-                         'ltype', 'source', 'use_bg', 'use_power', 'powers', 'db', 'overlap', 'logdir']  # 'note'
+                         'ltype', 'source', 'use_bg',
+                         'use_power','opt_powers', 'powers',
+                         'db', 'overlap', 'logdir']  # 'note'
             results_df = results_df.reindex(columns=new_order)
 
             # Remove irrelevant trials (e.g. when dnorm had wrong calculation)
@@ -173,7 +180,8 @@ def generate_results_table(results_folder: str = os.path.join(gs.PKG_ROOT_DIR, '
     # inds = total_results.dfilter[filtered].index
     for ind, f in enumerate(filtered):
         if f:
-            [filter_by, filter_values] = eval(total_results.dfilter.iloc[ind])
+            [filter_by, filter_values] = total_results.dfilter.iloc[ind].split(' ')
+            filter_values = eval(filter_values)
             if filter_by == 'wavelength':
                 wavelength = tuple(filter_values) if len(filter_values) > 1 else filter_values[0]
             else:
@@ -209,8 +217,9 @@ def generate_results_table(results_folder: str = os.path.join(gs.PKG_ROOT_DIR, '
 
     # save
     # TODO: save runs_df with results_csv paths
-    current_res_fname = os.path.join(results_folder, 'curr_total_results.csv')
+    current_res_fname = os.path.join(results_folder, dst_fname)
     total_results.to_csv(current_res_fname)
+    print('Saving total results to: ', current_res_fname)
 
     return total_results
 
@@ -218,4 +227,6 @@ def generate_results_table(results_folder: str = os.path.join(gs.PKG_ROOT_DIR, '
 if __name__ == '__main__':
     results_folder = os.path.join(gs.PKG_ROOT_DIR, 'results')
     experiments_table_fname = 'runs_board.xlsx'
-    generate_results_table(results_folder, experiments_table_fname)
+    dst_fname = 'total_results.csv'
+    dst_fname = 'remote_' + dst_fname  if (sys.platform in ['linux', 'ubuntu']) else dst_fname
+    generate_results_table(results_folder, experiments_table_fname, dst_fname=dst_fname)

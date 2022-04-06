@@ -10,7 +10,7 @@ from learning_lidar.utils import global_settings as gs
 
 NUM_AVILABLE_CPU = os.cpu_count()
 NUM_AVAILABLE_GPU = torch.cuda.device_count()
-START_DATE = datetime(2017, 4, 1)
+START_DATE = datetime(2017, 9, 1)
 END_DATE = datetime(2017, 10, 31)
 station_name = 'haifa'
 station_name = station_name + '_remote' if (sys.platform in ['linux', 'ubuntu']) else station_name
@@ -132,7 +132,7 @@ else:
 CONSTS = {
     'max_epochs': 20,
     'max_steps': None,
-    'num_workers': int(NUM_AVILABLE_CPU * 0.8),
+    'num_workers': int(NUM_AVILABLE_CPU * 0.9),
     'train_csv_path': train_csv_path,
     'test_csv_path': test_csv_path,
     'stats_csv_path': stats_csv_path,
@@ -147,21 +147,30 @@ CONSTS = {
 
 # Note, replace tune.choice with grid_search if want all possible combinations
 RAY_HYPER_PARAMS = {
-    "hsizes": tune.grid_search(['[4,4,4,4]']),
+    "hsizes": tune.grid_search(['[4,4,4,4]', '[5,5,5,5]', '[6, 6, 6, 6]']),
     # Options: '[4,4,4,4]' | '[5,5,5,5]' | '[6, 6, 6, 6]' ...etc.
     "fc_size": tune.grid_search(['[16]', '[32]']),  # Options: '[4]' | '[16]' | '[32]' ...etc.
     "lr": tune.grid_search([2 * 1e-3]),
-    "bsize": tune.grid_search([10]),
+    "bsize": tune.grid_search([32]),
     "ltype": tune.grid_search(['MAELoss']),  # Options: 'MAELoss' | 'MSELoss' | 'MARELoss'. See 'custom_losses.py'
-    "use_power": tune.grid_search(['([0.5, -0.30, 0.5], [1.0])']),  # Options: False | '([0.5,1,1], [0.5])' ...etc.
-    # UV : -0.27 , G: -0.263 , IR: -0.11
-    "opt_powers": tune.grid_search([False]),  # Options: False | True
-    "use_bg": tune.grid_search([False, True, 'range_corr']),
+    # "use_power": tune.grid_search(['([0.5,-0.1,0.5],[1])', '([0.5,-0.1,1],[1])']),# '([0.5,-0.3,1],[1])']),
+    "use_power": tune.grid_search(['([0.5,1,0.5],[1])', '([0.5,1,1],[1])',
+                                   '([0.5,0.5,0.5],[1])', '([0.5,0.5,1],[1])',
+                                   '([0.5,.25,1],[1])', '([0.5,.25,.5],[1])',
+                                   '([0.5,-.25,1],[1])', '([0.5,-.25,.5],[1])',
+                                   '([0.5,-0.1,0.5],[1])', '([0.5,-0.1,1],[1])',
+                                   '([0.5,-0.3,0.5],[1])', '([0.5,-0.3,1],[1])',
+                                   '([0.5,-.5,.5],[1])', '([0.5,-.5,1],[1])']),
+    # Options: False | '([0.5,1,1], [0.5])' ...etc. UV  : -0.27 , G: -0.263 , IR: -0.11
+    "opt_powers": tune.choice([False]),  # Options: False | True
+    "use_bg": tune.grid_search([True, 'range_corr']),  # False | True |  'range_corr'
     # Options: False | True | 'range_corr'. Not relevant for 'signal' as source
     "source": tune.grid_search(['lidar']),  # Options: 'lidar'| 'signal_p' | 'signal'
-    'dfilter': tune.grid_search(["wavelength [355]"]),  # Options: None | '(wavelength, [lambda])' - lambda=355,532,1064
+    'dfilter': tune.grid_search(["wavelength [532]", "wavelength [1064]"]),
+    # None,"wavelength [355]", "wavelength [532]","wavelength [1064]"]),  # Options: None | '(wavelength, [lambda])'
+    # - lambda=355,532,1064
     'dnorm': tune.grid_search([False]),  # Options: False | True
-    'overfit': tune.grid_search([True]),  # Apply over fit mode of pytorch lightening. Note: Change bsize to 10
+    'overfit': tune.grid_search([False]),  # Apply over fit mode of pytorch lightening. Note: Change bsize to 10
     'debug': tune.choice([False]),  # Apply debug mode of pytorch lightening
     'cbias': tune.grid_search([True]),  # Calc convolution biases. This may be redundant if using batch norm
     'wdecay': tune.choice([0])  # Weight decay algorithm to test l2 regularization of NN weights.
