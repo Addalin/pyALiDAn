@@ -247,14 +247,14 @@ def calc_lidar_signal(station: gs.Station, day_date: datetime.date, total_ds: xr
     pr2_da = calc_range_corr_signal_da(station, day_date, attbsc_da, lc_da)  # pr2 = LC * attbsc
     r2_da = prep_utils.calc_r2_da(station, day_date)  # r^2
     p_da = calc_lidar_signal_da(station, day_date, r2_da, pr2_da)  # p = pr2 / r^2
-    pn_da = calc_poiss_measurement(station, day_date, p_da)  # lidar measurement: pn ~Poiss(p), w.o background
-    pr2n_da = calc_range_corr_measurement(station, day_date, pn_da,
-                                          r2_da)  # range corrected measurement: pr2n = pn * r^2
-    pr2n_da.attrs['info'] += ' - w.o. background'
+    p_poiss_da = calc_poiss_measurement(station, day_date, p_da)  # lidar measurement: pn ~Poiss(p), w.o background
+    pr2_poiss_da = calc_range_corr_measurement(station, day_date, p_poiss_da,
+                                               r2_da)  # range corrected measurement: pr2n = pn * r^2
+    pr2_poiss_da.attrs['info'] += ' - w.o. background'
 
     signal_ds = xr.Dataset().assign(attbsc=attbsc_da, LC=lc_da,
-                                    range_corr=pr2_da, range_corr_p=pr2n_da,
-                                    p=p_da, r2=r2_da)
+                                    range_corr=pr2_da, range_corr_p=pr2_poiss_da,
+                                    p=p_da, p_poiss=p_poiss_da, r2=r2_da)
     signal_ds['date'] = day_date
     signal_ds.attrs = {'location': station.location,
                        'info': 'Daily generated lidar signals.',

@@ -1,3 +1,6 @@
+import os
+from typing import Optional
+
 import numpy as np
 import pandas as pd
 import torch
@@ -6,7 +9,7 @@ from pytorch_lightning import LightningDataModule
 from torch.utils.data import DataLoader, random_split
 
 import learning_lidar.utils.xr_utils as xr_utils
-from learning_lidar.learning_phase.utils_.custom_operations import PowTransform, SampleXR2Tensor
+from learning_lidar.learning_phase.learn_utils.custom_operations import XR2Tensor, ApplyPoisson
 
 
 class LidarDataSet(torch.utils.data.Dataset):
@@ -14,13 +17,11 @@ class LidarDataSet(torch.utils.data.Dataset):
     TODO: add usage
     """
 
-    def __init__(self, dataset_csv_file, transform, torch_transforms, top_height,
+    def __init__(self, dataset_csv_file, data_folder, transforms, top_height,
                  X_features, profiles, Y_features, filter_by, filter_values):
         """
 
         :param dataset_csv_file: string, Path to the csv file of the database
-        :param transform:
-        :param transform:
         :param top_height: np.float(). The Height[km] **above** ground (Lidar) level - up to which slice the samples.
         Note: default is 15.3 [km]. IF ONE CHANGES IT - THAN THIS WILL AFFECT THE INPUT DIMENSIONS AND STATISTICS !!!
         :param X_features:
@@ -32,6 +33,7 @@ class LidarDataSet(torch.utils.data.Dataset):
         """
 
         self.data = pd.read_csv(dataset_csv_file)
+        self.data_folder = data_folder
         self.key = list(self.data.keys())
         if filter_by:
             if filter_by not in self.key:
@@ -43,8 +45,7 @@ class LidarDataSet(torch.utils.data.Dataset):
         self.profiles = profiles
         self.Y_features = Y_features
         self.top_height = top_height
-        self.transform = transform
-        self.torch_transforms = torch_transforms
+        self.transforms = transforms
 
     def __len__(self):
         return len(self.data)
@@ -54,14 +55,12 @@ class LidarDataSet(torch.utils.data.Dataset):
         X = self.load_X(idx)
         Y = self.load_Y(idx)
         wavelength = self.get_key_val(idx, 'wavelength').astype(np.int32)
-
-        sample = {'x': X, 'y': Y}
-        if self.transform:
-            sample = self.transform(sample)
-            if self.torch_transforms:
-                sample['x'] = self.torch_transforms(sample['x'])
+        if self.transforms:
+            X = self.transforms(X)
+            # convert Y from pd.Series to np.array, and then to torch.tensor
+            Y = torch.from_numpy(np.array(Y).astype(np.float32))
             wavelength = torch.from_numpy(np.asarray(wavelength))
-        sample['wavelength'] = wavelength
+        sample = {'x': X, 'y': Y, 'wavelength': wavelength}
         return sample
 
     def get_splits(self, n_test=0.2, n_val=0.2):
@@ -88,7 +87,8 @@ class LidarDataSet(torch.utils.data.Dataset):
 
         # Load X datasets
         X_paths = row[self.X_features]
-        datasets = [xr_utils.load_dataset(path) for path in X_paths]
+
+        datasets = [xr_utils.load_dataset(os.path.join(self.data_folder, path)) for path in X_paths]
 
         # Calc sample height and time slices
         hslices = [
@@ -126,10 +126,15 @@ class LidarDataSet(torch.utils.data.Dataset):
 
 
 class LidarDataModule(LightningDataModule):
-    def __init__(self, train_csv_path, test_csv_path, stats_csv_path,
+    def __init__(self, nn_data_folder, train_csv_path, test_csv_path, stats_csv_path,
                  powers, top_height, X_features_profiles, Y_features, batch_size, num_workers,
-                 val_length=0.2, test_length=0.2, data_filter=None, data_norm=False):
+                 val_length=0.2, test_length=0.2, data_filter=None, data_norm: bool = False,
+                 shuffle_train: bool = True):
         super().__init__()
+        self.test = None
+        self.val = None
+        self.train = None
+        self.nn_data_folder = nn_data_folder
         self.train_csv_path = train_csv_path
         self.test_csv_path = test_csv_path
         self.stats_csv_path = stats_csv_path
@@ -148,7 +153,8 @@ class LidarDataModule(LightningDataModule):
             self.filter_by = None
             self.filter_values = None
         self.data_norm = data_norm
-        self.stats = self.calc_stats()
+        self.stats = self.calc_stats() if self.data_norm else None  # avoid loading stats if data_norm is disabled
+        self.shffle_train = shuffle_train
 
     def calc_stats(self):
         stats_df = pd.read_csv(self.stats_csv_path)
@@ -187,37 +193,39 @@ class LidarDataModule(LightningDataModule):
         # called only on 1 GPU
         pass
 
-    def setup(self, stage=None):
+    def setup(self, stage: Optional[str] = None):
         # called on every GPU
 
-        # Step 1. Load Dataset
-        # TODO: add option - y = {bin(r0),bin(r1)}
-        #transformations_list = [SampleXR2Tensor(), PowTransform(self.Y_features, self.profiles, self.powers)] \
-        #    if self.powers else [SampleXR2Tensor()]
-        transformations_list = [SampleXR2Tensor()]
-        lidar_transforms = torchvision.transforms.Compose(transformations_list)
-        torch_transforms = torchvision.transforms.Normalize(mean=tuple(self.stats['x']['mean']),
-                                                            std=tuple(self.stats['x']['std'])) \
-            if self.data_norm else None
+        # Step 1. Set transforms to be applied on the data
+        transforms_list = [XR2Tensor()]
+        if 'p_bg_poiss' in self.profiles:
+            transforms_list.append(ApplyPoisson(channel=2))
+        if self.data_norm:
+            transforms_list.append(torchvision.transforms.Normalize(mean=tuple(self.stats['x']['mean']),
+                                                                    std=tuple(self.stats['x']['std'])))
 
+        transforms = torchvision.transforms.Compose(transforms_list)
+
+        # Step 2. Load and split Datasets
         if stage == 'fit' or stage is None:
-            trainable_dataset = LidarDataSet(dataset_csv_file=self.train_csv_path,
-                                             transform=lidar_transforms, torch_transforms=torch_transforms,
-                                             top_height=self.top_height, X_features=self.X_features,
-                                             profiles=self.profiles, Y_features=self.Y_features,
-                                             filter_by=self.filter_by, filter_values=self.filter_values)
+            trainable_dataset = LidarDataSet(dataset_csv_file=self.train_csv_path, data_folder=self.nn_data_folder,
+                                             transforms=transforms, top_height=self.top_height,
+                                             X_features=self.X_features, profiles=self.profiles,
+                                             Y_features=self.Y_features, filter_by=self.filter_by,
+                                             filter_values=self.filter_values)
 
-            self.train, self.val = trainable_dataset.get_splits(n_val=self.val_length, n_test=0)
+            self.train, self.val = trainable_dataset.get_splits(n_val=self.val_length,
+                                                                n_test=0)  # from train csv taking n_val as validation set.
 
         if stage == 'test' or stage is None:
-            self.test = LidarDataSet(dataset_csv_file=self.test_csv_path,
-                                     transform=lidar_transforms, torch_transforms=torch_transforms,
-                                     top_height=self.top_height, X_features=self.X_features, profiles=self.profiles,
-                                     Y_features=self.Y_features, filter_by=self.filter_by,
+            self.test = LidarDataSet(dataset_csv_file=self.test_csv_path, data_folder=self.nn_data_folder,
+                                     transforms=transforms, top_height=self.top_height, X_features=self.X_features,
+                                     profiles=self.profiles, Y_features=self.Y_features, filter_by=self.filter_by,
                                      filter_values=self.filter_values)
 
     def train_dataloader(self):
-        return DataLoader(self.train, batch_size=self.batch_size, shuffle=True, num_workers=self.num_workers)
+        return DataLoader(self.train, batch_size=self.batch_size, shuffle=self.shffle_train,
+                          num_workers=self.num_workers)
 
     def val_dataloader(self):
         return DataLoader(self.val, batch_size=self.batch_size, shuffle=False, num_workers=self.num_workers)

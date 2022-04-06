@@ -4,57 +4,67 @@ from pytorch_lightning.core.lightning import LightningModule
 from torch import nn
 from torch.optim import Adam
 
-from learning_lidar.learning_phase.utils_.custom_losses import MARELoss
+from learning_lidar.learning_phase.learn_utils.custom_losses import MARELoss
 
 
-class Gamma(LightningModule):
-    def __init__(self, in_channels, X_features_profiles, powers):
-        super().__init__()
-        X_features, profiles = map(list, zip(*X_features_profiles))
-        self.x_powers = nn.Parameter(torch.tensor([powers[profile] for profile in profiles])) if powers else None
-        self.eps = torch.tensor(np.finfo(float).eps)
-        self.gamma = nn.Parameter(torch.tensor(powers))
+class PowerLayer(nn.Module):
+    def __init__(self, powers=[1, 1], do_opt_powers: bool = False):
+        super(PowerLayer, self).__init__()
+        self.powers = nn.Parameter(torch.tensor(powers))
+        self.train_powers(do_opt_powers)
 
+    def train_powers(self, do_opt_powers: bool = False):
+        self.powers.requires_grad = do_opt_powers
+        self.powers.retain_grad = do_opt_powers
 
-    def forward(self, input):
-        return input.sign() * (input.abs() + self.eps) ** self.gamma
+    def forward(self, x):
+        for c_i, p_i in enumerate(self.powers):
+            x[:, c_i, :, :] = torch.pow(x[:, c_i, :, :], p_i)
+        return x
+
 
 class DefaultCNN(LightningModule):
 
     def __init__(self, in_channels, output_size, hidden_sizes, fc_size, loss_type, learning_rate, X_features_profiles,
-                 powers):
+                 powers, weight_decay=0, do_opt_powers: bool = False, conv_bias: bool = True):
         super().__init__()
-        self.save_hyperparameters()
+        self.save_hyperparameters()  # TODO: IS this doing anything?
         self.lr = learning_rate
-        X_features, profiles = map(list, zip(*X_features_profiles))
-        self.x_powers = nn.Parameter(torch.tensor([powers[profile] for profile in profiles])) if powers else None
-        # self.x_powers = [powers[profile] for profile in profiles] if powers else None
+        self.weight_decay = weight_decay
         self.eps = torch.tensor(np.finfo(float).eps)
+        self.cov_bias = conv_bias
+        X_features, profiles = map(list, zip(*X_features_profiles))
+        self.x_powers = [powers[profile] for profile in profiles] if powers else None
 
+        self.power_layer = PowerLayer(powers=self.x_powers, do_opt_powers=do_opt_powers) if powers else None
         self.conv_layer = nn.Sequential(
             # Conv layer 1
-            nn.Conv2d(in_channels=in_channels, out_channels=hidden_sizes[0], kernel_size=(5, 3), padding=3),
+            nn.Conv2d(in_channels=in_channels, out_channels=hidden_sizes[0], kernel_size=(5, 3), padding=3,
+                      bias=self.cov_bias),
             nn.BatchNorm2d(hidden_sizes[0]),
             nn.ReLU(inplace=True),
             nn.Dropout2d(p=0.15),
             nn.MaxPool2d(kernel_size=(4, 2), stride=(4, 2)),
 
             # Conv layer 2
-            nn.Conv2d(in_channels=hidden_sizes[0], out_channels=hidden_sizes[1], kernel_size=3, padding=1),
+            nn.Conv2d(in_channels=hidden_sizes[0], out_channels=hidden_sizes[1], kernel_size=3, padding=1,
+                      bias=self.cov_bias),
             nn.BatchNorm2d(hidden_sizes[1]),
             nn.ReLU(inplace=True),
             nn.Dropout2d(p=0.15),
             nn.MaxPool2d(kernel_size=(4, 2), stride=(4, 2)),
 
             # Conv layer 3
-            nn.Conv2d(in_channels=hidden_sizes[1], out_channels=hidden_sizes[2], kernel_size=3, padding=1),
+            nn.Conv2d(in_channels=hidden_sizes[1], out_channels=hidden_sizes[2], kernel_size=3, padding=1,
+                      bias=self.cov_bias),
             nn.BatchNorm2d(hidden_sizes[2]),
             nn.ReLU(inplace=True),
             nn.Dropout2d(p=0.15),
             nn.MaxPool2d(kernel_size=(4, 2), stride=(4, 2)),
 
             # Conv layer 4
-            nn.Conv2d(in_channels=hidden_sizes[2], out_channels=hidden_sizes[3], kernel_size=3, padding=1),
+            nn.Conv2d(in_channels=hidden_sizes[2], out_channels=hidden_sizes[3], kernel_size=3, padding=1,
+                      bias=self.cov_bias),
             nn.BatchNorm2d(hidden_sizes[3]),
             nn.ReLU(inplace=True),
             nn.Dropout2d(p=0.15),
@@ -84,6 +94,8 @@ class DefaultCNN(LightningModule):
             self.criterion = nn.L1Loss()
         elif loss_type == 'MARELoss':
             self.criterion = MARELoss()
+        elif loss_type == 'MAESmooth':
+            self.criterion = nn.SmoothL1Loss()
 
         # Step 4. Instantiate Relative Loss - for accuracy
         self.rel_loss_type = 'MARELoss'
@@ -92,9 +104,8 @@ class DefaultCNN(LightningModule):
     def forward(self, x):
         batch_size, channels, width, height = x.size()
         x = x.float()
-        if not (self.x_powers is None):
-            for c_i in range(channels):
-                x[:, c_i, :, :] = (x[:, c_i, :, :] + self.eps) ** self.x_powers[c_i]
+        if self.x_powers is not None:
+            x = self.power_layer(x)
 
         # conv layers
         x = self.conv_layer(x)
@@ -129,9 +140,15 @@ class DefaultCNN(LightningModule):
         #     self.log(f"{"MARE_{feature_num}_val", loss_mare)
         rel_loss = self.rel_loss(y, y_pred)
         self.log(f"rel_loss/{self.rel_loss_type}_val", rel_loss)
-        for c_i in range(x.size()[1]):
-            self.log(f"gamma_x/channel_{c_i}", self.x_powers[c_i])
+        if self.x_powers is not None:
+            for c_i in range(x.size()[1]):
+                self.log(f"gamma_x/channel_{c_i}", self.x_powers[c_i])
+        # Log Y values for overfitt test
+        if (self.trainer.overfit_batches > 0) & (self.current_epoch % 10 == 0):
+            for ind, (y_i, y_pred_i) in enumerate(zip(y, y_pred)):
+                self.log(f"overfitt/y_{ind}/orig", y_i)
+                self.log(f"overfitt/y_{ind}/pred", y_pred_i)
         return loss
 
     def configure_optimizers(self):
-        return Adam(self.parameters(), lr=self.lr)
+        return Adam(self.parameters(), lr=self.lr, weight_decay=self.weight_decay)

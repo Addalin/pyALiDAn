@@ -2,6 +2,7 @@ import datetime
 import glob
 import logging
 import os
+import sys
 from pathlib import Path
 from typing import Optional
 
@@ -76,7 +77,12 @@ def load_dataset(ncpath: str) -> xr.Dataset:
     :return: xarray.Dataset, if fails return none
     """
     logger = logging.getLogger()
+
     try:
+        if sys.platform in ["linux", "ubuntu"]:
+            ncpath = ncpath.replace('\\', '/').replace("//", "/")
+        elif sys.platform.__contains__("win"):
+            ncpath = ncpath.replace('/', '\\')
         dataset = xr.load_dataset(ncpath, engine='netcdf4').expand_dims()
         dataset.close()
         logger.debug(f"\nLoading dataset file: {ncpath}")

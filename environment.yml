@@ -1,12 +1,12 @@
-name: lidar
+name: lidar_local_new
 channels:
-  - pytorch
   - defaults
   - conda-forge
+  - pytorch
   - pro
 dependencies:
   - netcdf4
-  - xarray=0.19
+  - xarray #=0.19
   - tensorboard
   - pip
   - sphinx
@@ -14,27 +14,47 @@ dependencies:
   - pyyaml
   - torchvision
   - seaborn
-  - ray-tune=1.4
+  #- ray-tune #=1.4
   - opencv
   - astral
-  - numpy=1.20
+  - numpy #=1.20
   - pandas
   - tqdm
   - openpyxl
   - matplotlib
-  - pytorch=1.7
+  - pytorch  # =1.7
   - astropy
-  - pytorch-lightning=1.4
+  #- pytorch-lightning #=1.4
   - jupyter
   - jupyterlab
   - scikit-learn
   - scipy
+  - nb_conda_kernels
   - nb_conda
   - nc-time-axis
-  - python=3.7
+  - python =3.9
   - sqlite
+  - python-graphviz
+  #- tensorflow
   - pip:
+      - ray[tune]
+      - ray[default]
+      - pytorch-lightning
       - pytictoc
       - git+https://github.com/scaperex/ARLreader.git
       - git+https://gitlab.com/ioannis_binietoglou/lidar_molecular.git
+      - nvitop
+      - torchviz # requires installation of Graphviz `winget install graphviz` see: https://graphviz.org/download/
+
+# conda activate base
+# sudo bash cuda-11.3.sh
+# bash anaconda-tensorflow.sh
+# conda install pytorch torchvision torchaudio cudatoolkit=11.3  -c pytorch
+# conda config --add channels conda-forge
+# conda create --name lidar_remote
+# conda activate lidar_remote
+# conda install netcdf4 xarray tensorboard pip sphinx multiprocess pyyaml torchvision seaborn opencv astral numpy pandas tqdm openpyxl matplotlib pytorch astropy jupyter jupyterlab scikit-learn scipy nb_conda_kernels nb_conda nc-time-axis sqlite
+# pip install "ray[tune]" "ray[default]" pytorch-lightning pytictoc nvitop git+https://github.com/scaperex/ARLreader.git git+https://gitlab.com/ioannis_binietoglou/lidar_molecular.git
+#
+# netcdf4 xarray tensorboard pip sphinx multiprocess pyyaml torchvision seaborn opencv astral numpy pandas tqdm openpyxl matplotlib pytorch astropy jupyter jupyterlab scikit-learn scipy nb_conda_kernels nb_conda nc-time-axis sqlite
 
