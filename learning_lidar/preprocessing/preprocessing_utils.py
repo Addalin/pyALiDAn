@@ -713,9 +713,17 @@ def get_raw_lidar_signal(station: gs.Station, day_date: datetime, height_slice: 
         times = list(all_times)[num_times * part_of_day_indx:num_times * (part_of_day_indx + 1)]
 
         darray = cur_darry.sel(channel=channel_ids, height=height_slice)
+
         ''' Create p dataset'''
+        # Validate that the input nc file has 720 time bins, otherwise puts zeros
+        nchans, nheights, ntimes = darray.values.shape
+        if ntimes < num_times:
+            new_data = np.zeros([nchans, nheights, num_times])
+            new_data[:, :, 0:ntimes] = darray.values
+        else:
+            new_data = darray.values
         ds_partial = xr.Dataset(
-            data_vars={'p': (('Wavelength', 'Height', 'Time'), darray.values)},
+            data_vars={'p': (('Wavelength', 'Height', 'Time'), new_data)},
             coords={'Height': heights_ind[:height_slice.stop - height_slice.start],
                     'Time': times,
                     'Wavelength': wavelengths})
