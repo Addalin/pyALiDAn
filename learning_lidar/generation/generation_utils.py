@@ -3,10 +3,10 @@ import os
 from datetime import datetime, timedelta
 
 import numpy as np
+import xarray as xr
 from matplotlib import pyplot as plt
 from scipy.ndimage import gaussian_filter1d
 from tqdm import tqdm
-import xarray as xr
 
 import learning_lidar.preprocessing.preprocessing_utils as prep_utils
 from learning_lidar.utils import xr_utils, global_settings as gs
@@ -322,6 +322,7 @@ def save_full_params_dataset(station, start_date, end_date, data, type_):
     folder_name = station.generation_folder
     nc_name = f"generated_{type_}_{station.name}_{start_date.strftime('%Y-%m-%d')}_{end_date.strftime('%Y-%m-%d')}.nc"
     xr_utils.save_dataset(data, folder_name, nc_name)
+
 
 def valid_box_domain(x, y, bounds_x, bounds_y):
     return bounds_x[0] <= x <= bounds_x[1] and bounds_y[0] <= y <= bounds_y[1]
