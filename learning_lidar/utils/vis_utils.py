@@ -30,7 +30,7 @@ COLORS = ["darkblue", "darkgreen", "darkred"]
 def stitle2figname(stitle: str, format_fig='png'):
     # Replace chars that are not acceptable to file names
     title_str = stitle.replace("\n", "").replace("  ", " ").replace("__", "_"). \
-        replace("\\", "_").replace("/", "_").replace(":", '-')
+        replace("\\", "_").replace("/", "_").replace(":", '-').replace('.', '_')
     fig_name = f"{title_str}.{format_fig}"
     return fig_name
 
@@ -217,19 +217,21 @@ def visualize_ds_profile_chan(dataset, lambda_nm=532, profile_type='range_corr',
 
 
 def daily_ds_histogram(dataset, profile_type='range_corr',
-                       SAVE_FIG=False, n_splits=1, nbins=100, figsize=(5, 4),
+                       SAVE_FIG=False, n_temporal_splits=1,
+                       nbins=100, figsize=(5, 4), height_range=None,
                        dst_folder=os.path.join(PKG_ROOT_DIR, 'figures'),
                        format_fig='png', dpi=1000):
     # TODO: replace function to work with seaborn histplot :https://seaborn.pydata.org/generated/seaborn.histplot.html
     logger = logging.getLogger()
 
     date_datetime = xr_utils.get_daily_ds_date(dataset)
-
-    time_splits = np.array_split(dataset.Time, n_splits)
+    if type(height_range) is slice and height_range.start <= height_range.stop:
+        dataset = dataset.sel(Height=height_range)
+    time_splits = np.array_split(dataset.Time, n_temporal_splits)
     # Adapt fig size according to the number of n_splits
     (w_fig, h_fig) = figsize
-    new_figsize = (w_fig * n_splits, h_fig * n_splits)
-    fig, axes = plt.subplots(nrows=n_splits, ncols=2, figsize=new_figsize,
+    new_figsize = (w_fig * n_temporal_splits, h_fig * n_temporal_splits)
+    fig, axes = plt.subplots(nrows=n_temporal_splits, ncols=2, figsize=new_figsize,
                              sharey='row', sharex='col', squeeze=False)
     ax = axes
     th = 0
@@ -294,7 +296,7 @@ def daily_ds_histogram(dataset, profile_type='range_corr',
         ax[ind_split, 1].tick_params(axis='both', which='major')
         ax[ind_split, 1].grid(axis='both', which='major', linestyle='--', alpha=0.5)
         ax[ind_split, 0].grid(axis='both', which='major', linestyle='--', alpha=0.5)
-        if ind_split == n_splits - 1:
+        if ind_split == n_temporal_splits - 1:
             xlabels = f"{ds_profile.long_name}\n[{ds_profile.units}]"
             ax[ind_split, 0].set_xlabel(xlabels, position=(1.05, 1e6),
                                         horizontalalignment='center')
@@ -324,7 +326,9 @@ def daily_ds_histogram(dataset, profile_type='range_corr',
         # the rectangle is where I want to place the table
 
     stitle = f"Histogram of {ds_profile.info.lower()} " \
-             f"\n {dataset.attrs['location']} {date_datetime.strftime('%Y-%m-%d')}"
+             f"\n {dataset.attrs['location']} {date_datetime.strftime('%Y-%m-%d')} " \
+             f" for {dataset.Height[0].values:.2f} - {dataset.Height[-1].values:.2f} km"
+    print(stitle)
     fig.suptitle(stitle)
 
     plt.tight_layout()
