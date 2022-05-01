@@ -2,13 +2,18 @@ import os
 from datetime import datetime, timedelta, date
 
 import matplotlib.pyplot as plt
+import matplotlib.ticker as mticker
 import numpy as np
 import pandas as pd
-import sklearn as sns
+import seaborn as sns
+import sklearn as sk
 import xarray as xr
 from scipy import stats
 from scipy.stats import multivariate_normal
-import matplotlib.ticker as mticker
+
+from learning_lidar.utils import vis_utils
+
+vis_utils.set_visualization_settings()
 
 import learning_lidar.generation.generation_utils as gen_utils
 from learning_lidar.utils import utils, xr_utils, vis_utils, proc_utils, global_settings as gs
@@ -19,9 +24,41 @@ vis_utils.set_visualization_settings()
 # TODO: add debug and save of figures option
 # TODO : organize main() to functions & comments
 
+def plot_2D_KDE(sample_orig, sample_new, Z,
+                label_orig: str = 'orig', label_new: str = 'new',
+                label_x: str = 'x_label', label_y: str = 'y_label', s_title: str = '',
+                x_lim=[0, 1], y_lim=[0, 1], figsize=(7, 5), fig_type: str = 'svg'):
+    fig, ax = plt.subplots(nrows=1, ncols=1, figsize=figsize)
+    ax.scatter(x=sample_orig[0], y=sample_orig[1], s=1, c='k', label=label_orig)
+    im = ax.imshow(np.rot90(Z), cmap='turbo',
+                   extent=[x_lim[0], x_lim[1], y_lim[0], y_lim[1]])
+    ax.plot(sample_new[0], sample_new[1], 'k*', markersize=6)
+    ax.plot(sample_new[0], sample_new[1], 'w*', markersize=4, label=label_new)
+    ax.set_xlabel(label_x)
+    ax.set_ylabel(label_y)
+    fig.colorbar(im, ax=ax)
+    plt.legend()
+    ax.grid(color='w', linestyle='--', linewidth=0.5, alpha=0.3)
+    plt.tight_layout()
+    plt.savefig(os.path.join('figures', s_title + '.' + fig_type), bbox_inches='tight')
+    ax.set_title(s_title)
+    plt.show()
+    return fig, ax
+
+
+def gaussian2density(means_x, means_y, stds_x, stds_y, grid):
+    density = np.zeros(grid.shape[0:2])
+    for mu_x, mu_y, std_x, std_y in zip(means_x, means_y, stds_x, stds_y):
+        cov = np.diag((std_x, std_y))
+        mu = (mu_x, mu_y)
+        rv = multivariate_normal(mu, cov)
+        Z_i = np.reshape(rv.pdf(grid), grid.shape[0:2])
+        density += Z_i
+    return density
+
 
 def plot_angstrom_exponent_distribution(x, y, x_label, y_label, date_):
-    fig, ax = plt.subplots(nrows=1, ncols=1, figsize = (8,6))
+    fig, ax = plt.subplots(nrows=1, ncols=1, figsize=(8, 6))
     ax.scatter(x=x, y=y, s=5)
     ax.set_xlabel(x_label)
     ax.set_ylabel(y_label)
@@ -53,8 +90,9 @@ def kde_estimation_main(args, month, year, DATA_DIR):
 
     x, y = ds_ang.angstrom.sel(Wavelengths=couple_0).values, ds_ang.angstrom.sel(Wavelengths=couple_1).values
 
-    if args.plot_results:
-        plot_angstrom_exponent_distribution(x, y, x_label=couple_0, y_label=couple_1, date_=t_slice.start.strftime('%Y-%m'))
+    # if args.plot_results:
+    # plot_angstrom_exponent_distribution(x, y, x_label=couple_0, y_label=couple_1,
+    #                                    date_=t_slice.start.strftime('%Y-%m'))
 
     # 2. Perform a kernel density estimation on the data
     # 3. Resample the estimated density generate new values for $A_{355,532}$ & $A_{532,1064 }$, per each day
@@ -70,7 +108,8 @@ def kde_estimation_main(args, month, year, DATA_DIR):
     # Sample new points
     [x1, y1] = kernel.resample(2 * monthdays)
     scores_new = kernel(np.vstack([x1, y1]))
-    # TODO: the argpartition was to make sure values are within limits . so make sure the usage of regection sampling is done correctly
+    # TODO: the argpartition was to make sure values are within limits .
+    #  so make sure the usage of regection sampling is done correctly
     max_ind = np.argpartition(scores_new, -2 * monthdays)[-2 * monthdays:]
     ang_355_532, ang_532_1064 = x1[max_ind], y1[max_ind]
 
@@ -83,49 +122,16 @@ def kde_estimation_main(args, month, year, DATA_DIR):
 
     # Show density and the new chosen samples
     if args.plot_results:
-        fig, ax = plt.subplots(nrows=1, ncols=1, figsize=(7,5))
-        ax.scatter(x=x, y=y, s=1, c='k', label='AERONET')
-        im = ax.imshow(np.rot90(Z), cmap='turbo',
-                       extent=[xmin, xmax, ymin, ymax])
-        ax.plot(ang_355_532, ang_532_1064, 'k*', markersize=6)
-        ax.plot(ang_355_532, ang_532_1064, 'w*', markersize=4, label='new samples')
-        # ax.set_xlabel(couple_0)
-        # ax.set_ylabel(couple_1)
-        ax.set_xlabel(r"${\rm \AA}_{355, 532}$")
-        ax.set_ylabel(r"${\rm \AA}_{532, 1064}$")
-        title = "" #f"Sampling from Angstrom Exponent distribution {t_slice.start.strftime('%Y-%m')}"
-        fig.colorbar(im, ax=ax)
-        plt.legend()
-        ax.grid(color='w', linestyle='--', linewidth=0.5, alpha=0.3)
-        plt.tight_layout()
-        clean_title = f"pdf_angstrom_{t_slice.start.strftime('%B_%Y')}"
-        plt.savefig(os.path.join('figures', clean_title+'.svg'), bbox_inches = 'tight')
-        plt.savefig(os.path.join('figures', clean_title+'.jpeg'), bbox_inches = 'tight')
-        ax.set_title(title)
-        plt.show()
-
-
+        fig, ax = plot_2D_KDE(sample_orig=[x, y], sample_new=[ang_355_532, ang_532_1064], Z=Z,
+                              label_orig='AERONET', label_new='New samples',
+                              label_x=r"${\rm \AA}_{355, 532}$",
+                              label_y=r"${\rm \AA}_{532, 1064}$",
+                              s_title=f"pdf_angstrom_{t_slice.start.strftime('%B_%Y')}",
+                              x_lim=[xmin, xmax], y_lim=[ymin, ymax])
 
     # ## Angstrom - Lidar Ratio
 
     df_a_lr = pd.read_csv(station.Angstrom_LidarRatio)
-    if args.plot_results:
-        fig, ax = plt.subplots(nrows=1, ncols=1, figsize=(8, 5))
-        df_a_lr[df_a_lr['type'] == 'red'].plot.scatter(x='x', y='y',
-                                                       label=df_a_lr[df_a_lr['type'] == 'red']['name'].unique()[0],
-                                                       c='r',
-                                                       ax=ax)
-        df_a_lr[df_a_lr['type'] == 'black'].plot.scatter(x='x', y='y',
-                                                         label=df_a_lr[df_a_lr['type'] == 'black']['name'].unique()[0],
-                                                         c='b', ax=ax)
-        df_a_lr[df_a_lr['type'] == 'green'].plot.scatter(x='x', y='y',
-                                                         label=df_a_lr[df_a_lr['type'] == 'green']['name'].unique()[0],
-                                                         c='g', ax=ax)
-        plt.xlabel(r'$\rm \, LR_{355[nm]}$')
-        plt.ylabel(r'$\rm A$')
-        plt.xlim([25, 125])
-        plt.ylim([0, 4])
-        plt.show()
 
     # ### Creating joint probability $P(x=LR,y=A)$
     # 1 . Calculating multivariate normal distribution for each type in the dataset
@@ -133,22 +139,19 @@ def kde_estimation_main(args, month, year, DATA_DIR):
     ymin, ymax = [0, 4]
     Z_types = []
     weight_types = []
-    for type in ['red', 'black', 'green']:
+    types = df_a_lr.type.unique().tolist()
+    colors = df_a_lr.color.unique().tolist()
+    grps_type = df_a_lr.groupby(df_a_lr.type).groups
+    for type in types:
         df_type = df_a_lr[df_a_lr['type'] == type]
         LR_type = df_type['x']
         A_type = df_type['y']
-        std_x = df_type['dx'] * .5
-        std_y = df_type['dy'] * .5
+        std_x = df_type['std_x']
+        std_y = df_type['std_y']
 
         X, Y = np.mgrid[xmin:xmax:200j, ymin:ymax:200j]
         grid = np.dstack((X, Y))
-        Z_type = np.zeros((grid.shape[0], grid.shape[1]))
-
-        for x0, y0, stdx, stdy in zip(LR_type, A_type, std_x, std_y):
-            cov = np.diag((stdx, stdy))
-            rv = multivariate_normal((x0, y0), cov)
-            Z_i = np.reshape(rv.pdf(grid), X.shape)
-            Z_type += Z_i
+        Z_type = gaussian2density(LR_type, A_type, std_x, std_y, grid)
         Z_types.append(Z_type)
         weight_types.append(len(df_type))
 
@@ -162,25 +165,18 @@ def kde_estimation_main(args, month, year, DATA_DIR):
     weights = weights / weights.sum()
     normal_Z = np.zeros((grid.shape[0], grid.shape[1]))
     for z_type, weight in zip(Z_types, weights):
-        normal_Z += weight * z_type / z_type.sum() # TODO: check that the sum of total density is 1
+        normal_Z += weight * z_type / z_type.sum()  # TODO: check that the sum of total density is 1
 
     # Sampling the grid , with the weights set by the joint distribution inorder to generate a kernel distribution
     xy = np.vstack([X.reshape(X.size), Y.reshape(Y.size)])
     kernel_LR_A = stats.gaussian_kde(xy, weights=normal_Z.reshape(normal_Z.size))
     Z = np.reshape(kernel_LR_A(xy).T, X.shape)
     if args.plot_results:
-        fig, ax = plt.subplots(nrows=1, ncols=1)
-        im = ax.imshow(np.rot90(Z), cmap='turbo',
-                       extent=[xmin, xmax, ymin, ymax], aspect="auto")
-        for type in ['red', 'black', 'green']:
-            x_type, y_type, label_type, x_err, y_err = df_a_lr[df_a_lr['type'] == type]['x'], \
-                                                       df_a_lr[df_a_lr['type'] == type]['y'], \
-                                                       df_a_lr[df_a_lr['type'] == type]['name'].unique()[0], \
-                                                       df_a_lr[df_a_lr['type'] == type]['dx'] * .5, \
-                                                       df_a_lr[df_a_lr['type'] == type]['dy'] * .5
-            ax.errorbar(x_type, y_type, xerr=x_err, yerr=y_err, markersize=0, fmt='o', c='k', lw=.5)
-            ax.plot(x_type, y_type, '.k', markersize=8)
-            ax.plot(x_type, y_type, '.' + type[0], markersize=5, label=label_type)
+        fig, ax = plt.subplots(nrows=1, ncols=1, figsize=(9, 6))
+        im = ax.imshow(np.rot90(Z), cmap='turbo', extent=[xmin, xmax, ymin, ymax], aspect="auto")
+        sns.scatterplot(data=df_a_lr, x='x', y='y', hue='type', ax=ax)
+        ax.errorbar(x=df_a_lr.x, y=df_a_lr.y, xerr=df_a_lr.std_x, yerr=df_a_lr.std_y,
+                    markersize=0, fmt='o', c='k', lw=.5)
         ax.grid(color='w', linestyle='--', linewidth=0.5, alpha=0.3)
         plt.xlabel(r'$\rm \, LR_{355[nm]}$')
         plt.ylabel(r'$\rm A$')
@@ -191,32 +187,26 @@ def kde_estimation_main(args, month, year, DATA_DIR):
         fig.colorbar(im, ax=ax)
         plt.legend()
         plt.tight_layout()
-        # plt.savefig(os.path.join('figures', title+' 1'))
         plt.show()
 
     # Joint distribution weighted in favor of urban industrial and desert dust
-    weights = np.array([.05, .75, .20])
-    normal_Z = np.zeros((grid.shape[0], grid.shape[1]))
+    weights = np.array(
+        [.05, .20, .75])  # weights for: ['biomass burning', 'biomass burning and desert dust', 'urban industrial']
+    normal_Z = np.zeros(grid.shape[0:2])
     for z_type, weight in zip(Z_types, weights):
-        normal_Z += weight * z_type / z_type.sum() # TODO: check that the sum of total density is 1
+        normal_Z += weight * z_type / z_type.sum()  # TODO: check that the sum of total density is 1
 
     # Sampling the grid , with the weights set by the joint distribution inorder to generate a kernel distribution
     xy = np.vstack([X.reshape(X.size), Y.reshape(Y.size)])
     kernel_LR_A = stats.gaussian_kde(xy, weights=normal_Z.reshape(normal_Z.size))
     Z = np.reshape(kernel_LR_A(xy).T, X.shape)
     if args.plot_results:
-        fig, ax = plt.subplots(nrows=1, ncols=1)
+        fig, ax = plt.subplots(nrows=1, ncols=1, figsize=(9, 6))
         im = ax.imshow(np.rot90(Z), cmap='turbo',
                        extent=[xmin, xmax, ymin, ymax], aspect="auto")
-        for type in ['red', 'black', 'green']:
-            x_type, y_type, label_type, x_err, y_err = df_a_lr[df_a_lr['type'] == type]['x'], \
-                                                       df_a_lr[df_a_lr['type'] == type]['y'], \
-                                                       df_a_lr[df_a_lr['type'] == type]['name'].unique()[0], \
-                                                       df_a_lr[df_a_lr['type'] == type]['dx'] * .5, \
-                                                       df_a_lr[df_a_lr['type'] == type]['dy'] * .5
-            ax.errorbar(x_type, y_type, xerr=x_err, yerr=y_err, markersize=0, fmt='o', c='k', lw=.5)
-            ax.plot(x_type, y_type, '.k', markersize=8)
-            ax.plot(x_type, y_type, '.' + type[0], markersize=5, label=label_type)
+        sns.scatterplot(data=df_a_lr, x='x', y='y', hue='type', ax=ax)
+        ax.errorbar(x=df_a_lr.x, y=df_a_lr.y, xerr=df_a_lr.std_x, yerr=df_a_lr.std_y, markersize=0, fmt='o', c='k',
+                    lw=.5)
         ax.grid(color='w', linestyle='--', linewidth=0.5, alpha=0.3)
         plt.xlabel(r'$\rm \, LR_{355[nm]}$')
         plt.ylabel(r'$\rm A$')
@@ -228,12 +218,11 @@ def kde_estimation_main(args, month, year, DATA_DIR):
         fig.colorbar(im, ax=ax)
         plt.legend()
         plt.tight_layout()
-        # plt.savefig(os.path.join('figures', title+' 2'))
         plt.show()
 
     # 3. Sampling $LR$ from 1D conditioned probability $P(x=LR|y=A)$
     LR_samp = []
-    fig, ax = plt.subplots(nrows=1, ncols=1)
+    fig, ax = plt.subplots(nrows=1, ncols=1, figsize=(9, 6))
     for ang in ang_355_532:
         # calc conditioned density for each value of Angstrom Exponent list
         X_, Y_ = np.mgrid[xmin:xmax:200j, ang:ang:1j]
@@ -242,12 +231,13 @@ def kde_estimation_main(args, month, year, DATA_DIR):
         yy_i = Z_.reshape(Z_.size)
         xx_i = X_.reshape(X_.size)
         kernel_LR_cond_A_i = stats.gaussian_kde(yy_i)
-        random_state = sns.utils.check_random_state(None)
+        random_state = sk.utils.check_random_state(None)
         weights = kernel_LR_cond_A_i.dataset[0, :]
         maxv = weights.max()
         minv = weights.min()
         weights = (weights - minv) / (maxv - minv)
         weights /= weights.sum()
+        # TODO: sample from conditioned distribution and make sure that samples correlate with 95%.
         indx = random_state.choice(kernel_LR_cond_A_i.n, size=1, p=weights)
         ax.plot(xx_i, yy_i, linewidth=0.8)
         ax.scatter(x=xx_i[indx], y=yy_i[indx], s=10)
@@ -267,24 +257,17 @@ def kde_estimation_main(args, month, year, DATA_DIR):
         # plt.savefig(os.path.join('figures', title+'.pdf'))
         plt.show()
 
-
     LR_samp = np.array(LR_samp).reshape(2 * monthdays)
 
     if args.plot_results:
         # 4. Show the joint density, and the new samples of LR
         # Show density, and the new chosen samples
         fig, ax = plt.subplots(nrows=1, ncols=1, figsize=(9, 6))
-        for type in ['red', 'black', 'green']:
-            x_type, y_type, label_type, x_err, y_err = df_a_lr[df_a_lr['type'] == type]['x'], \
-                                                       df_a_lr[df_a_lr['type'] == type]['y'], \
-                                                       df_a_lr[df_a_lr['type'] == type]['name'].unique()[0], \
-                                                       df_a_lr[df_a_lr['type'] == type]['dx'] * .5, \
-                                                       df_a_lr[df_a_lr['type'] == type]['dy'] * .5
-            ax.errorbar(x_type, y_type, xerr=x_err, yerr=y_err, markersize=0, fmt='o', c='k', lw=.5)
-            ax.plot(x_type, y_type, '.k', markersize=8)
-            ax.plot(x_type, y_type, '.' + type[0], markersize=5, label=label_type)
         im = ax.imshow(np.rot90(Z), cmap='turbo',
                        extent=[xmin, xmax, ymin, ymax], aspect="auto")
+        sns.scatterplot(data=df_a_lr, x='x', y='y', hue='type', ax=ax)
+        ax.errorbar(x=df_a_lr.x, y=df_a_lr.y, xerr=df_a_lr.std_x, yerr=df_a_lr.std_y, markersize=0, fmt='o', c='k',
+                    lw=.5)
         ax.plot(LR_samp, ang_355_532, 'k*', markersize=6)
         ax.plot(LR_samp, ang_355_532, 'w*', markersize=4, label='new samples')
         plt.xlabel(r'$\rm \, LR[sr]$')
@@ -298,8 +281,8 @@ def kde_estimation_main(args, month, year, DATA_DIR):
 
         title = f"Sampling from $P(x=LR|y=A)$ {t_slice.start.strftime('%Y-%m')}"
         clean_title = f"pdf_LR_angstrom_" + f"{t_slice.start.strftime('%B_%Y')}"
-        plt.savefig(os.path.join('figures', clean_title+'.svg'), bbox_inches = 'tight')
-        plt.savefig(os.path.join('figures', clean_title+'.jpeg'), bbox_inches = 'tight')
+        plt.savefig(os.path.join('figures', clean_title + '.svg'), bbox_inches='tight')
+        plt.savefig(os.path.join('figures', clean_title + '.jpeg'), bbox_inches='tight')
         ax.set_title(title)
         plt.show()
 
@@ -362,7 +345,7 @@ def kde_estimation_main(args, month, year, DATA_DIR):
         while ~valid_domain:
             sample_rm, sample_beta = kernel_rm_beta.resample(1)[:, 0]
             valid_domain = gen_utils.valid_box_domain(sample_rm, sample_beta,
-                                            rm_bounds, beta_bounds)
+                                                      rm_bounds, beta_bounds)
         rm_v.append(sample_rm)
         beta_v.append(sample_beta)
     print(rm_v, beta_v)
@@ -387,13 +370,11 @@ def kde_estimation_main(args, month, year, DATA_DIR):
                        extent=[round(xmin), round(xmax), 0, ymax], aspect="auto")
         ax.plot(rm_new, beta_532_new, 'k*', markersize=6)
         ax.plot(rm_new, beta_532_new, 'w*', markersize=4, label='new samples')
-        # ax.set_xlabel(r'$r_m$')
-        # ax.set_ylabel(r'$\beta_{532}^{max}$')
         ax.set_xlabel(r'$r_{\rm ref} [{\rm km}]$')
         ax.set_ylabel(r'$\alpha_{532}^{\rm max} \left[\frac{1}{\rm km}\right]$')
         ticks_loc = ax.get_yticks().tolist()
         ax.yaxis.set_major_locator(mticker.FixedLocator(ticks_loc))
-        ax.set_yticklabels([round(tick_label, 1) for tick_label in ax.get_yticks()*55])  # Beta to Alpha!
+        ax.set_yticklabels([round(tick_label, 1) for tick_label in ax.get_yticks() * 55])  # Beta to Alpha!
         plt.locator_params(axis='y', nbins=5)
         plt.locator_params(axis='x', nbins=5)
         fig.colorbar(im, ax=ax)
@@ -402,11 +383,10 @@ def kde_estimation_main(args, month, year, DATA_DIR):
         plt.tight_layout()
         title = r"Sampling from $r_m$ - $ \alpha_{532}^{max}$  " + f"{t_slice.start.strftime('%Y-%m')}"
         clean_title = r"pdf_alpha_refHeight_" + f"{t_slice.start.strftime('%B_%Y')}"
-        plt.savefig(os.path.join('figures', clean_title+'.svg'), bbox_inches = 'tight')
-        plt.savefig(os.path.join('figures', clean_title+'.jpeg'), bbox_inches = 'tight')
+        plt.savefig(os.path.join('figures', clean_title + '.svg'), bbox_inches='tight')
+        plt.savefig(os.path.join('figures', clean_title + '.jpeg'), bbox_inches='tight')
         ax.set_title(title)
         plt.show()
-
 
     # Create dataset of parameters for generating month signals
 
@@ -464,7 +444,7 @@ def kde_estimation_main(args, month, year, DATA_DIR):
         plt.show()
 
 
-def create_density_params_ds(station, rm_new, ang_355_532, ang_532_1064, LR_samp, beta_532_new, times, nc_aeronet_name)\
+def create_density_params_ds(station, rm_new, ang_355_532, ang_532_1064, LR_samp, beta_532_new, times, nc_aeronet_name) \
         -> xr.Dataset:
     """
     Wraps the variables into a xr.Dataset
