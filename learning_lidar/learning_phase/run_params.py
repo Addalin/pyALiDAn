@@ -25,8 +25,7 @@ def get_paths(station: gs.Station, start_date: datetime, end_date: datetime):
     train_csv_path = os.path.join(base_path, 'data', "dataset_" + csv_base_name + '_train.csv')
     test_csv_path = os.path.join(base_path, 'data', "dataset_" + csv_base_name + '_test.csv')
     stats_csv_path = os.path.join(base_path, 'data', "stats_" + csv_base_name + '_train.csv')
-    results_path = os.path.join(station.nn_output_results)  # TODO: save in D or E
-    # TODO: Add exception in case paths are invalid
+    results_path = os.path.join(station.nn_output_results)  # TODO: Add exception in case paths are invalid
     return train_csv_path, test_csv_path, stats_csv_path, results_path, nn_source_data
 
 
@@ -83,24 +82,25 @@ def update_params(config, consts):
 
 
 # ######## RESUME EXPERIMENT ######### ---> Make sure RESTORE_TRIAL = False
-RESUME_EXP = False  # 'ERRORED_ONLY'  # False | True
+RESUME_EXP = False  # 'ERRORED_ONLY' | False | True
 # Can be "LOCAL" to continue experiment when it was disrupted
 # (trials that were completed seem to continue training),
 # or "ERRORED_ONLY" to reset and rerun ERRORED trials (not tested). Otherwise False to start a new experiment.
 # Note: if fail_fast was 'True' in the the folder of 'EXP_NAME', then tune will not be able to load trials that didn't store any folder
 
-EXP_NAME = None  # 'main_2022-02-13_19-10-30'  #
+EXP_NAME = None #'None'
 # If 'resume' is not False, must enter experiment path.
 # e.g. - "main_2021-05-19_21-50-40". Path is relative to RESULTS_PATH. Otherwise can keep it None.
 # And it is generated automatically.
 
 
 # ######## RESTORE or VALIDATE TRIAL PARAMS #########
-experiment_dir = 'main_2022-02-04_20-14-28'
-trial_dir = r"C:\Users\addalin\Dropbox\Lidar\lidar_learning\results\main_2022-02-04_20-14-28\main_4b099_00000_0_bsize" \
-            r"=32,dfilter=wavelength [355],dnorm=False,fc_size=[16],hsizes=[4,4,4,4]," \
-            r"lr=0.002,ltype=MAELoss,opt_powers=T_2022-02-04_20-14-29"
-check_point_name = 'checkpoint_epoch=999-step=999'
+experiment_dir = 'main_2022-04-09_18-58-52'
+trial_dir =  r"main_f3bba_00028_28_bsize=32,cbias=True,debug=False,dfilter=wavelength [532],dnorm=False,fc_size=[16],hsizes=[5,5,5,5],lr=0.002,lt_2022-04-09_22-44-53"
+#trial_dir = r"C:\Users\addalin\Dropbox\Lidar\lidar_learning\results\main_2022-02-04_20-14-28\main_4b099_00000_0_bsize" \
+#            r"=32,dfilter=wavelength [355],dnorm=False,fc_size=[16],hsizes=[4,4,4,4]," \
+#            r"lr=0.002,ltype=MAELoss,opt_powers=T_2022-02-04_20-14-29"
+check_point_name = 'checkpoint_epoch=0-step=58'
 
 
 # TODO: Load Trainer chekpoint  https://pytorch-lightning.readthedocs.io/en/stable/common/weights_loading.html#restoring-training-state
@@ -145,28 +145,36 @@ CONSTS = {
     "Y_features": ['LC'],
 }
 
-# Note, replace tune.choice with grid_search if want all possible combinations
+# Note, replace tune.choice with grid_search if you want all possible combinations
 RAY_HYPER_PARAMS = {
-    "hsizes": tune.grid_search(['[4,4,4,4]', '[5,5,5,5]', '[6, 6, 6, 6]']),
+    "hsizes": tune.grid_search(['[4,4,4,4]', '[5,5,5,5]','[6,6,6,6]']), #'[4,4,4,4]', '[5,5,5,5]',
     # Options: '[4,4,4,4]' | '[5,5,5,5]' | '[6, 6, 6, 6]' ...etc.
-    "fc_size": tune.grid_search(['[16]', '[32]']),  # Options: '[4]' | '[16]' | '[32]' ...etc.
+    "fc_size": tune.grid_search(['[32]']),  # Options: '[4]' | '[16]' | '[32]' ...etc.'[16]',
     "lr": tune.grid_search([2 * 1e-3]),
-    "bsize": tune.grid_search([32]),
+    "bsize": tune.grid_search([16,32]),
     "ltype": tune.grid_search(['MAELoss']),  # Options: 'MAELoss' | 'MSELoss' | 'MARELoss'. See 'custom_losses.py'
     # "use_power": tune.grid_search(['([0.5,-0.1,0.5],[1])', '([0.5,-0.1,1],[1])']),# '([0.5,-0.3,1],[1])']),
-    "use_power": tune.grid_search(['([0.5,1,0.5],[1])', '([0.5,1,1],[1])',
-                                   '([0.5,0.5,0.5],[1])', '([0.5,0.5,1],[1])',
-                                   '([0.5,.25,1],[1])', '([0.5,.25,.5],[1])',
-                                   '([0.5,-.25,1],[1])', '([0.5,-.25,.5],[1])',
-                                   '([0.5,-0.1,0.5],[1])', '([0.5,-0.1,1],[1])',
-                                   '([0.5,-0.3,0.5],[1])', '([0.5,-0.3,1],[1])',
-                                   '([0.5,-.5,.5],[1])', '([0.5,-.5,1],[1])']),
+    "use_power": tune.grid_search(['([0.5,-.27,1],[1])','([0.5,-.27,.5],[1])',# '([0.5,1,0.5],[1])', '([0.5,1,1],[1])',
+                                   '([0.5,-.28,1],[1])','([0.5,-.28,.5],[1])',#'([0.5,0.5,0.5],[1])', #'([0.5,0.5,1],[1])',
+                                   '([0.5,-.23,1],[1])','([0.5,-.23,.5],[1])',
+                                   '([0.5,-.26,1],[1])','([0.5,-.26,.5],[1])',
+                                   '([0.5,-.3,1],[1])', '([0.5,-.3,.5],[1])',
+                                   '([0.5,-.1,1],[1])', '([0.5,-.1,.5],[1])',
+                                   '([0.5,-.21,1],[1])', '([0.5,-.21,.5],[1])',
+                                   '([0.5,-.5,1],[1])', '([0.5,-.5,.5],[1])'
+                                   ]),
+                                   #'([0.5,-.23,1],[1])','([0.5,-.23,.5],[1])', #'([0.5,-.25,1],[1])', #'([0.5,-.25,.5],[1])',
+                                   #'([0.5,0.21,1],[1])','([0.5,0.21,.5],[1])',#'([0.5,-0.1,0.5],[1])',# '([0.5,-0.1,1],[1])',
+                                   #'([0.5,-0.21,1],[1])','([0.5,-0.21,.5],[1])',#'([0.5,-0.3,0.5],[1])', #'([0.5,-0.3,1],[1])',
+                                   #'([0.5,.19,1],[1])','([0.5,.19,.5],[1])',
+                                   #'([0.5,-.19,1],[1])','([0.5,-.19,.5],[1])',
+                                   #'([0.5,.1,1],[1])','([0.5,.1,.5],[1])']),#'([0.5,-.5,.5],[1])', #'([0.5,-.5,1],[1])']),
     # Options: False | '([0.5,1,1], [0.5])' ...etc. UV  : -0.27 , G: -0.263 , IR: -0.11
     "opt_powers": tune.choice([False]),  # Options: False | True
-    "use_bg": tune.grid_search([True, 'range_corr']),  # False | True |  'range_corr'
+    "use_bg": tune.grid_search(['range_corr', True]),  # False | True |  'range_corr'
     # Options: False | True | 'range_corr'. Not relevant for 'signal' as source
     "source": tune.grid_search(['lidar']),  # Options: 'lidar'| 'signal_p' | 'signal'
-    'dfilter': tune.grid_search(["wavelength [532]", "wavelength [1064]"]),
+    'dfilter': tune.grid_search(["wavelength [532]"]), #"wavelength [355]", "wavelength [532]",
     # None,"wavelength [355]", "wavelength [532]","wavelength [1064]"]),  # Options: None | '(wavelength, [lambda])'
     # - lambda=355,532,1064
     'dnorm': tune.grid_search([False]),  # Options: False | True
