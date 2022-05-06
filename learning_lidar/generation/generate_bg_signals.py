@@ -1,4 +1,6 @@
-import calendar
+import os
+from datetime import datetime, timedelta
+
 import os
 from datetime import datetime, timedelta
 
@@ -14,7 +16,7 @@ from scipy.optimize import curve_fit
 from sklearn.linear_model import LinearRegression
 
 from learning_lidar.generation import generation_utils as gen_utils, generate_bg_signals_utils as gen_bg_utils
-from learning_lidar.utils import misc_lidar, xr_utils, vis_utils, global_settings as gs
+from learning_lidar.utils import misc_lidar, vis_utils, global_settings as gs
 
 sns.set_theme()
 vis_utils.set_visualization_settings()
@@ -27,7 +29,7 @@ class BackgroundGenerator:
         self.wavelengths = gs.LAMBDA_nm().get_elastic()
         self.eps = np.finfo(np.float).eps
 
-        data_folder = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(os.curdir))), 'data')
+        data_folder = gs.PKG_DATA_DIR
         self.bg_signal_folder = os.path.join(data_folder, 'background_signal')
 
         # #### 1. Load parameters of gaussian curve fit

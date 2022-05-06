@@ -31,6 +31,7 @@ import pandas as pd
 import pkg_resources
 
 PKG_ROOT_DIR = pkg_resources.get_distribution('learning_lidar').location
+PKG_DATA_DIR = os.path.join(PKG_ROOT_DIR, 'data')
 # %% Basic physics constants
 
 eps = np.finfo(float).eps
@@ -49,9 +50,7 @@ n_chan = 13
 class Station:
     def __init__(self, station_name='haifa',
                  stations_csv_path=
-                 os.path.join(PKG_ROOT_DIR,
-                              'data',
-                              'stations.csv')):
+                 os.path.join(PKG_DATA_DIR, 'stations.csv')):
         """
         A station class that stores all the below information
 

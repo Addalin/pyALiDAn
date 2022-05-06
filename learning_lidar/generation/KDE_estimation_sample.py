@@ -69,7 +69,7 @@ def plot_angstrom_exponent_distribution(x, y, x_label, y_label, date_):
     plt.show()
 
 
-def kde_estimation_main(args, month, year, DATA_DIR):
+def kde_estimation_main(args, month, year, data_folder):
     #  Load measurements from AERONET for current month
     station = gs.Station(station_name=args.station_name)
     start_date, end_date = args.start_date, args.end_date
@@ -292,7 +292,7 @@ def kde_estimation_main(args, month, year, DATA_DIR):
 
     monthdays = (date(year, month + 1, 1) - date(year, month, 1)).days
     csv_name = f"dataset_{station.name}_{start_date.strftime('%Y-%m-%d')}_{end_date.strftime('%Y-%m-%d')}_extended.csv"
-    csv_path_extended = os.path.join(DATA_DIR, csv_name)
+    csv_path_extended = os.path.join(data_folder, csv_name)
     df_extended = pd.read_csv(csv_path_extended)
     df_extended['date'] = pd.to_datetime(df_extended['date'], format='%Y-%m-%d')
     grps_month = df_extended.groupby(df_extended['date'].dt.month).groups
@@ -478,8 +478,7 @@ def create_density_params_ds(station, rm_new, ang_355_532, ang_532_1064, LR_samp
 
 if __name__ == '__main__':
 
-    HOME_DIR = os.path.abspath(os.path.join(os.getcwd(), os.pardir, os.pardir))
-    DATA_DIR = os.path.join(HOME_DIR, 'data')
+    data_folder = gs.PKG_DATA_DIR
 
     parser = utils.get_base_arguments()
 
@@ -491,4 +490,4 @@ if __name__ == '__main__':
     # start_date and end_date should correspond to the extended csv!
     # months to run KDE on, one month at a time.
     for date_ in pd.date_range(args.start_date, args.end_date, freq='MS'):
-        kde_estimation_main(args, date_.month, date_.year, DATA_DIR)
+        kde_estimation_main(args, date_.month, date_.year, data_folder)

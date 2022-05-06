@@ -1,21 +1,21 @@
+import logging
 import os
 from datetime import datetime, timedelta
-from IPython.display import display
-import logging
-from tqdm import tqdm
-
 from itertools import repeat
 from multiprocessing import Pool, cpu_count
 
 import numpy as np
 import pandas as pd
 import xarray as xr
+from IPython.display import display
+from tqdm import tqdm
+
+import learning_lidar.dataseting.dataseting_utils as ds_utils
+import learning_lidar.generation.generation_utils as gen_utils
 # import sys
 # sys.path.append('/home/liam/PycharmProjects/adi')
 import learning_lidar.preprocessing.preprocessing_utils as prep_utils
-import learning_lidar.dataseting.dataseting_utils as ds_utils
 from learning_lidar.generation.daily_signals_generations_utils import get_daily_bg
-import learning_lidar.generation.generation_utils as gen_utils
 from learning_lidar.utils import utils, xr_utils, global_settings as gs
 
 
@@ -32,7 +32,7 @@ def dataseting_main(params, log_level=logging.DEBUG):
     station = gs.Station(station_name=station_name)
 
     # Set new paths
-    data_folder = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))), 'data')
+    data_folder = gs.PKG_DATA_DIR
     csv_path = os.path.join(data_folder, f"dataset_{station_name}_"
                                          f"{start_date.strftime('%Y-%m-%d')}_{end_date.strftime('%Y-%m-%d')}.csv")
     csv_path_extended = os.path.join(data_folder, f"dataset_{station_name}_"
@@ -447,7 +447,7 @@ def calc_data_statistics(station, start_date, end_date, top_height=15.3, mode='g
      the desired period [start_date, end_date]. Note: one should previously save the generated dataset for this period.
     """
     dataset_type_str = '_' + dataset_type if dataset_type in ['train', 'test'] else ''
-    data_folder = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))), 'data')
+    data_folder = gs.PKG_DATA_DIR
     csv_gen_fname = f"dataset_{'gen_' if mode == 'gen' else ''}{station.name}" \
                     f"_{start_date.strftime('%Y-%m-%d')}_{end_date.strftime('%Y-%m-%d')}{dataset_type_str}.csv"
     csv_gen_path = os.path.join(data_folder, csv_gen_fname)
