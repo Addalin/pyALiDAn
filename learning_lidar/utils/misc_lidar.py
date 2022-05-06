@@ -251,15 +251,15 @@ def calc_S(heights, P):
 
 def calc_extiction_klett(S, heights, sigma_0, ind_m, k=1):
     """
-    Calculate the inversion of the extinction coefficient using Klett metho
+    Calculate the inversion of the extinction coefficient using Klett method
     :param S: Range corrected lidar signal a.k.a pr^2
-    :param heights: measurments heights (note that they should be relative to lidar height(ground) and not to sea level height)
-    :param sigma_0: initial solution (usually this should be molecular extiction)
+    :param heights: measurements heights (note that they should be relative to lidar height, a.k.a ground-level; not sea-level)
+    :param sigma_0: initial solution (usually this should be molecular extinction coefficient)
     :param ind_m: reference height index, usually this should be the middle bin between r_0 and r_1 (low and top heights of reference range)
     :param k: set k=1
     :return: extinction coefficient profile
     """
-    S_m = S[ind_m] + eps
+    S_m = S[ind_m] + eps  # machine epsilon addition - for numerical stabilization, avoiding zeros values.
     sigma_m = sigma_0[ind_m] + eps
 
     dr = heights[1] - heights[0]
