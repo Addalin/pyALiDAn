@@ -107,12 +107,17 @@ def add_profiles_values(df, station, day_date, file_type='profiles'):
         [bin_r0, bin_r1] = [np.argmin(abs(data.height.values - r)) for r in [r0, r1]]
         delta_r = r1 - r0
         lr_aeronet = data[f'LR_aeronet_{wavelength}'].fillna('').item()
+        lr_used = 50.0 if ('50.0 [Sr]' in data.aerBsc_klett_532.retrieving_info) else lr_aeronet
         aerBsc_klett_max = data[f'aerBsc_klett_{wavelength}'].values.max()
-        return r0 + altitude, r1 + altitude, delta_r, bin_r0, bin_r1, lr_aeronet, aerBsc_klett_max
+        aerExt_klett_max = aerBsc_klett_max * lr_used if (lr_used != '' and aerBsc_klett_max != '') else ''
+        return r0 + altitude, r1 + altitude, delta_r, bin_r0, bin_r1, \
+               lr_aeronet, lr_used, aerBsc_klett_max, aerExt_klett_max
 
-    df[['r0', 'r1', 'dr', 'bin_r0', 'bin_r1', 'lr_aeronet', 'aerBsc_klett_max']] = df.apply(_get_info_from_profile_nc,
-                                                                                            axis=1,
-                                                                                            result_type='expand')
+    df[['r0', 'r1', 'dr', 'bin_r0', 'bin_r1',
+        'lr_aeronet', 'lr_used', 'aerBsc_klett_max', 'aerExt_klett_max']] = df.apply(
+        _get_info_from_profile_nc,
+        axis=1,
+        result_type='expand')
     return df
 
 

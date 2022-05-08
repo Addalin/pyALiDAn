@@ -333,7 +333,7 @@ def kde_estimation_main(args, month, year, data_folder):
 
     kernel_rm_beta = stats.gaussian_kde(values)
 
-    # Sample new points
+    # Sample new points # TODO: drop rm =0
     rm_bounds = [np.round_(df_rm_beta['rm'].min()),
                  np.ceil(df_rm_beta['rm'].max())]
     beta_bounds = [0.0, 1.0]

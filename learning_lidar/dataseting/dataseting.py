@@ -162,7 +162,7 @@ def create_dataset(station_name='haifa', start_date=datetime(2017, 9, 1),
     station = gs.Station(station_name=station_name)
     db_path = station.db_file
     wavelengths = gs.LAMBDA_nm().get_elastic()
-    cali_method = 'Klett_Method'
+    cali_method = 'Klett_Method'  # or 'AOD_Constrained_Method'
 
     if len(list_dates) > 0:
         try:
@@ -179,6 +179,7 @@ def create_dataset(station_name='haifa', start_date=datetime(2017, 9, 1),
 
             # Query the db for a specific day, wavelength and calibration method
             try:
+                # TODO: iterate query and query_database on cali_method (for case of having more that one method)
                 query = ds_utils.get_query(wavelength, cali_method, day_date)
                 df = ds_utils.query_database(query=query, database_path=db_path)
                 if df.empty:
@@ -224,7 +225,8 @@ def create_dataset(station_name='haifa', start_date=datetime(2017, 9, 1),
                 # reorder the columns
                 key = ['date', 'wavelength', 'cali_method', 'telescope', 'cali_start_time', 'cali_stop_time',
                        'start_time_period', 'end_time_period', 'profile_path']
-                y_features = ['LC', 'LC_std', 'r0', 'r1', 'dr', 'bin_r0', 'bin_r1', 'lr_aeronet', 'aerBsc_klett_max']
+                y_features = ['LC', 'LC_std', 'r0', 'r1', 'dr', 'bin_r0', 'bin_r1',
+                              'lr_aeronet', 'lr_used', 'aerBsc_klett_max', 'aerExt_klett_max']
                 x_features = ['lidar_path', 'molecular_path', 'bg_path']
                 expanded_df = expanded_df[key + x_features + y_features]
                 full_df = pd.concat([full_df, expanded_df])
