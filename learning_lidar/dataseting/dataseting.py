@@ -20,6 +20,9 @@ from learning_lidar.utils import utils, xr_utils, global_settings as gs
 
 
 def dataseting_main(params, log_level=logging.DEBUG):
+    """"
+    parameters for creating a dataset of generation mode: --start_date 2017-09-01 --end_date 2017-10-31 --use_km_unit --calc_stats --generated_mode
+    """
     logging.getLogger('matplotlib').setLevel(logging.ERROR)  # Fix annoying matplotlib logs
     logging.getLogger('PIL').setLevel(logging.ERROR)  # Fix annoying PIL logs
     logger = utils.create_and_configer_logger(f"{os.path.basename(__file__)}.log", level=log_level)
@@ -115,6 +118,7 @@ def dataseting_main(params, log_level=logging.DEBUG):
         logger.info(f"\nDone calculating {mode} train dataset statistics. saved to:{csv_stats_path}")
         _, csv_stats_path = calc_data_statistics(station, start_date, end_date, dataset_type='test', mode=mode)
         logger.info(f"\nDone calculating {mode} test dataset statistics. saved to:{csv_stats_path}")
+
 
 # %% Dataset creating helper functions
 def create_dataset(station_name='haifa', start_date=datetime(2017, 9, 1),
@@ -220,10 +224,10 @@ def create_dataset(station_name='haifa', start_date=datetime(2017, 9, 1),
                 # reorder the columns
                 key = ['date', 'wavelength', 'cali_method', 'telescope', 'cali_start_time', 'cali_stop_time',
                        'start_time_period', 'end_time_period', 'profile_path']
-                y_features = ['LC', 'LC_std', 'r0', 'r1', 'dr', 'bin_r0', 'bin_r1']
+                y_features = ['LC', 'LC_std', 'r0', 'r1', 'dr', 'bin_r0', 'bin_r1', 'lr_aeronet', 'aerBsc_klett_max']
                 x_features = ['lidar_path', 'molecular_path', 'bg_path']
                 expanded_df = expanded_df[key + x_features + y_features]
-                full_df = full_df.append(expanded_df)
+                full_df = pd.concat([full_df, expanded_df])
             except ds_utils.EmptyDataFrameError as e:
                 logger.exception(f"{e}, skipping to next day.")
                 continue

@@ -33,7 +33,7 @@ def get_query(wavelength, cali_method, day_date):
             lcc.wavelength, lcc.cali_method, lcc.telescope
     FROM lidar_calibration_constant as lcc
     WHERE
-        wavelength == {wavelength} AND
+        (wavelength == {int(wavelength)} or wavelength=={wavelength} ) AND
         cali_method == '{cali_method}' AND
         telescope == 'far_range' AND
         (cali_start_time BETWEEN '{start_time}' AND '{end_time}');
@@ -100,16 +100,19 @@ def add_profiles_values(df, station, day_date, file_type='profiles'):
         :return:
         """
         data = xr_utils.load_dataset(row['matched_nc_profile'])
-        wavelen = row.wavelength
+        wavelength = row.wavelength
         # get altitude to rebase the reference heights according to sea-level-height
         altitude = data.altitude.item()
-        [r0, r1] = data[f'reference_height_{wavelen}'].values
+        [r0, r1] = data[f'reference_height_{wavelength}'].values
         [bin_r0, bin_r1] = [np.argmin(abs(data.height.values - r)) for r in [r0, r1]]
         delta_r = r1 - r0
-        return r0 + altitude, r1 + altitude, delta_r, bin_r0, bin_r1
+        lr_aeronet = data[f'LR_aeronet_{wavelength}'].fillna('').item()
+        aerBsc_klett_max = data[f'aerBsc_klett_{wavelength}'].values.max()
+        return r0 + altitude, r1 + altitude, delta_r, bin_r0, bin_r1, lr_aeronet, aerBsc_klett_max
 
-    df[['r0', 'r1', 'dr', 'bin_r0', 'bin_r1']] = df.apply(_get_info_from_profile_nc, axis=1,
-                                                          result_type='expand')
+    df[['r0', 'r1', 'dr', 'bin_r0', 'bin_r1', 'lr_aeronet', 'aerBsc_klett_max']] = df.apply(_get_info_from_profile_nc,
+                                                                                            axis=1,
+                                                                                            result_type='expand')
     return df
 
 
@@ -146,16 +149,22 @@ def add_X_path(df, station, day_date, lambda_nm=532, data_source='molecular', fi
 def get_time_slots_expanded(df, sample_size):
     if sample_size:
         expanded_df = pd.DataFrame()
+        names = df.columns.to_list()
+        names.extend(['start_time_period', 'end_time_period'])
         for indx, row in df.iterrows():
             time_slots = pd.date_range(row.loc['cali_start_time'], row.loc['cali_stop_time'], freq=sample_size)
             time_slots.freq = None
             if len(time_slots) < 2:
                 continue
             for start_time, end_time in zip(time_slots[:-1], time_slots[1:]):
-                mini_df = row.copy()
-                mini_df['start_time_period'] = start_time
-                mini_df['end_time_period'] = end_time
-                expanded_df = expanded_df.append(mini_df)
+                new_row = pd.DataFrame(columns=names)
+                new_row[df.columns.to_list()] = df.iloc[indx:indx + 1]
+                new_row['start_time_period'] = [start_time]
+                new_row['end_time_period'] = [end_time]
+                if expanded_df.shape[0] == 0:
+                    expanded_df = new_row  # initializing with first row
+                else:
+                    expanded_df = pd.concat([expanded_df, new_row], axis=0)  # append new row
     else:
         expanded_df = df.copy()
         expanded_df['start_time_period'] = expanded_df['cali_start_time']
