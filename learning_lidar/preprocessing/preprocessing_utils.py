@@ -611,10 +611,10 @@ def gen_daily_molecular_ds(day_date):
 def get_daily_range_corr(station, day_date, height_units='km',
                          optim_size=False, verbose=False, use_km_unit=True):
     """
-    Retrieving daily range corrected lidar signal (pr^2)
-    from attenuated_backscatter signals in three channels (355,532,1064).
-
-    The attenuated_backscatter are from 4 files of 6-hours *att_bsc.nc for a given day_date and station
+    Retrieving daily range corrected lidar signal (pr^2) from 'level1a' data by Pollynet Processing chain.
+    The range corrected signal is represented by 'att_bsc' (aka attenuated backscatter coefficient) in the source data,
+    at three wavelength channels: (355,532,1064).
+    This function merges 4 files, each is of 6-hours, of '*att_bsc.nc' for a given day_date and station.
 
     :param station: gs.station() object of the lidar station
     :param day_date: datetime.date object of the required date
