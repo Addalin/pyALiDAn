@@ -15,7 +15,8 @@ from learning_lidar.utils import misc_lidar, xr_utils, global_settings as gs
 from learning_lidar.utils.utils import write_row_to_csv
 
 
-def convert_profiles_units(dataset, units=[r'$1/m$', r'$1/km$'], scale=1e+3):
+def convert_profiles_units(dataset: xr.Dataset, units: list[str] = [r'$1/m$', r'$1/km$'],
+                           scale: float = 1e+3) -> xr.Dataset:
     """
     Converting units of or profiles in dataset,
     :param dataset: lidar dataset or molecular dataset
@@ -36,25 +37,25 @@ def convert_profiles_units(dataset, units=[r'$1/m$', r'$1/km$'], scale=1e+3):
     return dataset
 
 
-def calc_sigma_profile_df(row, lambda_nm=532.0, indx_n='sigma'):
+def calc_sigma_profile_df(row, lambda_nm: Union[int, float] = 532.0, column_name: str = 'sigma') -> pd.Series:
     """
     Returns pd series of extinction profile [1/m] from a radiosonde dataframe containing the
     columns:['PRES','TEMPS','RELHS']. The function applies on rows of the radiosonde df.
     :param row: row of radiosonde df
     :param lambda_nm: wavelength in [nm], e.g, for green lambda_nm = 532.0 [nm]
-    :param indx_n: index name, the column name of the result. The default is 'sigma'.
+    :param column_name: index name, the column name of the result. The default is 'sigma'.
     This could be useful to get profiles for several hours each have a different index name
     (e.g., datetime.datetime object of measuring time of the radiosonde as datetime.datetime(2017, 9, 2, 0, 0))
     :return: pd series of extinction profile in units of [1/m]
     """
     return pd.Series(
-        data=[rayleigh_scattering.alpha_rayleigh(wavelength=lambda_nm, pressure=row['PRES'],
+        data=[rayleigh_scattering.alpha_rayleigh(wavelength=float(lambda_nm), pressure=row['PRES'],
                                                  temperature=row['TEMPS'], C=385.0,
                                                  rh=row['RELHS'])],
-        index=[indx_n])
+        index=[column_name])
 
 
-def cal_e_tau_df(col, height_bins):
+def cal_e_tau_df(col, height_bins: np.array()) -> pd.Series:
     """
     Calculate the the attenuated optical depth (tau is the optical depth).
     Calculation is per column of the backscatter (sigma) dataframe.
@@ -69,7 +70,7 @@ def cal_e_tau_df(col, height_bins):
     return e_tau
 
 
-def calc_beta_profile_df(row, lambda_nm=532.0, ind_n='beta'):
+def calc_beta_profile_df(row, lambda_nm: Union[int, float] = 532.0, ind_n='beta') -> pd.Series:
     """
     Returns pd series of backscatter profile from a radiosonde dataframe containing the
     columns:['PRES','TEMPS','RELHS']. The function applies on rows of the radiosonde df.
@@ -80,14 +81,14 @@ def calc_beta_profile_df(row, lambda_nm=532.0, ind_n='beta'):
     (e.g., datetime.datetime object of measuring time of the radiosonde as datetime.datetime(2017, 9, 2, 0, 0))
     :return: pd.Series() of backscatter profile [1/sr*m]
     """
-    return pd.Series([rayleigh_scattering.beta_pi_rayleigh(wavelength=lambda_nm,
+    return pd.Series([rayleigh_scattering.beta_pi_rayleigh(wavelength=float(lambda_nm),
                                                            pressure=row['PRES'],
                                                            temperature=row['TEMPS'],
                                                            C=385.0, rh=row['RELHS'])],
                      index=[ind_n])
 
 
-def gdas2radiosonde(src_file, dst_file, col_names=None):
+def gdas2radiosonde(src_file: os.path, dst_file: os.path, col_names: list[str] = None) -> os.path:
     """
     Helper function that converts a gdas file from TROPOS server (saved as .gdas1), to a simple txt.
     The resulting file is without any prior info, and resembles the table format
@@ -125,12 +126,12 @@ def gdas2radiosonde(src_file, dst_file, col_names=None):
     return dst_file
 
 
-def get_month_folder_name(parent_folder, day_date):
+def get_month_folder_name(parent_folder: os.path, day_date: datetime) -> os.path:
     month_folder = os.path.join(parent_folder, day_date.strftime("%Y"), day_date.strftime("%m"))
     return month_folder
 
 
-def extract_date_time(path, format_filename, format_times):
+def extract_date_time(path: os.path, format_filename: str, format_times: str):
     """
     Extracting datetime from file name using a formatter string.
     :param path: path to folder containing the files to observe
@@ -149,9 +150,11 @@ def extract_date_time(path, format_filename, format_times):
     return time_stamps
 
 
-def get_daily_molecular_profiles(station, day_date, lambda_nm=532, height_units='km'):
+def get_daily_molecular_profiles(station: gs.Station, day_date: datetime, lambda_nm: Union[int, float] = 532,
+                                 height_units: str = 'km') -> (pd.Series, pd.Series):
     """
     Generating daily molecular profile from gdas txt file
+    :param day_date:
     :param station: gs.station() object of the lidar station
     :param gdas_txt_paths: paths to gdas txt files , containing table with the columns
     "PRES	HGHT	TEMP	UWND	VWND	WWND	RELH	TPOT	WDIR	WSPD"
@@ -200,14 +203,14 @@ def get_daily_molecular_profiles(station, day_date, lambda_nm=532, height_units=
     return df_sigma, df_beta
 
 
-def get_gdas_timestamp(station, path, file_type='txt'):
+def get_gdas_timestamp(station: gs.Station, path: os.path, file_type: str = 'txt'):
     format_times = ["%Y%m%d_%H"]
     format_filename = f"{station.location.lower()}_(.*)_{station.lat:.1f}_{station.lon:.1f}.{file_type}"
     date_time = extract_date_time(path, format_filename, format_times)[0]
     return date_time
 
 
-def get_daily_gdas_paths(station, day_date, f_type='gdas1'):
+def get_daily_gdas_paths(station: gs.Station, day_date: datetime, f_type: str = 'gdas1') -> (os.path, list[os.path]):
     """
     Retrieves gdas container folder and file paths for a given date
     :param station: gs.station() object of the lidar station
@@ -237,7 +240,7 @@ def get_daily_gdas_paths(station, day_date, f_type='gdas1'):
     return month_folder, gdas_paths
 
 
-def convert_daily_gdas(station, day_date):
+def convert_daily_gdas(station: gs.Station, day_date: datetime) -> list[os.path]:
     """
     Converting gdas files from TROPOS of type .gdas1 to .txt for a given day.
     :param station: gs.station() object of the lidar station
@@ -260,7 +263,8 @@ def convert_daily_gdas(station, day_date):
     return converted_paths
 
 
-def get_TROPOS_dataset_file_name(start_time=None, end_time=None, file_type='profiles'):
+def get_TROPOS_dataset_file_name(start_time: Union[datetime, None] = None, end_time: Union[datetime, None] = None,
+                                 file_type: str = 'profiles') -> str:
     """
     Retrieves file pattern name of TROPOS start time, end time and  profile type.
     :param start_time: datetime.datetime object specifying specific start time of measurement or profile analysis
@@ -284,7 +288,9 @@ def get_TROPOS_dataset_file_name(start_time=None, end_time=None, file_type='prof
     return pattern
 
 
-def get_TROPOS_dataset_paths(station, day_date, start_time=None, end_time=None, file_type='profiles', level='level0'):
+def get_TROPOS_dataset_paths(station: gs.Station, day_date: datetime, start_time: Union[datetime, None] = None,
+                             end_time: Union[datetime, None] = None, file_type: str = 'profiles',
+                             level: str = 'level0') -> list[os.path]:
     """
     Retrieves netcdf (.nc) files from TROPOS for a given station and day_date, and type.
 
@@ -313,14 +319,14 @@ def get_TROPOS_dataset_paths(station, day_date, start_time=None, end_time=None, 
     return paths
 
 
-def get_TROPOS_day_folder_name(parent_folder, day_date):
+def get_TROPOS_day_folder_name(parent_folder: os.path, day_date: datetime) -> os.path:
     moth_folder = get_month_folder_name(parent_folder, day_date)
     day_folder = os.path.join(moth_folder, day_date.strftime("%d"))
     return day_folder
 
 
-def get_range_corr_ds_chan(darray, altitude, lambda_nm, height_units='km', optim_size=False,
-                           verbose=False):
+def get_range_corr_ds_chan(darray: xr.DataArray, altitude: float, lambda_nm: int, height_units: str = 'km',
+                           optim_size: bool = False, verbose: bool = False):
     """
     Retrieving a 6-hours range corrected lidar signal (pr^2)
     from attenuated_backscatter signals in three channels (355,532,1064).
@@ -362,6 +368,7 @@ def create_range_corr_ds_chan(rangecorr_df: pd.DataFrame, lambda_nm: int, height
     from attenuated_backscatter signals in three channels (355,532,1064).
     The attenuated_backscatter are from a 6-hours *att_bsc.nc loaded earlier by darray
 
+    :param rangecorr_df:
     :param lambda_nm: wavelength in [nm], e.g, for green lambda_nm = 532.0 [nm]
     :param height_units:  Output units of height grid in 'km' (default) or 'm'
     :param optim_size: Boolean. False(default): the retrieved values are of type 'float64',
@@ -410,8 +417,9 @@ def create_range_corr_ds_chan(rangecorr_df: pd.DataFrame, lambda_nm: int, height
     return range_corr_ds_chan
 
 
-def generate_daily_molecular_chan(station, day_date, lambda_nm, time_res='30S',
-                                  height_units='km', optim_size=False, verbose=False):
+def generate_daily_molecular_chan(station: gs.Station, day_date: date, lambda_nm: Union[int, float],
+                                  time_res: str = '30S', height_units: str = 'km', optim_size: bool = False,
+                                  verbose: bool = False) -> xr.Dataset:
     """
     Generating daily molecular profiles for a given channel's wavelength
     :param station: gs.station() object of the lidar station
@@ -496,7 +504,7 @@ def generate_daily_molecular_chan(station, day_date, lambda_nm, time_res='30S',
     return ds_chan
 
 
-def calc_r2_da(station, day_date):
+def calc_r2_da(station: gs.Station, day_date: date) -> xr.DataArray:
     """
     calc r^2 (as 2D image)
     :param station: gs.station() object of the lidar station
@@ -523,7 +531,7 @@ def calc_r2_da(station, day_date):
     return r2_ds.r2
 
 
-def convert_periodic_gdas(station, start_day, end_day):
+def convert_periodic_gdas(station: gs.Station, start_day: datetime, end_day: datetime) -> list[os.path]:
     logger = logging.getLogger()
 
     day_dates = pd.date_range(start=start_day, end=end_day, freq=timedelta(days=1))
@@ -537,8 +545,8 @@ def convert_periodic_gdas(station, start_day, end_day):
     return gdastxt_paths
 
 
-def generate_daily_molecular(station, day_date, time_res='30S', height_units='km',
-                             optim_size=False, verbose=False, USE_KM_UNITS=True):
+def generate_daily_molecular(station: gs.Station, day_date: date, time_res: str = '30S', height_units: str = 'km',
+                             optim_size: bool = False, verbose: bool = False, USE_KM_UNITS: bool = True) -> xr.Dataset:
     """
     Generating daily molecular profiles for all elastic channels (355,532,1064)
     :param station: gs.station() object of the lidar station
@@ -578,7 +586,7 @@ def generate_daily_molecular(station, day_date, time_res='30S', height_units='km
     return mol_ds
 
 
-def gen_daily_molecular_ds(day_date):
+def gen_daily_molecular_ds(day_date: date):
     """
     Generating and saving a daily molecular profile.
     The profile is of type xr.Dataset().
@@ -608,8 +616,8 @@ def gen_daily_molecular_ds(day_date):
     logger.debug(f"\nDone saving molecular datasets for {day_date.strftime('%Y-%m-%d')}, to: {ncpaths}")
 
 
-def get_daily_range_corr(station, day_date, height_units='km',
-                         optim_size=False, verbose=False, use_km_unit=True):
+def get_daily_range_corr(station: gs.Station, day_date: date, height_units: str = 'km',
+                         optim_size: bool = False, verbose: bool = False, use_km_unit: bool = True):
     """
     Retrieving daily range corrected lidar signal (pr^2) from 'level1a' data by Pollynet Processing chain.
     The range corrected signal is represented by 'att_bsc' (aka attenuated backscatter coefficient) in the source data,
