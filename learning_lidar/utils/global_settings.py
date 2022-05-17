@@ -141,7 +141,7 @@ class Station:
         heights = np.linspace(min_height * scale, top_height * scale, self.n_bins)
         return heights
 
-    def calc_daily_time_index(self, day_date):
+    def calc_daily_time_index(self, day_date: date):
         # TODO: day_date should be of type datetime (not datetime.date) . The error was fixed .
         #  but we need to clarify it, since up until now daye_date was datetime ..
         start_dt = datetime.combine(day_date, time(0)) if type(day_date) == date else day_date

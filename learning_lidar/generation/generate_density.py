@@ -16,10 +16,12 @@ from learning_lidar.utils import utils, vis_utils, global_settings as gs
 def generate_daily_aerosol_density(station: gs.Station, day_date: datetime.date, save_ds: bool = True) -> (
         xr.Dataset, xr.Dataset):
     """
-    Generate daily density (normalized and unit--less) , and optical density of aerosols: extinction (alpha [1/km]) ,
-    and backscatter (beta [1/km sr])) :param station: gs.station() object of the lidar station :param day_date:
-    datetime.date object of the required date :param SAVE_DS: bool. True - save the dataset :return: aer_ds,
-    density_ds : (xr.Dataset(), xr.Dataset()) - The aerosols optical density and the density datasets
+    Generate daily aerosol density (rho - a normalized and unit--less) ,
+    and optical coefficients: extinction (alpha [1/km]), and backscatter (beta [1/km sr]))
+    :param station: gs.station() object of the lidar station
+    :param day_date: datetime.date object of the required date
+    :param SAVE_DS: bool. True - save the dataset
+    :return: aer_ds, density_ds : (xr.Dataset(), xr.Dataset()) - The aerosols optical density and the density datasets
     """
     logger = logging.getLogger()
     logger.debug(f"Start generate_daily_aerosol_density for {station.name} on {day_date}")
