@@ -130,7 +130,7 @@ def add_X_path(df, station, day_date, lambda_nm=532, data_source='molecular', fi
     :param lambda_nm: wavelength [nm] e.g., for the green channel 532 [nm]
     :param data_source: string object: 'molecular' or 'lidar'
     :param file_type: string object: e.g., 'attbsc' for molecular_dataset or 'range_corr' for a lidar_dataset
-    :return: ds with the added collum of the relevant raw
+    :return: ds with the added column of the relevant raw
     """
     logger = logging.getLogger()
     paths = xr_utils.get_prep_dataset_paths(station=station,
