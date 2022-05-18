@@ -61,8 +61,7 @@ if __name__ == '__main__':
     # ####### Lidar Signal generation #######
     logger.info("Generating Lidar Signal...")
     daily_signals_generator = DailySignalGenerator(station_name=args.station_name,
-                                                   save_ds=args.save_ds, logger=logger)
+                                                   save_ds=args.save_ds, logger=logger, plot_results=args.plot_results)
 
     daily_signals_generator.daily_signals_generation(start_date=args.start_date, end_date=args.end_date,
-                                                     update_overlap_only=args.update_overlap_only,
-                                                     plot_results=args.plot_results)
+                                                     update_overlap_only=args.update_overlap_only)
