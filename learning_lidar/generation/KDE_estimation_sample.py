@@ -17,7 +17,7 @@ vis_utils.set_visualization_settings()
 
 import learning_lidar.generation.generation_utils as gen_utils
 from learning_lidar.utils import utils, xr_utils, vis_utils, proc_utils, global_settings as gs
-
+from generate_density_utils import LR_tropos
 vis_utils.set_visualization_settings()
 
 
@@ -109,7 +109,7 @@ def kde_estimation_main(args, month, year, data_folder):
     [x1, y1] = kernel.resample(2 * monthdays)
     scores_new = kernel(np.vstack([x1, y1]))
     # TODO: the argpartition was to make sure values are within limits .
-    #  so make sure the usage of regection sampling is done correctly
+    #  so make sure the usage of rejection sampling is done correctly
     max_ind = np.argpartition(scores_new, -2 * monthdays)[-2 * monthdays:]
     ang_355_532, ang_532_1064 = x1[max_ind], y1[max_ind]
 
@@ -374,7 +374,9 @@ def kde_estimation_main(args, month, year, data_folder):
         ax.set_ylabel(r'$\alpha_{532}^{\rm max} \left[\frac{1}{\rm km}\right]$')
         ticks_loc = ax.get_yticks().tolist()
         ax.yaxis.set_major_locator(mticker.FixedLocator(ticks_loc))
-        ax.set_yticklabels([round(tick_label, 1) for tick_label in ax.get_yticks() * 55])  # Beta to Alpha!
+        # Set new y_ticks - Convert Beta values to alpha!
+        y_ticks = [round(tick_label, 1) for tick_label in ax.get_yticks() * LR_tropos]
+        ax.set_yticklabels(y_ticks)
         plt.locator_params(axis='y', nbins=5)
         plt.locator_params(axis='x', nbins=5)
         fig.colorbar(im, ax=ax)
