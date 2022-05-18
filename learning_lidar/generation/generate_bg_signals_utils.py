@@ -2,13 +2,14 @@ import os
 from datetime import datetime, timedelta, time
 
 import astral
+import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 import seaborn as sns
 from dateutil import tz
-import matplotlib.pyplot as plt
-from scipy.optimize import curve_fit
 from matplotlib import dates as mdates
+from scipy.optimize import curve_fit
+
 from learning_lidar.utils import utils, vis_utils, global_settings as gs
 from learning_lidar.utils.misc_lidar import calc_gauss_curve
 
@@ -289,7 +290,7 @@ def plot_bg_part_of_year(ds_bg_year, dslice):
     ds_bg_year.sel(Time=dslice).bg.plot(hue='Wavelength', ax=ax, linewidth=0.05)
     ax.set_xlim([dslice.start, dslice.stop])
     ax.set_ybound([-.01, 2])
-    ax.set_ylabel(r"${\rm P_{BG}[photons]}$")
+    ax.set_ylabel(r"$\rm{\bm{P}_{BG}[photons]}$")
     ax.set_xticks(pd.date_range(dslice.start, dslice.stop, freq="2MS"))
     ax.xaxis.set_major_formatter(mdates.DateFormatter('%m-%d'))
     ax.xaxis.set_tick_params(rotation=0)
@@ -335,7 +336,7 @@ def plot_bg_one_day(ds_bg_year, c_day, mean=None):
     for tick in ax.xaxis.get_majorticklabels():
         tick.set_horizontalalignment("left")
     ax.set_ybound([-.01, 2])
-    ax.set_ylabel(r"${\rm P_{BG}[photons]}$")
+    ax.set_ylabel(r"${\rm \bm{P}_{BG}[photons]}$")
     plt.tight_layout()
     fig_path = os.path.join('figures', f"BG_{c_day.strftime('%Y-%m-%d')}")
     print(f"Saving fig to {fig_path}")

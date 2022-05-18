@@ -36,11 +36,11 @@ class DailySignalGenerator:
                                                           update_overlap_only=False, PLOT_RESULTS=False)
 
         if self.save_ds:
-            # TODO: check that the range_corr_p is added to measure_ds, and that the LCNET is uploading the new paths
+            # TODO: check that the LCNET is uploading the new paths
             #  (especially if range_corr_p )  . and if so, save only 2 single files of measure_ds, and signal_ds to save
             #  time and space
             # NOTE: saving to separated datasets (for the use of the learning phase),
-            # is done in dataseting.prepare_generated_samples()
+            # is done in dataseting.prepare_generated_samples() create_generated_dataset
             gen_utils.save_generated_dataset(self.station, measure_ds, data_source='lidar', save_mode='single')
             gen_utils.save_generated_dataset(self.station, signal_ds, data_source='signal', save_mode='single')
 
@@ -88,7 +88,7 @@ if __name__ == '__main__':
 
     args = parser.parse_args()
 
-    logger = utils.create_and_configer_logger(f"{os.path.basename(__file__)}.log", level=logging.DEBUG)
+    logger = utils.create_and_configer_logger(f"{os.path.basename(__file__)}.log", level=args.log)
     logger.info(args)
 
     daily_signals_generator = DailySignalGenerator(station_name=args.station_name,

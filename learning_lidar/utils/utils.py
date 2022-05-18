@@ -18,6 +18,15 @@ rc('text', usetex=True)
 rc('font', family='serif')
 plt.rcParams['text.latex.preamble'] = r"\usepackage{amsmath}"
 
+log_levels = {
+    'critical': logging.CRITICAL,
+    'error': logging.ERROR,
+    'warn': logging.WARNING,
+    'warning': logging.WARNING,
+    'info': logging.INFO,
+    'debug': logging.DEBUG
+}
+
 
 def create_and_configer_logger(log_name='log_file.log', level=logging.DEBUG):
     """
@@ -38,7 +47,18 @@ def create_and_configer_logger(log_name='log_file.log', level=logging.DEBUG):
         log_name: str, log file name
         
     Returns: logger
+    :param log_name:
+    :param level:
     """
+    if type(level) is str:
+        olevel = level
+        level = log_levels.get(level.lower())
+        if level is None:
+            raise ValueError(
+                f"Wrong values of log given: {olevel} \nMust be one of: {' | '.join(log_levels.keys())}")
+    # TODO: make sure that once the log level is set from parser,
+    #  than keep it without change, unless it is not given that keep the info level as default.
+    #  Currently, the log level changes all the time from the parser level to 'info'
     # set up logging to file
     logging.basicConfig(
         filename=log_name,
@@ -57,6 +77,7 @@ def create_and_configer_logger(log_name='log_file.log', level=logging.DEBUG):
     logging.getLogger('').addHandler(console)
 
     logger = logging.getLogger(__name__)
+    logger.setLevel(level=level)
     return logger
 
 
@@ -177,6 +198,10 @@ def get_base_arguments(parser: argparse.ArgumentParser = None) -> argparse.Argum
 
     parser.add_argument('--save_ds', action='store_true',
                         help='Whether to save the datasets')
+
+    parser.add_argument("--log", default='info',
+                        help=("Provide logging level. \nExample --log 'debug', \nDefault='info', "
+                              f"\nMust be one of: {' | '.join(log_levels.keys())}"))
 
     return parser
 

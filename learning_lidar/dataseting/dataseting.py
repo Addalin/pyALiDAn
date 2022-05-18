@@ -557,7 +557,7 @@ def calc_day_statistics(station, day_date, top_height=15.3):
     mol_ds = xr_utils.load_dataset(mol_nc_name)
     signal_ds = xr_utils.load_dataset(signal_nc_name)
     lidar_ds = xr_utils.load_dataset(lidar_nc_name)
-    p_bg = get_daily_bg(station, day_date)  # daily background: p_bg
+    p_bg = get_daily_bg(station, day_date, PLOT_RESULTS=False)  # daily background: p_bg
 
     # update daily profiles stats
     datasets_with_names_time_height = [(signal_ds.p, f'p_{sig_source}'),
