@@ -229,7 +229,7 @@ def get_daily_overlap(station: gs.Station, day_date: datetime.date, height_index
 
     overlap_params = get_month_gen_params_ds(station, day_date, type_='overlap')
     overlap = sigmoid(height_index, *overlap_params.to_array().values)
-    overlap_ds = xr.Dataset(data_vars={'overlap': ('Height', overlap)},
+    overlap_ds = xr.Dataset(data_vars={'overlap': ('Height', overlap.values)},
                             coords={'Height': height_index.values},
                             attrs={'name': 'Overlap Function'})
 
