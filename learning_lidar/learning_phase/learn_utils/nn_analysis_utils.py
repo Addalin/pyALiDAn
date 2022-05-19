@@ -136,7 +136,7 @@ def generate_results_table(results_folder: str = os.path.join(gs.PKG_ROOT_DIR, '
                          'loss', 'MARELoss',
                          'bsize', 'dfilter', 'dnorm', 'fc_size', 'hsizes', 'lr',
                          'ltype', 'source', 'use_bg',
-                         'use_power','opt_powers', 'powers',
+                         'use_power', 'opt_powers', 'powers',
                          'db', 'overlap', 'logdir']  # 'note'
             results_df = results_df.reindex(columns=new_order)
 
@@ -180,8 +180,14 @@ def generate_results_table(results_folder: str = os.path.join(gs.PKG_ROOT_DIR, '
     # inds = total_results.dfilter[filtered].index
     for ind, f in enumerate(filtered):
         if f:
-            [filter_by, filter_values] = total_results.dfilter.iloc[ind].split(' ')
-            filter_values = eval(filter_values)
+            try:
+                [filter_by, filter_values] = total_results.dfilter.iloc[ind].split(' ')
+            except:
+                # The dfilter was not formatted properly, or no filter was done
+                [filter_by, filter_values] = ['None', 'None']
+                pass
+            finally:
+                filter_values = eval(filter_values)
             if filter_by == 'wavelength':
                 wavelength = tuple(filter_values) if len(filter_values) > 1 else filter_values[0]
             else:
@@ -210,6 +216,10 @@ def generate_results_table(results_folder: str = os.path.join(gs.PKG_ROOT_DIR, '
             configs.append('E')
         elif (hsize == 6) and (fcsize == 32) and u_hsize:
             configs.append('F')
+        elif (hsize == 8) and (fcsize == 16) and u_hsize:
+            configs.append('G')
+        elif (hsize == 8) and (fcsize == 32) and u_hsize:
+            configs.append('H')
         else:
             configs.append('Other')
 
@@ -228,5 +238,5 @@ if __name__ == '__main__':
     results_folder = os.path.join(gs.PKG_ROOT_DIR, 'results')
     experiments_table_fname = 'runs_board.xlsx'
     dst_fname = 'total_results.csv'
-    dst_fname = 'remote_' + dst_fname  if (sys.platform in ['linux', 'ubuntu']) else dst_fname
+    dst_fname = 'remote_' + dst_fname if (sys.platform in ['linux', 'ubuntu']) else dst_fname
     generate_results_table(results_folder, experiments_table_fname, dst_fname=dst_fname)
