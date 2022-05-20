@@ -226,7 +226,9 @@ def generate_results_table(results_folder: str = os.path.join(gs.PKG_ROOT_DIR, '
 
     total_results['config'] = configs
 
-    # Split table to valid loss and non-valid loss
+    # Split table to valid loss and non-valid loss (loss=1). The non-valid will be used to do re-runs.
+    # If the comment is 'repeat'- then one should repeat it according to the logdir.
+    # If the comment is 'ignore' it means that it was already repeated.
     valid_loss = total_results[total_results.MARELoss < 1].copy()
     one_loss = total_results[total_results.MARELoss == 1].copy()
     comment = []
