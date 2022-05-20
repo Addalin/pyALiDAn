@@ -95,8 +95,8 @@ EXP_NAME = None #'None'
 
 
 # ######## RESTORE or VALIDATE TRIAL PARAMS #########
-experiment_dir = 'main_2022-04-09_18-58-52'
-trial_dir =  r"main_f3bba_00028_28_bsize=32,cbias=True,debug=False,dfilter=wavelength [532],dnorm=False,fc_size=[16],hsizes=[5,5,5,5],lr=0.002,lt_2022-04-09_22-44-53"
+experiment_dir = 'main_2022-03-26_19-43-28'
+trial_dir =  r"/home/addalin/E/results/main_2022-03-26_19-43-28/main_dd418_00191_191_bsize=32,cbias=True,debug=False,dfilter=wavelength [355],dnorm=False,fc_size=[32],hsizes=[6, 6, 6, 6],lr=0.00_2022-03-30_20-13-08"
 #trial_dir = r"C:\Users\addalin\Dropbox\Lidar\lidar_learning\results\main_2022-02-04_20-14-28\main_4b099_00000_0_bsize" \
 #            r"=32,dfilter=wavelength [355],dnorm=False,fc_size=[16],hsizes=[4,4,4,4]," \
 #            r"lr=0.002,ltype=MAELoss,opt_powers=T_2022-02-04_20-14-29"
@@ -121,7 +121,7 @@ if VALIDATE_TRIAL:
     PRETRAINED_MODEL_PATH, MODEL_PARAMS = get_trial_params_and_checkpoint(experiment_dir, trial_dir, check_point_name)
 
 # ######## RESTORE TRIAL #########
-RESTORE_TRIAL = False  # If true restores the given trial
+RESTORE_TRIAL = True  # If true restores the given trial
 if RESTORE_TRIAL:
     CHECKPOINT_PATH, TRIAL_PARAMS = get_trial_params_and_checkpoint(experiment_dir, trial_dir, check_point_name)
 else:
@@ -206,3 +206,4 @@ NON_RAY_HYPER_PARAMS = {
 }
 USE_RAY = True
 DEBUG_RAY = False
+INIT_PARAMETERS = True
