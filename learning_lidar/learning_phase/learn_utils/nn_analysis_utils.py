@@ -197,6 +197,7 @@ def generate_results_table(results_folder: str = os.path.join(gs.PKG_ROOT_DIR, '
         wavelengths.append(wavelength)
 
     total_results['wavelength'] = wavelengths
+    total_results.loc[total_results.wavelength == 'all', 'dfilter'] = ''
 
     # Specify config name
     configs = []
@@ -225,11 +226,32 @@ def generate_results_table(results_folder: str = os.path.join(gs.PKG_ROOT_DIR, '
 
     total_results['config'] = configs
 
+    # Split table to valid loss and non-valid loss
+    valid_loss = total_results[total_results.MARELoss < 1].copy()
+    one_loss = total_results[total_results.MARELoss == 1].copy()
+    comment = []
+    for idx, row in one_loss.iterrows():
+        res_duplicate = valid_loss[valid_loss['config'] == row['config']][valid_loss['use_bg'] == row['use_bg']][
+            valid_loss['db'] == row['db']][valid_loss['source'] == row['source']][
+            valid_loss['fc_size'] == row['fc_size']][
+            valid_loss['wavelength'] == row['wavelength']][valid_loss['pow_y'] == row['pow_y']][
+            valid_loss['pow_x1'] == row['pow_x1']][valid_loss['pow_x2'] == row['pow_x2']][
+            valid_loss['pow_x3'] == row['pow_x3']]
+        if res_duplicate.empty:
+            comment.append('repeat')
+        else:
+            comment.append('ignore')
+    one_loss['comment'] = comment
+
     # save
     # TODO: save runs_df with results_csv paths
-    current_res_fname = os.path.join(results_folder, dst_fname)
-    total_results.to_csv(current_res_fname)
-    print('Saving total results to: ', current_res_fname)
+    valid_res_fname = os.path.join(results_folder, dst_fname)
+    valid_loss.to_csv(valid_res_fname)
+    print('Saving valid results to: ', valid_res_fname)
+    nonvalid_res_fname = os.path.join(results_folder, 'non_valid_'+dst_fname)
+    one_loss.to_csv(nonvalid_res_fname)
+    print('Saving non valid results results to: ', nonvalid_res_fname)
+
 
     return total_results
 
