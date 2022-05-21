@@ -38,8 +38,9 @@ class DefaultCNN(LightningModule):
     def init_parameters(self, init_funcs):
         print('Reset parameters')
         for p in self.parameters():
-            init_func = init_funcs.get(len(p.shape), init_funcs["default"])
-            init_func(p)
+            if p.requires_grad:  # init only parameters that require grads
+                init_func = init_funcs.get(len(p.shape), init_funcs["default"])
+                init_func(p)
 
     def __init__(self, in_channels, output_size, hidden_sizes, fc_size, loss_type, learning_rate, X_features_profiles,
                  powers, weight_decay=0, do_opt_powers: bool = False, conv_bias: bool = True):

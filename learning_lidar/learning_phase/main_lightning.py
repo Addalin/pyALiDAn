@@ -13,7 +13,7 @@ from learning_lidar.learning_phase.data_modules.lidar_data_module import LidarDa
 from learning_lidar.learning_phase.models.defaultCNN import DefaultCNN, init_funcs
 from learning_lidar.learning_phase.run_params import USE_RAY, DEBUG_RAY, CONSTS, RAY_HYPER_PARAMS, RESULTS_PATH, \
     NON_RAY_HYPER_PARAMS, update_params, RESUME_EXP, EXP_NAME, TRIAL_PARAMS, \
-    CHECKPOINT_PATH,INIT_PARAMETERS
+    CHECKPOINT_PATH, INIT_PARAMETERS, TRIAL_CONSTS
 from learning_lidar.utils.utils import create_and_configer_logger
 
 seed_everything(8318)  # Note, for full deterministic result add deterministic=True to trainer
@@ -95,7 +95,7 @@ if __name__ == '__main__':
             print_intermediate_tables=True)
 
         analysis = tune.run(
-            tune.with_parameters(main, consts=CONSTS),
+            tune.with_parameters(main, consts=TRIAL_CONSTS if TRIAL_CONSTS else CONSTS),
             config=TRIAL_PARAMS if TRIAL_PARAMS else RAY_HYPER_PARAMS,
             local_dir=RESULTS_PATH,  # where to save the results
             fail_fast=False,  # if one run fails - stop all runs
