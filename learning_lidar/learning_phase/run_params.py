@@ -8,16 +8,8 @@ from ray import tune
 import glob
 from learning_lidar.utils import global_settings as gs
 
-NUM_AVILABLE_CPU = os.cpu_count()
-NUM_AVAILABLE_GPU = torch.cuda.device_count()
-db_type = 'initial'  # options: 'extended' or 'initial'
-START_DATE = datetime(2017, 4, 1) if db_type == 'extended' else datetime(2017, 9, 1)
-END_DATE = datetime(2017, 10, 31)
-station_name = 'haifa'
-station_name = station_name + '_remote' if (sys.platform in ['linux', 'ubuntu']) else station_name
-station = gs.Station(station_name)
 
-
+# ######## HELPER FUNCTIONS ##########
 def get_paths(station: gs.Station, start_date: datetime, end_date: datetime):
     base_path = os.path.dirname(os.path.dirname(os.path.dirname(__file__)))
     nn_source_data = station.nn_source_data
@@ -28,11 +20,6 @@ def get_paths(station: gs.Station, start_date: datetime, end_date: datetime):
     stats_csv_path = os.path.join(base_path, 'data', "stats_" + csv_base_name + '_train.csv')
     results_path = os.path.join(station.nn_output_results)  # TODO: Add exception in case paths are invalid
     return train_csv_path, test_csv_path, stats_csv_path, results_path, nn_source_data
-
-
-train_csv_path, test_csv_path, stats_csv_path, RESULTS_PATH, nn_source_data = get_paths(station,
-                                                                                        start_date=START_DATE,
-                                                                                        end_date=END_DATE)
 
 
 def update_params(config, consts):
@@ -80,65 +67,102 @@ def update_params(config, consts):
     return config, X_features, powers, dfilter
 
 
-# ######## RESUME EXPERIMENT ######### ---> Make sure RESTORE_TRIAL = False
-RESUME_EXP = True  # 'ERRORED_ONLY' | False | True
-# Can be "LOCAL" to continue experiment when it was disrupted (trials that were completed seem to continue training),
-# or "ERRORED_ONLY" to reset and rerun ERRORED trials (not tested). Otherwise False to start a new experiment. Note:
-# if fail_fast was 'True' in the folder of 'EXP_NAME', then tune will not be able to load trials that didn't
-# store any folder
-EXP_NAME = 'main_2022-05-20_19-54-17'  # 'None'
-if RESUME_EXP:  # Load original CONSTS of the experiment that is resumed
-    path_exp = os.path.join(RESULTS_PATH, EXP_NAME)
-    const_fnames = glob.glob(path_exp + "/**/consts.yaml", recursive=True)
+# TODO: Load Trainer chekpoint  https://pytorch-lightning.readthedocs.io/en/stable/common/weights_loading.html
+#  restoring-training-state name of trainer : epoch=29-step=3539.ckpt found under
+#  C:...\main_2022-01-31_23-24-22\main_28520_00024_24_bsize=32,dfilter=('wavelength', [355]),dnorm=False,
+#  fc_size=[16],hsizes=[6, 6, 6, 6],lr=0.002,ltype=MAELoss,sou_2022-02-01_11-49-31\lightning_logs\version_0
+def get_checkpoint_params_const(results_path, experiment_name, trial_id, checkpoint_id):
+    # experiment and trial directories
+    experiment_dir = os.path.join(results_path, experiment_name)
+    if not os.path.exists(experiment_dir):
+        raise ValueError(f"Wrong experiment path: {experiment_dir}")
+
+    trial_dir = glob.glob(os.path.join(experiment_dir, rf'main_{trial_id}*'))[0]
+    if not os.path.exists(trial_dir):
+        raise ValueError(f"Wrong trial path: {trial_dir}")
+
+    # Load consts
+    trial_consts_path = os.path.join(trial_dir, 'consts.yaml')
+    with open(trial_consts_path, 'r') as f:
+        consts = yaml.load(f.read(), Loader=yaml.FullLoader)
+
+    # Load parameters
+    trial_params_path = os.path.join(trial_dir, 'params.json')
+    with open(trial_params_path, 'r') as f:
+        params = json.load(f)
+
+    # Load checkpoint
+    chekpoint_name = glob.glob1(trial_dir, f'checkpoint_epoch={checkpoint_id}*')[0]
+    chekpoint_dir = os.path.join(trial_dir, chekpoint_name)
+    if not (os.path.exists(chekpoint_dir)):
+        raise ValueError(f"Wrong checkpoint dir path: {chekpoint_dir}")
+
+    return chekpoint_dir, params, consts
+
+
+def get_experiment_consts(results_path, experiment_name):
+    # experiment and trial directories
+    experiment_dir = os.path.join(results_path, experiment_name)
+    if not os.path.exists(experiment_dir):
+        raise ValueError(f"Wrong experiment path: {experiment_dir}")
+    const_fnames = glob.glob(experiment_dir + "/**/consts.yaml", recursive=True)
     if const_fnames:
         with open(const_fnames[0], 'r') as f:
-            CONSTS = yaml.load(f.read(), Loader=yaml.FullLoader)
-    else:
-        CONSTS = None
-else:
-    CONSTS = None
+            consts = yaml.load(f.read(), Loader=yaml.FullLoader)
+    return consts
 
+
+# ######## SET BASIC INFO ##########
+NUM_AVILABLE_CPU = os.cpu_count()
+NUM_AVAILABLE_GPU = torch.cuda.device_count()
+db_type = 'extended'  # options: 'extended' or 'initial'
+START_DATE = datetime(2017, 4, 1) if db_type == 'extended' else datetime(2017, 9, 1)
+END_DATE = datetime(2017, 10, 31)
+station_name = 'haifa'
+station_name = station_name + '_remote' if (sys.platform in ['linux', 'ubuntu']) else station_name
+station = gs.Station(station_name)
+train_csv_path, test_csv_path, stats_csv_path, RESULTS_PATH, nn_source_data = get_paths(station,
+                                                                                        start_date=START_DATE,
+                                                                                        end_date=END_DATE)
+
+# ######## RESUME EXPERIMENT ######### ---> Make sure RESTORE_TRIAL = False
+RESUME_EXP = False
+# options: 'ERRORED_ONLY' | False | True
+# Can be "LOCAL" to continue experiment when it was disrupted (trials that were completed seem to continue training),
+# or "ERRORED_ONLY" to reset and rerun ERRORED trials (not tested). Otherwise, False to start a new experiment. Note:
+# if fail_fast was 'True' in the folder of 'EXP_NAME', then tune will not be able to load trials that didn't
+# store any folder
+
+EXP_NAME = None
+# options: Path relative to RESULTS_PATH. e.g.: "main_2021-05-19_21-50-40"
+# else, can keep it None --> creating new experiment path automatically
 # If 'resume' is not False, must enter experiment path.
-# e.g. - "main_2021-05-19_21-50-40". Path is relative to RESULTS_PATH. Otherwise can keep it None.
-# And it is generated automatically.
+
+CONSTS = get_experiment_consts(RESULTS_PATH, EXP_NAME) if RESUME_EXP else None
+# Load original CONSTS of the experiment that is resumed
 
 
 # ######## RESTORE or VALIDATE TRIAL PARAMS #########
-experiment_dir = 'main_2022-04-05_07-29-08'
-trial_dir = r'/home/addalin/E/results/main_2022-04-05_07-29-08/main_ef3f6_00180_180_bsize=32,cbias=True,debug=False,dfilter=wavelength [532],dnorm=False,fc_size=[16],hsizes=[4,4,4,4],lr=0.002,l_2022-04-06_21-08-39'
-check_point_name = 'checkpoint_epoch=0-step=58'
-
-
-# TODO: Load Trainer chekpoint  https://pytorch-lightning.readthedocs.io/en/stable/common/weights_loading.html#restoring-training-state
-# name of trainer : epoch=29-step=3539.ckpt
-# found under C:...\main_2022-01-31_23-24-22\main_28520_00024_24_bsize=32,dfilter=('wavelength', [355]),dnorm=False,fc_size=[16],hsizes=[6, 6, 6, 6],lr=0.002,ltype=MAELoss,sou_2022-02-01_11-49-31\lightning_logs\version_0
-def get_trial_params_and_checkpoint(experiment_dir, trial_dir, check_point_name):
-    # Load parameters
-    trial_params_path = os.path.join(RESULTS_PATH, experiment_dir, trial_dir, 'params.json')
-    with open(trial_params_path, 'r') as f:
-        params = json.load(f)
-    # Load consts
-    trial_consts_path = os.path.join(RESULTS_PATH, experiment_dir, trial_dir, 'consts.yaml')
-    with open(trial_consts_path, 'r') as f:
-        consts = yaml.load(f.read(), Loader=yaml.FullLoader)
-    # Load checkpoint
-    checkpoint = os.path.join(RESULTS_PATH, experiment_dir, trial_dir, check_point_name)
-
-    return checkpoint, params, consts
-
+experiment_name = 'main_2022-05-21_10-26-35'
+trial_id = '58784_00024'
+checkpoint_id = 0
 
 # ######## VALIDATE TRIAL #########
 # This part is relevant for model_validation.py
 VALIDATE_TRIAL = False  # TODO: make sure that the validation works properly when VALIDATE_TRIAL = True
 if VALIDATE_TRIAL:
-    PRETRAINED_MODEL_PATH, MODEL_PARAMS, MODEL_CONSTS = get_trial_params_and_checkpoint(experiment_dir, trial_dir,
-                                                                                        check_point_name)
+    PRETRAINED_MODEL_PATH, MODEL_PARAMS, MODEL_CONSTS = get_checkpoint_params_const(RESULTS_PATH, experiment_name,
+                                                                                    trial_id, checkpoint_id)
+    # set EXP_NAME - to save the new trial in same experiment
+    EXP_NAME = experiment_name
 
 # ######## RESTORE TRIAL #########
-RESTORE_TRIAL = False  # If true restores the given trial
+RESTORE_TRIAL = True  # If true restores the given trial
 if RESTORE_TRIAL:
-    CHECKPOINT_PATH, TRIAL_PARAMS, TRIAL_CONSTS = get_trial_params_and_checkpoint(experiment_dir, trial_dir,
-                                                                                  check_point_name)
+    CHECKPOINT_PATH, TRIAL_PARAMS, TRIAL_CONSTS = get_checkpoint_params_const(RESULTS_PATH, experiment_name,
+                                                                              trial_id, checkpoint_id)
+    # set EXP_NAME - to save the new trial in same experiment
+    EXP_NAME = experiment_name
 else:
     TRIAL_PARAMS = None
     CHECKPOINT_PATH = None
@@ -198,7 +222,8 @@ RAY_HYPER_PARAMS = {
     # 'operations': tune.grid_search(["(None, None, ['poiss','r2'])"])
     # Apply l2 regularization on model weights. parameter weight_decay of Adam optimiser
     # afterwards
-    'db_type': tune.grid_search([db_type]),  # 'extended' or 'initial'. This is set at the beginning.(adding it for logging)
+    'db_type': tune.grid_search([db_type]),
+    # 'extended' or 'initial'. This is set at the beginning.(adding it for logging)
 }
 
 NON_RAY_HYPER_PARAMS = {
@@ -220,5 +245,5 @@ NON_RAY_HYPER_PARAMS = {
     'db_type': db_type,  # 'extended' or 'initial'. This is set at the beginning.(adding it for logging)
 }
 USE_RAY = True
-DEBUG_RAY = True
+DEBUG_RAY = False
 INIT_PARAMETERS = True
