@@ -90,6 +90,7 @@ def generate_results_table(results_folder: str = os.path.join(gs.PKG_ROOT_DIR, '
         states_paths = sorted(glob.glob(os.path.join(row.experiment_folder, r'experiment_state*.json')))
         if states_paths:
             try:
+                # Load results of all trials (and through all runs) of the experiment
                 results_dfs = []
                 for state_path in states_paths:
                     analysis = tune.ExperimentAnalysis(state_path)
@@ -99,11 +100,11 @@ def generate_results_table(results_folder: str = os.path.join(gs.PKG_ROOT_DIR, '
                     results_dfs.append(analysis.dataframe(metric="MARELoss", mode="min", ))
                 results_df = pd.concat(results_dfs)
 
-                # update fields:
+                # Update fields:
                 if ignore_MARELoss:
                     results_df["MARELoss"] = None
 
-                # rename column names:
+                # Rename column names:
                 cols = results_df.columns.values.tolist()
                 new_cols = [col.replace('config/', "") for col in cols]
                 dict_cols = {}
@@ -111,7 +112,7 @@ def generate_results_table(results_folder: str = os.path.join(gs.PKG_ROOT_DIR, '
                     dict_cols.update({col: new_col})
                 results_df = results_df.rename(columns=dict_cols)
 
-                # update power values:
+                # Update power values:
                 use_power = [False if (p is None) or (p == 'FALSE') or (p == False) else True for p in
                              results_df.use_power]
                 powers = ['' if (p is None) or (p == 'FALSE') or (p == False) else p for p in results_df.use_power]
@@ -128,7 +129,7 @@ def generate_results_table(results_folder: str = os.path.join(gs.PKG_ROOT_DIR, '
                              'iterations_since_restore']
                 results_df.drop(columns=drop_cols, inplace=True)
 
-                # reorganize columns:
+                # Reorganize columns:
                 if 'opt_powers' not in results_df.keys():
                     results_df['opt_powers'] = False
 
@@ -145,7 +146,7 @@ def generate_results_table(results_folder: str = os.path.join(gs.PKG_ROOT_DIR, '
                     key, cond = eval(row.trial_to_ignore)
                     results_df.drop(index=results_df[results_df[key] == cond].index, inplace=True)
 
-                # Save csv
+                # Save experiment's results in the main folder of the experiment
                 results_csv = os.path.join(row.experiment_folder, f'experiment_results.csv')
                 results_df.to_csv(results_csv, index=False)
 
@@ -157,14 +158,14 @@ def generate_results_table(results_folder: str = os.path.join(gs.PKG_ROOT_DIR, '
                 continue
         else:
             continue
-    # Concatenate all csv files with include = 1 (TRUE)
 
+    # Concatenate results of all experiment that has 'include'==True
     paths = [row['results_csv'] for idx, row in runs_df.iterrows() if not (pd.isnull(row['results_csv'])) == True]
     results_dfs = [pd.read_csv(path) for path in paths]
     total_results = pd.concat(results_dfs, ignore_index=True)
     total_results['fc_size'] = total_results.fc_size.apply(lambda x: eval(str(x))[0])
 
-    # update powers values
+    # Update powers values
     in_channels = 3
     res = total_results.apply(extract_powers, args=(in_channels,), axis=1, result_type='expand')
     cols_powx = [f"pow_x{ind + 1}" for ind in range(in_channels)]
@@ -182,7 +183,6 @@ def generate_results_table(results_folder: str = os.path.join(gs.PKG_ROOT_DIR, '
     # Specifying column of wavelength usage
     wavelengths = []
     filtered = total_results.dfilter.apply(lambda x: type(x) == str)
-    # inds = total_results.dfilter[filtered].index
     for ind, f in enumerate(filtered):
         if f:
             try:
