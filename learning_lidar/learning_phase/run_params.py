@@ -133,7 +133,7 @@ RESUME_EXP = False
 # if fail_fast was 'True' in the folder of 'EXP_NAME', then tune will not be able to load trials that didn't
 # store any folder
 
-EXP_NAME = None
+EXP_NAME = 'main_2022-05-21_10-26-35'  # None
 # options: Path relative to RESULTS_PATH. e.g.: "main_2021-05-19_21-50-40"
 # else, can keep it None --> creating new experiment path automatically
 # If 'resume' is not False, must enter experiment path.
@@ -143,8 +143,8 @@ CONSTS = get_experiment_consts(RESULTS_PATH, EXP_NAME) if RESUME_EXP else None
 
 
 # ######## RESTORE or VALIDATE TRIAL PARAMS #########
-experiment_name = 'main_2022-05-21_10-26-35'
-trial_id = '58784_00024'
+experiment_name = 'main_2022-03-26_19-43-28'
+trial_id = 'dd418_00191'
 checkpoint_id = 0
 
 # ######## VALIDATE TRIAL #########
@@ -157,7 +157,7 @@ if VALIDATE_TRIAL:
     EXP_NAME = experiment_name
 
 # ######## RESTORE TRIAL #########
-RESTORE_TRIAL = True  # If true restores the given trial
+RESTORE_TRIAL = False  # If true restores the given trial
 if RESTORE_TRIAL:
     CHECKPOINT_PATH, TRIAL_PARAMS, TRIAL_CONSTS = get_checkpoint_params_const(RESULTS_PATH, experiment_name,
                                                                               trial_id, checkpoint_id)
@@ -193,11 +193,13 @@ RAY_HYPER_PARAMS = {
     "lr": tune.grid_search([2 * 1e-3]),
     "bsize": tune.grid_search([32]),
     "ltype": tune.grid_search(['MAELoss']),  # Options: 'MAELoss' | 'MSELoss' | 'MARELoss'. See 'custom_losses.py'
-    "use_power": tune.grid_search(['([0.5,-.27,1],[1])', '([0.5,-.27,.5],[1])',
-                                   '([0.5,-.28,1],[1])', '([0.5,-.28,.5],[1])',
-                                   '([0.5,-.3,1],[1])', '([0.5,-.3,.5],[1])',
-                                   '([0.5,-.1,1],[1])', '([0.5,-.1,.5],[1])',
-                                   '([0.5,-.5,1],[1])', '([0.5,-.5,.5],[1])',
+    "use_power": tune.grid_search(['([0.5,-.27],[1])', #'([0.5,-.27,.5],[1])',
+                                   '([0.5,-.1],[1])', #'([0.5,-.1,.5],[1])',
+                                   '([0.5,-.2],[1])', #'([0.5,-.2,.5],[1])',
+                                   '([0.5,-.28],[1])',# '([0.5,-.28,.5],[1])',
+                                   '([0.5,-.3],[1])', #'([0.5,-.3,.5],[1])',
+                                   '([0.5,.5],[1])', #'([0.5,.5,.5],[1])',
+                                   '([0.5,-.5],[1])', #'([0.5,-.5,.5],[1])',
                                    False
                                    ]),
     # '([0.5,-.23,1],[1])','([0.5,-.23,.5],[1])', #'([0.5,-.25,1],[1])', #'([0.5,-.25,.5],[1])',
@@ -208,10 +210,10 @@ RAY_HYPER_PARAMS = {
     # '([0.5,.1,1],[1])','([0.5,.1,.5],[1])']),#'([0.5,-.5,.5],[1])', #'([0.5,-.5,1],[1])']),
     # Options: False | '([0.5,1,1], [0.5])' ...etc. UV  : -0.27 , G: -0.263 , IR: -0.11
     "opt_powers": tune.choice([False]),  # Options: False | True
-    "use_bg": tune.grid_search(['range_corr', True]),  # False | True |  'range_corr'
+    "use_bg": tune.grid_search([False]),  # False | True |  'range_corr'
     # Options: False | True | 'range_corr'. Not relevant for 'signal' as source
     "source": tune.grid_search(['lidar']),  # Options: 'lidar'| 'signal_p' | 'signal'
-    'dfilter': tune.grid_search(["wavelength [355]", "wavelength [532]"]),  # "wavelength [355]", "wavelength [532]",
+    'dfilter': tune.grid_search([None]),  # "wavelength [355]", "wavelength [532]",
     # None,"wavelength [355]", "wavelength [532]","wavelength [1064]"]),  # Options: None | '(wavelength, [lambda])'
     # - lambda=355,532,1064
     'dnorm': tune.grid_search([False]),  # Options: False | True
@@ -247,3 +249,4 @@ NON_RAY_HYPER_PARAMS = {
 USE_RAY = True
 DEBUG_RAY = False
 INIT_PARAMETERS = True
+CONSTS.update({'max_epochs': 30})

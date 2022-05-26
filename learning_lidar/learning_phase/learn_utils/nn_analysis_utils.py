@@ -67,7 +67,14 @@ def plot_pivot_table(pivot_table, figsize, title, ylim=None):
 def generate_results_table(results_folder: str = os.path.join(gs.PKG_ROOT_DIR, 'results'),
                            experiments_table_fname: str = 'runs_board.xlsx',
                            dst_fname='total_results.csv'):
-    """
+    """ Postprocessing LCNET results from jason state files saved in experiments_table_fname.
+     Then generating a summery table that includes the total trials of the experiment in experiments_table_fname,
+     such that:
+      1. The valid trials table saved to 'valid_res_fname' --> this table is used later in analysis results
+      2. The invalid trials table is separately saved to 'nonvalid_res_fname'.
+         In the comment column trials that require re-run have 'repeat':
+               --> this indicates which trial should be re-run or debug. See RESTORE_TRIAL flag in run_params.py
+         Trials that were already repeated and have other valid run have 'ignore'.
     # TODO add usage
     :param results_folder:
     :param experiments_table_fname:
@@ -80,82 +87,76 @@ def generate_results_table(results_folder: str = os.path.join(gs.PKG_ROOT_DIR, '
     print(runs_df)
 
     for idx, row in runs_df.iterrows():
-        try:
-            state_fname = sorted(glob.glob(os.path.join(row.experiment_folder, r'experiment_state*.json')))[-1]
-            analysis = tune.ExperimentAnalysis(state_fname)
-            ignore_MARELoss = "MARELoss" in [row.field_to_ignore]
-            analysis.default_metric = "MARELoss" if ignore_MARELoss else "MARELoss"
-            analysis.default_mode = "min"
-            results_df = analysis.dataframe(metric="MARELoss", mode="min", )
+        states_paths = sorted(glob.glob(os.path.join(row.experiment_folder, r'experiment_state*.json')))
+        if states_paths:
+            try:
+                results_dfs = []
+                for state_path in states_paths:
+                    analysis = tune.ExperimentAnalysis(state_path)
+                    ignore_MARELoss = "MARELoss" in [row.field_to_ignore]
+                    analysis.default_metric = "MARELoss" if ignore_MARELoss else "MARELoss"
+                    analysis.default_mode = "min"
+                    results_dfs.append(analysis.dataframe(metric="MARELoss", mode="min", ))
+                results_df = pd.concat(results_dfs)
 
-            # update fields:
-            if ignore_MARELoss:
-                results_df["MARELoss"] = None
+                # update fields:
+                if ignore_MARELoss:
+                    results_df["MARELoss"] = None
 
-            # rename column names:
-            cols = results_df.columns.values.tolist()
-            new_cols = [col.replace('config/', "") for col in cols]
-            dict_cols = {}
-            for col, new_col in zip(cols, new_cols):
-                dict_cols.update({col: new_col})
-            results_df = results_df.rename(columns=dict_cols)
+                # rename column names:
+                cols = results_df.columns.values.tolist()
+                new_cols = [col.replace('config/', "") for col in cols]
+                dict_cols = {}
+                for col, new_col in zip(cols, new_cols):
+                    dict_cols.update({col: new_col})
+                results_df = results_df.rename(columns=dict_cols)
 
-            # update power values:
-            # TODO: incase Adi Vainiger: use_bg : TRUE, range_corr and pow_x3 is not given --> use the default values to 0.5
-            len_pow = len(results_df[results_df.use_power == True])
-            len_no_pow = len(results_df[results_df.use_power == False])
-            len_pows = len(results_df[results_df.use_power != False])
-            if len_no_pow > 0:
-                results_df.loc[results_df[results_df.use_power == False].index, 'powers'] = ''
-            if len_pows != len_pow:
-                results_df.loc[results_df[results_df.use_power != False].index, 'powers'] = results_df.use_power
-                results_df.loc[results_df[results_df.use_power != False].index, 'use_power'] = True
-            else:
-                results_df.loc[results_df[results_df.use_power == True].index, 'powers'] = '([0.5,0.5],[0.5])'
+                # update power values:
+                use_power = [False if (p is None) or (p == 'FALSE') or (p == False) else True for p in
+                             results_df.use_power]
+                powers = ['' if (p is None) or (p == 'FALSE') or (p == False) else p for p in results_df.use_power]
+                results_df['use_power'] = use_power
+                results_df['powers'] = powers
+                results_df['overlap'] = row.overlap
+                results_df['db'] = row.database
 
-            # Update source type of database, i.e., extended/initial with/without overlap
-            results_df['overlap'] = row.overlap
-            results_df['db'] = row.database
-            # note = row['note']
-            # row.note.str.__contains__('overlap')
-            # results_df['note']= note if type(note)==str else 'ok'
+                # Drop irrelevant columns:
+                drop_cols = ['time_this_iter_s', 'should_checkpoint', 'done',
+                             'timesteps_total', 'episodes_total',
+                             'experiment_id', 'timestamp', 'pid', 'hostname',
+                             'node_ip', 'time_since_restore', 'timesteps_since_restore',
+                             'iterations_since_restore']
+                results_df.drop(columns=drop_cols, inplace=True)
 
-            # Drop irrelevant columns:
-            drop_cols = ['time_this_iter_s', 'should_checkpoint', 'done',
-                         'timesteps_total', 'episodes_total',
-                         'experiment_id', 'timestamp', 'pid', 'hostname',
-                         'node_ip', 'time_since_restore', 'timesteps_since_restore',
-                         'iterations_since_restore']
-            results_df.drop(columns=drop_cols, inplace=True)
+                # reorganize columns:
+                if 'opt_powers' not in results_df.keys():
+                    results_df['opt_powers'] = False
 
-            # reorganize columns:
-            if 'opt_powers' not in results_df.keys():
-                results_df['opt_powers'] = False
+                new_order = ['trial_id', 'date', 'time_total_s', 'training_iteration',
+                             'loss', 'MARELoss',
+                             'bsize', 'dfilter', 'dnorm', 'fc_size', 'hsizes', 'lr',
+                             'ltype', 'source', 'use_bg',
+                             'use_power', 'opt_powers', 'powers',
+                             'db', 'overlap', 'logdir']  # 'note'
+                results_df = results_df.reindex(columns=new_order)
 
-            new_order = ['trial_id', 'date', 'time_total_s', 'training_iteration',
-                         'loss', 'MARELoss',
-                         'bsize', 'dfilter', 'dnorm', 'fc_size', 'hsizes', 'lr',
-                         'ltype', 'source', 'use_bg',
-                         'use_power', 'opt_powers', 'powers',
-                         'db', 'overlap', 'logdir']  # 'note'
-            results_df = results_df.reindex(columns=new_order)
+                # Remove irrelevant trials (e.g. when dnorm had wrong calculation)
+                if row.trial_to_ignore is not np.nan:
+                    key, cond = eval(row.trial_to_ignore)
+                    results_df.drop(index=results_df[results_df[key] == cond].index, inplace=True)
 
-            # Remove irrelevant trials (e.g. when dnorm had wrong calculation)
-            if row.trial_to_ignore is not np.nan:
-                key, cond = eval(row.trial_to_ignore)
-                results_df.drop(index=results_df[results_df[key] == cond].index, inplace=True)
+                # Save csv
+                results_csv = os.path.join(row.experiment_folder, f'experiment_results.csv')
+                results_df.to_csv(results_csv, index=False)
 
-            # Save csv
-            results_csv = os.path.join(row.experiment_folder, f'experiment_results.csv')
-            results_df.to_csv(results_csv, index=False)
+                # Update csv path in main runs_board
+                runs_df.loc[idx, 'results_csv'] = results_csv
+                print(results_csv, idx)
 
-            # Update csv path in main runs_board
-            runs_df.loc[idx, 'results_csv'] = results_csv
-            print(results_csv, idx)
-
-        except:
+            except:
+                continue
+        else:
             continue
-
     # Concatenate all csv files with include = 1 (TRUE)
 
     paths = [row['results_csv'] for idx, row in runs_df.iterrows() if not (pd.isnull(row['results_csv'])) == True]
@@ -169,6 +170,10 @@ def generate_results_table(results_folder: str = os.path.join(gs.PKG_ROOT_DIR, '
     cols_powx = [f"pow_x{ind + 1}" for ind in range(in_channels)]
     res.rename(columns={0: 'pow_y', 1: cols_powx[0], 2: cols_powx[1], 3: cols_powx[2]}, inplace=True)
     total_results[res.columns.values] = res
+    total_results.loc[total_results.query(
+        # correct runs of use_bg, where the third channel input is missing to default value of 0.5)
+        f"use_power & (use_bg=='{True}' or use_bg=='{'range_corr'}') & pow_x3.isna()").index, 'pow_x3'] = 0.5
+
     total_results['powers'] = total_results.powers.apply(lambda x: eval(x) if type(x) == str else None)
     hsizes = total_results.hsizes.apply(lambda x: eval(x))
     total_results['u_hsize'] = hsizes.apply(lambda x: all(
@@ -250,10 +255,9 @@ def generate_results_table(results_folder: str = os.path.join(gs.PKG_ROOT_DIR, '
     valid_res_fname = os.path.join(results_folder, dst_fname)
     valid_loss.to_csv(valid_res_fname)
     print('Saving valid results to: ', valid_res_fname)
-    nonvalid_res_fname = os.path.join(results_folder, 'non_valid_'+dst_fname)
+    nonvalid_res_fname = os.path.join(results_folder, 'non_valid_' + dst_fname)
     one_loss.to_csv(nonvalid_res_fname)
     print('Saving non valid results results to: ', nonvalid_res_fname)
-
 
     return total_results
 
