@@ -1,13 +1,21 @@
 import glob
 import os
 import sys
+
 import matplotlib as mpl
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 from ray import tune
 
-from learning_lidar.utils import global_settings as gs
+from learning_lidar.utils import global_settings as gs, vis_utils
+
+mpl.rc('text', usetex=True)
+mpl.rcParams['text.latex.preamble'] = [r"usepackage{amsmath}"]
+plt.rcParams["font.weight"] = "bold"
+plt.rcParams["axes.labelweight"] = "bold"
+mpl.rc('text', usetex=True)
+mpl.ticker.ScalarFormatter(useMathText=True)
 
 
 def extract_powers(row, in_channels):
@@ -30,38 +38,56 @@ def extract_powers(row, in_channels):
     return [pow_y, *pow_xi]
 
 
-def format_and_plot(ax):
+def plot_pivot_table(pivot_table: pd.pivot_table, title: str, figsize=(7, 5), vis_title: bool = True,
+                     y_label=r'Relative error $[\%]$', ylim=None, sci_view=False,
+                     legend_col: int = 1, legend_loc: str = 'best', fig_txt: dict = None,
+                     save_fig: bool = False, fig_path: os.path = os.path.join(gs.PKG_ROOT_DIR, 'figures'),
+                     format_fig: str = 'png'):
     """
     # TODO: add usage
-    :param ax:
-    :return:
-    """
-    ax.get_yaxis().set_minor_locator(mpl.ticker.AutoMinorLocator())
-    ax.grid(b=True, which='minor', color='w', linewidth=0.8)
-    ax.grid(b=True, which='major', color='w', linewidth=1.2)
-    ax.xaxis.grid(False)
-    ax.set_ylabel(r'Relative error $[\%]$')
-    plt.tight_layout()
-    plt.show()
-
-
-def plot_pivot_table(pivot_table, figsize, title, ylim=None):
-    """
-    # TODO: add usage
+    :param vis_title:
+    :param fig_txt:
     :param pivot_table:
-    :param figsize:
     :param title:
+    :param figsize:
+    :param y_label:
     :param ylim:
+    :param sci_view:
+    :param legend_col:
+    :param legend_loc:
+    :param save_fig:
+    :param fig_path:
+    :param format_fig:
     :return:
     """
     if not pivot_table.empty:
-        _, ax_ = plt.subplots(nrows=1, ncols=1, figsize=figsize)
-        pivot_table.plot(kind='bar', ax=ax_, title=title)
+        fig, ax = plt.subplots(nrows=1, ncols=1, figsize=figsize)
+        pivot_table.plot(kind='bar', ax=ax, title=title, rot=0). \
+            legend(ncol=legend_col, title=pivot_table.columns.name, loc=legend_loc, framealpha=0.9)
+
+        ax.title.set_visible(vis_title)
         if ylim:
-            ax_.set_ylim(ylim)
-        format_and_plot(ax_)
+            ax.set_ylim(ylim)
+        ax.get_yaxis().set_minor_locator(mpl.ticker.AutoMinorLocator())
+        ax.grid(visible=True, which='minor', linewidth=0.6)  # , color='w'
+        ax.grid(visible=True, which='major', linewidth=1.2)  # , color='w'
+        ax.xaxis.grid(False)
+        ax.set_ylabel(y_label)
+        if sci_view:
+            ax.ticklabel_format(axis='y', style='sci', scilimits=(0, 0))
+        if fig_txt:
+            fig.text(fig_txt['locx'], fig_txt['locy'], fig_txt['str'], fontsize=14)
+        plt.tight_layout()
+        plt.show()
+
     else:
         print("No results to display!")
+    plt.tight_layout()
+    if save_fig:
+        fpath = vis_utils.save_fig(fig, stitle=title, dst_folder=fig_path, format_fig=format_fig)
+    else:
+        fpath = ''
+    return fig, ax, fpath
 
 
 def generate_results_table(results_folder: str = os.path.join(gs.PKG_ROOT_DIR, 'results'),
@@ -136,7 +162,7 @@ def generate_results_table(results_folder: str = os.path.join(gs.PKG_ROOT_DIR, '
                          'loss', 'MARELoss',
                          'bsize', 'dfilter', 'dnorm', 'fc_size', 'hsizes', 'lr',
                          'ltype', 'source', 'use_bg',
-                         'use_power','opt_powers', 'powers',
+                         'use_power', 'opt_powers', 'powers',
                          'db', 'overlap', 'logdir']  # 'note'
             results_df = results_df.reindex(columns=new_order)
 
@@ -228,5 +254,5 @@ if __name__ == '__main__':
     results_folder = os.path.join(gs.PKG_ROOT_DIR, 'results')
     experiments_table_fname = 'runs_board.xlsx'
     dst_fname = 'total_results.csv'
-    dst_fname = 'remote_' + dst_fname  if (sys.platform in ['linux', 'ubuntu']) else dst_fname
+    dst_fname = 'remote_' + dst_fname if (sys.platform in ['linux', 'ubuntu']) else dst_fname
     generate_results_table(results_folder, experiments_table_fname, dst_fname=dst_fname)
