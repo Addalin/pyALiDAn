@@ -214,13 +214,13 @@ def generate_results_table(results_folder: str = os.path.join(gs.PKG_ROOT_DIR, '
             configs.append('A')
         elif (hsize == 4) and (fcsize == 32) and u_hsize:
             configs.append('B')
-        elif (hsize == 5) and (fcsize == 16) and u_hsize:
-            configs.append('C')
-        elif (hsize == 5) and (fcsize == 32) and u_hsize:
-            configs.append('D')
         elif (hsize == 6) and (fcsize == 16) and u_hsize:
-            configs.append('E')
+            configs.append('C')
         elif (hsize == 6) and (fcsize == 32) and u_hsize:
+            configs.append('D')
+        elif (hsize == 5) and (fcsize == 16) and u_hsize:
+            configs.append('E')
+        elif (hsize == 5) and (fcsize == 32) and u_hsize:
             configs.append('F')
         elif (hsize == 8) and (fcsize == 16) and u_hsize:
             configs.append('G')

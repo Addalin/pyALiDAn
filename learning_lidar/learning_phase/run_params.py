@@ -193,13 +193,13 @@ RAY_HYPER_PARAMS = {
     "lr": tune.grid_search([2 * 1e-3]),
     "bsize": tune.grid_search([32]),
     "ltype": tune.grid_search(['MAELoss']),  # Options: 'MAELoss' | 'MSELoss' | 'MARELoss'. See 'custom_losses.py'
-    "use_power": tune.grid_search(['([0.5,-.27],[1])', #'([0.5,-.27,.5],[1])',
-                                   '([0.5,-.1],[1])', #'([0.5,-.1,.5],[1])',
-                                   '([0.5,-.2],[1])', #'([0.5,-.2,.5],[1])',
-                                   '([0.5,-.28],[1])',# '([0.5,-.28,.5],[1])',
-                                   '([0.5,-.3],[1])', #'([0.5,-.3,.5],[1])',
-                                   '([0.5,.5],[1])', #'([0.5,.5,.5],[1])',
-                                   '([0.5,-.5],[1])', #'([0.5,-.5,.5],[1])',
+    "use_power": tune.grid_search(['([0.5,-.27,1],[1])', '([0.5,-.27,.5],[1])',
+                                   '([0.5,-.1,1],[1])', '([0.5,-.1,.5],[1])',
+                                   '([0.5,-.2,1],[1])', '([0.5,-.2,.5],[1])',
+                                   '([0.5,-.28,1],[1])', '([0.5,-.28,.5],[1])',
+                                   '([0.5,-.3,1],[1])', '([0.5,-.3,.5],[1])',
+                                   '([0.5,.5,1],[1])', '([0.5,.5,.5],[1])',
+                                   '([0.5,-.5,1],[1])', '([0.5,-.5,.5],[1])',
                                    False
                                    ]),
     # '([0.5,-.23,1],[1])','([0.5,-.23,.5],[1])', #'([0.5,-.25,1],[1])', #'([0.5,-.25,.5],[1])',
@@ -210,7 +210,7 @@ RAY_HYPER_PARAMS = {
     # '([0.5,.1,1],[1])','([0.5,.1,.5],[1])']),#'([0.5,-.5,.5],[1])', #'([0.5,-.5,1],[1])']),
     # Options: False | '([0.5,1,1], [0.5])' ...etc. UV  : -0.27 , G: -0.263 , IR: -0.11
     "opt_powers": tune.choice([False]),  # Options: False | True
-    "use_bg": tune.grid_search([False]),  # False | True |  'range_corr'
+    "use_bg": tune.grid_search(['range_corr',True]),  # False | True |  'range_corr'
     # Options: False | True | 'range_corr'. Not relevant for 'signal' as source
     "source": tune.grid_search(['lidar']),  # Options: 'lidar'| 'signal_p' | 'signal'
     'dfilter': tune.grid_search([None]),  # "wavelength [355]", "wavelength [532]",
