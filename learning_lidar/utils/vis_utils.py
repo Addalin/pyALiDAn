@@ -1,5 +1,6 @@
 import logging
 import os
+from datetime import datetime
 from datetime import timedelta
 from decimal import Decimal
 
@@ -30,7 +31,7 @@ COLORS = ["darkblue", "darkgreen", "darkred"]
 def stitle2figname(stitle: str, format_fig='png'):
     # Replace chars that are not acceptable to file names
     title_str = stitle.replace("\n", "").replace("  ", " ").replace("__", "_"). \
-        replace("\\", "_").replace("/", "_").replace(":", '-').replace('.', '_')
+        replace("\\", "_").replace("/", "_").replace(":", '-').replace('.', '_').replace('$', '')
     fig_name = f"{title_str}.{format_fig}"
     return fig_name
 
@@ -195,21 +196,7 @@ def visualize_ds_profile_chan(dataset, lambda_nm=532, profile_type='range_corr',
     plt.show()
 
     if SAVE_FIG:
-        title_str = g.get_figure().axes[0].get_title()
-        fname = stitle2figname(title_str, format_fig=format_fig)
-        if not os.path.exists(dst_folder):
-            try:
-                os.makedirs(dst_folder, exist_ok=True)
-                logger.debug(f"\nCreating folder: {dst_folder}")
-            except Exception:
-                raise OSError(f"\nFailed to create folder: {dst_folder}")
-
-        fpath = os.path.join(dst_folder, fname)
-        if format_fig == 'svg':
-            g.figure.savefig(fpath, bbox_inches='tight', format=format_fig)
-        else:
-            g.figure.savefig(fpath, bbox_inches='tight', format=format_fig, dpi=dpi)
-        logger.debug(f"Save daily plot to:{fpath}")
+        fpath = save_fig(fig=g.figure, fig_name=stitle, folder_name=dst_folder, format_fig=format_fig, dpi=dpi)
     else:
         fpath = None
 
@@ -218,18 +205,30 @@ def visualize_ds_profile_chan(dataset, lambda_nm=532, profile_type='range_corr',
 
 def daily_ds_histogram(dataset, profile_type='range_corr',
                        SAVE_FIG=False, n_temporal_splits=1,
-                       nbins=100, figsize=(5, 4), height_range=None,
+                       nbins=100, figsize=(5, 4), height_range: slice = None,
                        dst_folder=os.path.join(PKG_ROOT_DIR, 'figures'),
                        format_fig='png', dpi=1000):
     # TODO: replace function to work with seaborn histplot :https://seaborn.pydata.org/generated/seaborn.histplot.html
     logger = logging.getLogger()
 
+    # Extract and set the relevant times and heights to analyse
     date_datetime = xr_utils.get_daily_ds_date(dataset)
-    if type(height_range) is slice and height_range.start <= height_range.stop:
-        dataset = dataset.sel(Height=height_range)
+    # Check validity of height_range
+    if not (type(height_range) is slice
+            or (type(height_range) is slice and height_range.start <= height_range.stop)):
+        height_range = slice(dataset.Height.min().item(), dataset.Height.max().item())
+    dataset = dataset.sel(Height=height_range)
     time_splits = np.array_split(dataset.Time, n_temporal_splits)
     # Adapt fig size according to the number of n_splits
     (w_fig, h_fig) = figsize
+
+    logger.info(f"Start calculating daily histogram of {date_datetime} "
+                f"for height range [{height_range}], "
+                f"and {n_temporal_splits} time splits")
+
+    # TODO: Counting how many negative elements exits - To set automatically the number of column in the plotting
+    #  facet grid count_neg = sum(sum(map(lambda x: x < 0, dataset.get(profile_type).values)).ravel()) if count_neg >
+    #  0: ncols = 2 else: ncols = 1
     new_figsize = (w_fig * n_temporal_splits, h_fig * n_temporal_splits)
     fig, axes = plt.subplots(nrows=n_temporal_splits, ncols=2, figsize=new_figsize,
                              sharey='row', sharex='col', squeeze=False)
@@ -258,7 +257,7 @@ def daily_ds_histogram(dataset, profile_type='range_corr',
             ax[ind_split, 1].set_xscale('symlog')
 
             # negative values histogram
-            neg_ds = sub_ds.where(sub_ds < -th).where(sub_ds != np.nan)  # .values
+            neg_ds = sub_ds.where(sub_ds < -th).where(sub_ds != np.nan)
             neg_vals = neg_ds.values[~np.isnan(neg_ds.values)]
             neg_size = neg_vals.size
             if neg_size > 0:
@@ -273,7 +272,7 @@ def daily_ds_histogram(dataset, profile_type='range_corr',
                                  f"{100.0 * neg_size / orig_size :.2f}"]
 
         # fixing xticks with FixedLocator but also using MaxNLocator to avoid cramped x-labels
-        ticks_loc = ax[ind_split, 1].get_xticks().tolist()
+        ticks_loc = ax[ind_split, 1].get_xticks()
         ax[ind_split, 1].xaxis.set_major_locator(mticker.FixedLocator(ticks_loc))
 
         new_posx_ticks = [f"$10^{np.log10(Decimal(n))}$" if n > 0 else round(n) for n in ticks_loc]
@@ -283,7 +282,7 @@ def daily_ds_histogram(dataset, profile_type='range_corr',
             if (ind_split + 1) % 2:
                 ax[ind_split, 0].invert_xaxis()
             ax[ind_split, 0].set_xscale('symlog')
-            ticks_loc = ax[ind_split, 0].get_xticks()  # .tolist()
+            ticks_loc = ax[ind_split, 0].get_xticks()
             ax[ind_split, 0].xaxis.set_major_locator(mticker.FixedLocator(ticks_loc))
             new_negx_ticks = [f"$-10^{np.log10(Decimal(n))}$" if n > 0 else round(n) for n in ticks_loc]
             ax[ind_split, 0].set_xticklabels(new_negx_ticks)
@@ -302,6 +301,8 @@ def daily_ds_histogram(dataset, profile_type='range_corr',
                                         horizontalalignment='center')
         if ind_split == 0:
             ax[ind_split, 1].legend(loc='upper right')
+
+        # Plot results table on figure for each time split
         df_stats = df_stats.set_index('wavelength [nm]')
         the_table = ax[ind_split, 1].table(cellText=df_stats.values,
                                            colWidths=[0.09] * 3,
@@ -312,7 +313,8 @@ def daily_ds_histogram(dataset, profile_type='range_corr',
         the_table.scale(1.0, 1.2)
         # the_table.set_fontsize(14)
 
-        print(df_stats)
+        logger.info(f"Done calculating daily histogram")
+        logger.info(df_stats)
         ds_stats = xr.Dataset(
             data_vars={'stats': (('Wavelength', 'Type'), df_stats.values),
                        'index': ind_split,
@@ -323,29 +325,42 @@ def daily_ds_histogram(dataset, profile_type='range_corr',
                     'Wavelength': df_stats.index.to_list(),
                     })
         list_ds_stats.append(ds_stats)
-        # the rectangle is where I want to place the table
 
     stitle = f"Histogram of {ds_profile.info.lower()} " \
              f"\n {dataset.attrs['location']} {date_datetime.strftime('%Y-%m-%d')} " \
              f" for {dataset.Height[0].values:.2f} - {dataset.Height[-1].values:.2f} km"
-    print(stitle)
     fig.suptitle(stitle)
-
     plt.tight_layout()
     plt.show()
 
     if SAVE_FIG:
-        fname = stitle2figname(stitle, format_fig)
-        if not os.path.exists(dst_folder):
-            try:
-                os.makedirs(dst_folder, exist_ok=True)
-                logger.debug(f"Creating folder: {dst_folder}")
-            except Exception:
-                raise OSError(f"Failed to create folder: {dst_folder}")
-        fpath = os.path.join(dst_folder, fname)
-        fig.savefig(fpath, bbox_inches='tight', format=format_fig, dpi=dpi)
-        logger.debug(f"Figure saved at {fpath}")
+        fpath = save_fig(fig=fig, fig_name=stitle, folder_name=dst_folder, format_fig=format_fig, dpi=dpi)
     else:
         fpath = None
 
     return fig, axes, list_ds_stats, fpath
+
+
+def save_fig(fig, fig_name: str = '',
+             folder_name: os.path = os.path.join(PKG_ROOT_DIR, 'figures'),
+             format_fig='png', dpi: int = SAVEFIG_DPI):
+    logger = logging.getLogger()
+    if fig_name == '':
+        fig_name = f"figure_{datetime.now().strftime('%Y_%m_%d %H_%M')}"
+        #     try:
+    #         stitle = fig.suptitle(stitle)
+    # or
+    #         stitle = g.get_figure().axes[0].get_title()
+    #     except: (TODO: complete this section - give a generic name to the figure)
+
+    fname = stitle2figname(fig_name, format_fig)
+    if not os.path.exists(folder_name):
+        try:
+            os.makedirs(folder_name, exist_ok=True)
+            logger.debug(f"Creating folder: {folder_name}")
+        except Exception:
+            raise OSError(f"Failed to create folder: {folder_name}")
+    fpath = os.path.join(folder_name, fname)
+    fig.savefig(fpath, bbox_inches='tight', format=format_fig.replace('.', ''), dpi=dpi)
+    logger.debug(f"Figure saved at {fpath}")
+    return fpath
