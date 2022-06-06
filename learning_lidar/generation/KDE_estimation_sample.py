@@ -17,7 +17,7 @@ vis_utils.set_visualization_settings()
 
 import learning_lidar.generation.generation_utils as gen_utils
 from learning_lidar.utils import utils, xr_utils, vis_utils, proc_utils, global_settings as gs
-from generate_density_utils import LR_tropos
+from learning_lidar.generation.generate_density_utils import LR_tropos
 vis_utils.set_visualization_settings()
 
 
@@ -291,6 +291,8 @@ def kde_estimation_main(args, month, year, data_folder):
     km_scale = 1E+3
 
     monthdays = (date(year, month + 1, 1) - date(year, month, 1)).days
+    # TODO: use the new dataset which already includes the required statistics
+    #  remember also to convert backscatter to km units
     csv_name = f"dataset_{station.name}_{start_date.strftime('%Y-%m-%d')}_{end_date.strftime('%Y-%m-%d')}_extended.csv"
     csv_path_extended = os.path.join(data_folder, csv_name)
     df_extended = pd.read_csv(csv_path_extended)

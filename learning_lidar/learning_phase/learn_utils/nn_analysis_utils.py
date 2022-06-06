@@ -84,7 +84,7 @@ def plot_pivot_table(pivot_table: pd.pivot_table, title: str, figsize=(7, 5), vi
         print("No results to display!")
     plt.tight_layout()
     if save_fig:
-        fpath = vis_utils.save_fig(fig, stitle=title, dst_folder=fig_path, format_fig=format_fig)
+        fpath = vis_utils.save_fig(fig, fig_name=title, folder_name=fig_path, format_fig=format_fig)
     else:
         fpath = ''
     return fig, ax, fpath
