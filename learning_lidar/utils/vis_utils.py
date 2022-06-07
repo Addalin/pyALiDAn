@@ -207,7 +207,7 @@ def daily_ds_histogram(dataset, profile_type='range_corr',
                        SAVE_FIG=False, n_temporal_splits=1,
                        nbins=100, figsize=(5, 4), height_range: slice = None,
                        dst_folder=os.path.join(PKG_ROOT_DIR, 'figures'),
-                       format_fig='png', dpi=1000):
+                       format_fig='png', dpi=1000, show_title=True):
     # TODO: replace function to work with seaborn histplot :https://seaborn.pydata.org/generated/seaborn.histplot.html
     logger = logging.getLogger()
 
@@ -329,7 +329,8 @@ def daily_ds_histogram(dataset, profile_type='range_corr',
     stitle = f"Histogram of {ds_profile.info.lower()} " \
              f"\n {dataset.attrs['location']} {date_datetime.strftime('%Y-%m-%d')} " \
              f" for {dataset.Height[0].values:.2f} - {dataset.Height[-1].values:.2f} km"
-    fig.suptitle(stitle)
+    if show_title:
+        fig.suptitle(stitle)
     plt.tight_layout()
     plt.show()
 
