@@ -1,21 +1,23 @@
 import datetime
-import os
 import logging
+import os
 from multiprocessing import Pool, cpu_count
+
 import pandas as pd
 import xarray as xr
 
-from learning_lidar.utils import utils, vis_utils, global_settings as gs
 from learning_lidar.generation import generation_utils as gen_utils, daily_signals_generations_utils as gen_sig_utils
+from learning_lidar.utils import utils, vis_utils, global_settings as gs
 
 
 # TODO:  add 2 flags - Debug
 
 class DailySignalGenerator:
-    def __init__(self, station_name: gs.Station, save_ds: bool, logger: logging.Logger = None):
+    def __init__(self, station_name: gs.Station, save_ds: bool, plot_results: bool, logger: logging.Logger = None):
         station_name = station_name
         self.station = gs.Station(station_name=station_name)
         self.save_ds = save_ds
+        self.plot_results = plot_results
 
         logging.getLogger('PIL').setLevel(logging.ERROR)  # Fix annoying PIL logs
         logging.getLogger('matplotlib').setLevel(logging.ERROR)  # Fix annoying matplotlib logs
@@ -27,17 +29,18 @@ class DailySignalGenerator:
         vis_utils.set_visualization_settings()
 
     def generate_daily_lidar_measurement(self, day_date: datetime.date) -> (xr.Dataset, xr.Dataset):
-        ds_total = gen_sig_utils.calc_total_optical_density(station=self.station, day_date=day_date)
-        signal_ds = gen_sig_utils.calc_lidar_signal(self.station, day_date, ds_total)
+        ds_total = gen_sig_utils.calc_total_optical_density(station=self.station, day_date=day_date,
+                                                            PLOT_RESULTS=self.plot_results)
+        signal_ds = gen_sig_utils.calc_lidar_signal(self.station, day_date, ds_total, PLOT_RESULTS=self.plot_results)
         measure_ds = gen_sig_utils.calc_daily_measurement(station=self.station, day_date=day_date, signal_ds=signal_ds,
-                                                          update_overlap_only=False)
+                                                          update_overlap_only=False, PLOT_RESULTS=False)
 
         if self.save_ds:
-            # TODO: check that the range_corr_p is added to measure_ds, and that the LCNET is uploading the new paths
+            # TODO: check that the LCNET is uploading the new paths
             #  (especially if range_corr_p )  . and if so, save only 2 single files of measure_ds, and signal_ds to save
             #  time and space
             # NOTE: saving to separated datasets (for the use of the learning phase),
-            # is done in dataseting.prepare_generated_samples()
+            # is done in dataseting.prepare_generated_samples() create_generated_dataset
             gen_utils.save_generated_dataset(self.station, measure_ds, data_source='lidar', save_mode='single')
             gen_utils.save_generated_dataset(self.station, signal_ds, data_source='signal', save_mode='single')
 
@@ -52,7 +55,7 @@ class DailySignalGenerator:
         """
 
         measure_ds = gen_sig_utils.calc_daily_measurement(self.station, day_date, signal_ds=None,
-                                                          update_overlap_only=True)
+                                                          update_overlap_only=True, PLOT_RESULTS=False)
 
         if self.save_ds:
             # NOTE: saving to separated datasets (for the use of the learning phase),
@@ -61,16 +64,13 @@ class DailySignalGenerator:
 
         return measure_ds
 
-    def daily_signals_generation(self, start_date, end_date, update_overlap_only, plot_results):
-        gen_utils.PLOT_RESULTS = plot_results
-        # TODO: Toggle PLOT_RESULTS to True - doesn't seem to work. Omer - works for me. Adi, please check again..
-
+    def daily_signals_generation(self, start_date, end_date, update_overlap_only):
         self.logger.info(f"\nStation name:{self.station.location}\nStart generating lidar signals & measurements "
                          f"for period: [{start_date.strftime('%Y-%m-%d')},{end_date.strftime('%Y-%m-%d')}]")
 
         days_list = pd.date_range(start=start_date, end=end_date).to_pydatetime().tolist()
         num_days = len(days_list)
-        num_processes = 1 if gen_utils.PLOT_RESULTS else min((cpu_count() - 1, num_days))
+        num_processes = 1 if self.plot_results else min((cpu_count() - 1, num_days))
 
         func = self.generate_daily_lidar_measurement if not update_overlap_only else self.update_daily_lidar_measurement
         with Pool(num_processes) as p:
@@ -88,12 +88,11 @@ if __name__ == '__main__':
 
     args = parser.parse_args()
 
-    logger = utils.create_and_configer_logger(f"{os.path.basename(__file__)}.log", level=logging.INFO)
+    logger = utils.create_and_configer_logger(f"{os.path.basename(__file__)}.log", level=args.log)
     logger.info(args)
 
     daily_signals_generator = DailySignalGenerator(station_name=args.station_name,
-                                                   save_ds=args.save_ds, logger=logger)
+                                                   save_ds=args.save_ds, logger=logger, plot_results=args.plot_results)
 
     daily_signals_generator.daily_signals_generation(start_date=args.start_date, end_date=args.end_date,
-                                                     update_overlap_only=args.update_overlap_only,
-                                                     plot_results=args.plot_results)
+                                                     update_overlap_only=args.update_overlap_only)

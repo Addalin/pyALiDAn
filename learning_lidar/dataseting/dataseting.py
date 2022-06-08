@@ -1,25 +1,28 @@
+import logging
 import os
 from datetime import datetime, timedelta
-from IPython.display import display
-import logging
-from tqdm import tqdm
-
 from itertools import repeat
 from multiprocessing import Pool, cpu_count
 
 import numpy as np
 import pandas as pd
 import xarray as xr
+from IPython.display import display
+from tqdm import tqdm
+
+import learning_lidar.dataseting.dataseting_utils as ds_utils
+import learning_lidar.generation.generation_utils as gen_utils
 # import sys
 # sys.path.append('/home/liam/PycharmProjects/adi')
 import learning_lidar.preprocessing.preprocessing_utils as prep_utils
-import learning_lidar.dataseting.dataseting_utils as ds_utils
 from learning_lidar.generation.daily_signals_generations_utils import get_daily_bg
-import learning_lidar.generation.generation_utils as gen_utils
 from learning_lidar.utils import utils, xr_utils, global_settings as gs
 
 
 def dataseting_main(params, log_level=logging.DEBUG):
+    """"
+    parameters for creating a dataset of generation mode: --start_date 2017-09-01 --end_date 2017-10-31 --use_km_unit --calc_stats --generated_mode
+    """
     logging.getLogger('matplotlib').setLevel(logging.ERROR)  # Fix annoying matplotlib logs
     logging.getLogger('PIL').setLevel(logging.ERROR)  # Fix annoying PIL logs
     logger = utils.create_and_configer_logger(f"{os.path.basename(__file__)}.log", level=log_level)
@@ -32,7 +35,7 @@ def dataseting_main(params, log_level=logging.DEBUG):
     station = gs.Station(station_name=station_name)
 
     # Set new paths
-    data_folder = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))), 'data')
+    data_folder = gs.PKG_DATA_DIR
     csv_path = os.path.join(data_folder, f"dataset_{station_name}_"
                                          f"{start_date.strftime('%Y-%m-%d')}_{end_date.strftime('%Y-%m-%d')}.csv")
     csv_path_extended = os.path.join(data_folder, f"dataset_{station_name}_"
@@ -116,6 +119,7 @@ def dataseting_main(params, log_level=logging.DEBUG):
         _, csv_stats_path = calc_data_statistics(station, start_date, end_date, dataset_type='test', mode=mode)
         logger.info(f"\nDone calculating {mode} test dataset statistics. saved to:{csv_stats_path}")
 
+
 # %% Dataset creating helper functions
 def create_dataset(station_name='haifa', start_date=datetime(2017, 9, 1),
                    end_date=datetime(2017, 9, 2), sample_size='29.5min', list_dates=[]):
@@ -158,7 +162,7 @@ def create_dataset(station_name='haifa', start_date=datetime(2017, 9, 1),
     station = gs.Station(station_name=station_name)
     db_path = station.db_file
     wavelengths = gs.LAMBDA_nm().get_elastic()
-    cali_method = 'Klett_Method'
+    cali_method = 'Klett_Method'  # or 'AOD_Constrained_Method'
 
     if len(list_dates) > 0:
         try:
@@ -175,6 +179,7 @@ def create_dataset(station_name='haifa', start_date=datetime(2017, 9, 1),
 
             # Query the db for a specific day, wavelength and calibration method
             try:
+                # TODO: iterate query and query_database on cali_method (for case of having more that one method)
                 query = ds_utils.get_query(wavelength, cali_method, day_date)
                 df = ds_utils.query_database(query=query, database_path=db_path)
                 if df.empty:
@@ -220,10 +225,11 @@ def create_dataset(station_name='haifa', start_date=datetime(2017, 9, 1),
                 # reorder the columns
                 key = ['date', 'wavelength', 'cali_method', 'telescope', 'cali_start_time', 'cali_stop_time',
                        'start_time_period', 'end_time_period', 'profile_path']
-                y_features = ['LC', 'LC_std', 'r0', 'r1', 'dr', 'bin_r0', 'bin_r1']
+                y_features = ['LC', 'LC_std', 'r0', 'r1', 'dr', 'bin_r0', 'bin_r1',
+                              'lr_aeronet', 'lr_used', 'aerBsc_klett_max', 'aerExt_klett_max']
                 x_features = ['lidar_path', 'molecular_path', 'bg_path']
                 expanded_df = expanded_df[key + x_features + y_features]
-                full_df = full_df.append(expanded_df)
+                full_df = pd.concat([full_df, expanded_df])
             except ds_utils.EmptyDataFrameError as e:
                 logger.exception(f"{e}, skipping to next day.")
                 continue
@@ -447,7 +453,7 @@ def calc_data_statistics(station, start_date, end_date, top_height=15.3, mode='g
      the desired period [start_date, end_date]. Note: one should previously save the generated dataset for this period.
     """
     dataset_type_str = '_' + dataset_type if dataset_type in ['train', 'test'] else ''
-    data_folder = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))), 'data')
+    data_folder = gs.PKG_DATA_DIR
     csv_gen_fname = f"dataset_{'gen_' if mode == 'gen' else ''}{station.name}" \
                     f"_{start_date.strftime('%Y-%m-%d')}_{end_date.strftime('%Y-%m-%d')}{dataset_type_str}.csv"
     csv_gen_path = os.path.join(data_folder, csv_gen_fname)
@@ -551,7 +557,7 @@ def calc_day_statistics(station, day_date, top_height=15.3):
     mol_ds = xr_utils.load_dataset(mol_nc_name)
     signal_ds = xr_utils.load_dataset(signal_nc_name)
     lidar_ds = xr_utils.load_dataset(lidar_nc_name)
-    p_bg = get_daily_bg(station, day_date)  # daily background: p_bg
+    p_bg = get_daily_bg(station, day_date, PLOT_RESULTS=False)  # daily background: p_bg
 
     # update daily profiles stats
     datasets_with_names_time_height = [(signal_ds.p, f'p_{sig_source}'),

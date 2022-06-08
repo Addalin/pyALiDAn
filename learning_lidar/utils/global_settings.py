@@ -31,6 +31,7 @@ import pandas as pd
 import pkg_resources
 
 PKG_ROOT_DIR = pkg_resources.get_distribution('learning_lidar').location
+PKG_DATA_DIR = os.path.join(PKG_ROOT_DIR, 'data')
 # %% Basic physics constants
 
 eps = np.finfo(float).eps
@@ -49,9 +50,7 @@ n_chan = 13
 class Station:
     def __init__(self, station_name='haifa',
                  stations_csv_path=
-                 os.path.join(PKG_ROOT_DIR,
-                              'data',
-                              'stations.csv')):
+                 os.path.join(PKG_DATA_DIR, 'stations.csv')):
         """
         A station class that stores all the below information
 
@@ -142,7 +141,7 @@ class Station:
         heights = np.linspace(min_height * scale, top_height * scale, self.n_bins)
         return heights
 
-    def calc_daily_time_index(self, day_date):
+    def calc_daily_time_index(self, day_date: date):
         # TODO: day_date should be of type datetime (not datetime.date) . The error was fixed .
         #  but we need to clarify it, since up until now daye_date was datetime ..
         start_dt = datetime.combine(day_date, time(0)) if type(day_date) == date else day_date

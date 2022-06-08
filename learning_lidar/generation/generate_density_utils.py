@@ -19,7 +19,7 @@ from learning_lidar.utils import utils, xr_utils, vis_utils, misc_lidar, proc_ut
 t_index = [500, 1500, 2500]
 vis_utils.set_visualization_settings()
 wavelengths = gs.LAMBDA_nm().get_elastic()
-LR_tropos = 55
+LR_tropos = 50
 PLOT_RESULTS = gen_utils.PLOT_RESULTS
 
 
@@ -729,7 +729,7 @@ def calc_tau_ds(ang_ds, sigma_0):
             tau_chans.append(tau_0)
         else:
             # Estimate AOD of $\lambda=1064nm$ and  $\lambda=355nm$
-            key = f"ang_{wavelength}_{wavelength_0}" if wavelength < wavelength_0 else f"ang_{wavelength_0}_{wavelength}"
+            key = f"ang_{int(wavelength)}_{int(wavelength_0)}" if wavelength < wavelength_0 else f"ang_{int(wavelength_0)}_{int(wavelength)}"
             tau = xr.apply_ufunc(lambda tau0, ang: misc_lidar.tau_ang2tau(tau0, ang, wavelength_0, wavelength), tau_0,
                                  ang_ds[key], keep_attrs=True).assign_coords({'Wavelength': wavelength})
             tau_chans.append(tau)
@@ -812,7 +812,7 @@ def generate_beta_ds(station, day_date, day_params_ds, sigma_ds):
     # Creating Daily Lidar Aerosols' beta dataset
     LR_ds = get_LR_ds(station, day_date, day_params_ds)
     beta_ds = xr.apply_ufunc(lambda LR, sigma: sigma / LR, LR_ds.LR, sigma_ds)
-    beta_ds.attrs = {'info': "Daily aerosols' generated backscatter coefficient",
+    beta_ds.attrs = {'info': "Daily generated aerosol backscatter coefficient",
                      'long_name': r'$\beta$',
                      'name': 'beta',
                      'units': r'$\rm 1/km \cdot sr$',

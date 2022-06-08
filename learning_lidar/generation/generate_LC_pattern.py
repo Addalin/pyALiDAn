@@ -1,6 +1,5 @@
-import calendar
 import os
-from datetime import datetime, timedelta
+from datetime import timedelta
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -40,7 +39,7 @@ def generate_LC_pattern_main(params):
     station = gs.Station(station_name=station_name)
     wavelengths = gs.LAMBDA_nm().get_elastic()
 
-    data_folder = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(os.curdir))), 'data')
+    data_folder = gs.PKG_DATA_DIR
 
     ds_extended_name = f"dataset_{station_name}_{start_date.strftime('%Y-%m-%d')}_{end_date.strftime('%Y-%m-%d')}_extended.nc"
     ds_path_extended = os.path.join(data_folder, ds_extended_name)

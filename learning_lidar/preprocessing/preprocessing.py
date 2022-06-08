@@ -164,7 +164,8 @@ if __name__ == '__main__':
                         help='Whether to generate the lidar dataset ')
 
     parser.add_argument('--generate_raw_lidar_ds', action='store_true',
-                        help='Whether to generate the raw lidar dataset ')
+                        help='Whether to whether to generate a raw lidar dataset,'
+                             ' this is to adapt the Pollynet Processing Chain data to the lidar NN')
 
     parser.add_argument('--use_km_unit', action='store_true',
                         help='Whether to use_km_unit')
