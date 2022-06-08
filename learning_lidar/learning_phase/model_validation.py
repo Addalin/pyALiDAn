@@ -7,7 +7,7 @@ from pytorch_lightning import Trainer, seed_everything
 from learning_lidar.learning_phase.data_modules.lidar_data_module import LidarDataModule
 from learning_lidar.learning_phase.models.defaultCNN import DefaultCNN
 from learning_lidar.learning_phase.run_params import DEBUG_RAY, CONSTS, update_params, MODEL_PARAMS, \
-    PRETRAINED_MODEL_PATH
+    PRETRAINED_MODEL_PATH, MODEL_CONSTS
 from learning_lidar.utils.utils import create_and_configer_logger
 
 seed_everything(8318)  # Note, for full deterministic result add deterministic=True to trainer
@@ -45,4 +45,4 @@ if __name__ == '__main__':
     logger = create_and_configer_logger(
         log_name=f"{os.path.dirname(__file__)}_{datetime.now().strftime('%Y-%m-%d %H_%M_%S')}.log", level=logging.INFO)
 
-    main(config=MODEL_PARAMS, checkpoint_dir=PRETRAINED_MODEL_PATH, consts=CONSTS)
+    main(config=MODEL_PARAMS, checkpoint_dir=PRETRAINED_MODEL_PATH, consts=MODEL_CONSTS)

@@ -2,21 +2,14 @@ import json
 import os
 import sys
 from datetime import datetime
-
+import yaml
 import torch
 from ray import tune
-
+import glob
 from learning_lidar.utils import global_settings as gs
 
-NUM_AVILABLE_CPU = os.cpu_count()
-NUM_AVAILABLE_GPU = torch.cuda.device_count()
-START_DATE = datetime(2017, 9, 1)
-END_DATE = datetime(2017, 10, 31)
-station_name = 'haifa'
-station_name = station_name + '_remote' if (sys.platform in ['linux', 'ubuntu']) else station_name
-station = gs.Station(station_name)
 
-
+# ######## HELPER FUNCTIONS ##########
 def get_paths(station: gs.Station, start_date: datetime, end_date: datetime):
     base_path = os.path.dirname(os.path.dirname(os.path.dirname(__file__)))
     nn_source_data = station.nn_source_data
@@ -25,17 +18,8 @@ def get_paths(station: gs.Station, start_date: datetime, end_date: datetime):
     train_csv_path = os.path.join(base_path, 'data', "dataset_" + csv_base_name + '_train.csv')
     test_csv_path = os.path.join(base_path, 'data', "dataset_" + csv_base_name + '_test.csv')
     stats_csv_path = os.path.join(base_path, 'data', "stats_" + csv_base_name + '_train.csv')
-    results_path = os.path.join(station.nn_output_results)  # TODO: save in D or E
-    # TODO: Add exception in case paths are invalid
+    results_path = os.path.join(station.nn_output_results)  # TODO: Add exception in case paths are invalid
     return train_csv_path, test_csv_path, stats_csv_path, results_path, nn_source_data
-
-
-train_csv_path, test_csv_path, stats_csv_path, RESULTS_PATH, nn_source_data = get_paths(station,
-                                                                                        start_date=START_DATE,
-                                                                                        end_date=END_DATE)
-
-
-# TODO - update dates to change between datasets
 
 
 def update_params(config, consts):
@@ -57,7 +41,8 @@ def update_params(config, consts):
     if not use_power:
         powers = None
     else:
-        # If powers are given in the config dict as string, then update the power values accordingly, else use the const case
+        # If powers are given in the config dict as string, then update the power values accordingly, else use the
+        # const case
         powers = consts['powers']
         if type(use_power) == str:
             power_in, power_out = eval(use_power)
@@ -82,54 +67,109 @@ def update_params(config, consts):
     return config, X_features, powers, dfilter
 
 
-# ######## RESUME EXPERIMENT ######### ---> Make sure RESTORE_TRIAL = False
-RESUME_EXP = False  # 'ERRORED_ONLY'  # False | True
-# Can be "LOCAL" to continue experiment when it was disrupted
-# (trials that were completed seem to continue training),
-# or "ERRORED_ONLY" to reset and rerun ERRORED trials (not tested). Otherwise False to start a new experiment.
-# Note: if fail_fast was 'True' in the the folder of 'EXP_NAME', then tune will not be able to load trials that didn't store any folder
+# TODO: Load Trainer chekpoint  https://pytorch-lightning.readthedocs.io/en/stable/common/weights_loading.html
+#  restoring-training-state name of trainer : epoch=29-step=3539.ckpt found under
+#  C:...\main_2022-01-31_23-24-22\main_28520_00024_24_bsize=32,dfilter=('wavelength', [355]),dnorm=False,
+#  fc_size=[16],hsizes=[6, 6, 6, 6],lr=0.002,ltype=MAELoss,sou_2022-02-01_11-49-31\lightning_logs\version_0
+def get_checkpoint_params_const(results_path, experiment_name, trial_id, checkpoint_id):
+    # experiment and trial directories
+    experiment_dir = os.path.join(results_path, experiment_name)
+    if not os.path.exists(experiment_dir):
+        raise ValueError(f"Wrong experiment path: {experiment_dir}")
 
-EXP_NAME = None  # 'main_2022-02-13_19-10-30'  #
+    trial_dir = glob.glob(os.path.join(experiment_dir, rf'main_{trial_id}*'))[0]
+    if not os.path.exists(trial_dir):
+        raise ValueError(f"Wrong trial path: {trial_dir}")
+
+    # Load consts
+    trial_consts_path = os.path.join(trial_dir, 'consts.yaml')
+    with open(trial_consts_path, 'r') as f:
+        consts = yaml.load(f.read(), Loader=yaml.FullLoader)
+
+    # Load parameters
+    trial_params_path = os.path.join(trial_dir, 'params.json')
+    with open(trial_params_path, 'r') as f:
+        params = json.load(f)
+
+    # Load checkpoint
+    chekpoint_name = glob.glob1(trial_dir, f'checkpoint_epoch={checkpoint_id}*')[0]
+    chekpoint_dir = os.path.join(trial_dir, chekpoint_name)
+    if not (os.path.exists(chekpoint_dir)):
+        raise ValueError(f"Wrong checkpoint dir path: {chekpoint_dir}")
+
+    return chekpoint_dir, params, consts
+
+
+def get_experiment_consts(results_path, experiment_name):
+    # experiment and trial directories
+    experiment_dir = os.path.join(results_path, experiment_name)
+    if not os.path.exists(experiment_dir):
+        raise ValueError(f"Wrong experiment path: {experiment_dir}")
+    const_fnames = glob.glob(experiment_dir + "/**/consts.yaml", recursive=True)
+    if const_fnames:
+        with open(const_fnames[0], 'r') as f:
+            consts = yaml.load(f.read(), Loader=yaml.FullLoader)
+    return consts
+
+
+# ######## SET BASIC INFO ##########
+NUM_AVILABLE_CPU = os.cpu_count()
+NUM_AVAILABLE_GPU = torch.cuda.device_count()
+db_type = 'extended'  # options: 'extended' or 'initial'
+START_DATE = datetime(2017, 4, 1) if db_type == 'extended' else datetime(2017, 9, 1)
+END_DATE = datetime(2017, 10, 31)
+station_name = 'haifa'
+station_name = station_name + '_remote' if (sys.platform in ['linux', 'ubuntu']) else station_name
+station = gs.Station(station_name)
+train_csv_path, test_csv_path, stats_csv_path, RESULTS_PATH, nn_source_data = get_paths(station,
+                                                                                        start_date=START_DATE,
+                                                                                        end_date=END_DATE)
+
+# ######## RESUME EXPERIMENT ######### ---> Make sure RESTORE_TRIAL = False
+RESUME_EXP = False
+# options: 'ERRORED_ONLY' | False | True
+# Can be "LOCAL" to continue experiment when it was disrupted (trials that were completed seem to continue training),
+# or "ERRORED_ONLY" to reset and rerun ERRORED trials (not tested). Otherwise, False to start a new experiment. Note:
+# if fail_fast was 'True' in the folder of 'EXP_NAME', then tune will not be able to load trials that didn't
+# store any folder
+
+EXP_NAME = 'main_2022-05-21_10-26-35'  # None
+# options: Path relative to RESULTS_PATH. e.g.: "main_2021-05-19_21-50-40"
+# else, can keep it None --> creating new experiment path automatically
 # If 'resume' is not False, must enter experiment path.
-# e.g. - "main_2021-05-19_21-50-40". Path is relative to RESULTS_PATH. Otherwise can keep it None.
-# And it is generated automatically.
+
+CONSTS = get_experiment_consts(RESULTS_PATH, EXP_NAME) if RESUME_EXP else None
+# Load original CONSTS of the experiment that is resumed
 
 
 # ######## RESTORE or VALIDATE TRIAL PARAMS #########
-experiment_dir = 'main_2022-02-04_20-14-28'
-trial_dir = r"C:\Users\addalin\Dropbox\Lidar\lidar_learning\results\main_2022-02-04_20-14-28\main_4b099_00000_0_bsize" \
-            r"=32,dfilter=wavelength [355],dnorm=False,fc_size=[16],hsizes=[4,4,4,4]," \
-            r"lr=0.002,ltype=MAELoss,opt_powers=T_2022-02-04_20-14-29"
-check_point_name = 'checkpoint_epoch=999-step=999'
-
-
-# TODO: Load Trainer chekpoint  https://pytorch-lightning.readthedocs.io/en/stable/common/weights_loading.html#restoring-training-state
-# name of trainer : epoch=29-step=3539.ckpt
-# found under C:...\main_2022-01-31_23-24-22\main_28520_00024_24_bsize=32,dfilter=('wavelength', [355]),dnorm=False,fc_size=[16],hsizes=[6, 6, 6, 6],lr=0.002,ltype=MAELoss,sou_2022-02-01_11-49-31\lightning_logs\version_0
-def get_trial_params_and_checkpoint(experiment_dir, trial_dir, check_point_name):
-    trial_params_path = os.path.join(RESULTS_PATH, experiment_dir, trial_dir, 'params.json')
-    with open(trial_params_path) as params_file:
-        params = json.load(params_file)
-    checkpoint = os.path.join(RESULTS_PATH, experiment_dir, trial_dir, check_point_name)
-
-    return checkpoint, params
-
+experiment_name = 'main_2022-03-26_19-43-28'
+trial_id = 'dd418_00191'
+checkpoint_id = 0
 
 # ######## VALIDATE TRIAL #########
-VALIDATE_TRIAL = False  # TODO: What is the mode for validating experiment / trial?
+# This part is relevant for model_validation.py
+VALIDATE_TRIAL = False  # TODO: make sure that the validation works properly when VALIDATE_TRIAL = True
 if VALIDATE_TRIAL:
-    PRETRAINED_MODEL_PATH, MODEL_PARAMS = get_trial_params_and_checkpoint(experiment_dir, trial_dir, check_point_name)
+    PRETRAINED_MODEL_PATH, MODEL_PARAMS, MODEL_CONSTS = get_checkpoint_params_const(RESULTS_PATH, experiment_name,
+                                                                                    trial_id, checkpoint_id)
+    # set EXP_NAME - to save the new trial in same experiment
+    EXP_NAME = experiment_name
 
 # ######## RESTORE TRIAL #########
 RESTORE_TRIAL = False  # If true restores the given trial
 if RESTORE_TRIAL:
-    CHECKPOINT_PATH, TRIAL_PARAMS = get_trial_params_and_checkpoint(experiment_dir, trial_dir, check_point_name)
+    CHECKPOINT_PATH, TRIAL_PARAMS, TRIAL_CONSTS = get_checkpoint_params_const(RESULTS_PATH, experiment_name,
+                                                                              trial_id, checkpoint_id)
+    # set EXP_NAME - to save the new trial in same experiment
+    EXP_NAME = experiment_name
 else:
     TRIAL_PARAMS = None
     CHECKPOINT_PATH = None
+    TRIAL_CONSTS = None
 
 # Constants - should correspond to data, dataloader and model
-CONSTS = {
+CONSTS = CONSTS if CONSTS else {
     'max_epochs': 20,
     'max_steps': None,
     'num_workers': int(NUM_AVILABLE_CPU * 0.9),
@@ -145,28 +185,35 @@ CONSTS = {
     "Y_features": ['LC'],
 }
 
-# Note, replace tune.choice with grid_search if want all possible combinations
+# Note, replace tune.choice with grid_search if you want all possible combinations
 RAY_HYPER_PARAMS = {
-    "hsizes": tune.grid_search(['[4,4,4,4]', '[5,5,5,5]', '[6, 6, 6, 6]']),
+    "hsizes": tune.grid_search(['[6,6,6,6]']),  # '[4,4,4,4]', '[5,5,5,5]',
     # Options: '[4,4,4,4]' | '[5,5,5,5]' | '[6, 6, 6, 6]' ...etc.
-    "fc_size": tune.grid_search(['[16]', '[32]']),  # Options: '[4]' | '[16]' | '[32]' ...etc.
+    "fc_size": tune.grid_search(['[32]']),  # Options: '[4]' | '[16]' | '[32]' ...etc.'[16]',
     "lr": tune.grid_search([2 * 1e-3]),
     "bsize": tune.grid_search([32]),
     "ltype": tune.grid_search(['MAELoss']),  # Options: 'MAELoss' | 'MSELoss' | 'MARELoss'. See 'custom_losses.py'
-    # "use_power": tune.grid_search(['([0.5,-0.1,0.5],[1])', '([0.5,-0.1,1],[1])']),# '([0.5,-0.3,1],[1])']),
-    "use_power": tune.grid_search(['([0.5,1,0.5],[1])', '([0.5,1,1],[1])',
-                                   '([0.5,0.5,0.5],[1])', '([0.5,0.5,1],[1])',
-                                   '([0.5,.25,1],[1])', '([0.5,.25,.5],[1])',
-                                   '([0.5,-.25,1],[1])', '([0.5,-.25,.5],[1])',
-                                   '([0.5,-0.1,0.5],[1])', '([0.5,-0.1,1],[1])',
-                                   '([0.5,-0.3,0.5],[1])', '([0.5,-0.3,1],[1])',
-                                   '([0.5,-.5,.5],[1])', '([0.5,-.5,1],[1])']),
+    "use_power": tune.grid_search(['([0.5,-.27,1],[1])', '([0.5,-.27,.5],[1])',
+                                   '([0.5,-.1,1],[1])', '([0.5,-.1,.5],[1])',
+                                   '([0.5,-.2,1],[1])', '([0.5,-.2,.5],[1])',
+                                   '([0.5,-.28,1],[1])', '([0.5,-.28,.5],[1])',
+                                   '([0.5,-.3,1],[1])', '([0.5,-.3,.5],[1])',
+                                   '([0.5,.5,1],[1])', '([0.5,.5,.5],[1])',
+                                   '([0.5,-.5,1],[1])', '([0.5,-.5,.5],[1])',
+                                   False
+                                   ]),
+    # '([0.5,-.23,1],[1])','([0.5,-.23,.5],[1])', #'([0.5,-.25,1],[1])', #'([0.5,-.25,.5],[1])',
+    # '([0.5,0.21,1],[1])','([0.5,0.21,.5],[1])',#'([0.5,-0.1,0.5],[1])',# '([0.5,-0.1,1],[1])',
+    # '([0.5,-0.21,1],[1])','([0.5,-0.21,.5],[1])',#'([0.5,-0.3,0.5],[1])', #'([0.5,-0.3,1],[1])',
+    # '([0.5,.19,1],[1])','([0.5,.19,.5],[1])',
+    # '([0.5,-.19,1],[1])','([0.5,-.19,.5],[1])',
+    # '([0.5,.1,1],[1])','([0.5,.1,.5],[1])']),#'([0.5,-.5,.5],[1])', #'([0.5,-.5,1],[1])']),
     # Options: False | '([0.5,1,1], [0.5])' ...etc. UV  : -0.27 , G: -0.263 , IR: -0.11
     "opt_powers": tune.choice([False]),  # Options: False | True
-    "use_bg": tune.grid_search([True, 'range_corr']),  # False | True |  'range_corr'
+    "use_bg": tune.grid_search(['range_corr',True]),  # False | True |  'range_corr'
     # Options: False | True | 'range_corr'. Not relevant for 'signal' as source
     "source": tune.grid_search(['lidar']),  # Options: 'lidar'| 'signal_p' | 'signal'
-    'dfilter': tune.grid_search(["wavelength [532]", "wavelength [1064]"]),
+    'dfilter': tune.grid_search([None]),  # "wavelength [355]", "wavelength [532]",
     # None,"wavelength [355]", "wavelength [532]","wavelength [1064]"]),  # Options: None | '(wavelength, [lambda])'
     # - lambda=355,532,1064
     'dnorm': tune.grid_search([False]),  # Options: False | True
@@ -177,6 +224,8 @@ RAY_HYPER_PARAMS = {
     # 'operations': tune.grid_search(["(None, None, ['poiss','r2'])"])
     # Apply l2 regularization on model weights. parameter weight_decay of Adam optimiser
     # afterwards
+    'db_type': tune.grid_search([db_type]),
+    # 'extended' or 'initial'. This is set at the beginning.(adding it for logging)
 }
 
 NON_RAY_HYPER_PARAMS = {
@@ -195,6 +244,9 @@ NON_RAY_HYPER_PARAMS = {
     'cbias': True,  # Calc convolution biases
     'wdecay': 0,  # Weight decay algorithm to test l2 regularization of NN weights.
     # 'operations': None
+    'db_type': db_type,  # 'extended' or 'initial'. This is set at the beginning.(adding it for logging)
 }
 USE_RAY = True
 DEBUG_RAY = False
+INIT_PARAMETERS = True
+CONSTS.update({'max_epochs': 30})

@@ -23,7 +23,24 @@ class PowerLayer(nn.Module):
         return x
 
 
+# init parameters https://stackoverflow.com/questions/49433936/how-to-initialize-weights-in-pytorch
+init_funcs = {
+    1: lambda x: torch.nn.init.normal_(x, mean=0., std=1.),  # can be bias
+    2: lambda x: torch.nn.init.xavier_normal_(x, gain=1.),  # can be weight
+    3: lambda x: torch.nn.init.xavier_uniform_(x, gain=1.),  # can be conv1D filter
+    4: lambda x: torch.nn.init.xavier_uniform_(x, gain=1.),  # can be conv2D filter
+    "default": lambda x: torch.nn.init.constant(x, 1.),  # everything else
+}
+
+
 class DefaultCNN(LightningModule):
+
+    def init_parameters(self, init_funcs):
+        print('Reset parameters')
+        for p in self.parameters():
+            if p.requires_grad:  # init only parameters that require grads
+                init_func = init_funcs.get(len(p.shape), init_funcs["default"])
+                init_func(p)
 
     def __init__(self, in_channels, output_size, hidden_sizes, fc_size, loss_type, learning_rate, X_features_profiles,
                  powers, weight_decay=0, do_opt_powers: bool = False, conv_bias: bool = True):

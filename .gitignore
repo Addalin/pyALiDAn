@@ -274,6 +274,7 @@ cython_debug/
 /data/stats*
 /20_05_2021_env.yml
 /torch
+/results/
 /learning_lidar/preprocessing/figures/
 /Analysis/figures/
 /results_to_ignore/
