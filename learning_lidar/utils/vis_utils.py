@@ -203,7 +203,7 @@ def visualize_ds_profile_chan(dataset, lambda_nm=532, profile_type='range_corr',
     return g, fpath
 
 
-def daily_ds_histogram(dataset, profile_type='range_corr',
+def daily_ds_histogram(dataset, profile_type='range_corr', alpha=.5,
                        SAVE_FIG=False, n_temporal_splits=1,
                        nbins=100, figsize=(5, 4), height_range: slice = None,
                        dst_folder=os.path.join(PKG_ROOT_DIR, 'figures'),
@@ -253,7 +253,7 @@ def daily_ds_histogram(dataset, profile_type='range_corr',
             hist, bins = np.histogram(pos_vals, bins=nbins_p)
             logbins = np.logspace(np.log10(bins[0]), np.log10(bins[-1]), len(bins))
             ax[ind_split, 1].hist(pos_vals, bins=logbins, label=f"$\lambda={wavelength}$",
-                                  alpha=0.4)
+                                  alpha=alpha)
             ax[ind_split, 1].set_xscale('symlog')
 
             # negative values histogram
@@ -265,7 +265,7 @@ def daily_ds_histogram(dataset, profile_type='range_corr',
                 histneg, binsneg = np.histogram(neg_vals, bins=nbins_n)
                 neg_logbins = np.logspace(np.log10(-binsneg[-1]), np.log10(-binsneg[0]), len(binsneg))
                 ax[ind_split, 0].hist(-neg_vals, bins=neg_logbins, label=f"$\lambda={wavelength}$",
-                                      alpha=0.5)
+                                      alpha=alpha)
 
             df_stats.loc[ind] = [wavelength, f"{100.0 * (orig_size - neg_size - pos_size) / orig_size:.2f}",
                                  f"{100.0 * pos_size / orig_size:.2f}",
@@ -275,7 +275,7 @@ def daily_ds_histogram(dataset, profile_type='range_corr',
         ticks_loc = ax[ind_split, 1].get_xticks()
         ax[ind_split, 1].xaxis.set_major_locator(mticker.FixedLocator(ticks_loc))
 
-        new_posx_ticks = [f"$10^{np.log10(Decimal(n))}$" if n > 0 else round(n) for n in ticks_loc]
+        new_posx_ticks = [rf"$10^{{{np.log10(Decimal(n))}}}$" if n > 0 else round(n) for n in ticks_loc]
         ax[ind_split, 1].set_xticklabels(new_posx_ticks)
         if neg_size > 0:
             ax[ind_split, 0].set_xscale('log')
@@ -284,7 +284,9 @@ def daily_ds_histogram(dataset, profile_type='range_corr',
             ax[ind_split, 0].set_xscale('symlog')
             ticks_loc = ax[ind_split, 0].get_xticks()
             ax[ind_split, 0].xaxis.set_major_locator(mticker.FixedLocator(ticks_loc))
-            new_negx_ticks = [f"$-10^{np.log10(Decimal(n))}$" if n > 0 else round(n) for n in ticks_loc]
+            new_negx_vals = [np.log10(Decimal(n)) if n > 0 else round(n) for n in ticks_loc]
+            # print(new_negx_vals)
+            new_negx_ticks = [rf"$-10^{{{tic:.1f}}}$" if type(tic) == Decimal else tic for tic in new_negx_vals]
             ax[ind_split, 0].set_xticklabels(new_negx_ticks)
 
         y_lim = ax[ind_split, 1].get_ylim()
@@ -293,8 +295,8 @@ def daily_ds_histogram(dataset, profile_type='range_corr',
         ax[ind_split, 0].tick_params(axis='both', which='major')
         ax[ind_split, 0].set_ylabel('counts')
         ax[ind_split, 1].tick_params(axis='both', which='major')
-        ax[ind_split, 1].grid(axis='both', which='major', linestyle='--', alpha=0.5)
-        ax[ind_split, 0].grid(axis='both', which='major', linestyle='--', alpha=0.5)
+        ax[ind_split, 1].grid(axis='both', which='major', linestyle='--', alpha=alpha)
+        ax[ind_split, 0].grid(axis='both', which='major', linestyle='--', alpha=alpha)
         if ind_split == n_temporal_splits - 1:
             xlabels = f"{ds_profile.long_name}\n[{ds_profile.units}]"
             ax[ind_split, 0].set_xlabel(xlabels, position=(1.05, 1e6),
@@ -316,7 +318,7 @@ def daily_ds_histogram(dataset, profile_type='range_corr',
         logger.info(f"Done calculating daily histogram")
         logger.info(df_stats)
         ds_stats = xr.Dataset(
-            data_vars={'stats': (('Wavelength', 'Type'), df_stats.values),
+            data_vars={'stats': (('Wavelength', 'Stats'), df_stats.values),
                        'index': ind_split,
                        'start_time': time_split[0].values,
                        'end_time': time_split[-1].values
