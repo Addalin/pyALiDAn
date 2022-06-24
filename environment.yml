@@ -1,4 +1,4 @@
-name: lidar_local_new
+name: lidar_remote_cpu
 channels:
   - defaults
   - conda-forge
@@ -27,7 +27,7 @@ dependencies:
   #- pytorch-lightning #=1.4
   - jupyter
   - jupyterlab
-  - scikit-learn
+  - scikit-learn=1.1.1
   - scipy
   - nb_conda_kernels
   - nb_conda
@@ -45,6 +45,7 @@ dependencies:
       - git+https://gitlab.com/ioannis_binietoglou/lidar_molecular.git
       - nvitop
       - torchviz # requires installation of Graphviz `winget install graphviz` see: https://graphviz.org/download/
+      - latex
 
 # conda activate base
 # sudo bash cuda-11.3.sh
@@ -54,7 +55,7 @@ dependencies:
 # conda create --name lidar_remote
 # conda activate lidar_remote
 # conda install netcdf4 xarray tensorboard pip sphinx multiprocess pyyaml torchvision seaborn opencv astral numpy pandas tqdm openpyxl matplotlib pytorch astropy jupyter jupyterlab scikit-learn scipy nb_conda_kernels nb_conda nc-time-axis sqlite
-# pip install "ray[tune]" "ray[default]" pytorch-lightning pytictoc nvitop git+https://github.com/scaperex/ARLreader.git git+https://gitlab.com/ioannis_binietoglou/lidar_molecular.git
+# pip install "ray[tune]" "ray[default]" pytorch-lightning pytictoc nvitop git+https://github.com/scaperex/ARLreader.git git+https://gitlab.com/ioannis_binietoglou/lidar_molecular.git nvitop latex
 #
 # netcdf4 xarray tensorboard pip sphinx multiprocess pyyaml torchvision seaborn opencv astral numpy pandas tqdm openpyxl matplotlib pytorch astropy jupyter jupyterlab scikit-learn scipy nb_conda_kernels nb_conda nc-time-axis sqlite
 
