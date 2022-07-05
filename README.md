@@ -5,7 +5,7 @@ This repository is currently under preparation.
 It will hold the supplemental data and code for the papers [1] and [2].
 
 
-To recieve a notification when the code is ready, you can add a star and a watch to our repository :) 
+To receive a notification when the code is ready, you are welcome to add our repository to your "star" & "watch" repositories :)
 
 
 References:
