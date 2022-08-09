@@ -1,28 +1,30 @@
 from __future__ import division
-import os
-from datetime import datetime, timedelta, date
-import pandas as pd
-import xarray as xr
-from matplotlib import dates as mdates
-import seaborn as sns
-import learning_lidar.preprocessing.preprocessing_utils as prep_utils
-from learning_lidar.utils import utils, xr_utils, vis_utils, proc_utils, global_settings as gs
-import numpy as np
-import matplotlib.pyplot as plt
-import pickle
-from sklearn.mixture import BayesianGaussianMixture as BayesGMM
-from pytictoc import TicToc
-import random
-import scipy.stats as ss
-from matplotlib import colors
-from typing import Union
-from pathlib import Path
-import platform
-from numpy import random
-from scipy.spatial.distance import pdist, cdist
-from scipy.stats import kstwobign, pearsonr
-from scipy.stats import genextreme
 
+import os
+import pickle
+import platform
+import random
+from datetime import datetime, timedelta
+from pathlib import Path
+from typing import Union
+
+import matplotlib.pyplot as plt
+import numpy as np
+import pandas as pd
+import scipy.stats as ss
+import seaborn as sns
+import xarray as xr
+from matplotlib import colors
+from matplotlib import dates as mdates
+from numpy import random
+from pytictoc import TicToc
+from scipy.spatial.distance import pdist, cdist
+from scipy.stats import genextreme
+from scipy.stats import kstwobign, pearsonr
+from sklearn.mixture import BayesianGaussianMixture as BayesGMM
+
+import learning_lidar.preprocessing.preprocessing_utils as prep_utils
+from learning_lidar.utils import xr_utils, vis_utils, proc_utils, global_settings as gs
 
 """ Plotting functions & settings"""
 
@@ -77,7 +79,7 @@ def plot_daily_profile_for_publish(profile_ds, height_slice=None, figsize=(15, 5
         # except Exception as e:
         #     print(e)
         ds.Height.attrs['units'] = ds.Height.attrs['units'].replace("km", r"\textbf{km}")
-        cbar_ax = fig.add_axes([.91, .15, .03, .7])
+        cbar_ax = fig.add_axes([.87, .15, .04, .7])
         if threshold is None:
             threshold = ds.max()
             if not (isinstance(threshold, int) or isinstance(threshold, float)):
@@ -100,11 +102,11 @@ def plot_daily_profile_for_publish(profile_ds, height_slice=None, figsize=(15, 5
     if cbar_text:
         cbar_ax.set_ylabel(cbar_text)
 
-    plt.ticklabel_format(axis="y", style="sci", scilimits=(0, 0))
+    plt.ticklabel_format(axis="y", style="sci", scilimits=(0, 0), useOffset=True)
     if ncols > 1:
         fig.tight_layout(rect=[0, 0, .9, 1])
     else:
-        fig.tight_layout(rect=[0, 0, .87, 1])
+        fig.tight_layout(rect=[0, 0, .86, 1])
     if save_fig:
         if folder_name is None:
             folder_name = os.path.join(os.path.abspath(os.path.curdir), 'figures')
