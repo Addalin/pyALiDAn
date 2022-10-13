@@ -32,11 +32,29 @@
 
 **Do not ever make a pull request from `public` to `master` in the original repo**
 
-## List of files to delete
-### Files in `pyALiDAn_public\Analysis`
-1. Compare_PollyNet_results_on_ALiDAn_data.ipynb
-2. 
+## List of candidate files to be deleted
+### 1. The folder `Analysis` 
+This folder is now aimed for RND and ongoing research.
+
+Notebooks for publish from this folder were moved to a new folder named `learning_lidar/generation/ALiDAn Notebooks`.
+### 2. Files in the main folder
+1. `Paths_lidar_learning.pptx` 
+2. `workflow.md`
+
+### 3. Files in  `learning_lidar/dataseting/`
+1. `update_signal_database.ipynb`
+
+### 4. Files in  `learning_lidar/generation/`
+1. The folder named `legacy`
+
+### 5. Files in `learning_lidar/learning_phase`
+1. `analysis_LCNet_results.ipynb`
+2. `Manipulating_NN_inputs.ipynb`
+
+### 6. Files in `learning_lidar/preprocessing`
+1. `read_grib_files.ipynb`
 
 ## TODO:
-1. complete the files to be deleted
-2. after pushing pyALiDAn create make is citable: https://guides.lib.berkeley.edu/citeyourcode
+1. Merge changes from servers to master and decide if they are relevant for publishing
+2. Complete the list of files to be deleted
+3. After pushing pyALiDAn create make is citable: https://guides.lib.berkeley.edu/citeyourcode
