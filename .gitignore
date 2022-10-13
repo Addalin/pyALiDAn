@@ -214,7 +214,7 @@ dmypy.json
 cython_debug/
 
 ### JupyterNotebooks template
-# gitignore template for Jupyter Notebooks
+# gitignore template for Jupyter ALiDAn Notebooks
 # website: http://jupyter.org/
 
 */.ipynb_checkpoints/*
