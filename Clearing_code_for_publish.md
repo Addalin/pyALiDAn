@@ -1,5 +1,8 @@
 # Clearing pyALiDAn code
 > Following a meeting with Shubi on 13/Oct/2022
+> 
+> This filee contains steps and information regarding clearing the code and publishing it in a public repository names pyALiDAn
+
 ## The chosen solution to publish a clear repo 
 1. Create a folder that the original repo is cloned into it:
 
@@ -34,3 +37,6 @@
 1. Compare_PollyNet_results_on_ALiDAn_data.ipynb
 2. 
 
+## TODO:
+1. complete the files to be deleted
+2. after pushing pyALiDAn create make is citable: https://guides.lib.berkeley.edu/citeyourcode
