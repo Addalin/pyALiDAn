@@ -22,7 +22,7 @@ The authors acknowledge the financial contributions and the inspiring framework 
 
 
 pyALiDAn derives data from measurements, reanalyses, and assimilation databases such as [PollyNet](https://github.com/PollyNET/Pollynet_Processing_Chain), [AERONET](https://aeronet.gsfc.nasa.gov/new_web/data.html) by NASA , [GDAS](https://www.ncei.noaa.gov/products/weather-climate-models/global-data-assimilation) NOAA, ERA5, etc. 
-Such data varies by geographic location, spatially, temporally, and spectrally; hence we chose using [xarray](https://docs.xarray.dev/en/stable/), [pandas](https://pandas.pydata.org/), and [seaborn](https://seaborn.pydata.org/) to handle and visualize such data. 
+Such data varies by geographic location, spatially, temporally, and spectrally.For handling and visualizing we chose to use [xarray](https://docs.xarray.dev/en/stable/), [pandas](https://pandas.pydata.org/), and [seaborn](https://seaborn.pydata.org/). 
 [SQLite](https://www.sqlite.org/index.html) is used for information extraction from databases, [ARLreader](https://github.com/martin-rdz/ARLreader) is used to read the NOAA ARLs data.
 Additional science codes are used for physics or machine learning models, as [SciPy](https://scipy.org/), [lidar_molecular](https://gitlab.com/ioannis_binietoglou/lidar_molecular) and more.
 The learning section relies on [PyTorch](https://pytorch.org/), [PyTorch Lightning](https://www.pytorchlightning.ai/) and [RAY](https://www.ray.io/).
