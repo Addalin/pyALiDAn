@@ -1,3 +1,5 @@
+from abc import ABC
+
 import numpy as np
 import torch
 from pytorch_lightning.core.lightning import LightningModule
@@ -33,7 +35,7 @@ init_funcs = {
 }
 
 
-class DefaultCNN(LightningModule):
+class calibCNN(LightningModule, ABC):
 
     def init_parameters(self, init_funcs):
         print('Reset parameters')

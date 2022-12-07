@@ -1,3 +1,34 @@
+# pyALiDAn
+## Python implementation of the **Atmospheric Lidar Data Augmentation (ALiDAn)** framework & a learning pytorch-based pipeline of lidar analysis.
+ALiDAn is an end-to-end physics- and statistics-based simulation framework of lidar measurements [1]. This framework aims to promote the study of dynamic phenomena from lidar measurements and set new benchmarks. 
+
+The repository also includes a spatiotemporal and synergistic lidar calibration approach [2], which forms a learning pipeline for additional algorithms such as inversion of aerosols, aerosol typing etc.
+
+> Note:
+This repository is still under final preparations. 
+It will hold the supplemental data and code for the papers [1] and [2].
+> To receive a notification when the code is ready, you are welcome to add our repository to your "star" & "watch" repositories :)
+
+
+### References:
+
+[1] Adi Vainiger, Omer Shubi, Yoav Schechner, Zhenping Yin, Holger Baars, Birgit Heese, Dietrich Althausen, "ALiDAn: Spatiotemporal and Multi--Wavelength Atmospheric Lidar Data Augmentation”, under review, 2022.
+
+[2] Adi Vainiger, Omer Shubi, Yoav Schechner, Zhenping Yin, Holger Baars, Birgit Heese, Dietrich Althausen, "Supervised learning calibration of an atmospheric lidar” IEEE International Geoscience and Remote Sensing Symposium (2022).
+
+### Acknowledgements:
+I. Czerninski, Y. Sde Chen, M. Tzabari, Y.Bertschy , M. Fisher, J. Hofer, A. Floutsi, R. Hengst, I. Talmon, and D. Yagodin, The Taub Foundation, Ollendorff Minerva Center.
+The authors acknowledge the financial contributions and the inspiring framework of the ERC Synergy Grant “CloudCT” (Number 810370).
+
+
+pyALiDAn derives data from measurements, reanalyses, and assimilation databases such as [PollyNet](https://github.com/PollyNET/Pollynet_Processing_Chain), [AERONET](https://aeronet.gsfc.nasa.gov/new_web/data.html) by NASA , [GDAS](https://www.ncei.noaa.gov/products/weather-climate-models/global-data-assimilation) NOAA, ERA5, etc. 
+Such data varies by geographic location, spatially, temporally, and spectrally; hence we chose using [xarray](https://docs.xarray.dev/en/stable/), [pandas](https://pandas.pydata.org/), and [seaborn](https://seaborn.pydata.org/) to handle and visualize such data. 
+[SQLite](https://www.sqlite.org/index.html) is used for information extraction from databases, [ARLreader](https://github.com/martin-rdz/ARLreader) is used to read the NOAA ARLs data.
+Additional science codes are used for physics or machine learning models, as [SciPy](https://scipy.org/), [lidar_molecular](https://gitlab.com/ioannis_binietoglou/lidar_molecular) and more.
+The learning section relies on [PyTorch](https://pytorch.org/), [PyTorch Lightning](https://www.pytorchlightning.ai/) and [RAY](https://www.ray.io/).
+These are wonderful learning packages, if you are not familiar they have many tutorials. 
+
+We are grateful to the developers and creators of the above libraries.
 # Installation
 
 To get the code simply clone it - 
@@ -28,22 +59,33 @@ Where relevant, use the `--use_km_unit` flag to use km units vs m units.
 
 Under `learning_lidar`:
 
-- [generation](generation)
+- [Preprocessing](Preprocessing)
 
-- [dataseting](dataseting)
+- [Generation](Generation)
 
-- [preprocessing](preprocessing)
+- [Dataseting](Dataseting)
 
-- [learning_phase](learning_phase)
+- [Learning_phase](Learning_phase)
 
-In general, each subfolder corresponds to a process, and each standalone script is in a different file, and has a corresponding `<script_name>_utils`
-file for subroutines
+In general, each sub folder corresponds to a process, and each standalone script is in a different file, and has a corresponding `<script_name>_utils`
+file for subroutines,
 
 There is a general `utils` folder, and additional minor scripts and notebooks not mentioned here.
 
-### generation
 
-- Generates the different properties. `generation/generation_main.py` is a wrappper for the different parts of the process and
+
+
+### Preprocessing
+- Main script is `preprocessing/preprocessing.py`
+- converts raw data into clean format. 
+- Specifically can be used to:
+  - download and convert gdas files with the `--download_gdas` and `--convert_gdas` flags
+  - generate molecular `--generate_molecular_ds`, lidar `--generate_lidar_ds` or raw lidar `--generate_raw_lidar_ds`
+  - `--unzip_lidar_tropos` to automatically unzip downloaded tropos lidar data.
+
+### Generation
+
+- Generates ALiDAn data. `generation/generation_main.py` is a wrappper for the different parts of the process and
 and can be used to to run everything at once for a given period. It includes:
   - Background Signal (`genage_bg_signals`)
   - Angstrom Exponent and optical depth (`read_AERONET_data`)
@@ -62,7 +104,8 @@ and can be used to to run everything at once for a given period. It includes:
     - Figures that were necessary for the paper are saved under the `figures` subdirectory. 
     Only relevant if the `--plot_results` flag is present.
   
-### dataseting
+
+### Dataseting
 - Main script is `dataseting/dataseting.py`
 - Flags:
   - Used to create a csv of the records - `--do_dataset`
@@ -72,39 +115,36 @@ and can be used to to run everything at once for a given period. It includes:
   - `--calc_stats` to calculate mean, min, max, std statistics
   - `--create_time_split_samples` to split up the dataset into small intervals.
   - Note, use `--generated_mode` to apply the operations on the generated data (vs the raw tropos data)
+  
+### Learning_phase
+The learning pipeline is designed to receive two data types: raw lidar measurements by pollyXT and simulated by ALiDAn. The implementation is oriented to lidar calibration. However, one can easily apply any other model.
 
-
-### preprocessing
-- Main script is `preprocessing/preprocessing.py`
-- converts raw data into clean format. 
-- Specifically can be used to:
-  - download and convert gdas files with the `--download_gdas` and `--convert_gdas` flags
-  - generate molecular `--generate_molecular_ds`, lidar `--generate_lidar_ds` or raw lidar `--generate_raw_lidar_ds`
-  - `--unzip_lidar_tropos` to automatically unzip downloaded tropos lidar data.
-
-### learning_phase
-- deep learning module to predict 'Y' given 'X'
+- Deep learning module to predict 'Y' given 'X'
 - Makes use of parameters from `run_params.py`. 
 - Configure the params as desired, then run the network with `python main_lightning.py` 
-- The models are implemented with pytorch lighting, currently only `models/defaultCNN.py`.
+- The models are implemented with PyTorch Lightning, currently only `models/calibCNN.py`.
 - `analysis_LCNet_results` extracts the raw the results from a results folder and displays many comparisons of the different trials.
 NOTE: currently `analysis_LCNet_results.ipynb` is old results with messy code. Updated code is at `analysis_LCNet_results_no_overlap.ipynb`
 and this is the notebook that should be used!
 - `model_validation.py` is a script that was barely used yet but is meant to be used to load a pretrained model and 
 use it to reproduce results.
-- 
-### Notes 
 
-1. [workflow.md](workflow.md) contains information about the flow of data between the modules, 
-such as what is the input and ouput of each stage. 
-   1. It is not fully updated or clear but can provide useful information.
+
+### Notes 
+1. The [data](data) folder contains both data necessary for the generation, and csv files that are created in the dataseting stage,
+and needed as input for learning phase. Specifically -
+   1. `stations.csv` defines stations, currently also relevant when working on a different computer.
+   2. `dataset_<station_name>_<start_date>_<end_date>.csv` contain links to the actual data paths. Each row is a record.
 2. There are many todos in the code, some of which are crucial for certain stages, and some 'nice to have'.
 3. The [run_script.sh](learning_lidar/run_script.sh) can be used as an example of how to run parts of the code from the terminal with the commandline arguments,
 for example for different dates.
 4. [Paths_lidar_learning.pptx](Paths_lidar_learning.pptx) is for the planned changes to the data paths - which
 are meant to be much more organized, easier to maintain and less dependent.
+
+### Notes - personal
+
+1. [workflow.md](workflow.md) contains information about the flow of data between the modules, 
+such as what is the input and ouput of each stage. 
+   1. It is not fully updated or clear but can provide useful information.
+
 5. [Analysis](Analysis) contains different notebooks for exploring the data.
-6. The [data](data) folder contains both data necessary for the generation, and csv files that are created in the dataseting stage,
-and needed as input for learning phase. Specifically -
-   1. `stations.csv` defines stations, currently also relevent when working on a different computer.
-   2. `dataset_<station_name>_<start_date>_<end_date>.csv` contain links to the actual data paths. Each row is a record.

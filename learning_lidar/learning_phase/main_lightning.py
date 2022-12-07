@@ -10,7 +10,7 @@ from ray.tune import CLIReporter
 from ray.tune.integration.pytorch_lightning import TuneReportCheckpointCallback
 
 from learning_lidar.learning_phase.data_modules.lidar_data_module import LidarDataModule
-from learning_lidar.learning_phase.models.defaultCNN import DefaultCNN, init_funcs
+from learning_lidar.learning_phase.models.calibCNN import calibCNN, init_funcs
 from learning_lidar.learning_phase.run_params import USE_RAY, DEBUG_RAY, CONSTS, RAY_HYPER_PARAMS, RESULTS_PATH, \
     NON_RAY_HYPER_PARAMS, update_params, RESUME_EXP, EXP_NAME, TRIAL_PARAMS, \
     CHECKPOINT_PATH, INIT_PARAMETERS, TRIAL_CONSTS
@@ -31,13 +31,13 @@ def main(config, checkpoint_dir=None, consts=None):
 
     # Define Model
     if checkpoint_dir:
-        model = DefaultCNN.load_from_checkpoint(os.path.join(checkpoint_dir, "checkpoint"))
+        model = calibCNN.load_from_checkpoint(os.path.join(checkpoint_dir, "checkpoint"))
     else:
-        model = DefaultCNN(in_channels=len(X_features), output_size=len(consts['Y_features']),
-                           hidden_sizes=eval(config['hsizes']), fc_size=eval(config['fc_size']),
-                           loss_type=config['ltype'], learning_rate=config['lr'], weight_decay=config['wdecay'],
-                           X_features_profiles=X_features, powers=powers,
-                           do_opt_powers=config['opt_powers'], conv_bias=config['cbias'])
+        model = calibCNN(in_channels=len(X_features), output_size=len(consts['Y_features']),
+                         hidden_sizes=eval(config['hsizes']), fc_size=eval(config['fc_size']),
+                         loss_type=config['ltype'], learning_rate=config['lr'], weight_decay=config['wdecay'],
+                         X_features_profiles=X_features, powers=powers,
+                         do_opt_powers=config['opt_powers'], conv_bias=config['cbias'])
     if INIT_PARAMETERS:
         model.init_parameters(init_funcs)
 

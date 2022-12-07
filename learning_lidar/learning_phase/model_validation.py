@@ -5,7 +5,7 @@ from datetime import datetime
 from pytorch_lightning import Trainer, seed_everything
 
 from learning_lidar.learning_phase.data_modules.lidar_data_module import LidarDataModule
-from learning_lidar.learning_phase.models.defaultCNN import DefaultCNN
+from learning_lidar.learning_phase.models.calibCNN import calibCNN
 from learning_lidar.learning_phase.run_params import DEBUG_RAY, CONSTS, update_params, MODEL_PARAMS, \
     PRETRAINED_MODEL_PATH, MODEL_CONSTS
 from learning_lidar.utils.utils import create_and_configer_logger
@@ -16,7 +16,7 @@ seed_everything(8318)  # Note, for full deterministic result add deterministic=T
 def main(config, checkpoint_dir=None, consts=None):
     config, X_features, powers = update_params(config, consts)
 
-    model = DefaultCNN.load_from_checkpoint(os.path.join(checkpoint_dir, "checkpoint"))
+    model = calibCNN.load_from_checkpoint(os.path.join(checkpoint_dir, "checkpoint"))
 
     # Define Data
     lidar_dm = LidarDataModule(nn_data_folder=consts['nn_source_data'], train_csv_path=consts["train_csv_path"],
