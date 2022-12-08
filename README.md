@@ -143,8 +143,8 @@ are meant to be much more organized, easier to maintain and less dependent.
 
 ### Notes - personal
 
-1. [workflow.md](workflow.md) contains information about the flow of data between the modules, 
+1. [workflow.md](misc_private_pyALiDAn/workflow.md) contains information about the flow of data between the modules, 
 such as what is the input and ouput of each stage. 
    1. It is not fully updated or clear but can provide useful information.
 
-5. [Analysis](Analysis) contains different notebooks for exploring the data.
+5. [Notebookes](Notebookes) contains different notebooks for exploring the data.

@@ -239,7 +239,7 @@ cython_debug/
 /data from eshkol
 /generate_air_aerosol_from vadim.m
 /iannis_b-lidar_molecular-de3d2ef2f36b.zip
-/Analysis/named_colors.ipynb
+/Notebookes/playground/named_colors.ipynb
 /legacy_code/optimize_lidar_const.py
 /pois.m
 /protokol_linfit_20170913.dat
@@ -276,7 +276,7 @@ cython_debug/
 /torch
 /results/
 /learning_lidar/preprocessing/figures/
-/Analysis/figures/
+/Notebookes/figures/
 /results_to_ignore/
 /figures/
 /results/

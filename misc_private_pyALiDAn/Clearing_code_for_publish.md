@@ -1,7 +1,7 @@
 # Clearing pyALiDAn code
 > Following a meeting with Shubi on 13/Oct/2022
 > 
-> This file contains steps and information regarding clearing the code and publishing it in a public repository names pyALiDAn
+> This filee contains steps and information regarding clearing the code and publishing it in a public repository names pyALiDAn
 
 ## The chosen solution to publish a clear repo 
 1. Create a folder that the original repo is cloned into it:
@@ -33,26 +33,27 @@
 **Do not ever make a pull request from `public` to `master` in the original repo**
 
 ## List of candidate files to be deleted
-### 1. The folder `Analysis` 
+### 1. The folder `Analysis` - DONE
 This folder is now aimed for RND and ongoing research.
 
 Notebooks for publish from this folder were moved to a new folder named `learning_lidar/generation/ALiDAn Notebooks`.
 ### 2. Files in the main folder
-1. `Paths_lidar_learning.pptx` 
-2. `workflow.md`
+1. `Paths_lidar_learning.pptx` - DONE
+2. `workflow.md` - DONE
 
 ### 3. Files in  `learning_lidar/dataseting/`
-1. `update_signal_database.ipynb`
+1. `update_signal_database.ipynb` - DONE
 
 ### 4. Files in  `learning_lidar/generation/`
-1. The folder named `legacy`
+1. The folder named `legacy`- DONE
 
 ### 5. Files in `learning_lidar/learning_phase`
-1. `analysis_LCNet_results.ipynb`
-2. `Manipulating_NN_inputs.ipynb`
+1. `analysis_LCNet_results.ipynb` -?
+2. `Manipulating_NN_inputs.ipynb`- DONE
+3. `ggg.py`- DONE
 
 ### 6. Files in `learning_lidar/preprocessing`
-1. `read_grib_files.ipynb`
+1. `read_grib_files.ipynb` -?
 
 ## TODO:
 1. Merge changes from servers to master and decide if they are relevant for publishing

@@ -429,10 +429,10 @@ def calc_daily_measurement(station: gs.Station, day_date: datetime.date, signal_
     return measure_ds
 
 
-# %% Analysis part
+# %% Notebookes part
 
 def explore_orig_day(main_folder, station_name, start_date, end_date, day_date, timedelta, wavelengths, time_indx):
-    # TODO - organize this part and move to gen_utils.py or Analysis notebook
+    # TODO - organize this part and move to gen_utils.py or Notebookes notebook
     day_str = day_date.strftime('%Y-%m-%d')
     ds_path_extended = os.path.join(main_folder, 'data',
                                     f"dataset_{station_name}_{start_date.strftime('%Y-%m-%d')}_{end_date.strftime('%Y-%m-%d')}_extended.nc")
