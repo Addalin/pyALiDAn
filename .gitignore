@@ -272,7 +272,7 @@ cython_debug/
 /data/dataset*
 /data/overlap.zip
 /data/stats*
-/20_05_2021_env.yml
+/misc_private_pyALiDAn/20_05_2021_env.yml
 /torch
 /results/
 /learning_lidar/preprocessing/figures/
