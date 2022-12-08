@@ -1,3 +1,5 @@
+[![DOI](https://zenodo.org/badge/510758300.svg)](https://zenodo.org/badge/latestdoi/510758300)
+
 # pyALiDAn
 ## Python implementation of the **Atmospheric Lidar Data Augmentation (ALiDAn)** framework & a learning pytorch-based pipeline of lidar analysis.
 ALiDAn is an end-to-end physics- and statistics-based simulation framework of lidar measurements [1]. This framework aims to promote the study of dynamic phenomena from lidar measurements and set new benchmarks. 
@@ -22,7 +24,7 @@ The authors acknowledge the financial contributions and the inspiring framework 
 
 
 pyALiDAn derives data from measurements, reanalyses, and assimilation databases such as [PollyNet](https://github.com/PollyNET/Pollynet_Processing_Chain), [AERONET](https://aeronet.gsfc.nasa.gov/new_web/data.html) by NASA , [GDAS](https://www.ncei.noaa.gov/products/weather-climate-models/global-data-assimilation) NOAA, ERA5, etc. 
-Such data varies by geographic location, spatially, temporally, and spectrally.For handling and visualizing we chose to use [xarray](https://docs.xarray.dev/en/stable/), [pandas](https://pandas.pydata.org/), and [seaborn](https://seaborn.pydata.org/). 
+Such data varies by geographic location, spatially, temporally, and spectrally. For handling and visualizing we chose to use [xarray](https://docs.xarray.dev/en/stable/), [pandas](https://pandas.pydata.org/), and [seaborn](https://seaborn.pydata.org/). 
 [SQLite](https://www.sqlite.org/index.html) is used for information extraction from databases, [ARLreader](https://github.com/martin-rdz/ARLreader) is used to read the NOAA ARLs data.
 Additional science codes are used for physics or machine learning models, as [SciPy](https://scipy.org/), [lidar_molecular](https://gitlab.com/ioannis_binietoglou/lidar_molecular) and more.
 The learning section relies on [PyTorch](https://pytorch.org/), [PyTorch Lightning](https://www.pytorchlightning.ai/) and [RAY](https://www.ray.io/).
@@ -59,13 +61,13 @@ Where relevant, use the `--use_km_unit` flag to use km units vs m units.
 
 Under `learning_lidar`:
 
-- [Preprocessing](Preprocessing)
+- [Preprocessing](#preprocessing)
 
-- [Generation](Generation)
+- [Generation](#generation)
 
-- [Dataseting](Dataseting)
+- [Dataseting](#dataseting)
 
-- [Learning_phase](Learning_phase)
+- [Learning_phase](#learning_phase)
 
 In general, each sub folder corresponds to a process, and each standalone script is in a different file, and has a corresponding `<script_name>_utils`
 file for subroutines,
@@ -85,7 +87,7 @@ There is a general `utils` folder, and additional minor scripts and notebooks no
 
 ### Generation
 
-- Generates ALiDAn data. `generation/generation_main.py` is a wrappper for the different parts of the process and
+- Generates ALiDAn data. `generation/generation_main.py` is a wrapper for the different parts of the process and
 and can be used to to run everything at once for a given period. It includes:
   - Background Signal (`genage_bg_signals`)
   - Angstrom Exponent and optical depth (`read_AERONET_data`)
@@ -95,7 +97,7 @@ and can be used to to run everything at once for a given period. It includes:
   - signal generation (`daily_signals_generation`)
 
 - Additional code:
-  - `Opex_results` - notebook with graphs for the paper
+  - Figures output and validation of ALiDAn [1] are under [generation/ALiDAn Notebooks](generation/ALiDAn Notebooks).
   - Large parts of the code were initially written as notebooks, then manually converted to py files. 
     - For example under `generation/legacy` are the original notebooks.
     - `generate_bg_signals` has been converted to py, 
@@ -117,16 +119,17 @@ and can be used to to run everything at once for a given period. It includes:
   - Note, use `--generated_mode` to apply the operations on the generated data (vs the raw tropos data)
   
 ### Learning_phase
-The learning pipeline is designed to receive two data types: raw lidar measurements by pollyXT and simulated by ALiDAn. The implementation is oriented to lidar calibration. However, one can easily apply any other model.
+The learning pipeline is designed to receive two data types: raw lidar measurements by pollyXT and simulated by ALiDAn. 
+The implementation is oriented to lidar calibration. However, one can easily apply any other model.
 
-- Deep learning module to predict 'Y' given 'X'
-- Makes use of parameters from `run_params.py`. 
-- Configure the params as desired, then run the network with `python main_lightning.py` 
-- The models are implemented with PyTorch Lightning, currently only `models/calibCNN.py`.
+- Deep learning module to predict 'Y' given 'X'.
+- Makes use of parameters from  [run_params.py](learning_lidar/learning_phase/run_params.py). 
+- Configure the params as desired, then run the NN with `python main_lightning.py` 
+- The models are implemented with PyTorch Lightning, currently only [calibCNN.py](learning_lidar/learning_phase/models/calibCNN.py).
 - `analysis_LCNet_results` extracts the raw the results from a results folder and displays many comparisons of the different trials.
-NOTE: currently `analysis_LCNet_results.ipynb` is old results with messy code. Updated code is at `analysis_LCNet_results_no_overlap.ipynb`
+NOTE: currently `analysis_LCNet_results.ipynb` is old results with messy code. Updated code is at [analysis_LCNet_results_no_overlap.ipynb](learning_lidar/learning_phase/analysis_LCNet_results_no_overlap.ipynb)
 and this is the notebook that should be used!
-- `model_validation.py` is a script that was barely used yet but is meant to be used to load a pretrained model and 
+- [model_validation.py](learning_lidar/learning_phase/model_validation.py) is a script that was barely used yet but is meant to be used to load a pretrained model and 
 use it to reproduce results.
 
 
@@ -138,7 +141,7 @@ and needed as input for learning phase. Specifically -
 2. There are many todos in the code, some of which are crucial for certain stages, and some 'nice to have'.
 3. The [run_script.sh](learning_lidar/run_script.sh) can be used as an example of how to run parts of the code from the terminal with the commandline arguments,
 for example for different dates.
-4. [Paths_lidar_learning.pptx](Paths_lidar_learning.pptx) is for the planned changes to the data paths - which
+4. [Paths_lidar_learning.pptx](assets/Paths_lidar_learning.pptx) is for the planned changes to the data paths - which
 are meant to be much more organized, easier to maintain and less dependent.
 
 ### Notes - personal
@@ -147,4 +150,7 @@ are meant to be much more organized, easier to maintain and less dependent.
 such as what is the input and ouput of each stage. 
    1. It is not fully updated or clear but can provide useful information.
 
-5. [Notebookes](Notebookes) contains different notebooks for exploring the data.
+2. [Notebookes](Notebookes) contains three folder for ongoing work: 
+   - analysis - mostly for visualization and comparisons of various functions of the repo
+   - development - for developing new ideas and ongoing research
+   - playground - code trials and experiment, could also contain notebooks from web
