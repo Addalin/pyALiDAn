@@ -5,7 +5,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 import xarray as xr
-from learning_lidar.utils import utils, vis_utils, xr_utils, global_settings as gs
+from learning_lidar.utils import utils, vis_utils, xr_utils, misc_lidar, global_settings as gs
 
 vis_utils.set_visualization_settings()
 
@@ -14,22 +14,7 @@ vis_utils.set_visualization_settings()
 #  2. Apply this notebook on any month measured during the year.
 #  3. Add the calibration info to ds_day in synthisize_lidar_measurments.ipynb
 #  4. Organize main() to functions & comments
-
-
 # TODO NAN values in ds_aod.aod??
-
-
-def angstrom(tau_1, tau_2, lambda_1, lambda_2):
-    """
-    calculates angstrom exponent
-    :param tau_1: AOD Aerosol optical depth at wavelength lambda_1
-    :param tau_2: AOD Aerosol optical depth at wavelength lambda_2
-    :param lambda_1: wavelength lambda_1 , lambda_1<lambda_2 (e.g. 355 nm)
-    :param lambda_2: wavelength lambda_2 , lambda_1<lambda_2 (e.g. 532 nm)
-    :return: angstrom exponent A_1,2
-    """
-    val = -np.log(tau_1 / tau_2) / np.log(lambda_1 / lambda_2)
-    return val
 
 
 def read_aeronet_data_main(station_name, month, year, plot_results):
@@ -38,7 +23,7 @@ def read_aeronet_data_main(station_name, month, year, plot_results):
     Assumes aeronet files to exist. if not, download from - https://aeronet.gsfc.nasa.gov/cgi-bin/webtool_aod_v3?stage=3&region=Middle_East&state=Israel&site=Technion_Haifa_IL&place_code=10&if_polarized=0
 
     Mean values per day will be using as typical values for aerosols creation
-    :return:
+    :return: Angstrom exponent data for the wavelengths couples: [(355, 532), (355, 1064), (532, 1064)]
     """
     # Load AERONET file of month-year
     station = gs.Station(station_name)
@@ -53,7 +38,7 @@ def read_aeronet_data_main(station_name, month, year, plot_results):
     # TODO : add automatic download of `.lev20' file from AERONET in case a file is missing.
     aeronet_data = pd.read_csv(file_name, skiprows=6).dropna()
 
-    # #### Parse data and rename columns for easier extrapolation of AOD values
+    # Parse data and rename columns for easier extrapolation of AOD values
     df_dt = pd.to_datetime(aeronet_data['Date(dd:mm:yyyy)'] + aeronet_data['Time(hh:mm:ss)'], format="%d:%m:%Y%H:%M:%S")
     columns = ['AOD_1640nm', 'AOD_1020nm', 'AOD_675nm', 'AOD_500nm', 'AOD_380nm', 'AOD_340nm']
     df_AOD_ANGSTROM = aeronet_data[columns].copy(deep=True)
@@ -66,7 +51,7 @@ def read_aeronet_data_main(station_name, month, year, plot_results):
     cols.extend(wavelengths)
     df_AOD_ANGSTROM = df_AOD_ANGSTROM.reindex(cols, axis='columns').sort_index(axis=1)
 
-    # #### Calculate AOD for missing wavelengths as $355,532,1064$
+    # Calculate AOD for missing wavelengths as $355,532,1064$
     # by interpolation values from the nearest existing measured wavelengths.
     cols = df_AOD_ANGSTROM.columns.values.tolist()
     for wavelength in wavelengths:
@@ -79,7 +64,6 @@ def read_aeronet_data_main(station_name, month, year, plot_results):
     # Create dataset of AOD per wavelength
     ds_chans = []
     for wavelength in wavelengths:
-        field_name = f"AOD_{wavelength}"
         aeronet_ds_chan = xr.Dataset(
             data_vars={'aod': ('Time', df_AOD_ANGSTROM[wavelength]),
                        'lambda_nm': ('Wavelength', [wavelength])
@@ -97,15 +81,14 @@ def read_aeronet_data_main(station_name, month, year, plot_results):
                     'start_time': start_day.strftime("%Y-%d-%m"), 'end_time': end_day.strftime("%Y-%d-%m")}
 
     # Calculate Angstrom Exponent
-    # ## $A = -\frac {\ln(\tau_1/\tau_2)}{\ln(\lambda_1/\lambda_2)},\; \lambda_1\leq\lambda_2$
     couples = [(355, 532), (355, 1064), (532, 1064)]
     angstrom_daily = []
     for lambda_1, lambda_2 in couples:
-        angstrom_couple = xr.apply_ufunc(lambda x, y: angstrom(ds_aod.sel(Wavelength=x),
-                                                               ds_aod.sel(Wavelength=y), x, y), lambda_1, lambda_2,
-                                         keep_attrs=True)
+        angstrom_couple = xr.apply_ufunc(lambda x, y: misc_lidar.angstrom(ds_aod.sel(Wavelength=x).aod,
+                                                               ds_aod.sel(Wavelength=y).aod, x, y), lambda_1, lambda_2,
+                                         keep_attrs=True).rename('angstrom')
         angstrom_ds_chan = xr.Dataset(
-            data_vars={'angstrom': ('Time', angstrom_couple.aod),
+            data_vars={'angstrom': ('Time', angstrom_couple.values),
                        'lambda_nm': ('Wavelengths', [f"{lambda_1}-{lambda_2}"])
                        },
             coords={'Time': df_AOD_ANGSTROM.index.tolist(),
@@ -120,7 +103,6 @@ def read_aeronet_data_main(station_name, month, year, plot_results):
                     'start_time': start_day.strftime("%Y-%d-%m"), 'end_time': end_day.strftime("%Y-%d-%m")}
 
     # Show AOD and Angstrom Exponent for a period
-
     if plot_results:
         t_slice = slice(start_day, start_day + timedelta(days=30) - timedelta(seconds=30))
 
@@ -137,7 +119,6 @@ def read_aeronet_data_main(station_name, month, year, plot_results):
         ax[0].legend()
         ax[0].set_ylabel(r'$\tau$')
 
-        couples = [(355, 532), (355, 1064), (532, 1064)]
         for lambda_1, lambda_2 in couples:
             angstrom_mean = ds_ang.angstrom.sel(Wavelengths=f"{lambda_1}-{lambda_2}", Time=t_slice).mean().item()
             angstrom_std = ds_ang.angstrom.sel(Wavelengths=f"{lambda_1}-{lambda_2}", Time=t_slice).std().item()

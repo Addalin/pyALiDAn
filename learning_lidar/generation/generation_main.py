@@ -36,12 +36,14 @@ if __name__ == '__main__':
     # 2. Daily Angstrom Exponent and Optical Depth
     logger.info("Generating Angstrom Exponent and Optical Depth...")
     for month_date in pd.date_range(start=args.start_date, end=args.end_date, freq='MS'):
-        read_aeronet_data_main(station_name=args.station_name, month=month_date.month, year=month_date.year,
+        read_aeronet_data_main(station_name=args.station_name,
+                               month=month_date.month,
+                               year=month_date.year,
                                plot_results=args.plot_results)
 
     # 3. Initial parameters for density generation
 
-    # currently DATA_DIR is used to get the path of the data folder (inside repository), for the extended dataset path.
+    # currently, DATA_DIR is used to get the path of the data folder (inside repository), for the extended dataset path.
     data_folder = gs.PKG_DATA_DIR
 
     # start_date and end_date should correspond to the extended csv!
@@ -61,7 +63,10 @@ if __name__ == '__main__':
     # ####### Lidar Signal generation #######
     logger.info("Generating Lidar Signal...")
     daily_signals_generator = DailySignalGenerator(station_name=args.station_name,
-                                                   save_ds=args.save_ds, logger=logger, plot_results=args.plot_results)
+                                                   save_ds=args.save_ds,
+                                                   logger=logger,
+                                                   plot_results=args.plot_results)
 
-    daily_signals_generator.daily_signals_generation(start_date=args.start_date, end_date=args.end_date,
+    daily_signals_generator.daily_signals_generation(start_date=args.start_date,
+                                                     end_date=args.end_date,
                                                      update_overlap_only=args.update_overlap_only)
