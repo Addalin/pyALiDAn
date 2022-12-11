@@ -133,7 +133,7 @@ and this is the notebook that should be used!
 use it to reproduce results.
 
 
-### Notes 
+## Notes 
 1. The [data](data) folder contains both data necessary for the generation, and csv files that are created in the dataseting stage,
 and needed as input for learning phase. Specifically -
    1. `stations.csv` defines stations, currently also relevant when working on a different computer.
