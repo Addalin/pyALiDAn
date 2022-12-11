@@ -143,3 +143,4 @@ and needed as input for learning phase. Specifically -
 for example for different dates.
 4. [Paths_lidar_learning.pptx](assets/Paths_lidar_learning.pptx) is for the planned changes to the data paths - which
 are meant to be much more organized, easier to maintain and less dependent.
+5. The [pyALiDAn_dev](pyALiDAn_dev) - is a private folder of ongoing reseach. 
