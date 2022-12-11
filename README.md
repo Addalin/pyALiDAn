@@ -143,14 +143,3 @@ and needed as input for learning phase. Specifically -
 for example for different dates.
 4. [Paths_lidar_learning.pptx](assets/Paths_lidar_learning.pptx) is for the planned changes to the data paths - which
 are meant to be much more organized, easier to maintain and less dependent.
-
-### Notes - personal
-
-1. [workflow.md](misc_private_pyALiDAn/workflow.md) contains information about the flow of data between the modules, 
-such as what is the input and ouput of each stage. 
-   1. It is not fully updated or clear but can provide useful information.
-
-2. [Notebookes](Notebookes) contains three folder for ongoing work: 
-   - analysis - mostly for visualization and comparisons of various functions of the repo
-   - development - for developing new ideas and ongoing research
-   - playground - code trials and experiment, could also contain notebooks from web
