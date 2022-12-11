@@ -1,0 +1,3 @@
+[submodule "pyALiDAn_dev"]
+	path = pyALiDAn_dev
+	url = https://github.com/Addalin/pyALiDAn_dev.git
