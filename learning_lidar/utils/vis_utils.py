@@ -22,7 +22,7 @@ MEDIUM_FONT_SIZE = 18 + 2
 BIG_FONT_SIZE = 20 + 2
 TITLE_FONT_SIZE = 20 + 2
 SUPTITLE_FONT_SIZE = 22 + 2
-TIMEFORMAT = mdates.DateFormatter(r'%H:%M')
+TIMEFORMAT = mdates.DateFormatter(r'%H')
 MONTHFORMAT = mdates.DateFormatter(r'%Y-%m')
 DAYFORMAT = mdates.DateFormatter('%Y-%m-%d')
 COLORS = ["darkblue", "darkgreen", "darkred"]
@@ -61,7 +61,7 @@ def set_visualization_settings():
 
 
 def plot_daily_profile(profile_ds, height_slice=None, figsize=(16, 6), save_fig=False):
-    # TODO: add scintific ticks on colorbar
+    # TODO: add scientific ticks on color-bar
     wavelengths = profile_ds.Wavelength.values
     if height_slice is None:
         height_slice = slice(profile_ds.Height[0].values, profile_ds.Height[-1].values)

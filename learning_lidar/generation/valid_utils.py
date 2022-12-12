@@ -33,7 +33,7 @@ TIMEFORMAT = mdates.DateFormatter(r'%H')
 
 
 def plot_daily_profile_for_publish(profile_ds, height_slice=None, figsize=(15, 5), fname: str = None,
-                                   save_fig=False, threshold=None, cbar_text=None,
+                                   save_fig=False, threshold=None, cbar_text=None, show_title=True,
                                    folder_name: os.path = None, format_fig: str = 'png'):
     wavelengths = profile_ds.Wavelength.values
     if height_slice is None:
@@ -64,7 +64,8 @@ def plot_daily_profile_for_publish(profile_ds, height_slice=None, figsize=(15, 5
             ax.set_rasterization_zorder(-10)
             ax.xaxis.set_major_formatter(TIMEFORMAT)
             ax.xaxis.set_tick_params(rotation=0)
-            ax.set_title("")
+            if not show_title:
+                ax.set_title("")
             ax.set_ylabel(ax.get_ylabel().replace("Height", r'\textbf{Height}'))
             ax.set_xlabel(ax.get_xlabel().replace("Time", r'\textbf{Time}'))
             for tick in ax.xaxis.get_majorticklabels():
@@ -91,7 +92,8 @@ def plot_daily_profile_for_publish(profile_ds, height_slice=None, figsize=(15, 5
         ax.set_rasterization_zorder(-10)
         ax.xaxis.set_major_formatter(TIMEFORMAT)
         ax.xaxis.set_tick_params(rotation=0)
-        ax.set_title("")
+        if not show_title:
+            ax.set_title("")
         ax.set_ylabel(ax.get_ylabel().replace("Height", r'\textbf{Height}'))
         ax.set_xlabel(ax.get_xlabel().replace("Time", r'\textbf{Time}'))
         ax.xaxis.set_ticks_position('none')
