@@ -203,12 +203,16 @@ def visualize_ds_profile_chan(dataset, lambda_nm=532, profile_type='range_corr',
     return g, fpath
 
 
-def daily_ds_histogram(dataset, profile_type='range_corr', alpha=.5,
-                       SAVE_FIG=False, n_temporal_splits=1,
-                       nbins=100, figsize=(5, 4), height_range: slice = None,
-                       dst_folder=os.path.join(PKG_ROOT_DIR, 'figures'),
-                       format_fig='png', dpi=1000, show_title=True):
+def daily_ds_histogram(dataset, profile_type: str = 'range_corr', alpha: float = .5,
+                       SAVE_FIG: bool = False, n_temporal_splits: int = 1,
+                       nbins: int = 100, figsize=(5, 4), height_range: slice = None,
+                       dst_folder: os.path = os.path.join(PKG_ROOT_DIR, 'figures'),
+                       format_fig='png', dpi=1000,
+                       y_scale: str = 'linear',
+                       x_scale: str = 'symlog',
+                       show_title: bool = True, vis_stats_table: bool = True):
     # TODO: replace function to work with seaborn histplot :https://seaborn.pydata.org/generated/seaborn.histplot.html
+    # Note: if the log plot of x shows only one or two bins, it's better using x_scale='linear'
     logger = logging.getLogger()
 
     # Extract and set the relevant times and heights to analyse
@@ -226,11 +230,15 @@ def daily_ds_histogram(dataset, profile_type='range_corr', alpha=.5,
                 f"for height range [{height_range}], "
                 f"and {n_temporal_splits} time splits")
 
-    # TODO: Counting how many negative elements exits - To set automatically the number of column in the plotting
-    #  facet grid count_neg = sum(sum(map(lambda x: x < 0, dataset.get(profile_type).values)).ravel()) if count_neg >
-    #  0: ncols = 2 else: ncols = 1
+    # Set automatically the number of column in the plotting facet grid (ncols=2 if there are negative values)
+    if (dataset.get(profile_type) < 0).any().values:
+        ncols = 2
+    else:
+        ncols = 1
+    ax_pos = ncols - 1
+    ax_neg = ax_pos - 1
     new_figsize = (w_fig * n_temporal_splits, h_fig * n_temporal_splits)
-    fig, axes = plt.subplots(nrows=n_temporal_splits, ncols=2, figsize=new_figsize,
+    fig, axes = plt.subplots(nrows=n_temporal_splits, ncols=ncols, figsize=new_figsize,
                              sharey='row', sharex='col', squeeze=False)
     ax = axes
     th = 0
@@ -244,79 +252,105 @@ def daily_ds_histogram(dataset, profile_type='range_corr', alpha=.5,
             sub_ds = ds_profile.sel(Wavelength=wavelength)
             orig_size = sub_ds.where(sub_ds != np.nan).values.size
 
-            # positive values histogram
+            # Calc positive values histogram
             pos_vals = sub_ds.where(sub_ds > th).where(sub_ds != np.nan).values
             pos_vals = pos_vals[~np.isnan(pos_vals)]
             pos_size = pos_vals.size
 
-            nbins_p = nbins  # if pos_size>100 else 10
-            hist, bins = np.histogram(pos_vals, bins=nbins_p)
-            logbins = np.logspace(np.log10(bins[0]), np.log10(bins[-1]), len(bins))
-            ax[ind_split, 1].hist(pos_vals, bins=logbins, label=f"$\lambda={wavelength}$",
-                                  alpha=alpha)
-            ax[ind_split, 1].set_xscale('symlog')
-
-            # negative values histogram
+            # Calc negative values histogram
             neg_ds = sub_ds.where(sub_ds < -th).where(sub_ds != np.nan)
             neg_vals = neg_ds.values[~np.isnan(neg_ds.values)]
             neg_size = neg_vals.size
-            if neg_size > 0:
-                nbins_n = nbins if neg_size > 100 else 1
-                histneg, binsneg = np.histogram(neg_vals, bins=nbins_n)
-                neg_logbins = np.logspace(np.log10(-binsneg[-1]), np.log10(-binsneg[0]), len(binsneg))
-                ax[ind_split, 0].hist(-neg_vals, bins=neg_logbins, label=f"$\lambda={wavelength}$",
-                                      alpha=alpha)
 
+            # Update stats dataframe
             df_stats.loc[ind] = [wavelength, f"{100.0 * (orig_size - neg_size - pos_size) / orig_size:.2f}",
                                  f"{100.0 * pos_size / orig_size:.2f}",
                                  f"{100.0 * neg_size / orig_size :.2f}"]
 
-        # fixing xticks with FixedLocator but also using MaxNLocator to avoid cramped x-labels
-        ticks_loc = ax[ind_split, 1].get_xticks()
-        ax[ind_split, 1].xaxis.set_major_locator(mticker.FixedLocator(ticks_loc))
+            # Set plt.histogram dictionary
+            kwargs = dict(histtype='stepfilled', alpha=alpha,  # density=True,
+                          ec=COLORS[ind], linewidth=.8,
+                          label=f"$\lambda={wavelength}$")
 
-        new_posx_ticks = [rf"$10^{{{np.log10(Decimal(n))}}}$" if n > 0 else round(n) for n in ticks_loc]
-        ax[ind_split, 1].set_xticklabels(new_posx_ticks)
-        if neg_size > 0:
-            ax[ind_split, 0].set_xscale('log')
-            if (ind_split + 1) % 2:
-                ax[ind_split, 0].invert_xaxis()
-            ax[ind_split, 0].set_xscale('symlog')
-            ticks_loc = ax[ind_split, 0].get_xticks()
-            ax[ind_split, 0].xaxis.set_major_locator(mticker.FixedLocator(ticks_loc))
-            new_negx_vals = [np.log10(Decimal(n)) if n > 0 else round(n) for n in ticks_loc]
-            # print(new_negx_vals)
-            new_negx_ticks = [rf"$-10^{{{tic:.1f}}}$" if type(tic) == Decimal else tic for tic in new_negx_vals]
-            ax[ind_split, 0].set_xticklabels(new_negx_ticks)
+            # Plot positive histogram
+            nbins_p = nbins  # if pos_size>100 else 10
+            hist, bins = np.histogram(pos_vals, bins=nbins_p)
+            if x_scale in ['symlog', 'log']:
+                logbins = np.logspace(np.log10(bins[0]), np.log10(bins[-1]), len(bins))
+                bins = logbins
+                ax[ind_split, ax_pos].set_xscale(x_scale)
+            ax[ind_split, ax_pos].hist(x=pos_vals, bins=bins, **kwargs)
 
-        y_lim = ax[ind_split, 1].get_ylim()
-        ax[ind_split, 0].set_ylim(y_lim)
-        ax[ind_split, 0].ticklabel_format(axis='y', style='sci', scilimits=(0, 0))
+            # plot negative histogram
+            if neg_size > 0:
+                nbins_n = nbins if neg_size > 100 else 1
+                histneg, binsneg = np.histogram(neg_vals, bins=nbins_n)
+                if x_scale in ['symlog', 'log']:
+                    neg_logbins = np.logspace(np.log10(-binsneg[-1]), np.log10(-binsneg[0]), len(binsneg))
+                    binsneg = neg_logbins
+                ax[ind_split, ax_neg].hist(x=-neg_vals, bins=binsneg, **kwargs)
+
+        #Fix xticks with FixedLocator but also using MaxNLocator to avoid cramped x-labels
+        if x_scale != 'linear':
+            ticks_loc = ax[ind_split, ax_pos].get_xticks()
+            ax[ind_split, ax_pos].xaxis.set_major_locator(mticker.FixedLocator(ticks_loc))
+
+            new_posx_ticks = [rf"$10^{{{np.log10(Decimal(n))}}}$" if n > 0 else round(n) for n in ticks_loc]
+            ax[ind_split, ax_pos].set_xticklabels(new_posx_ticks)
+            if neg_size > 0:
+                ax[ind_split, ax_neg].set_xscale('log')
+                if (ind_split + 1) % 2:
+                    ax[ind_split, ax_neg].invert_xaxis()
+                ax[ind_split, ax_neg].set_xscale('symlog')
+                ticks_loc = ax[ind_split, ax_neg].get_xticks()
+                ax[ind_split, ax_neg].xaxis.set_major_locator(mticker.FixedLocator(ticks_loc))
+                new_negx_vals = [np.log10(Decimal(n)) if n > 0 else round(n) for n in ticks_loc]
+                # print(new_negx_vals)
+                new_negx_ticks = [rf"$-10^{{{tic:.1f}}}$" if type(tic) == Decimal else tic for tic in new_negx_vals]
+                ax[ind_split, ax_neg].set_xticklabels(new_negx_ticks)
+
+        # Set common y values and label to both axes
+        plt.yscale(y_scale)
+        if ax_neg == 0:
+            y_lim = ax[ind_split, ax_pos].get_ylim()
+            ax[ind_split, ax_neg].set_ylim(y_lim)
+        if y_scale == 'linear':
+            ax[ind_split, 0].ticklabel_format(axis='y', style='sci', scilimits=(0, 0))
         ax[ind_split, 0].tick_params(axis='both', which='major')
         ax[ind_split, 0].set_ylabel('counts')
-        ax[ind_split, 1].tick_params(axis='both', which='major')
-        ax[ind_split, 1].grid(axis='both', which='major', linestyle='--', alpha=alpha)
+        if ax_neg == 0:
+            ax[ind_split, ax_pos].tick_params(axis='both', which='major')
+            ax[ind_split, ax_pos].grid(axis='both', which='major', linestyle='--', alpha=alpha)
         ax[ind_split, 0].grid(axis='both', which='major', linestyle='--', alpha=alpha)
+
         if ind_split == n_temporal_splits - 1:
             xlabels = f"{ds_profile.long_name}\n[{ds_profile.units}]"
-            ax[ind_split, 0].set_xlabel(xlabels, position=(1.05, 1e6),
-                                        horizontalalignment='center')
-        if ind_split == 0:
-            ax[ind_split, 1].legend(loc='upper right')
+            if ax_neg == 0:
+                ax[ind_split, 0].set_xlabel(xlabels, position=(1.05, 1e6),
+                                            horizontalalignment='center')
+            else:
+                ax[ind_split, 0].set_xlabel(xlabels)
 
-        # Plot results table on figure for each time split
+        if ind_split == 0:  # Show legend only once (for all times)
+            ax[ind_split, ax_pos].legend(loc='upper right')
+
+        # Logging histogram results
         df_stats = df_stats.set_index('wavelength [nm]')
-        the_table = ax[ind_split, 1].table(cellText=df_stats.values,
-                                           colWidths=[0.09] * 3,
-                                           rowLabels=df_stats.index.tolist(),
-                                           colLabels=df_stats.columns.tolist(),
-                                           cellLoc='center',
-                                           loc='upper left')
-        the_table.scale(1.0, 1.2)
-        # the_table.set_fontsize(14)
-
         logger.info(f"Done calculating daily histogram")
         logger.info(df_stats)
+
+        # Plot stats table on figure for each time split
+        if vis_stats_table:
+            stats_table = ax[ind_split, ax_pos].table(cellText=df_stats.values,
+                                                      colWidths=[0.09] * 3,
+                                                      rowLabels=df_stats.index.tolist(),
+                                                      colLabels=df_stats.columns.tolist(),
+                                                      cellLoc='center',
+                                                      loc='upper left')
+            stats_table.scale(1.0, 1.2)
+            # stats_table.set_fontsize(14)
+
+        # Create xr.DataSet of statistics containing stats table for each time split
         ds_stats = xr.Dataset(
             data_vars={'stats': (('Wavelength', 'Stats'), df_stats.values),
                        'index': ind_split,
