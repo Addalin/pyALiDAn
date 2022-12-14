@@ -121,7 +121,8 @@ def get_prep_dataset_file_name(station: gs.Station, day_date: datetime.datetime,
     else:
         # this option is mainly to set new file names
         file_name = f"{dt_str}_{station.location}_{file_type}_{lambda_nm}_{data_source}.nc"
-    file_name = file_name.replace('all', '').replace('__', '_').replace('__', '_')
+    file_name = file_name.replace('all', '').replace('__', '_').replace('__', '_').replace('**', '*').replace('_*_*',
+                                                                                                              '_*')
     return file_name
 
 
@@ -144,7 +145,7 @@ def get_prep_dataset_paths(station: gs.Station, day_date: datetime.datetime, dat
     if data_source == 'molecular':
         parent_folder = station.molecular_dataset
     elif data_source == 'lidar':
-        parent_folder = station.lidar_dataset #TODO: make sure if this should not be station.lidar_dataset_calib ?
+        parent_folder = station.lidar_dataset  # TODO: make sure if this should not be station.lidar_dataset_calib ?
     else:
         raise Exception("Unsupported data_source.")
 
@@ -156,6 +157,20 @@ def get_prep_dataset_paths(station: gs.Station, day_date: datetime.datetime, dat
     paths = sorted(glob.glob(file_pattern))
 
     return paths
+
+
+def get_daily_prep_ds(station: gs.Station, day_date: datetime.date, data_source: str) -> xr.Dataset:
+    """
+    Returns the daily parameters of measures (lidar), signal, density or aerosol  creation as a dataset.
+
+    :param type_: str, should be one of 'lidar' / 'molecular'
+    :param station: gs.station() object of the lidar station
+    :param day_date: datetime.date object of the required date
+    :return: day_params_ds: xarray.Dataset(). Daily dataset of generation parameters.
+    """
+    daily_ds_path = get_prep_dataset_paths(station, day_date, data_source)[0]
+    ds = load_dataset(daily_ds_path)
+    return ds
 
 
 def save_prep_dataset(station: gs.Station, dataset: xr.Dataset, data_source: str = 'lidar',
