@@ -29,11 +29,12 @@ class DailySignalGenerator:
         vis_utils.set_visualization_settings()
 
     def generate_daily_lidar_measurement(self, day_date: datetime.date) -> (xr.Dataset, xr.Dataset):
-        ds_total = gen_sig_utils.calc_total_optical_density(station=self.station, day_date=day_date,
+        total_ds = gen_sig_utils.calc_total_optical_density(station=self.station, day_date=day_date,
                                                             PLOT_RESULTS=self.plot_results)
-        signal_ds = gen_sig_utils.calc_lidar_signal(self.station, day_date, ds_total, PLOT_RESULTS=self.plot_results)
+        signal_ds = gen_sig_utils.calc_lidar_signal(self.station, day_date, total_ds,
+                                                    PLOT_RESULTS=self.plot_results)
         measure_ds = gen_sig_utils.calc_daily_measurement(station=self.station, day_date=day_date, signal_ds=signal_ds,
-                                                          update_overlap_only=False, PLOT_RESULTS=False)
+                                                          PLOT_RESULTS=False, update_overlap_only=False)
 
         if self.save_ds:
             # TODO: check that the LCNET is uploading the new paths

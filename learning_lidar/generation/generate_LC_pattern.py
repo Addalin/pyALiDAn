@@ -102,10 +102,10 @@ def generate_LC_pattern_main(params):
 
     # Set parameters for generating a decay power pattern p(t)
     days_decay = 70
-    peak_days = np.array([-10, 40]) # september values. values for may -  # [-1, 50]
+    peak_days = np.array([-10, 40])  # september values. values for may -  # [-1, 50]
     period1 = (df_times.t_day >= peak_days[0]) & (df_times.t_day < peak_days[1])
     period2 = (df_times.t_day >= peak_days[1])
-    max_powers = [15000, 40000, 30000] # september values. values for may - [25000, 70000, 60000]
+    max_powers = [15000, 40000, 30000]  # september values. values for may - [25000, 70000, 60000]
     ds_chans = []
     for wavelength, p0 in zip(wavelengths, max_powers):
         c1 = df_times[period1].apply(lambda row: decay_p(row.t_day, peak_days[0], p0, days_decay), axis=1,
@@ -217,7 +217,6 @@ def generate_LC_pattern_main(params):
                      'info': 'LC - Lidar constant - from generation'}
     new_p.Wavelength.attrs = {'long_name': r'$\lambda$', 'units': r'$\rm nm$'}
 
-
     if params.plot_results:
         # Single plot of generated bezier interpolation
         fig, ax = plt.subplots(ncols=1, nrows=1, figsize=(10, 5))
@@ -244,9 +243,7 @@ def generate_LC_pattern_main(params):
         ax.set_title(title)
         plt.show()
 
-
-
-        curdays = [] # [start_date + timedelta(days=1 * n * 8) for n in range(8)] # Uncomment to plot daily Bezier inter
+        curdays = []  # [start_date + timedelta(days=1 * n * 8) for n in range(8)] # Uncomment to plot daily Bezier inter
         for cur_day in curdays:
             day_slice = slice(cur_day, cur_day + timedelta(hours=24) - timedelta(seconds=30))
             fig, ax = plt.subplots(ncols=1, nrows=1, figsize=(8, 5))
@@ -258,7 +255,6 @@ def generate_LC_pattern_main(params):
             ax.set_title(fr"B\'ezier interpolation of {new_p.p.long_name} - for {cur_day.strftime('%d/%m/%Y')}")
             plt.tight_layout()
             plt.show()
-
 
     if params.plot_results:
         # Plot both true and generated on two subplots
@@ -279,10 +275,11 @@ def generate_LC_pattern_main(params):
 
         for wavelength, c in zip(wavelengths, vis_utils.COLORS):
             ax[1].fill_between(ds_gen_p.Time.values,
-                            ds_gen_p.p_lbound.sel(Wavelength=wavelength).values,
-                            ds_gen_p.p_ubound.sel(Wavelength=wavelength).values,
-                            color=c, alpha=.1)
-        ds_gen_p.plot.scatter(ax=ax[1], y='p_new', x='Time', hue='Wavelength', s=10, hue_style='discrete', edgecolor='w')
+                               ds_gen_p.p_lbound.sel(Wavelength=wavelength).values,
+                               ds_gen_p.p_ubound.sel(Wavelength=wavelength).values,
+                               color=c, alpha=.1)
+        ds_gen_p.plot.scatter(ax=ax[1], y='p_new', x='Time', hue='Wavelength', s=10, hue_style='discrete',
+                              edgecolor='w')
         new_p.p.plot(ax=ax[1], hue='Wavelength', linewidth=0.8)
         title = fr"B\'ezier interpolation of {new_p.p.long_name} for " \
                 fr"{start_date.strftime('%d/%m/%Y')}-- {end_date.strftime('%d/%m/%Y')}"
