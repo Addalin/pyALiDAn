@@ -1,4 +1,4 @@
-[![DOI](https://zenodo.org/badge/510758300.svg)](https://zenodo.org/badge/latestdoi/510758300)
+[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.7424229.svg)](https://doi.org/10.5281/zenodo.7424229)
 
 # pyALiDAn
 ## Python implementation of the **Atmospheric Lidar Data Augmentation (ALiDAn)** framework & a learning pytorch-based pipeline of lidar analysis.
