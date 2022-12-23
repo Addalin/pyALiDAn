@@ -57,7 +57,7 @@ def calc_sigma_profile_df(row, lambda_nm: Union[int, float] = 532.0, column_name
 
 def cal_e_tau_df(col, height_bins: np.array) -> pd.Series:
     """
-    Calculate the the attenuated optical depth (tau is the optical depth).
+    Calculate the attenuated optical depth (tau is the optical depth).
     Calculation is per column of the backscatter (sigma) dataframe.
     :param col: column of sigma_df , the values of sigma should be in [1/m]
     :param height_bins: np.array of height bins above ground level
