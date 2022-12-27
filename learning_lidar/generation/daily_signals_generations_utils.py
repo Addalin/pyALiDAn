@@ -7,6 +7,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 import xarray as xr
+from pytictoc import TicToc
 from scipy.ndimage import gaussian_filter1d
 from tqdm import tqdm
 
@@ -283,7 +284,7 @@ def calc_mean_measurement(station: gs.Station, day_date: datetime.date, p_da: xr
     :return: xr.DataArray(). The daily mean measurement of the lidar signal
     """
     p_mean = p_da + bg_da
-    p_mean.attrs = {'info': 'Daily averaged lidar signal:',  # +r'$\mu_{p} =\mathbb{E}(p)+<p_{bg}>$',
+    p_mean.attrs = {'info': 'Daily averaged lidar signal:',
                     'long_name': r'$\mu_{p}$', 'name': 'pmean',
                     'units': r'$\rm photons$',
                     'location': station.location, }
@@ -313,15 +314,9 @@ def calc_poiss_measurement(station: gs.Station, day_date: datetime.date, p_mean:
     logger.info(f"\nCalculating Poisson signal for {day_date.strftime('%Y-%m-%d')}")
     # tic0 = TicToc()
     # tic0.tic()
-    pn_h = xr.apply_ufunc(
-        lambda mu: (mu + (np.sqrt(mu)) * np.random.normal(loc=0, scale=1.0, size=mu.shape)).astype(int),
-        p_mean.where(p_mean >= 50).fillna(0), keep_attrs=True)
-    pn_l = xr.apply_ufunc(lambda mu: misc_lidar.generate_poisson_signal_STEP(mu),
-                          p_mean.where(p_mean < 50).fillna(0), keep_attrs=True, dask='parallelized')
-    # TODO: consider using a faster implementation of Poisson from skimage or pytorch,
-    #  Note: this requires validation of the new method. #  skimage.util.random_noise(img, mode="poisson")
+    pn_da = xr.apply_ufunc(np.random.poisson, p_mean, dask='parallelized', keep_attrs=True)
     # tic0.toc()
-    pn_da = pn_h + pn_l
+    # pn_da = pn_h + pn_l
     pn_da.attrs = {'info': 'Generated Poisson Lidar Signal',
                    'long_name': r'$p$', 'name': 'pn',
                    'units': r'$\rm photons$',
