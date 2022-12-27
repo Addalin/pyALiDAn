@@ -92,6 +92,8 @@ def calc_attbsc_da(station: gs.Station, day_date: datetime.date, total_ds: xr.Da
     logger.debug(f"\nCalculating Attenuated Backscatter for {day_date.strftime('%Y-%m-%d')}")
     for wavelength in wavelengths:
         exp_tau_t = []
+        # TODO: find a way to run this function with dask such that it is applied
+        #  on blocks which are set as the columns of the dataset
         for t in tqdm(total_ds.Time, desc=f"Wavelength - {wavelength} [nm]"):
             sigma_t = total_ds.sigma.sel(Time=t)
             e_tau = xr.apply_ufunc(lambda x: np.exp(-2 * misc_lidar.calc_tau(x, height_bins)),
@@ -409,6 +411,12 @@ def calc_daily_measurement(station: gs.Station, day_date: datetime.date, signal_
         p_bg = get_daily_bg(station, day_date, PLOT_RESULTS)  # daily background: p_bg
     # Expand p_bg to coordinates : 'Wavelength','Height', 'Time
     bg_da = p_bg.broadcast_like(signal_ds.range_corr)
+
+    #  add the pre-triggered lidar signal
+    pre_trig = xr.apply_ufunc(np.random.poisson, bg_da, dask='parallelized', keep_attrs=True)
+    pre_trig.attrs = {'long_name': r'$p_{\rm pt}$',
+                      'info': 'Pre-triggered signal - Poisson ' + pre_trig.attrs['info'],
+                      'name': 'pre_trig', 'units': r'$\rm photons$'}
 
     # Calculate the total signal
     p_mean = calc_mean_measurement(station, day_date, p_da, bg_da, PLOT_RESULTS)
