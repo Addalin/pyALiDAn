@@ -290,7 +290,7 @@ def daily_ds_histogram(dataset, profile_type: str = 'range_corr', alpha: float =
                     binsneg = neg_logbins
                 ax[ind_split, ax_neg].hist(x=-neg_vals, bins=binsneg, **kwargs)
 
-        #Fix xticks with FixedLocator but also using MaxNLocator to avoid cramped x-labels
+        # Fix xticks with FixedLocator but also using MaxNLocator to avoid cramped x-labels
         if x_scale != 'linear':
             ticks_loc = ax[ind_split, ax_pos].get_xticks()
             ax[ind_split, ax_pos].xaxis.set_major_locator(mticker.FixedLocator(ticks_loc))
@@ -383,12 +383,21 @@ def save_fig(fig, fig_name: str = '',
              format_fig='png', dpi: int = SAVEFIG_DPI):
     logger = logging.getLogger()
     if fig_name == '':
-        fig_name = f"figure_{datetime.now().strftime('%Y_%m_%d %H_%M')}"
-        #     try:
-    #         stitle = fig.suptitle(stitle)
-    # or
-    #         stitle = g.get_figure().axes[0].get_title()
-    #     except: (TODO: complete this section - give a generic name to the figure)
+        try:
+            stitle = fig._suptitle.get_text()
+        except AttributeError as e:
+            # There is no sup title to the figure, try to get ax title
+            try:
+                stitle = fig.axes[0].get_title()
+            except:
+                # There is no ax title to the figure, set it empty
+                stitle = ''
+            else:
+                logger.debug('Setting name by ax title')
+        else:
+            logger.debug('Setting name by figure suptitle')
+        # if stitle is empty, set a generic fig name by time of creation
+        fig_name = stitle if stitle != '' else f"figure_{datetime.now().strftime('%Y_%m_%d %H_%M')}"
 
     fname = stitle2figname(fig_name, format_fig)
     if not os.path.exists(folder_name):
