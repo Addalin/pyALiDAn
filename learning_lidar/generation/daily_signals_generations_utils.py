@@ -298,6 +298,25 @@ def calc_mean_measurement(station: gs.Station, day_date: datetime.date, p_da: xr
     return p_mean
 
 
+def add_pre_triggered(nc_path:os.path):
+    """
+    This function update ALiDAn measurement to include the pre-triggered measurement.
+    Use it when a previously created measurement didn't include such.
+    The pre-triggered measurement, is derived from a Poisson distribution of p_bg. p_bg should already be included in the dataset stored at nc_path.
+    :param nc_path:
+    :return:
+    """
+    logger = logging.getLogger()
+    logger.debug(f"\nAdd pre-triggered measurement for {nc_path}")
+    cur_ds = xr_utils.load_dataset(nc_path)
+    pre_trig = xr.apply_ufunc(np.random.poisson, cur_ds.p_bg, dask='parallelized', keep_attrs=True).rename('p_pt')
+    pre_trig.attrs = {'long_name': r'$p_{\rm pt}$',
+                      'info': 'Pre-triggered signal - Poisson ' + pre_trig.attrs['info'],
+                      'units': r'$\rm photons$'}
+    cur_ds = cur_ds.assign(p_pt = pre_trig)
+    xr_utils.save_dataset(nc_path=nc_path, dataset=cur_ds)
+
+
 def calc_poiss_measurement(station: gs.Station, day_date: datetime.date, p_mean: xr.DataArray,
                            PLOT_RESULTS: bool) -> xr.DataArray:
     """
@@ -426,7 +445,7 @@ def calc_daily_measurement(station: gs.Station, day_date: datetime.date, signal_
     pr2n_da = calc_range_corr_measurement(station, day_date, pn_da, r2_da,
                                           PLOT_RESULTS)  # range corrected measurement: pr2n = pn * r^2
     measure_ds = xr.Dataset().assign(p=pn_da, range_corr=pr2n_da, p_mean=p_mean,
-                                     p_bg=bg_da, overlap=overlap_ds.overlap)
+                                     p_bg=bg_da, p_pt=pre_trig, overlap=overlap_ds.overlap)
     measure_ds['date'] = day_date
     measure_ds.attrs = {'location': station.location,
                         'info': 'Daily generated lidar signals measurement.',
