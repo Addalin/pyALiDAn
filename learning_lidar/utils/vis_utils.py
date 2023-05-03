@@ -60,7 +60,7 @@ def set_visualization_settings():
     plt.rcParams['text.latex.preamble'] = r'\boldmath'
 
 
-def plot_daily_profile(profile_ds, height_slice=None, figsize=(16, 6), save_fig=False):
+def plot_daily_profile(profile_ds, height_slice=None, figsize=(16, 6), SAVE_FIG=False):
     # TODO: add scientific ticks on color-bar
     wavelengths = profile_ds.Wavelength.values
     if height_slice is None:
@@ -81,7 +81,7 @@ def plot_daily_profile(profile_ds, height_slice=None, figsize=(16, 6), save_fig=
     suptitle = f"{profile_ds.info} - {str_date}"
     plt.ticklabel_format(axis="y", style="sci", scilimits=(0, 0))
     plt.tight_layout()
-    if save_fig:
+    if SAVE_FIG:
         fig_path = os.path.join('figures', suptitle)
         print(f"Saving fig to {fig_path}")
         plt.savefig(fig_path + '.jpeg')
@@ -90,11 +90,13 @@ def plot_daily_profile(profile_ds, height_slice=None, figsize=(16, 6), save_fig=
     plt.show()
 
 
-def plot_hourly_profile(profile_ds, height_slice=None, figsize=(10, 6), times=None):
+def plot_hourly_profile(profile_ds, height_slice=None, figsize=(10, 6), times=None,
+                        SAVE_FIG=False,
+                        folder_name: os.path = None, format_fig: str = 'png'):
     # TODO: add scientific ticks on color-bar
     day_date = utils.dt64_2_datetime(profile_ds.Time[0].values)
     str_date = day_date.strftime("%Y-%m-%d")
-    if times == None:
+    if times is None:
         times = [day_date + timedelta(hours=8),
                  day_date + timedelta(hours=12),
                  day_date + timedelta(hours=18)]
@@ -103,15 +105,21 @@ def plot_hourly_profile(profile_ds, height_slice=None, figsize=(10, 6), times=No
 
     ncols = len(times)
     fig, axes = plt.subplots(nrows=1, ncols=ncols, figsize=figsize, sharey=True)
-    for t, ax in zip(times,
-                     axes.ravel()):
-        profile_ds.sel(Time=t, Height=height_slice).plot.line(ax=ax, y='Height', hue='Wavelength')
-        ax.set_title(pd.to_datetime(str(t)).strftime('%H:%M:%S'))
+    if ncols > 1:
+        for t, ax in zip(times, axes.ravel()):
+            profile_ds.sel(Time=t, Height=height_slice).plot.line(ax=ax, y='Height', hue='Wavelength')
+            ax.set_title(pd.to_datetime(str(t)).strftime('%H:%M:%S'))
+    else:
+        profile_ds.sel(Time=times[0], Height=height_slice).plot.line(ax=axes, y='Height', hue='Wavelength')
+        axes.set_title(pd.to_datetime(str(times[0])).strftime('%H:%M:%S'))
     plt.tight_layout()
     plt.suptitle(f"{profile_ds.info} - {str_date}")
     plt.ticklabel_format(axis="y", style="sci", scilimits=(0, 0))
     plt.tight_layout()
     plt.show()
+    if SAVE_FIG:
+        fig_path = save_fig(fig, folder_name=folder_name, format_fig=format_fig)
+    return fig_path
 
 
 def visualize_ds_profile_chan(dataset, lambda_nm=532, profile_type='range_corr',
