@@ -83,7 +83,7 @@ There is a general `utils` folder, and additional minor scripts and notebooks no
 - Specifically can be used to:
   - download and convert gdas files with the `--download_gdas` and `--convert_gdas` flags
   - generate molecular `--generate_molecular_ds`, lidar `--generate_lidar_ds` or raw lidar `--generate_raw_lidar_ds`
-  - `--unzip_lidar_tropos` to automatically unzip downloaded tropos lidar data.
+  - `--unzip_lidar_tropos` to automatically unzip downloaded TROPOS lidar data.
 
 ### Generation
 
