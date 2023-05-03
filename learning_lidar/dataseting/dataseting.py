@@ -183,12 +183,11 @@ def create_dataset(station_name='haifa', start_date=datetime(2017, 9, 1),
                 query = ds_utils.get_query(wavelength, cali_method, day_date)
                 df = ds_utils.query_database(query=query, database_path=db_path)
                 if df.empty:
-                    raise ds_utils.EmptyDataFrameError(f"\n Not existing data for {station.location} station, "
+                    raise ds_utils.EmptyDataFrameError(f"\n Not existing data for {station.name} station, "
                                                        f"during {day_date.strftime('%Y-%m-%d')} in '{db_path}'")
                 df['date'] = day_date.strftime('%Y-%m-%d')
 
                 df = ds_utils.add_profiles_values(df, station, day_date, file_type='profiles')
-
                 df = df.rename(
                     {'liconst': 'LC', 'uncertainty_liconst': 'LC_std', 'matched_nc_profile': 'profile_path'},
                     axis='columns')

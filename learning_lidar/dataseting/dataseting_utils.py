@@ -80,17 +80,29 @@ def query_database(query="SELECT * FROM lidar_calibration_constant;",
 
 def add_profiles_values(df, station, day_date, file_type='profiles'):
     logger = logging.getLogger()
-    try:
-        df['matched_nc_profile'] = df.apply(lambda row: prep_utils.get_TROPOS_dataset_paths(station, day_date,
-                                                                                            start_time=row.cali_start_time,
-                                                                                            end_time=row.cali_stop_time,
-                                                                                            file_type=file_type,
-                                                                                            level='level1a')[0],
-                                            axis=1, result_type='expand')
-    except Exception:
-        logger.exception(
-            f"Non resolved 'matched_nc_profile' for {station.location} station, at date {day_date.strftime('%Y-%m-%d')} ")
-        pass
+    paths = []
+    inds = []
+    inds_rem = []
+    for ind, row in df.iterrows():
+        path_i = prep_utils.get_TROPOS_dataset_paths(station, day_date, start_time=row.cali_start_time,
+                                                     end_time=row.cali_stop_time,
+                                                     file_type=file_type,
+                                                     level='level1a')
+        if path_i:
+            paths.append(path_i[0])
+            inds.append(ind)
+        else:
+            # Take care of a cases when one of the profiles doesn't have a '...profiles.nc' file
+            paths.append('')
+            inds_rem.append(ind)
+    df['matched_nc_profile'] = paths
+    if inds_rem != []:
+        for ind_r in inds_rem:
+            logger.exception(
+                f"Non resolved 'matched_nc_profile' for {station.name} station,"
+                f" at date {day_date.strftime('%Y-%m-%d')} and times  ,{df.iloc[ind_r].cali_start_time} ,{df.iloc[ind_r].cali_stop_time}")
+        df.drop(df.index[inds_rem], inplace=True)  # removing indexes that their nc files weren't found
+        df.reset_index(drop=True, inplace=True)
 
     def _get_info_from_profile_nc(row):
         """
