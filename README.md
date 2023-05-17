@@ -1,7 +1,7 @@
 [![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.7424229.svg)](https://doi.org/10.5281/zenodo.7424229)
 
 # pyALiDAn
-## Python implementation of the **Atmospheric Lidar Data Augmentation (ALiDAn)** framework & a learning pytorch-based pipeline of lidar analysis.
+## Python implementation of the **Atmospheric Lidar Data Augmentation (ALiDAn)** framework & a learning PyTorch-based pipeline of lidar analysis.
 ALiDAn is an end-to-end physics- and statistics-based simulation framework of lidar measurements [1]. This framework aims to promote the study of dynamic phenomena from lidar measurements and set new benchmarks. 
 
 The repository also includes a spatiotemporal and synergistic lidar calibration approach [2], which forms a learning pipeline for additional algorithms such as inversion of aerosols, aerosol typing etc.
@@ -14,7 +14,7 @@ It will hold the supplemental data and code for the papers [1] and [2].
 
 ### References:
 
-[1] Adi Vainiger, Omer Shubi, Yoav Schechner, Zhenping Yin, Holger Baars, Birgit Heese, Dietrich Althausen, "ALiDAn: Spatiotemporal and Multi--Wavelength Atmospheric Lidar Data Augmentation”, under review, 2022.
+[1] Adi Vainiger, Omer Shubi, Yoav Schechner, Zhenping Yin, Holger Baars, Birgit Heese, Dietrich Althausen, "ALiDAn: Spatiotemporal and Multi--Wavelength Atmospheric Lidar Data Augmentation”,  IEEE Transactions on Geoscience and Remote Sensing, vol. 60, pp. 1-17, 2022.
 
 [2] Adi Vainiger, Omer Shubi, Yoav Schechner, Zhenping Yin, Holger Baars, Birgit Heese, Dietrich Althausen, "Supervised learning calibration of an atmospheric lidar” IEEE International Geoscience and Remote Sensing Symposium (2022).
 
