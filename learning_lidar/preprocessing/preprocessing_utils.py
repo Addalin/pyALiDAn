@@ -320,8 +320,8 @@ def get_TROPOS_dataset_paths(station: gs.Station, day_date: datetime, start_time
 
 
 def get_TROPOS_day_folder_name(parent_folder: os.path, day_date: datetime) -> os.path:
-    moth_folder = get_month_folder_name(parent_folder, day_date)
-    day_folder = os.path.join(moth_folder, day_date.strftime("%d"))
+    month_folder = get_month_folder_name(parent_folder, day_date)
+    day_folder = os.path.join(month_folder, day_date.strftime("%d"))
     return day_folder
 
 

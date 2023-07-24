@@ -482,8 +482,6 @@ def create_density_params_ds(station, rm_new, ang_355_532, ang_532_1064, LR_samp
 
 if __name__ == '__main__':
 
-    data_folder = gs.PKG_DATA_DIR
-
     parser = utils.get_base_arguments()
 
     parser.add_argument('--extended_smoothing_bezier', action='store_true',
@@ -494,4 +492,4 @@ if __name__ == '__main__':
     # start_date and end_date should correspond to the extended csv!
     # months to run KDE on, one month at a time.
     for date_ in pd.date_range(args.start_date, args.end_date, freq='MS'):
-        kde_estimation_main(args, date_.month, date_.year, data_folder)
+        kde_estimation_main(args, date_.month, date_.year, gs.PKG_DATA_DIR)

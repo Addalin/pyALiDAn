@@ -43,14 +43,12 @@ if __name__ == '__main__':
 
     # 3. Initial parameters for density generation
 
-    # currently, DATA_DIR is used to get the path of the data folder (inside repository), for the extended dataset path.
-    data_folder = gs.PKG_DATA_DIR
 
     # start_date and end_date should correspond to the extended csv!
     # months to run KDE on, one month at a time.
     # logger.info("KDE Estimation...")
     for month_date in pd.date_range(args.start_date, args.end_date, freq='MS'):
-        kde_estimation_main(args, month_date.month, month_date.year, data_folder)
+        kde_estimation_main(args, month_date.month, month_date.year, gs.PKG_DATA_DIR)
 
     # 4. Lidar Constant for a period
     logger.info("Generating Lidar Constant...")

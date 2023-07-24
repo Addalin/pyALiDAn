@@ -35,17 +35,16 @@ def dataseting_main(params, log_level=logging.DEBUG):
     station = gs.Station(station_name=station_name)
 
     # Set new paths
-    data_folder = gs.PKG_DATA_DIR
-    csv_path = os.path.join(data_folder, f"dataset_{station_name}_"
+    csv_path = os.path.join(gs.PKG_DATA_DIR, f"dataset_{station_name}_"
                                          f"{start_date.strftime('%Y-%m-%d')}_{end_date.strftime('%Y-%m-%d')}.csv")
-    csv_path_extended = os.path.join(data_folder, f"dataset_{station_name}_"
+    csv_path_extended = os.path.join(gs.PKG_DATA_DIR, f"dataset_{station_name}_"
                                                   f"{start_date.strftime('%Y-%m-%d')}_"
                                                   f"{end_date.strftime('%Y-%m-%d')}_extended.csv")
-    ds_path_extended = os.path.join(data_folder, f"dataset_{station_name}_"
+    ds_path_extended = os.path.join(gs.PKG_DATA_DIR, f"dataset_{station_name}_"
                                                  f"{start_date.strftime('%Y-%m-%d')}_"
                                                  f"{end_date.strftime('%Y-%m-%d')}_extended.nc")
 
-    csv_gen_path = os.path.join(data_folder, f"dataset_gen_{station_name}_"
+    csv_gen_path = os.path.join(gs.PKG_DATA_DIR, f"dataset_gen_{station_name}_"
                                              f"{start_date.strftime('%Y-%m-%d')}_{end_date.strftime('%Y-%m-%d')}.csv")
 
     if params.do_dataset:
@@ -452,10 +451,9 @@ def calc_data_statistics(station, start_date, end_date, top_height=15.3, mode='g
      the desired period [start_date, end_date]. Note: one should previously save the generated dataset for this period.
     """
     dataset_type_str = '_' + dataset_type if dataset_type in ['train', 'test'] else ''
-    data_folder = gs.PKG_DATA_DIR
     csv_gen_fname = f"dataset_{'gen_' if mode == 'gen' else ''}{station.name}" \
                     f"_{start_date.strftime('%Y-%m-%d')}_{end_date.strftime('%Y-%m-%d')}{dataset_type_str}.csv"
-    csv_gen_path = os.path.join(data_folder, csv_gen_fname)
+    csv_gen_path = os.path.join(gs.PKG_DATA_DIR, csv_gen_fname)
     df = pd.read_csv(csv_gen_path, parse_dates=['date', 'start_time_period', 'end_time_period'])
 
     wavelengths = gs.LAMBDA_nm().get_elastic()
@@ -508,7 +506,7 @@ def calc_data_statistics(station, start_date, end_date, top_height=15.3, mode='g
     # Save stats to csv
     stats_fname = f"stats_{'gen_' if mode == 'gen' else ''}{station.name}_" \
                   f"{start_date.strftime('%Y-%m-%d')}_{end_date.strftime('%Y-%m-%d')}{dataset_type_str}.csv"
-    csv_stats_path = os.path.join(data_folder, stats_fname)
+    csv_stats_path = os.path.join(gs.PKG_DATA_DIR, stats_fname)
     df_stats.to_csv(csv_stats_path)
     return df_stats, csv_stats_path
 

@@ -29,8 +29,7 @@ class BackgroundGenerator:
         self.wavelengths = gs.LAMBDA_nm().get_elastic()
         self.eps = np.finfo(np.float).eps
 
-        data_folder = gs.PKG_DATA_DIR
-        self.bg_signal_folder = os.path.join(data_folder, 'background_signal')
+        self.bg_signal_folder = os.path.join(gs.PKG_DATA_DIR, 'background_signal')
 
         # #### 1. Load parameters of gaussian curve fit
         bg_params_path = os.path.join(self.bg_signal_folder, 'curve_params.yml')
