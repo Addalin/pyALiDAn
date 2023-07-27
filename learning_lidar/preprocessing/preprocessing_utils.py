@@ -638,9 +638,15 @@ def get_daily_range_corr(station: gs.Station, day_date: date, height_units: str 
     """
 
     """ get netcdf paths of the attenuation backscatter for given day_date"""
+    logger = logging.getLogger()
     date_datetime = datetime.combine(date=day_date, time=time.min) if isinstance(day_date, date) else day_date
 
     bsc_paths = get_TROPOS_dataset_paths(station, date_datetime, file_type='att_bsc', level='level1a')
+    if len(bsc_paths) > 4:
+        logger.info(f"Found more than four '*_att_bsc.nc' files for Station"
+                    f" name:{station.name} date: {day_date}. Taking the four most newes ones.")
+        bsc_paths = bsc_paths[0:4]  # TODO: This is a hack, a more percise search should be done!
+        print
     bsc_ds0 = xr_utils.load_dataset(bsc_paths[0])
     altitude = bsc_ds0.altitude.values[0]
     profiles = [dvar for dvar in list(bsc_ds0.data_vars) if 'attenuated_backscatter' in dvar]
