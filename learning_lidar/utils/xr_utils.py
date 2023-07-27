@@ -174,7 +174,7 @@ def get_daily_prep_ds(station: gs.Station, day_date: datetime.date, data_source:
 
 
 def save_prep_dataset(station: gs.Station, dataset: xr.Dataset, data_source: str = 'lidar',
-                      save_mode: str = 'both', profiles=None, time_slices=None):
+                      level: str = 'level1a', save_mode: str = 'both', profiles=None, time_slices=None):
     """
     Save the input dataset to netcdf file
     :param time_slices:
@@ -184,6 +184,7 @@ def save_prep_dataset(station: gs.Station, dataset: xr.Dataset, data_source: str
     :param dataset: array.Dataset() a daily preprocessed lidar or molecular signals.
     Having dimensions of : Wavelength, Height, Time.
     :param data_source: source type of the file, i.e., 'lidar' - for lidar dataset, and 'molecular' - molecular dataset.
+    :param level: incase data_source is 'lidar' then split to raw (level0) and to pollynet postprocess (level1a)
     :param save_mode: save mode options:
                     'sep' - for separated profiles (each is file is per profile per wavelength)
                     'single' - save the dataset a single file per day
@@ -192,17 +193,7 @@ def save_prep_dataset(station: gs.Station, dataset: xr.Dataset, data_source: str
     """
     # TODO: merge save_prep_dataset() &  save_generated_dataset() -> save_daily_dataset() with a flag of 'gen' or 'prep'
     date_datetime = get_daily_ds_date(dataset)
-    if data_source == 'lidar':
-        base_folder = station.lidar_dataset
-    elif data_source == 'bg':
-        base_folder = station.bg_dataset
-    elif data_source == 'molecular':
-        base_folder = station.molecular_dataset
-    else:
-        raise Exception("Unsupported data_source.")
-    month_folder = utils.get_month_folder_name(base_folder, date_datetime)
-
-    get_daily_ds_date(dataset)
+    month_folder = get_prep_month_folder(station, date_datetime, data_source, level)
     '''save the dataset to separated netcdf files: per profile per wavelength'''
     ncpaths = []
 
@@ -238,6 +229,22 @@ def save_prep_dataset(station: gs.Station, dataset: xr.Dataset, data_source: str
         if ncpath:
             ncpaths.append(ncpath)
     return ncpaths
+
+
+def get_prep_month_folder(station, date_datetime, data_source, level):
+    if data_source == 'lidar':
+        if level == 'level0':
+            base_folder = station.lidar_dataset
+        elif level == 'level1a':
+            base_folder = station.lidar_dataset_calib
+    elif data_source == 'bg':
+        base_folder = station.bg_dataset
+    elif data_source == 'molecular':
+        base_folder = station.molecular_dataset
+    else:
+        raise Exception("Unsupported data_source.")
+    month_folder = utils.get_month_folder_name(base_folder, date_datetime)
+    return month_folder
 
 
 def load_and_save_all_datasets_in_paths(base_path, paths, exclude_paths):

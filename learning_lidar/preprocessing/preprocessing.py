@@ -108,7 +108,7 @@ def preprocessing_main(params):
             logger.info(f"extracting {file_name} to {save_path}")
             ZipFile(file_name).extractall(save_path)
 
-    ''' Generate lidar datasets for required period'''
+    ''' Generate lidar datasets for required period --> take post-processed data by PollyNet : level1a'''
     if params.generate_lidar_ds:
         lidarpaths = []
         logger.info(
@@ -121,15 +121,16 @@ def preprocessing_main(params):
                                                        verbose=False)
 
             # Save lidar dataset
-            lidar_paths = xr_utils.save_prep_dataset(station, lidar_ds, data_source='lidar', save_mode='single',
-                                            profiles=['range_corr'])
+            lidar_paths = xr_utils.save_prep_dataset(station, lidar_ds, data_source='lidar', level='level1a',
+                                                     save_mode='single',
+                                                     profiles=['range_corr'])
             lidarpaths.extend(lidar_paths)
         logger.info(
             f"\nDone creation of lidar datasets for period "
             f"[{start_date.strftime('%Y-%m-%d')},{end_date.strftime('%Y-%m-%d')}]")
 
         logger.debug(f'\nLidar paths: {lidarpaths}')
-    ''' Obtaining lidar datasets for required period'''
+    ''' Obtaining lidar datasets for required period --> take raw measurements : level0'''''
     if params.generate_raw_lidar_ds:
         lidarpaths = []
         logger.info(f"\nStart obtaining raw lidar datasets for period [{start_date.strftime('%Y-%m-%d')},"
