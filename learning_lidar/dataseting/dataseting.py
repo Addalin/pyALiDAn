@@ -224,7 +224,8 @@ def create_dataset(station_name='haifa', start_date=datetime(2017, 9, 1),
                 key = ['date', 'wavelength', 'cali_method', 'telescope', 'cali_start_time', 'cali_stop_time',
                        'start_time_period', 'end_time_period', 'profile_path']
                 y_features = ['LC', 'LC_std', 'r0', 'r1', 'dr', 'bin_r0', 'bin_r1',
-                              'lr_aeronet', 'lr_used', 'aerBsc_klett_max', 'aerExt_klett_max']
+                              'lr_aeronet', 'lr_used', 'aerBsc_klett_max', 'aerExt_klett_max',
+                              'aerBsc_klett_min', 'aerExt_klett_min', 'aerBsc_klett_mean', 'aerExt_klett_mean']
                 x_features = ['lidar_path', 'molecular_path', 'bg_path']
                 expanded_df = expanded_df[key + x_features + y_features]
                 full_df = pd.concat([full_df, expanded_df])

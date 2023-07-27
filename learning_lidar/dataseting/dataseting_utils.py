@@ -120,13 +120,25 @@ def add_profiles_values(df, station, day_date, file_type='profiles'):
         delta_r = r1 - r0
         lr_aeronet = data[f'LR_aeronet_{wavelength}'].fillna('').item()
         lr_used = 50.0 if ('50.0 [Sr]' in data.aerBsc_klett_532.retrieving_info) else lr_aeronet
+        # TODO: use pd.describe() --> gives count,mean,max,min,std,25%,50%,75% in a single command
         aerBsc_klett_max = data[f'aerBsc_klett_{wavelength}'].values.max()
         aerExt_klett_max = aerBsc_klett_max * lr_used if (lr_used != '' and aerBsc_klett_max != '') else ''
+        aerBsc_klett_min = data[f'aerBsc_klett_{wavelength}'].values.min()
+        aerExt_klett_min = aerBsc_klett_min * lr_used if (lr_used != '' and aerBsc_klett_min != '') else ''
+        aerBsc_klett_mean = data[f'aerBsc_klett_{wavelength}'].values.mean()
+        aerExt_klett_mean = aerBsc_klett_mean * lr_used if (lr_used != '' and aerBsc_klett_mean != '') else ''
+        aerBsc_klett_std = data[f'aerBsc_klett_{wavelength}'].values.std()
+        aerExt_klett_std = (lr_used * data[f'aerBsc_klett_{wavelength}'].values).std() if \
+            (lr_used != '' and aerBsc_klett_mean != '') else ''
         return r0 + altitude, r1 + altitude, delta_r, bin_r0, bin_r1, \
-               lr_aeronet, lr_used, aerBsc_klett_max, aerExt_klett_max
+               lr_aeronet, lr_used, aerBsc_klett_max, aerExt_klett_max, \
+               aerBsc_klett_min, aerExt_klett_min, aerBsc_klett_mean, \
+               aerExt_klett_mean, aerBsc_klett_std, aerExt_klett_std
 
     df[['r0', 'r1', 'dr', 'bin_r0', 'bin_r1',
-        'lr_aeronet', 'lr_used', 'aerBsc_klett_max', 'aerExt_klett_max']] = df.apply(
+        'lr_aeronet', 'lr_used', 'aerBsc_klett_max', 'aerExt_klett_max',
+        'aerBsc_klett_min', 'aerExt_klett_min',
+        'aerBsc_klett_mean', 'aerExt_klett_mean', 'aerBsc_klett_std', 'aerExt_klett_std']] = df.apply(
         _get_info_from_profile_nc,
         axis=1,
         result_type='expand')
