@@ -1,4 +1,4 @@
-name: lidar_remote_cpu
+name: lidar_wsl #lidar_remote_cpu
 channels:
   - defaults
   - conda-forge
@@ -17,7 +17,7 @@ dependencies:
   #- ray-tune #=1.4
   - opencv
   - astral
-  - numpy #=1.20
+  - numpy =1.22.2
   - pandas
   - tqdm
   - openpyxl
@@ -27,14 +27,15 @@ dependencies:
   #- pytorch-lightning #=1.4
   - jupyter
   - jupyterlab
-  - scikit-learn=1.1.1
-  - scipy
+  - scikit-learn =1.1.1
+  - scikit-image
+  - scipy =1.8.0
   - nb_conda_kernels
   - nb_conda
   - nc-time-axis
   - python =3.9
   - sqlite
-  - python-graphviz
+  #- python-graphviz
   #- tensorflow
   - pip:
       - ray[tune]
@@ -44,7 +45,7 @@ dependencies:
       - git+https://github.com/scaperex/ARLreader.git
       - git+https://gitlab.com/ioannis_binietoglou/lidar_molecular.git
       - nvitop
-      - torchviz # requires installation of Graphviz `winget install graphviz` see: https://graphviz.org/download/
+      #- torchviz # requires installation of Graphviz `winget install graphviz` see: https://graphviz.org/download/
       - latex
 
 # conda activate base
@@ -54,8 +55,8 @@ dependencies:
 # conda config --add channels conda-forge
 # conda create --name lidar_remote
 # conda activate lidar_remote
-# conda install netcdf4 xarray tensorboard pip sphinx multiprocess pyyaml torchvision seaborn opencv astral numpy pandas tqdm openpyxl matplotlib pytorch astropy jupyter jupyterlab scikit-learn scipy nb_conda_kernels nb_conda nc-time-axis sqlite
+# conda install  netcdf4 xarray tensorboard pip sphinx multiprocess pyyaml torchvision seaborn opencv astral numpy pandas tqdm openpyxl matplotlib pytorch astropy jupyter jupyterlab scikit-learn scipy nb_conda_kernels nb_conda nc-time-axis sqlite
 # pip install "ray[tune]" "ray[default]" pytorch-lightning pytictoc nvitop git+https://github.com/scaperex/ARLreader.git git+https://gitlab.com/ioannis_binietoglou/lidar_molecular.git nvitop latex
 #
-# netcdf4 xarray tensorboard pip sphinx multiprocess pyyaml torchvision seaborn opencv astral numpy pandas tqdm openpyxl matplotlib pytorch astropy jupyter jupyterlab scikit-learn scipy nb_conda_kernels nb_conda nc-time-axis sqlite
+# scipy netcdf4 xarray tensorboard pip sphinx multiprocess pyyaml torchvision seaborn opencv astral numpy pandas tqdm openpyxl matplotlib pytorch astropy jupyter jupyterlab scikit-learn  nb_conda_kernels nb_conda nc-time-axis sqlite
 
