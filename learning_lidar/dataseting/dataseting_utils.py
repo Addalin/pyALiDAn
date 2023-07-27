@@ -387,7 +387,7 @@ class Error(Exception):
     pass
 
 
-class EmptyDataFrameError(Error):
+class EmptyDataFrameWarning(Warning):
     """Raised when the data frame is empty and should not have been"""
     pass
 

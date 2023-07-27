@@ -178,12 +178,12 @@ def create_dataset(station_name='haifa', start_date=datetime(2017, 9, 1),
 
             # Query the db for a specific day, wavelength and calibration method
             try:
-                # TODO: iterate query and query_database on cali_method (for case of having more that one method)
+                # TODO: iterate query and query_database on cali_method (for case of having more than one method)
                 query = ds_utils.get_query(wavelength, cali_method, day_date)
                 df = ds_utils.query_database(query=query, database_path=db_path)
                 if df.empty:
-                    raise ds_utils.EmptyDataFrameError(f"\n Not existing data for {station.name} station, "
-                                                       f"during {day_date.strftime('%Y-%m-%d')} in '{db_path}'")
+                    raise ds_utils.EmptyDataFrameWarning(f"\n Not existing data for {station.name} station, "
+                                                         f"during {day_date.strftime('%Y-%m-%d')} in '{db_path}'")
                 df['date'] = day_date.strftime('%Y-%m-%d')
 
                 df = ds_utils.add_profiles_values(df, station, day_date, file_type='profiles')
@@ -228,8 +228,8 @@ def create_dataset(station_name='haifa', start_date=datetime(2017, 9, 1),
                 x_features = ['lidar_path', 'molecular_path', 'bg_path']
                 expanded_df = expanded_df[key + x_features + y_features]
                 full_df = pd.concat([full_df, expanded_df])
-            except ds_utils.EmptyDataFrameError as e:
-                logger.exception(f"{e}, skipping to next day.")
+            except ds_utils.EmptyDataFrameWarning as w:
+                logger.warning(f"{w}, skipping to next day.")
                 continue
     if full_df.empty:
         raise Exception("Empty Dataframe. No days retrieved!. Stopping dataseting.")
@@ -610,9 +610,7 @@ def save_dataset2timesplits(station, dataset, data_source='lidar', mod_source='g
                                                    data_source=data_source, save_mode=save_mode,
                                                    profiles=profiles, time_slices=time_slices)
     else:
-        ncpaths = xr_utils.save_prep_dataset(station,
-                                             dataset=dataset,
-                                             data_source=data_source, save_mode=save_mode,
+        ncpaths = xr_utils.save_prep_dataset(station, dataset=dataset, data_source=data_source, save_mode=save_mode,
                                              profiles=profiles, time_slices=time_slices)
     return ncpaths
 
