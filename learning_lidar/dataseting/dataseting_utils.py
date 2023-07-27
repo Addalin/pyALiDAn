@@ -82,9 +82,10 @@ def add_profiles_values(df, station, day_date, file_type='profiles'):
     logger = logging.getLogger()
     paths = []
     inds = []
-    inds_rem = []
+    inds2remove = []
     for ind, row in df.iterrows():
-        path_i = prep_utils.get_TROPOS_dataset_paths(station, day_date, start_time=row.cali_start_time,
+        path_i = prep_utils.get_TROPOS_dataset_paths(station, row.cali_start_time.date(),
+                                                     start_time=row.cali_start_time,
                                                      end_time=row.cali_stop_time,
                                                      file_type=file_type,
                                                      level='level1a')
@@ -94,14 +95,15 @@ def add_profiles_values(df, station, day_date, file_type='profiles'):
         else:
             # Take care of a cases when one of the profiles doesn't have a '...profiles.nc' file
             paths.append('')
-            inds_rem.append(ind)
+            inds2remove.append(ind)
     df['matched_nc_profile'] = paths
-    if inds_rem != []:
-        for ind_r in inds_rem:
+    if inds2remove:
+        for ind_r in inds2remove:
             logger.exception(
                 f"Non resolved 'matched_nc_profile' for {station.name} station,"
-                f" at date {day_date.strftime('%Y-%m-%d')} and times  ,{df.iloc[ind_r].cali_start_time} ,{df.iloc[ind_r].cali_stop_time}")
-        df.drop(df.index[inds_rem], inplace=True)  # removing indexes that their nc files weren't found
+                f" at date {day_date.strftime('%Y-%m-%d')} and times  ,{df.iloc[ind_r].cali_start_time} ,"
+                f"{df.iloc[ind_r].cali_stop_time}. Removing related row.")
+        df.drop(df.index[inds2remove], inplace=True)  # removing indexes that their nc files weren't found
         df.reset_index(drop=True, inplace=True)
 
     def _get_info_from_profile_nc(row):
