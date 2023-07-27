@@ -28,9 +28,8 @@ from datetime import timedelta, datetime, date, time
 
 import numpy as np
 import pandas as pd
-import pkg_resources
 
-PKG_ROOT_DIR = pkg_resources.get_distribution('learning_lidar').location
+PKG_ROOT_DIR = os.path.dirname(os.path.dirname(os.path.dirname(__file__)))
 PKG_DATA_DIR = os.path.join(PKG_ROOT_DIR, 'data')
 # %% Basic physics constants
 
