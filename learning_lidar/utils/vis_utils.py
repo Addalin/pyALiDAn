@@ -152,10 +152,10 @@ def visualize_ds_profile_chan(dataset, lambda_nm=532, profile_type='range_corr',
             minv = np.nanmin(sub_ds.values)
         elif USE_RANGE == 'HIGH':
             try:
-                minv = dataset.sel(Wavelength=lambda_nm, drop=True).get('plot_max_range').values.tolist()
+                maxv = dataset.sel(Wavelength=lambda_nm, drop=True).get('plot_max_range').values.tolist()
             except:
                 logger.debug("\nThe dataset doesn't 'contain plot_min_range', setting maxv=0")
-                minv = np.nanmin(sub_ds.values)
+                maxv = np.nanmin(sub_ds.values)
             maxv = np.nanmax(sub_ds.values)
         elif USE_RANGE is None:
             [maxv, minv] = [np.nanmax(sub_ds.values), np.nanmin(sub_ds.values)]
