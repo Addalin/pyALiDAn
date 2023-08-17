@@ -4,6 +4,7 @@ import os
 import pickle
 import platform
 import random
+import warnings
 from datetime import datetime, timedelta
 from pathlib import Path
 from typing import Union
@@ -25,6 +26,8 @@ from sklearn.mixture import BayesianGaussianMixture as BayesGMM
 
 import learning_lidar.preprocessing.preprocessing_utils as prep_utils
 from learning_lidar.utils import xr_utils, vis_utils, proc_utils, global_settings as gs
+
+warnings.filterwarnings("ignore", '.*Index.ravel returning ndarray is deprecated.*', )
 
 """ Plotting functions & settings"""
 
@@ -113,7 +116,8 @@ def plot_daily_profile_for_publish(profile_ds, height_slice=None, figsize=(15, 5
         if folder_name is None:
             folder_name = os.path.join(os.path.abspath(os.path.curdir), 'figures')
         if fname is None:
-            fname = f"{profile_ds.info} - {str_date}"
+            fname = f"{profile_ds.info} - {str_date}" if ncols > 1 \
+                else f"{profile_ds.info} - {str_date} - {wavelengths.item()}"
         fig_path = vis_utils.save_fig(fig, fig_name=fname,
                                       folder_name=folder_name,
                                       format_fig=format_fig)
@@ -125,7 +129,7 @@ def plot_daily_profile_for_publish(profile_ds, height_slice=None, figsize=(15, 5
 
 def plot_regression(source_vals, pred_vals, title_source: str = 'source', title_pred: str = 'predicted',
                     figsize=(8, 5), fname: str = 'Linear regression scatter plot', folder_name: os.path = None,
-                    min_val: float = None, max_val: float = None,
+                    min_val: float = None, max_val: float = None, hist_bins=200,
                     save_fig: bool = False, format_fig: str = 'png', context: str = 'poster'):
     sns.set_style("whitegrid", {"grid.color": ".6"})
     sns.set_context(context)
@@ -145,7 +149,7 @@ def plot_regression(source_vals, pred_vals, title_source: str = 'source', title_
 
     ax.plot(x_vals, line, color='magenta', linestyle='dashed', label=plot_text)
 
-    counts, xedges, yedges, im = ax.hist2d(source_vals, pred_vals, bins=200, cmap='turbo', cmin=1,
+    counts, xedges, yedges, im = ax.hist2d(source_vals, pred_vals, bins=hist_bins, cmap='turbo', cmin=1,
                                            norm=colors.LogNorm())
     cbar = fig.colorbar(im, ax=ax)
     cbar.set_label('counts')
