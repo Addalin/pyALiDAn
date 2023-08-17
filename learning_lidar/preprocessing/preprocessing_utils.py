@@ -3,6 +3,7 @@ import logging
 import os
 import re
 from datetime import datetime, timedelta, time, date
+from functools import partial
 from typing import Union
 
 import numpy as np
@@ -358,7 +359,7 @@ def get_range_corr_ds_chan(darray: xr.DataArray, altitude: float, lambda_nm: int
     range_corr_ds_chan = create_range_corr_ds_chan(rangecorr_df=rangecorr_df, lambda_nm=lambda_nm,
                                                    height_units=height_units, optim_size=optim_size, verbose=verbose)
 
-    return range_corr_ds_chan, LC
+    return range_corr_ds_chan, LC  # TODO: returning LC here is useless , it is only for plot range, which is not in used.
 
 
 def create_range_corr_ds_chan(rangecorr_df: pd.DataFrame, lambda_nm: int, height_units: str,
@@ -399,6 +400,7 @@ def create_range_corr_ds_chan(rangecorr_df: pd.DataFrame, lambda_nm: int, height
     range_corr_ds_chan = xr.Dataset(
         data_vars={'range_corr': (('Height', 'Time'), rangecorr_df),
                    'lambda_nm': ('Wavelength', [lambda_nm])
+                   # TODO: this variable has never been used, check and remove it
                    },
         coords={'Height': rangecorr_df.index.to_list(),
                 'Time': rangecorr_df.columns,
@@ -645,44 +647,31 @@ def get_daily_range_corr(station: gs.Station, day_date: date, height_units: str 
     if len(bsc_paths) > 4:
         logger.info(f"Found more than four '*_att_bsc.nc' files for Station"
                     f" name:{station.name} date: {day_date}. Taking the four most newes ones.")
-        bsc_paths = bsc_paths[0:4]  # TODO: This is a hack, a more percise search should be done!
-        print
-    bsc_ds0 = xr_utils.load_dataset(bsc_paths[0])
-    altitude = bsc_ds0.altitude.values[0]
-    profiles = [dvar for dvar in list(bsc_ds0.data_vars) if 'attenuated_backscatter' in dvar]
-    wavelengths = [np.uint(pname.split(sep='_')[-1].strip('nm')) for pname in profiles]
+        bsc_paths = bsc_paths[0:4]  # TODO: This is a hack, a more precise search should be done!
 
-    min_range = np.empty((len(wavelengths), len(bsc_paths)))
-    max_range = np.empty((len(wavelengths), len(bsc_paths)))
+    def _preprocess(x, height_units, optim_size, verbose):
+        drop_vars = [v for v in x.data_vars if not ('attenuated_backscatter' in v)]
+        altitude = x.altitude.values[0]
+        x = x.drop_vars(drop_vars)
+        wavelengths = [np.uint(dvar.split(sep='_')[-1].strip('nm')) for dvar in x.data_vars]
+        x_chans = [get_range_corr_ds_chan(altitude=altitude, darray=x.get(dvar).transpose(transpose_coords=True),
+                                          lambda_nm=wavelength, height_units=height_units,
+                                          optim_size=optim_size, verbose=verbose)[0]
+                   for dvar, wavelength in zip(x.data_vars, wavelengths)]
+        return xr.concat(x_chans, dim='Wavelength')
 
-    ds_range_corrs = []
-    for ind_path, bsc_path in enumerate(bsc_paths):
-        cur_ds = xr_utils.load_dataset(bsc_path)
-        '''get 6-hours range corrected dataset for three channels [355,532,1064]'''
-        ds_chans = []
-        for ind_wavelength, (pname, lambda_nm) in enumerate(zip(profiles, wavelengths)):
-            cur_darry = cur_ds.get(pname).transpose(transpose_coords=True)
-            ds_chan, LC = get_range_corr_ds_chan(cur_darry, altitude, lambda_nm, height_units, optim_size,
-                                                 verbose)
-            min_range[ind_wavelength, ind_path] = LC * cur_darry.attrs['plot_range'][0]
-            max_range[ind_wavelength, ind_path] = LC * cur_darry.attrs['plot_range'][1]
-            ds_chans.append(ds_chan)
+    partial_func = partial(_preprocess, height_units=height_units, optim_size=optim_size, verbose=verbose)
+    range_corr_ds = xr.open_mfdataset(paths=bsc_paths, preprocess=partial_func, parallel=True, engine='netcdf4')
 
-        cur_ds_range_corr = xr.concat(ds_chans, dim='Wavelength')
-        ds_range_corrs.append(cur_ds_range_corr)
-
-    '''merge range corrected of lidar through 24-hours'''
-    range_corr_ds = xr.merge(ds_range_corrs, compat='no_conflicts')
-
-    # Fixing missing timestamps values:
+    # assign attributes, date, and time reindex
     time_indx = station.calc_daily_time_index(date_datetime)
-    range_corr_ds = range_corr_ds.reindex({"Time": time_indx}, fill_value=0)
-    range_corr_ds = range_corr_ds.assign({'plot_min_range': ('Wavelength', min_range.min(axis=1)),
-                                          'plot_max_range': ('Wavelength', max_range.max(axis=1))})
-    range_corr_ds['date'] = date_datetime
-    range_corr_ds.attrs = {'location': station.location,
-                           'info': 'Daily range corrected lidar signal',
-                           'source_type': 'att_bsc'}
+    attrs = {'station': station.name,
+             'location': station.location,
+             'info': 'Daily range corrected lidar signal',
+             'source_type': 'att_bsc'}
+    range_corr_ds = (range_corr_ds.reindex({"Time": time_indx}, fill_value=0).assign_attrs(attrs).
+                     assign({'lambda_nm': range_corr_ds.lambda_nm.max(dim='Time'), 'date': date_datetime}))
+
     if use_km_unit:
         range_corr_ds = convert_profiles_units(range_corr_ds, units=[r'$m^2$', r'$km^2$'], scale=1e-6)
     return range_corr_ds
