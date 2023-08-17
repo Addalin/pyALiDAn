@@ -1,8 +1,9 @@
-name: lidar_wsl #lidar_remote_cpu
+name: lidar_win #lidar_remote_cpu
 channels:
   - defaults
   - conda-forge
   - pytorch
+  - nvidia
   - pro
 dependencies:
   - netcdf4
@@ -17,46 +18,49 @@ dependencies:
   #- ray-tune #=1.4
   - opencv
   - astral
-  - numpy =1.22.2
+  - numpy #=1.22.2
   - pandas
   - tqdm
   - openpyxl
   - matplotlib
   - pytorch  # =1.7
   - astropy
-  #- pytorch-lightning #=1.4
+  - pytorch-lightning #=1.4
   - jupyter
   - jupyterlab
-  - scikit-learn =1.1.1
+  - scikit-learn #=1.1.1
   - scikit-image
-  - scipy =1.8.0
+  - scipy # =1.8.0
   - nb_conda_kernels
   - nb_conda
   - nc-time-axis
   - python =3.9
   - sqlite
+  - cudatoolkit = 12.0
+  - flox
+  - cupy
   #- python-graphviz
   #- tensorflow
   - pip:
       - ray[tune]
       - ray[default]
-      - pytorch-lightning
+      #      - pytorch-lightning
       - pytictoc
       - git+https://github.com/scaperex/ARLreader.git
       - git+https://gitlab.com/ioannis_binietoglou/lidar_molecular.git
       - nvitop
       #- torchviz # requires installation of Graphviz `winget install graphviz` see: https://graphviz.org/download/
       - latex
-
+# To define cudatoolkit and cudnn version go to: https://docs.nvidia.com/deeplearning/cudnn/support-matrix/index.html
 # conda activate base
-# sudo bash cuda-11.3.sh
+# sudo bash cuda-11.3.sh #change for 12 if available
 # bash anaconda-tensorflow.sh
-# conda install pytorch torchvision torchaudio cudatoolkit=11.3  -c pytorch
+# conda install pytorch torchvision torchaudio cudatoolkit=11.3  -c pytorch tensorboard #change for 12 if available
 # conda config --add channels conda-forge
 # conda create --name lidar_remote
 # conda activate lidar_remote
-# conda install  netcdf4 xarray tensorboard pip sphinx multiprocess pyyaml torchvision seaborn opencv astral numpy pandas tqdm openpyxl matplotlib pytorch astropy jupyter jupyterlab scikit-learn scipy nb_conda_kernels nb_conda nc-time-axis sqlite
+# conda install netcdf4 xarray pip sphinx multiprocess pyyaml torchvision seaborn opencv astral numpy pandas tqdm openpyxl matplotlib astropy jupyter jupyterlab scikit-learn scikit-image scipy nb_conda_kernels nb_conda nc-time-axis sqlite
 # pip install "ray[tune]" "ray[default]" pytorch-lightning pytictoc nvitop git+https://github.com/scaperex/ARLreader.git git+https://gitlab.com/ioannis_binietoglou/lidar_molecular.git nvitop latex
-#
+# conda install -c conda-forge flox cupy cudatoolkit=12.0
 # scipy netcdf4 xarray tensorboard pip sphinx multiprocess pyyaml torchvision seaborn opencv astral numpy pandas tqdm openpyxl matplotlib pytorch astropy jupyter jupyterlab scikit-learn  nb_conda_kernels nb_conda nc-time-axis sqlite
 
