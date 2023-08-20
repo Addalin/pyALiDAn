@@ -326,7 +326,7 @@ def get_TROPOS_day_folder_name(parent_folder: os.path, day_date: datetime) -> os
     return day_folder
 
 
-def get_range_corr_ds_chan(darray: xr.DataArray, altitude: float, lambda_nm: int, height_units: str = 'km',
+def get_range_corr_ds_chan(darray: xr.DataArray, altitude: float, lambda_nm: int, use_km_units: bool = True,
                            optim_size: bool = False, verbose: bool = False):
     """
     Retrieving a 6-hours range corrected lidar signal (pr^2)
@@ -337,7 +337,7 @@ def get_range_corr_ds_chan(darray: xr.DataArray, altitude: float, lambda_nm: int
                     (loaded from TROPOS *att_bsc.nc)
     :param altitude: altitude of the station [m]
     :param lambda_nm: wavelength in [nm], e.g, for green lambda_nm = 532.0 [nm]
-    :param height_units:  Output units of height grid in 'km' (default) or 'm'
+    :param use_km_units:  Use km units True - default; else False is for 'm'
     :param optim_size: Boolean. False(default): the retrieved values are of type 'float64',
                                 True: the retrieved values are of type 'float'.
     :param verbose: Boolean. False(default). True: prints information regarding size optimization.
@@ -349,9 +349,11 @@ def get_range_corr_ds_chan(darray: xr.DataArray, altitude: float, lambda_nm: int
     LC = darray.attrs['Lidar_calibration_constant_used']
     times = pd.to_datetime(
         [datetime.utcfromtimestamp(np.round(vtime)) for vtime in darray.time.values]).values
-    if height_units == 'km':
+    if use_km_units:
+        height_units = 'km'
         scale = 1e-3
-    elif height_units == 'm':
+    else:
+        height_units = 'm'
         scale = 1
     heights_ind = scale * (darray.height.values + altitude)
     rangecorr_df = pd.DataFrame(LC * darray.values, index=heights_ind, columns=times)
@@ -359,7 +361,10 @@ def get_range_corr_ds_chan(darray: xr.DataArray, altitude: float, lambda_nm: int
     range_corr_ds_chan = create_range_corr_ds_chan(rangecorr_df=rangecorr_df, lambda_nm=lambda_nm,
                                                    height_units=height_units, optim_size=optim_size, verbose=verbose)
 
-    return range_corr_ds_chan, LC  # TODO: returning LC here is useless , it is only for plot range, which is not in used.
+    if use_km_units:
+        range_corr_ds_chan = convert_profiles_units(range_corr_ds_chan, units=[r'$m^2$', r'$km^2$'], scale=1e-6)
+
+    return range_corr_ds_chan, LC  # TODO: returning LC is useless, it is only for plot range, which is not in used.
 
 
 def create_range_corr_ds_chan(rangecorr_df: pd.DataFrame, lambda_nm: int, height_units: str,
@@ -407,14 +412,18 @@ def create_range_corr_ds_chan(rangecorr_df: pd.DataFrame, lambda_nm: int, height
                 'Wavelength': [lambda_nm]
                 }
     )
-    range_corr_ds_chan.range_corr.attrs = {'long_name': r'$LC \beta \cdot \exp(-2\tau)$',
+    range_corr_ds_chan.range_corr.attrs = {'long_name': 'Estimated RCS',
                                            'units': r'$\rm photons$' + r'$\cdot$' + r'$m^2$',
-                                           'info': 'Range corrected lidar signal from attenuated backscatter '
-                                                   'multiplied by LC'}
+                                           'info': "PollyNet estimated RSC lidar signal",
+                                           'source_type': "Multiplying the estimated attenuated backscatter and LC"
+                                                          r": $LC \cdot \beta \cdot \exp(-2\tau)$"}
     # set attributes of coordinates
     range_corr_ds_chan.Height.attrs = {'units': fr'$\rm {height_units}$',
                                        'info': 'Measurements heights above sea level'}
     range_corr_ds_chan.Wavelength.attrs = {'long_name': r'$\lambda$', 'units': r'$\rm nm$'}
+
+    if height_units == 'km':
+        range_corr_ds_chan = convert_profiles_units(range_corr_ds_chan, units=[r'$m^2$', r'$km^2$'], scale=1e-6)
 
     return range_corr_ds_chan
 
@@ -618,8 +627,8 @@ def gen_daily_molecular_ds(day_date: date):
     logger.debug(f"\nDone saving molecular datasets for {day_date.strftime('%Y-%m-%d')}, to: {ncpaths}")
 
 
-def get_daily_range_corr(station: gs.Station, day_date: date, height_units: str = 'km',
-                         optim_size: bool = False, verbose: bool = False, use_km_unit: bool = True):
+def get_daily_range_corr(station: gs.Station, day_date: date, use_km_units: bool = True,
+                         optim_size: bool = False, verbose: bool = False):
     """
     Retrieving daily range corrected lidar signal (pr^2) from 'level1a' data by Pollynet Processing chain.
     The range corrected signal is represented by 'att_bsc' (aka attenuated backscatter coefficient) in the source data,
@@ -628,11 +637,10 @@ def get_daily_range_corr(station: gs.Station, day_date: date, height_units: str 
 
     :param station: gs.station() object of the lidar station
     :param day_date: datetime.date object of the required date
-    :param height_units:  Output units of height grid in 'km' (default) or 'm'
+    :param use_km_units: Boolean flag, to set the scale of units of the output data ,True - km units, False - meter units
     :param optim_size: Boolean. False(default): the retrieved values are of type 'float64',
                                 True: the retrieved values are of type 'float'.
     :param verbose: Boolean. False(default). True: prints information regarding size optimization.
-    :param use_km_unit: Boolean flag, to set the scale of units of the output data ,True - km units, False - meter units
     :return: xarray.Dataset() a daily range corrected lidar signal, holding 5 data variables:
              1 daily dataset of range_corrected signal in 3 channels, with dimensions of : Height, Time, Wavelength
              3 variables : lambda_nm, plot_min_range, plot_max_range, with dimension of : Wavelength
@@ -649,31 +657,41 @@ def get_daily_range_corr(station: gs.Station, day_date: date, height_units: str 
                     f" name:{station.name} date: {day_date}. Taking the four most newes ones.")
         bsc_paths = bsc_paths[0:4]  # TODO: This is a hack, a more precise search should be done!
 
-    def _preprocess(x, height_units, optim_size, verbose):
-        drop_vars = [v for v in x.data_vars if not ('attenuated_backscatter' in v)]
-        altitude = x.altitude.values[0]
-        x = x.drop_vars(drop_vars)
-        wavelengths = [np.uint(dvar.split(sep='_')[-1].strip('nm')) for dvar in x.data_vars]
-        x_chans = [get_range_corr_ds_chan(altitude=altitude, darray=x.get(dvar).transpose(transpose_coords=True),
-                                          lambda_nm=wavelength, height_units=height_units,
-                                          optim_size=optim_size, verbose=verbose)[0]
-                   for dvar, wavelength in zip(x.data_vars, wavelengths)]
-        return xr.concat(x_chans, dim='Wavelength')
+    def _preprocess(ds: xr.Dataset, use_km_units: bool = True,
+                    optim_size: bool = False, verbose: bool = False):
+        """
+        Preprocessing the datasets loaded by xr.open_mfdataset.
+        For info, see "Examples" in https://docs.xarray.dev/en/stable/generated/xarray.open_mfdataset.html
+        :param ds: The loaded dataset
+        :param use_km_units: Use km units (Default True else meters)
+        :param optim_size: Boolean. False(default): the retrieved values are of type 'float64',
+                                True: the retrieved values are of type 'float'.
+        :param verbose: Boolean. False(default). True: prints information regarding size optimization.
+        :return: get_range_corr_ds_chan() applied to each ds called by xr.open_mfdataset()
+        """
+        drop_vars = [v for v in ds.data_vars if not ('attenuated_backscatter' in v)]
+        altitude = ds.altitude.values[0]
+        ds = ds.drop_vars(drop_vars)
+        wavelengths = [np.uint(dvar.split(sep='_')[-1].strip('nm')) for dvar in ds.data_vars]
+        RCS_chans = [get_range_corr_ds_chan(altitude=altitude, darray=ds.get(dvar).transpose(transpose_coords=True),
+                                            lambda_nm=wavelength, use_km_units=use_km_units,
+                                            optim_size=optim_size, verbose=verbose)[0]
+                     for dvar, wavelength in zip(ds.data_vars, wavelengths)]
+        return xr.concat(RCS_chans, dim='Wavelength')
 
-    partial_func = partial(_preprocess, height_units=height_units, optim_size=optim_size, verbose=verbose)
+    partial_func = partial(_preprocess, use_km_units=use_km_units, optim_size=optim_size, verbose=verbose)
     range_corr_ds = xr.open_mfdataset(paths=bsc_paths, preprocess=partial_func, parallel=True, engine='netcdf4')
 
     # assign attributes, date, and time reindex
     time_indx = station.calc_daily_time_index(date_datetime)
     attrs = {'station': station.name,
              'location': station.location,
-             'info': 'Daily range corrected lidar signal',
-             'source_type': 'att_bsc'}
+             'info': 'Estimated daily range corrected lidar signal',
+             'source_type': "PollNet output files named by: '<DATE>_<PollyNet STATION>_<MEASUREMENT START "
+                            "TIME>_att_bsc.nc'"}
     range_corr_ds = (range_corr_ds.reindex({"Time": time_indx}, fill_value=0).assign_attrs(attrs).
                      assign({'lambda_nm': range_corr_ds.lambda_nm.max(dim='Time'), 'date': date_datetime}))
 
-    if use_km_unit:
-        range_corr_ds = convert_profiles_units(range_corr_ds, units=[r'$m^2$', r'$km^2$'], scale=1e-6)
     return range_corr_ds
 
 
