@@ -361,9 +361,6 @@ def get_range_corr_ds_chan(darray: xr.DataArray, altitude: float, lambda_nm: int
     range_corr_ds_chan = create_range_corr_ds_chan(rangecorr_df=rangecorr_df, lambda_nm=lambda_nm,
                                                    height_units=height_units, optim_size=optim_size, verbose=verbose)
 
-    if use_km_units:
-        range_corr_ds_chan = convert_profiles_units(range_corr_ds_chan, units=[r'$m^2$', r'$km^2$'], scale=1e-6)
-
     return range_corr_ds_chan, LC  # TODO: returning LC is useless, it is only for plot range, which is not in used.
 
 
@@ -680,7 +677,7 @@ def get_daily_range_corr(station: gs.Station, day_date: date, use_km_units: bool
         return xr.concat(RCS_chans, dim='Wavelength')
 
     partial_func = partial(_preprocess, use_km_units=use_km_units, optim_size=optim_size, verbose=verbose)
-    range_corr_ds = xr.open_mfdataset(paths=bsc_paths, preprocess=partial_func, parallel=True, engine='netcdf4')
+    range_corr_ds = xr.open_mfdataset(paths=bsc_paths, preprocess=partial_func, engine='netcdf4')
 
     # assign attributes, date, and time reindex
     time_indx = station.calc_daily_time_index(date_datetime)
