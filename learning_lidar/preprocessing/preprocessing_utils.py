@@ -127,7 +127,7 @@ def gdas2radiosonde(src_file: os.path, dst_file: os.path, col_names: list[str] =
     return dst_file
 
 
-def get_month_folder_name(parent_folder: os.path, day_date: datetime) -> os.path:
+def get_month_folder_name(parent_folder: os.path, day_date: Union[datetime, datetime.date]) -> os.path:
     month_folder = os.path.join(parent_folder, day_date.strftime("%Y"), day_date.strftime("%m"))
     return month_folder
 
@@ -651,7 +651,7 @@ def get_daily_range_corr(station: gs.Station, day_date: date, use_km_units: bool
     bsc_paths = get_TROPOS_dataset_paths(station, date_datetime, file_type='att_bsc', level='level1a')
     if len(bsc_paths) > 4:
         logger.info(f"Found more than four '*_att_bsc.nc' files for Station"
-                    f" name:{station.name} date: {day_date}. Taking the four most newes ones.")
+                    f" name:{station.name} date: {day_date}. Taking the four most newest ones.")
         bsc_paths = bsc_paths[0:4]  # TODO: This is a hack, a more precise search should be done!
 
     def _preprocess(ds: xr.Dataset, use_km_units: bool = True,

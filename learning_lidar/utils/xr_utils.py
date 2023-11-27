@@ -5,6 +5,7 @@ import os
 import sys
 from pathlib import Path
 from typing import Optional
+from typing import Union
 
 import numpy as np
 import xarray as xr
@@ -92,7 +93,8 @@ def load_dataset(ncpath: str) -> xr.Dataset:
     return dataset
 
 
-def get_prep_dataset_file_name(station: gs.Station, day_date: datetime.datetime, data_source: str = 'molecular',
+def get_prep_dataset_file_name(station: gs.Station,
+                               day_date: Union[datetime, datetime.date], data_source: str = 'molecular',
                                lambda_nm: str = '*', file_type: str = '*', time_slice=None) -> str:
     """
      Retrieves file pattern name of preprocessed dataset according to
@@ -184,7 +186,7 @@ def save_prep_dataset(station: gs.Station, dataset: xr.Dataset, data_source: str
     :param dataset: array.Dataset() a daily preprocessed lidar or molecular signals.
     Having dimensions of : Wavelength, Height, Time.
     :param data_source: source type of the file, i.e., 'lidar' - for lidar dataset, and 'molecular' - molecular dataset.
-    :param level: incase data_source is 'lidar' then split to raw (level0) and to pollynet postprocess (level1a)
+    :param level: incase data_source is 'lidar' then split to raw (level0) and to pollynet post process (level1a)
     :param save_mode: save mode options:
                     'sep' - for separated profiles (each is file is per profile per wavelength)
                     'single' - save the dataset a single file per day

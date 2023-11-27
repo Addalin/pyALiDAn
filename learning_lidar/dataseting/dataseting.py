@@ -25,7 +25,9 @@ def dataseting_main(params, log_level=logging.DEBUG):
     """
     logging.getLogger('matplotlib').setLevel(logging.ERROR)  # Fix annoying matplotlib logs
     logging.getLogger('PIL').setLevel(logging.ERROR)  # Fix annoying PIL logs
-    logger = utils.create_and_configer_logger(f"{os.path.basename(__file__)}.log", level=log_level)
+    logger = utils.create_and_configer_logger(os.path.join(gs.PKG_ROOT_DIR, "dataseting", "logs",
+                                                           f"{os.path.basename(__file__)}.log"),
+                                              level=log_level)
     logger.info(params)
     station_name = params.station_name
     start_date = params.start_date
@@ -36,16 +38,16 @@ def dataseting_main(params, log_level=logging.DEBUG):
 
     # Set new paths
     csv_path = os.path.join(gs.PKG_DATA_DIR, f"dataset_{station_name}_"
-                                         f"{start_date.strftime('%Y-%m-%d')}_{end_date.strftime('%Y-%m-%d')}.csv")
+                                             f"{start_date.strftime('%Y-%m-%d')}_{end_date.strftime('%Y-%m-%d')}.csv")
     csv_path_extended = os.path.join(gs.PKG_DATA_DIR, f"dataset_{station_name}_"
-                                                  f"{start_date.strftime('%Y-%m-%d')}_"
-                                                  f"{end_date.strftime('%Y-%m-%d')}_extended.csv")
+                                                      f"{start_date.strftime('%Y-%m-%d')}_"
+                                                      f"{end_date.strftime('%Y-%m-%d')}_extended.csv")
     ds_path_extended = os.path.join(gs.PKG_DATA_DIR, f"dataset_{station_name}_"
-                                                 f"{start_date.strftime('%Y-%m-%d')}_"
-                                                 f"{end_date.strftime('%Y-%m-%d')}_extended.nc")
+                                                     f"{start_date.strftime('%Y-%m-%d')}_"
+                                                     f"{end_date.strftime('%Y-%m-%d')}_extended.nc")
 
     csv_gen_path = os.path.join(gs.PKG_DATA_DIR, f"dataset_gen_{station_name}_"
-                                             f"{start_date.strftime('%Y-%m-%d')}_{end_date.strftime('%Y-%m-%d')}.csv")
+                                                 f"{start_date.strftime('%Y-%m-%d')}_{end_date.strftime('%Y-%m-%d')}.csv")
 
     if params.do_dataset:
         df_csv_path = csv_gen_path if params.generated_mode else csv_path
@@ -157,6 +159,8 @@ def create_dataset(station_name='haifa', start_date=datetime(2017, 9, 1),
     # Y = estimated values {LC,r0,r1} (and also LC_std is possible)
     # TODO : organize and update usage
     """
+    if list_dates is None:
+        list_dates = []
     logger = logging.getLogger()
     station = gs.Station(station_name=station_name)
     db_path = station.db_file
@@ -245,7 +249,7 @@ def timestamp2datetime(time_stamp):
     return datetime.combine(time_stamp.date(), time_stamp.time())
 
 
-def get_time_splits(station, start_date, end_date, sample_size):
+def get_time_splits(station: gs.Station, start_date: datetime, end_date: datetime, sample_size: str) -> list:
     sample_start = pd.date_range(start=start_date,
                                  end=end_date + timedelta(days=1),
                                  freq=sample_size)[0:-1]
@@ -258,7 +262,7 @@ def get_time_splits(station, start_date, end_date, sample_size):
 
 
 # %% Dataset extending helper functions
-def extend_calibration_info(df):
+def extend_calibration_info(df: pd.DataFrame) -> pd.DataFrame:
     """
     Extending the input dataset (df) by - recalculation of Lidar Constant and calculation info of reference range
     :param df: pd.DataFrame(). Dataset of calibrated samples for learning calibration method.
@@ -282,7 +286,7 @@ def extend_calibration_info(df):
     return df
 
 
-def create_calibration_ds(df, station, source_file):
+def create_calibration_ds(df: pd.DataFrame, station: gs.Station, source_file: os.path) -> xr.Dataset:
     """
     Create calibration dataset from the input df,
     by splitting it to a dataset according to wavelengths and time (as coordinates).
@@ -340,7 +344,8 @@ def create_calibration_ds(df, station, source_file):
     return ds_calibration
 
 
-def create_generated_dataset(station, start_date, end_date, sample_size='30min', calc_mean_lc=True):
+def create_generated_dataset(station: gs.Station, start_date: datetime, end_date: datetime,
+                             sample_size: str = '30min', calc_mean_lc: bool = True) -> pd.DataFrame:
     """
     Creates a dataframe consisting of:
         date | wavelength | start_time | end_time | lidar_path | bg_path | molecular_path | signal_path |  LC
@@ -438,7 +443,9 @@ def create_generated_dataset(station, start_date, end_date, sample_size='30min',
     return gen_df
 
 
-def calc_data_statistics(station, start_date, end_date, top_height=15.3, mode='gen', dataset_type='train'):
+def calc_data_statistics(station: gs.Station, start_date: datetime,
+                         end_date: gs.Station, top_height: float = 15.3, mode: str = 'gen', dataset_type: str = 'train') \
+        -> (pd.DataFrame, os.path):
     """
     Calculated statistics for the period of the dataset of the given station during start_date, end_date
     :param dataset_type:

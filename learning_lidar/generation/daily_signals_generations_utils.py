@@ -7,7 +7,6 @@ import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 import xarray as xr
-from pytictoc import TicToc
 from scipy.ndimage import gaussian_filter1d
 from tqdm import tqdm
 
@@ -15,7 +14,9 @@ import learning_lidar.generation.generation_utils as gen_utils
 import learning_lidar.preprocessing.preprocessing_utils as prep_utils
 from learning_lidar.utils import utils, xr_utils, vis_utils, misc_lidar, global_settings as gs
 
-logger = utils.create_and_configer_logger(f"{os.path.basename(__file__)}.log", level=logging.INFO)
+logger = utils.create_and_configer_logger(os.path.join(gs.PKG_ROOT_DIR, "generation", "logs",
+                                                       f"{os.path.basename(__file__)}.log"),
+                                          level=logging.INFO)
 vis_utils.set_visualization_settings()
 wavelengths = gs.LAMBDA_nm().get_elastic()
 
@@ -286,7 +287,7 @@ def calc_mean_measurement(station: gs.Station, day_date: datetime.date, p_da: xr
     :return: xr.DataArray(). The daily mean measurement of the lidar signal
     """
     p_mean = p_da + bg_da
-    p_mean.attrs = {'info': 'Daily averaged lidar signal:',
+    p_mean.attrs = {'info': 'Daily averaged lidar signal (Poisson parameter p_bg + p).',
                     'long_name': r'$\mu_{p}$', 'name': 'pmean',
                     'units': r'$\rm photons$',
                     'location': station.location, }
@@ -459,7 +460,7 @@ def calc_daily_measurement(station: gs.Station, day_date: datetime.date, signal_
 # %% Notebookes part
 
 def explore_orig_day(main_folder, station_name, start_date, end_date, day_date, timedelta, wavelengths, time_indx):
-    # TODO - organize this part and move to gen_utils.py or Notebookes notebook
+    # TODO - organize this part and move to gen_utils.py or Notebooks notebook
     day_str = day_date.strftime('%Y-%m-%d')
     ds_path_extended = os.path.join(main_folder, 'data',
                                     f"dataset_{station_name}_{start_date.strftime('%Y-%m-%d')}_{end_date.strftime('%Y-%m-%d')}_extended.nc")

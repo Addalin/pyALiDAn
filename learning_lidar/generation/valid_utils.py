@@ -43,7 +43,7 @@ def plot_daily_profile_for_publish(profile_ds, height_slice=None, figsize=(15, 5
         height_slice = slice(profile_ds.Height[0].values, profile_ds.Height[-1].values)
     str_date = profile_ds.Time[0].dt.strftime("%Y-%m-%d").values.tolist()
     ncols = wavelengths.size
-    fig, axes = plt.subplots(nrows=1, ncols=ncols, figsize=figsize, sharey=True)
+    fig, axes = plt.subplots(nrows=1, ncols=ncols, figsize=figsize, sharey=True, layout="constrained")
     if ncols > 1:
         for col_index, (wavelength, ax) in enumerate(zip(wavelengths, axes.ravel())):
             ds = profile_ds.sel(Height=height_slice, Wavelength=wavelength)
@@ -108,10 +108,10 @@ def plot_daily_profile_for_publish(profile_ds, height_slice=None, figsize=(15, 5
         cbar_ax.set_ylabel(cbar_text)
 
     plt.ticklabel_format(axis="y", style="sci", scilimits=(0, 0), useOffset=True)
-    if ncols > 1:
-        fig.tight_layout(rect=[0, 0, .9, 1])
-    else:
-        fig.tight_layout(rect=[0, 0, .86, 1])
+    # if ncols > 1:
+    #     fig.tight_layout(rect=[0, 0, .9, 1])
+    # else:
+    #     fig.tight_layout(rect=[0, 0, .86, 1])
     if save_fig:
         if folder_name is None:
             folder_name = os.path.join(os.path.abspath(os.path.curdir), 'figures')
@@ -133,12 +133,13 @@ def plot_regression(source_vals, pred_vals, title_source: str = 'source', title_
                     save_fig: bool = False, format_fig: str = 'png', context: str = 'poster'):
     sns.set_style("whitegrid", {"grid.color": ".6"})
     sns.set_context(context)
-    fig, ax = plt.subplots(nrows=1, ncols=1, figsize=figsize)
+    fig, ax = plt.subplots(nrows=1, ncols=1, figsize=figsize, layout="constrained")
 
     slope, intercept, r_value, p_value, std_err = ss.linregress(source_vals, pred_vals)
 
     nrmse = np.linalg.norm((source_vals - pred_vals)) / np.linalg.norm((source_vals))
     plot_text = fr"$\rm R^2$" + f":{r_value ** 2:.3f}\n" \
+                                f"p-value: {p_value}\n" \
                                 f"Slope: {slope:.3f}\n" \
                                 f"Offset: {intercept:.1e} \n" \
                                 f"NRMSE: {nrmse:.3f}\n" \
@@ -154,18 +155,18 @@ def plot_regression(source_vals, pred_vals, title_source: str = 'source', title_
     cbar = fig.colorbar(im, ax=ax)
     cbar.set_label('counts')
     plt.legend()
-    # ax.axis('equal')
-    min_val = min(min(source_vals), min(pred_vals)) if min_val is None else min_val
-    max_val = max(max(source_vals), max(pred_vals)) if max_val is None else max_val
+    # # ax.axis('equal')
+    # min_val = min(min(source_vals), min(pred_vals)) if min_val is None else min_val
+    # max_val = max(max(source_vals), max(pred_vals)) if max_val is None else max_val
 
-    ax.set_xlim(min_val, max_val)
-    ax.set_ylim(min_val, max_val)
+    ax.set_xlim(min(source_vals), max(source_vals))  # GT values
+    ax.set_ylim(min(pred_vals), max(source_vals))  # Estimated values
     ax.set_xlabel(title_source)
     ax.set_ylabel(title_pred)
     ax.set_axisbelow(True)
     ax.grid(color='gray', linewidth=0.5, alpha=0.3)
 
-    fig.tight_layout()
+    # fig.tight_layout()
     if save_fig:
         if folder_name is None:
             folder_name = os.path.join(os.path.abspath(os.path.curdir), 'figures')

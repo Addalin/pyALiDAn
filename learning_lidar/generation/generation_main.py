@@ -24,7 +24,9 @@ if __name__ == '__main__':
 
     args = parser.parse_args()
 
-    logger = utils.create_and_configer_logger(f"{os.path.basename(__file__)}.log", level=logging.INFO)
+    logger = utils.create_and_configer_logger(os.path.join(gs.PKG_ROOT_DIR, "generation", "logs",
+                                                           f"{os.path.basename(__file__)}.log"),
+                                              level=logging.INFO)
     logger.info(args)
     # ####### Ingredients generation #########
     # 1. Daily mean background signal

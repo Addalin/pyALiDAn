@@ -51,7 +51,9 @@ def generate_density_main(params):
     gen_den_utils.PLOT_RESULTS = params.plot_results
     logging.getLogger('PIL').setLevel(logging.ERROR)  # Fix annoying PIL logs
     logging.getLogger('matplotlib').setLevel(logging.ERROR)  # Fix annoying matplotlib logs
-    logger = utils.create_and_configer_logger(f"{os.path.basename(__file__)}.log", level=logging.INFO)
+    logger = utils.create_and_configer_logger(os.path.join(gs.PKG_ROOT_DIR, "generation", "logs",
+                                                           f"{os.path.basename(__file__)}.log"),
+                                              level=logging.INFO)
     logger.info(params)
     station = gs.Station(station_name=params.station_name)
     start_date, end_date = params.start_date, params.end_date

@@ -31,7 +31,8 @@ COLORS = ["darkblue", "darkgreen", "darkred"]
 def stitle2figname(stitle: str, format_fig='png'):
     # Replace chars that are not acceptable to file names
     title_str = stitle.replace("\n", "").replace("  ", " ").replace("__", "_"). \
-        replace("\\", "_").replace("/", "_").replace(":", '-').replace('.', '_').replace('$', '')
+        replace("\\", "_").replace("/", "_").replace(":", '-'). \
+        replace('.', '_').replace('$', '').replace("{", "").replace("}", "").replace("|", "")
     fig_name = f"{title_str}.{format_fig}"
     return fig_name
 
@@ -40,6 +41,7 @@ def set_visualization_settings():
     # TODO make sure this actually propagates to other functions
     plt.rcParams['figure.dpi'] = FIGURE_DPI
     plt.rcParams['savefig.dpi'] = SAVEFIG_DPI
+    plt.rcParams['figure.constrained_layout.use'] = True
 
     # Create an array with the colors to use
 
@@ -55,7 +57,7 @@ def set_visualization_settings():
     plt.rc('legend', fontsize=MEDIUM_FONT_SIZE)  # legend fontsize
     plt.rc('figure', titlesize=SUPTITLE_FONT_SIZE)  # fontsize of the figure title
 
-    # plt.rc('text', usetex=True)
+    plt.rc('text', usetex=True)
     plt.rc('font', weight='bold')
     plt.rcParams['text.latex.preamble'] = r'\boldmath'
 

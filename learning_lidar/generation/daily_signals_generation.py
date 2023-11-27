@@ -24,7 +24,9 @@ class DailySignalGenerator:
         if logger:
             self.logger = logger
         else:
-            self.logger = utils.create_and_configer_logger(f"{os.path.basename(__file__)}.log", level=logging.INFO)
+            self.logger = utils.create_and_configer_logger(os.path.join(gs.PKG_ROOT_DIR, "generation", "logs",
+                                                                        f"{os.path.basename(__file__)}.log"),
+                                                           level=logging.INFO)
 
         vis_utils.set_visualization_settings()
 
@@ -89,7 +91,9 @@ if __name__ == '__main__':
 
     args = parser.parse_args()
 
-    logger = utils.create_and_configer_logger(f"{os.path.basename(__file__)}.log", level=args.log)
+    logger = utils.create_and_configer_logger(os.path.join(gs.PKG_ROOT_DIR, "generation", "logs",
+                                                           f"{os.path.basename(__file__)}.log"),
+                                              level=args.log)
     logger.info(args)
 
     daily_signals_generator = DailySignalGenerator(station_name=args.station_name,

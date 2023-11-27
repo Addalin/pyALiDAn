@@ -19,7 +19,9 @@ from learning_lidar.utils import utils, xr_utils, global_settings as gs
 def preprocessing_main(params):
     logging.getLogger('matplotlib').setLevel(logging.ERROR)  # Fix annoying matplotlib logs
     logging.getLogger('PIL').setLevel(logging.ERROR)  # Fix annoying PIL logs
-    logger = utils.create_and_configer_logger(f"{os.path.basename(__file__)}.log", level=logging.INFO)
+    logger = utils.create_and_configer_logger(os.path.join(gs.PKG_ROOT_DIR, "preprocessing", "logs",
+                                                           f"{os.path.basename(__file__)}.log"),
+                                              level=logging.INFO)
     logger.info(params)
     station_name = params.station_name
     start_date = params.start_date
@@ -117,7 +119,8 @@ def preprocessing_main(params):
 
         for day_date in tqdm(valid_gdas_days):
             # Generate daily range corrected
-            lidar_ds = prep_utils.get_daily_range_corr(station, day_date, height_units='km', optim_size=False,
+            lidar_ds = prep_utils.get_daily_range_corr(station, day_date, use_km_units=True,
+                                                       optim_size=False,
                                                        verbose=False)
 
             # Save lidar dataset

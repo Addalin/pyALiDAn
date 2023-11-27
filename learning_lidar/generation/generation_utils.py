@@ -1,6 +1,7 @@
 import calendar
 import os
 from datetime import datetime, timedelta
+from typing import Union
 
 import numpy as np
 import xarray as xr
@@ -14,7 +15,8 @@ from learning_lidar.utils import xr_utils, global_settings as gs
 PLOT_RESULTS = False
 
 
-def get_gen_dataset_file_name(station: gs.Station, day_date: datetime, wavelength='*',
+def get_gen_dataset_file_name(station: gs.Station, day_date: Union[datetime, datetime.date],
+                              wavelength='*',
                               data_source='lidar', file_type='range_corr',
                               time_slice=None) -> str:
     """
