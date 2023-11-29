@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 # MIT License
-# Copyright (c) 2020  Adi Vainiger
+# Copyright (c) 2023  Adi Vainiger
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to deal
@@ -29,21 +29,15 @@ from datetime import timedelta, datetime, date, time
 import numpy as np
 import pandas as pd
 
+# Package root and data directories
 PKG_ROOT_DIR = os.path.dirname(os.path.dirname(os.path.dirname(__file__)))
 PKG_DATA_DIR = os.path.join(PKG_ROOT_DIR, 'data')
-# %% Basic physics constants
 
+# Basic physics constants
 eps = np.finfo(float).eps
 C_km_s = 299792.458  # Speed of light [Km/sec]
 C_m_s = C_km_s * 1E+3  # Speed of light [m/sec]
 h_plank = 6.62606e-34  # plank constant [J sec]
-
-# %% pollyXT Lidar info
-n_chan = 13
-
-
-# %% Haifa station info
-
 
 @dataclass()
 class Station:
@@ -51,7 +45,7 @@ class Station:
                  stations_csv_path=
                  os.path.join(PKG_DATA_DIR, 'stations.csv')):
         """
-        A station class that stores all the below information
+        A pollyXT station class that stores all the below information
 
         :param station_name: str, should match a station_name in the csv file
         :param stations_csv_path: str, path to stations csv file
@@ -150,6 +144,7 @@ class Station:
         return time_index
 
 
+# pollyXT Lidar Channels info
 class CHANNELS:
     def __init__(self):
         ''' Class of pollyXT lidar channel numbers '''
@@ -165,6 +160,7 @@ class CHANNELS:
         self.RNF = 9  # Near Field red channel - 607[nm]
         self.UVNF = 10  # Near Field UV channel - 355[nm]
         self.V1NF = 11  # Near field Raman channel - 387[nm]
+        self.num_channels = 12
 
     def get_elastic(self):
         return [self.UV, self.G, self.IR]
@@ -198,8 +194,8 @@ class LAMBDA_m(LAMBDA_nm):
         LAMBDA_nm.__init__(self, 1E-9)
 
 
-# %%DEBUG -----------------------------
 if __name__ == '__main__':
+    print(__file__)
     print('This files contains some useful constants')
     wavelengths = LAMBDA_nm()
     print(wavelengths)
@@ -207,3 +203,5 @@ if __name__ == '__main__':
     print(wavelengths_m.get_elastic())
     haifa_station = Station()
     print(haifa_station)
+    print(f"pkg root dir: {PKG_DATA_DIR}")
+    print(f"pkg data dir: {PKG_ROOT_DIR}")
