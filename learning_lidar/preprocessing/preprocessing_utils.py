@@ -151,13 +151,13 @@ def extract_date_time(path: os.path, format_filename: str, format_times: str):
     return time_stamps
 
 
-def get_daily_molecular_profiles(station: gs.Station, day_date: datetime, lambda_nm: Union[int, float] = 532,
+def get_daily_molecular_profiles(station: gs.Station, day_date: Union[datetime, datetime.date],
+                                 lambda_nm: Union[int, float] = 532,
                                  height_units: str = 'km') -> (pd.Series, pd.Series):
     """
     Generating daily molecular profile from gdas txt file
     :param day_date:
     :param station: gs.station() object of the lidar station
-    :param gdas_txt_paths: paths to gdas txt files , containing table with the columns
     "PRES	HGHT	TEMP	UWND	VWND	WWND	RELH	TPOT	WDIR	WSPD"
     :param lambda_nm: wavelength [nm] e.g., for the green channel 532 [nm]
     :param height_units: units of height grid in 'km' (default) or 'm'

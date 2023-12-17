@@ -123,7 +123,7 @@ def dataseting_main(params, log_level=logging.DEBUG):
 
 # %% Dataset creating helper functions
 def create_dataset(station_name='haifa', start_date=datetime(2017, 9, 1),
-                   end_date=datetime(2017, 9, 2), sample_size='29.5min', list_dates=[]):
+                   end_date=datetime(2017, 9, 2), sample_size='29.5min', list_dates=None):
     """
     CHOOSE: telescope: far_range , METHOD: Klett_Method
     each sample will have 60 bins (aka 30 mins length)

@@ -94,7 +94,7 @@ def load_dataset(ncpath: str) -> xr.Dataset:
 
 
 def get_prep_dataset_file_name(station: gs.Station,
-                               day_date: Union[datetime, datetime.date], data_source: str = 'molecular',
+                               day_date: Union[datetime.datetime, datetime.date], data_source: str = 'molecular',
                                lambda_nm: str = '*', file_type: str = '*', time_slice=None) -> str:
     """
      Retrieves file pattern name of preprocessed dataset according to
